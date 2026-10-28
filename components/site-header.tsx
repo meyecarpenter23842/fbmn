@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Container, Icon } from "./ui";
 
@@ -27,6 +27,21 @@ function Brand() {
 
 export function SiteHeader() {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const menuButton = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (!menuOpen && !searchOpen) return;
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setMenuOpen(false);
+        setSearchOpen(false);
+        menuButton.current?.focus();
+      }
+    }
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [menuOpen, searchOpen]);
 
   return (
     <header className="site-header">
@@ -40,8 +55,9 @@ export function SiteHeader() {
       <Container className="header-main">
         <button
           className="icon-button menu-toggle"
+          ref={menuButton}
           type="button"
-          onClick={() => setMenuOpen((open) => !open)}
+          onClick={() => { setMenuOpen((open) => !open); setSearchOpen(false); }}
           aria-expanded={menuOpen}
           aria-controls="site-navigation"
           aria-label={menuOpen ? "Đóng menu" : "Mở menu"}
@@ -66,11 +82,22 @@ export function SiteHeader() {
             <Icon name="cart" size={25} />
             <span><strong>Giỏ hàng</strong><small>Chưa mở đặt hàng</small></span>
           </button>
-          <button className="icon-button mobile-search" type="button" disabled aria-label="Tìm kiếm — sắp ra mắt">
-            <Icon name="search" size={22} />
+          <button className="icon-button mobile-search" type="button"
+            aria-label={searchOpen ? "Đóng thông tin tìm kiếm" : "Mở thông tin tìm kiếm"}
+            aria-expanded={searchOpen} aria-controls="mobile-search-notice"
+            onClick={() => { setSearchOpen((open) => !open); setMenuOpen(false); }}>
+            <Icon name={searchOpen ? "x" : "search"} size={22} />
           </button>
         </div>
       </Container>
+
+      <div id="mobile-search-notice" className="mobile-search-notice" hidden={!searchOpen}>
+        <Container className="mobile-search-notice__inner">
+          <strong>Tìm kiếm sản phẩm đang được hoàn thiện.</strong>
+          <span>Trong thời gian này anh/chị có thể khám phá các nhóm tập vở, sổ và văn phòng phẩm.</span>
+          <a href="#categories" onClick={() => setSearchOpen(false)}>Xem danh mục sản phẩm</a>
+        </Container>
+      </div>
 
       <nav id="site-navigation" className={["site-navigation", menuOpen ? "site-navigation--open" : ""].join(" ")}
         aria-label="Điều hướng chính">

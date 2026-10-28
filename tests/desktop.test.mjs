@@ -7,8 +7,9 @@ const read = (filename) => readFileSync(new URL("../" + filename, import.meta.ur
 test("desktop reference sections exist in the approved order", () => {
   const page = read("app/page.tsx");
   const names = ['className="hero"', 'className="hero__features"', 'className="categories-grid"',
-    'className="featured-section"', 'className="products-grid"', 'className="benefits-section"',
+    'className="featured-section"', '<MobileCarousel itemCount={previewProducts.length}>', 'className="benefits-section"',
     'className="about-banner"'];
+  assert.match(read("components/mobile-carousel.tsx"), /className="products-grid"/);
   const offsets = names.map((name) => page.indexOf(name));
   assert.ok(offsets.every((n) => n >= 0), "Missing desktop reference section");
   assert.deepEqual([...offsets].sort((a, b) => a - b), offsets, "Sections out of order");

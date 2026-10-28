@@ -9,7 +9,7 @@ test("homepage renders Futurebook brand and content sections", () => {
   assert.match(home, /Futurebook/);
   assert.match(home, /SiteHeader/);
   assert.match(home, /categories-grid/);
-  assert.match(home, /products-grid/);
+  assert.match(home, /MobileCarousel/);
 });
 
 test("mockup prices and testimonials are not presented as real data", () => {

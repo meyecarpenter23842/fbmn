@@ -1,4 +1,5 @@
 import { SiteHeader } from "@/components/site-header";
+import { MobileCarousel } from "@/components/mobile-carousel";
 import { NotebookArt, StationeryArt } from "@/components/notebook-art";
 import { Badge, ButtonLink, Card, Container, Icon, Pill } from "@/components/ui";
 import { categories, previewProducts } from "@/lib/ui-preview";
@@ -71,7 +72,7 @@ export default function HomePage() {
               </div>
               <a className="section-heading__link" href="#categories">Xem danh mục <Icon name="arrow" size={17} /></a>
             </div>
-            <div className="products-grid" aria-label="Các thẻ sản phẩm minh họa">
+            <MobileCarousel itemCount={previewProducts.length}>
               {previewProducts.map((product) => (
                 <Card key={product.title} className="product-card">
                   <Badge>MẪU UI</Badge>
@@ -86,7 +87,7 @@ export default function HomePage() {
                   </div>
                 </Card>
               ))}
-            </div>
+            </MobileCarousel>
             <p className="preview-note">* Các hình minh họa trên là thành phần dựng giao diện, không đại diện cho mã hàng hoặc giá bán hiện hành.</p>
           </Container>
         </section>
