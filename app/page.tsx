@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { SiteHeader } from "@/components/site-header";
 import { MobileCarousel } from "@/components/mobile-carousel";
 import { NotebookArt, StationeryArt } from "@/components/notebook-art";
@@ -78,7 +79,7 @@ export default function HomePage() {
                     <strong>Liên hệ báo giá</strong>
                     <div className="ref-product-card__actions">
                       <button type="button" disabled title="Giỏ hàng chưa mở" aria-label={"Chưa mở giỏ hàng cho " + product.title}><Icon name="cart" size={17}/></button>
-                      <a href="#contact">Xem thông tin</a>
+                      <Link href="/lien-he">Xem thông tin</Link>
                     </div>
                   </div>
                 </Card>
@@ -107,7 +108,13 @@ export default function HomePage() {
         </Container>
       </main>
       <footer className="ref-footer" id="contact">
-        <Container><strong>FUTUREBOOK MIỀN NAM</strong><span>Website giới thiệu · Catalogue và thông tin liên hệ đang cập nhật</span></Container>
+        <Container>
+          <strong>FUTUREBOOK MIỀN NAM</strong>
+          <nav aria-label="Điều hướng trang thông tin">
+            <Link href="/gioi-thieu">Giới thiệu</Link> · <Link href="/tin-tuc">Tin tức</Link> · <Link href="/khuyen-mai">Khuyến mãi</Link> · <Link href="/dai-ly">Đại lý</Link> · <a href="/lien-he">Liên hệ</a>
+          </nav>
+          <span>Catalogue và thông tin liên hệ được công bố sau khi xác minh</span>
+        </Container>
       </footer>
     </>
   );

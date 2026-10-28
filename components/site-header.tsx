@@ -2,18 +2,19 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { Container, Icon } from "./ui";
 import { VerifiedMediaImage } from "./verified-media-image";
 import { approvedSiteMedia } from "@/lib/media/approved-site-media";
 
 const desktopNavigation = [
   { label: "Trang chủ", href: "/#home" },
-  { label: "Giới thiệu", href: "/#about" },
+  { label: "Giới thiệu", href: "/gioi-thieu" },
   { label: "Sản phẩm", href: "/san-pham" },
-  { label: "Khuyến mãi", href: "/#collections" },
-  { label: "Dành cho đại lý", href: "/#agency" },
-  { label: "Tin tức", href: "", disabled: true },
-  { label: "Liên hệ", href: "/#contact" },
+  { label: "Khuyến mãi", href: "/khuyen-mai" },
+  { label: "Dành cho đại lý", href: "/dai-ly" },
+  { label: "Tin tức", href: "/tin-tuc" },
+  { label: "Liên hệ", href: "/lien-he" },
 ] as const;
 
 function Brand() {
@@ -28,6 +29,7 @@ function Brand() {
 }
 
 export function SiteHeader() {
+  const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const menuButton = useRef<HTMLButtonElement>(null);
@@ -71,13 +73,12 @@ export function SiteHeader() {
       <nav id="site-navigation" className={"ref-navigation" + (menuOpen ? " ref-navigation--open" : "")} aria-label="Điều hướng chính">
         <Container className="ref-navigation__inner">
           <Link className="ref-navigation__catalog" href="/san-pham" onClick={() => setMenuOpen(false)}><Icon name="menu" size={17}/> Danh mục sản phẩm <Icon name="down" size={15}/></Link>
-          {desktopNavigation.map(item => "disabled" in item && item.disabled ? (
-            <span className="ref-navigation__link ref-navigation__link--disabled" aria-disabled="true" key={item.label}>{item.label}</span>
-          ) : (
-            <Link className={"ref-navigation__link" + (item.href === "/#home" ? " ref-navigation__link--active" : "")}
+          {desktopNavigation.map(item => {
+            const active = item.href === "/#home" ? pathname === "/" : pathname === item.href;
+            return <Link className={"ref-navigation__link" + (active ? " ref-navigation__link--active" : "")}
               key={item.label} href={item.href} onClick={() => setMenuOpen(false)}
-              aria-current={item.href === "/#home" ? "page" : undefined}>{item.label}</Link>
-          ))}
+              aria-current={active ? "page" : undefined}>{item.label}</Link>;
+          })}
         </Container>
       </nav>
       <div id="ref-mobile-search" className="ref-search-notice" hidden={!searchOpen} role="status">
