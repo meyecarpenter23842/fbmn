@@ -102,6 +102,7 @@ export function validateCatalog(catalog: Catalog): CatalogProblem[] {
     return [{ path: "catalog", message: "Invalid catalogue envelope" }];
   }
   const categoryIds = new Set<string>();
+  const categorySlugs = new Set<string>();
   const productIds = new Set<string>();
   const slugs = new Set<string>();
   const skus = new Set<string>();
@@ -110,6 +111,9 @@ export function validateCatalog(catalog: Catalog): CatalogProblem[] {
     const path = "categories[" + i + "]";
     if (!ID.test(category.id) || categoryIds.has(category.id)) errors.push({ path, message: "Invalid/duplicate category ID" });
     categoryIds.add(category.id);
+    const slug = (category.slug ?? category.id).toLowerCase();
+    if (!ID.test(slug) || categorySlugs.has(slug)) errors.push({ path, message: "Invalid/duplicate category slug" });
+    categorySlugs.add(slug);
     if (!nonempty(category.name) || !["school_notebook", "student_notebook", "memo_book", "stationery"].includes(category.group) ||
         !Number.isSafeInteger(category.sortOrder) || !["draft", "published", "archived"].includes(category.publication)) {
       errors.push({ path, message: "Invalid category fields" });

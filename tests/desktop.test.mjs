@@ -38,7 +38,8 @@ test("mockup phone, price, code and popularity labels are not offered as true da
 test("unsupported search, cart and account actions remain disabled", () => {
   const header = read("components/site-header.tsx");
   const home = read("app/page.tsx");
-  assert.match(header, /type="search"[^>]*disabled/);
+  assert.match(header, /action="\/san-pham" method="get"/);
+  assert.match(header, /type="search" name="q"/);
   assert.match(header, /type="button" disabled title="Giỏ hàng chưa mở"/);
   assert.match(home, /type="button" disabled title="Giỏ hàng chưa mở"/);
   assert.match(home, /href="#categories"/);

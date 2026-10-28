@@ -7,13 +7,13 @@ import { VerifiedMediaImage } from "./verified-media-image";
 import { approvedSiteMedia } from "@/lib/media/approved-site-media";
 
 const desktopNavigation = [
-  { label: "Trang chủ", href: "#home" },
-  { label: "Giới thiệu", href: "#about" },
-  { label: "Sản phẩm", href: "#categories" },
-  { label: "Khuyến mãi", href: "#collections" },
-  { label: "Dành cho đại lý", href: "#agency" },
+  { label: "Trang chủ", href: "/#home" },
+  { label: "Giới thiệu", href: "/#about" },
+  { label: "Sản phẩm", href: "/san-pham" },
+  { label: "Khuyến mãi", href: "/#collections" },
+  { label: "Dành cho đại lý", href: "/#agency" },
   { label: "Tin tức", href: "", disabled: true },
-  { label: "Liên hệ", href: "#contact" },
+  { label: "Liên hệ", href: "/#contact" },
 ] as const;
 
 function Brand() {
@@ -49,10 +49,10 @@ export function SiteHeader() {
     <header className="ref-header">
       <Container className="ref-header__inner">
         <Brand />
-        <div className="ref-header__desktop-search" role="search" aria-label="Tìm kiếm sản phẩm">
-          <input type="search" aria-label="Tìm sản phẩm" placeholder="Tìm sản phẩm: vở A4, vở B5, sổ tay..." disabled title="Tìm kiếm chưa mở" />
-          <button type="button" disabled aria-label="Tìm kiếm chưa mở"><Icon name="search" size={22}/></button>
-        </div>
+        <form className="ref-header__desktop-search" role="search" aria-label="Tìm kiếm sản phẩm" action="/san-pham" method="get">
+          <input type="search" name="q" aria-label="Tìm sản phẩm" placeholder="Tìm sản phẩm: vở A4, vở B5, sổ tay..." maxLength={80}/>
+          <button type="submit" aria-label="Tìm sản phẩm"><Icon name="search" size={22}/></button>
+        </form>
         <div className="ref-header__right">
           <div className="ref-header__contact"><small>Thông tin liên hệ</small><strong>Đang cập nhật</strong></div>
           <button className="ref-header__desktop-action" type="button" disabled title="Tài khoản sẽ mở khi có phân quyền"><Icon name="user" size={24}/><span>Tài khoản</span></button>
@@ -70,18 +70,18 @@ export function SiteHeader() {
       </Container>
       <nav id="site-navigation" className={"ref-navigation" + (menuOpen ? " ref-navigation--open" : "")} aria-label="Điều hướng chính">
         <Container className="ref-navigation__inner">
-          <Link className="ref-navigation__catalog" href="#categories" onClick={() => setMenuOpen(false)}><Icon name="menu" size={17}/> Danh mục sản phẩm <Icon name="down" size={15}/></Link>
+          <Link className="ref-navigation__catalog" href="/san-pham" onClick={() => setMenuOpen(false)}><Icon name="menu" size={17}/> Danh mục sản phẩm <Icon name="down" size={15}/></Link>
           {desktopNavigation.map(item => "disabled" in item && item.disabled ? (
             <span className="ref-navigation__link ref-navigation__link--disabled" aria-disabled="true" key={item.label}>{item.label}</span>
           ) : (
-            <Link className={"ref-navigation__link" + (item.href === "#home" ? " ref-navigation__link--active" : "")}
+            <Link className={"ref-navigation__link" + (item.href === "/#home" ? " ref-navigation__link--active" : "")}
               key={item.label} href={item.href} onClick={() => setMenuOpen(false)}
-              aria-current={item.href === "#home" ? "page" : undefined}>{item.label}</Link>
+              aria-current={item.href === "/#home" ? "page" : undefined}>{item.label}</Link>
           ))}
         </Container>
       </nav>
       <div id="ref-mobile-search" className="ref-search-notice" hidden={!searchOpen} role="status">
-        <Container>Tìm kiếm sản phẩm đang được hoàn thiện. <Link href="#categories" onClick={() => setSearchOpen(false)}>Xem danh mục</Link></Container>
+        <Container><form action="/san-pham" method="get" role="search" aria-label="Tìm sản phẩm trên điện thoại" className="catalog-mobile-search"><label htmlFor="catalog-header-mobile-q">Tìm sản phẩm theo tên hoặc mã SKU</label><div><input id="catalog-header-mobile-q" name="q" type="search" maxLength={80} placeholder="Nhập sản phẩm cần tìm..." /><button type="submit">Tìm kiếm</button></div></form></Container>
       </div>
     </header>
   );

@@ -1,0 +1,9 @@
+
+/* Desktop header search and mobile popover now submit to the public catalogue. */
+.ref-header__desktop-search input:focus-visible { outline: 2px solid #8e43be; outline-offset: 1px; }
+.ref-header__desktop-search button { cursor: pointer; }
+.catalog-mobile-search { padding: 7px 0; }
+.catalog-mobile-search label { display: block; font-size: 12px; font-weight: 800; margin-bottom: 7px; }
+.catalog-mobile-search div { display: flex; gap: 8px; }
+.catalog-mobile-search input { flex: 1; min-width: 0; background: #fff; border: 1px solid #d6c4e4; border-radius: 7px; min-height: 42px; padding: 8px 12px; }
+.catalog-mobile-search button { background: #58218c; color: #fff; border: 0; border-radius: 7px; min-height: 42px; padding-inline: 15px; font-weight: 800; }

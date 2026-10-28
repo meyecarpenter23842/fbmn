@@ -22,6 +22,7 @@ export interface Evidence {
 export interface Category {
   id: string;
   name: string;
+  slug?: string; // optional stable SEO slug; falls back to category ID
   group: ProductGroup;
   publication: Publication;
   sortOrder: number;
@@ -109,6 +110,6 @@ export interface PublicProduct {
 }
 
 export interface PublicCatalog {
-  categories: Array<{ id: string; name: string; group: ProductGroup; sortOrder: number }>;
+  categories: Array<{ id: string; slug: string; name: string; group: ProductGroup; sortOrder: number }>;
   products: PublicProduct[];
 }

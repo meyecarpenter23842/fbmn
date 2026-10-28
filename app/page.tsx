@@ -49,7 +49,7 @@ export default function HomePage() {
           <section id="categories" className="ref-categories" aria-label="Danh mục Futurebook">
             <div className="ref-category-strip">
               {categories.map(category => (
-                <a href="#collections" className="ref-category" key={category.title}
+                <a href={"/san-pham?q=" + encodeURIComponent(category.title)} className="ref-category" key={category.title}
                   aria-label={category.title + " — xem khu giới thiệu sản phẩm"}>
                   <div className="ref-category__image">
                     {category.kind === "stationery" ? <StationeryArt/> : <NotebookArt cover={category.kind} title="FBMN"/>}

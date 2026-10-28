@@ -50,5 +50,6 @@ test("cart/account stay disabled while authentication and ordering are unfinishe
   const header = read("components/site-header.tsx");
   assert.match(header, /type="button" disabled title="Giỏ hàng chưa mở"/);
   assert.match(header, /Tài khoản sẽ mở khi có phân quyền/);
-  assert.match(header, /Tìm kiếm sản phẩm đang được hoàn thiện/);
+  assert.match(header, /catalog-header-mobile-q/);
+  assert.match(header, /action="\/san-pham" method="get"/);
 });

@@ -26,7 +26,7 @@ export function toPublicCatalog(catalog: Catalog, now: Date = new Date()): Publi
   if (Number.isNaN(now.getTime())) throw new Error("Invalid date for catalogue projection");
   const today = now.toISOString().slice(0, 10);
   const categories = catalog.categories.filter(c => c.publication === "published")
-    .map(c => ({ id: c.id, name: c.name, group: c.group, sortOrder: c.sortOrder }));
+    .map(c => ({ id: c.id, slug: c.slug ?? c.id, name: c.name, group: c.group, sortOrder: c.sortOrder }));
   const visibleIds = new Set(categories.map(c => c.id));
   const products: PublicProduct[] = [];
   for (const product of catalog.products) {
