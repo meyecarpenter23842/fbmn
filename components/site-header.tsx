@@ -3,6 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Container, Icon } from "./ui";
+import { VerifiedMediaImage } from "./verified-media-image";
+import { approvedSiteMedia } from "@/lib/media/approved-site-media";
 
 const navigation = [
   { label: "Trang chủ", href: "#home" },
@@ -16,7 +18,9 @@ const navigation = [
 function Brand() {
   return (
     <Link href="/#home" className="brand-logo" aria-label="Futurebook Miền Nam — về trang chủ">
-      <span className="brand-logo__mark" aria-hidden="true">FB</span>
+      <span className="brand-logo__mark" aria-hidden="true">
+        <VerifiedMediaImage asset={approvedSiteMedia.brandLogo} fallback="FB" className="brand-logo__real" priority sizes="52px" />
+      </span>
       <span className="brand-logo__type">
         <strong>FBMN</strong>
         <small>FUTUREBOOK MIỀN NAM</small>

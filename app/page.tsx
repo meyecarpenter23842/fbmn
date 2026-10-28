@@ -3,6 +3,8 @@ import { MobileCarousel } from "@/components/mobile-carousel";
 import { NotebookArt, StationeryArt } from "@/components/notebook-art";
 import { Badge, ButtonLink, Card, Container, Icon, Pill } from "@/components/ui";
 import { categories, previewProducts } from "@/lib/ui-preview";
+import { VerifiedMediaImage } from "@/components/verified-media-image";
+import { approvedSiteMedia } from "@/lib/media/approved-site-media";
 
 export default function HomePage() {
   return (
@@ -22,6 +24,12 @@ export default function HomePage() {
             </div>
             <div className="hero__visual" aria-label="Minh họa bố cục tập vở Futurebook">
               <span className="hero__halo" aria-hidden="true" />
+              <VerifiedMediaImage
+                asset={approvedSiteMedia.heroBanner}
+                priority
+                className="hero__verified-image"
+                sizes="(max-width: 800px) 100vw, 50vw"
+                fallback={(
               <div className="hero__stack" aria-hidden="true">
                 <NotebookArt cover="sky" className="hero__book hero__book--back" title="NOTEBOOK" />
                 <NotebookArt cover="rose" className="hero__book hero__book--middle" title="HAPPINESS" />
@@ -29,6 +37,8 @@ export default function HomePage() {
                 <NotebookArt cover="kraft" className="hero__book hero__book--right" title="SO COOL" />
                 <StationeryArt />
               </div>
+                )}
+              />
               <span className="hero__bubble">Học mỗi ngày<br />Khám phá điều hay!</span>
             </div>
             <div className="hero__features" aria-label="Khám phá nội dung Futurebook">
