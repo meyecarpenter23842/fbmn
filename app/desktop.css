@@ -1,0 +1,114 @@
+/* WEB PR 02 — Desktop visual fidelity.
+   Mobile web remains managed by globals.css: NO native-style bottom navigation.
+   All overrides in this file are intentionally desktop/tablet-only. */
+@media (min-width: 801px) {
+  .site-header { border-bottom: 1px solid #e9e1f3; }
+  .announcement { min-height: 30px; background: linear-gradient(90deg, #60108c, #7723a5 55%, #672595); }
+  .announcement__inner { min-height: 30px; }
+  .announcement__contact { opacity: .9; }
+  .header-main { min-height: 86px; grid-template-columns: minmax(178px, 235px) minmax(260px, 1fr) auto; }
+  .brand-logo__mark { border-color: #751a9b; }
+  .header-search { height: 41px; }
+  .header-search input { background: #fbfafd; }
+  .header-actions { gap: 14px; }
+  .site-navigation { background: #f9f5fd; }
+  .site-navigation__inner { gap: 9px; min-height: 43px; }
+  .nav-item { display: inline-flex; gap: 7px; font-size: 12px; border-radius: 5px 5px 0 0; }
+  .nav-item--active { box-shadow: 0 -1px 0 rgba(239, 7, 83, .15); }
+  .hero {
+    min-height: 366px;
+    grid-template-columns: minmax(0, 48%) minmax(0, 52%);
+    grid-template-rows: minmax(285px, 1fr) 61px;
+    background: radial-gradient(circle at 78% 20%, #fffdf6 0, transparent 32%),
+      radial-gradient(circle at 5% 15%, #f7f1ff 0, transparent 50%),
+      linear-gradient(98deg, #f6f2ff 0%, #fbf7fd 48%, #ffeeda 100%);
+  }
+  .hero::after {
+    content: "";
+    position: absolute;
+    z-index: -1;
+    right: -4%; bottom: 38px;
+    width: 71%; height: 40%;
+    background: linear-gradient(0deg, #efc49e7a, #f8e4ca2b);
+    border-radius: 46% 0 0 0;
+  }
+  .hero__copy { align-self: center; padding: 25px 6px 10px 46px; }
+  .hero__lead { font-size: clamp(31px, 3.25vw, 44px); margin-top: 13px; }
+  .hero h1 { font-size: clamp(32px, 3.45vw, 45px); margin-bottom: 14px; }
+  .hero__subtitle { padding: 10px 17px; background: linear-gradient(92deg, #62259c, #8c42b6); }
+  .hero__support { max-width: 380px; }
+  .hero__visual { grid-column: 2; grid-row: 1; align-self: end; min-height: 298px; overflow: hidden; }
+  .hero__stack { height: 306px; min-height: 306px; }
+  .hero__stack .hero__book { bottom: 19px; }
+  .hero__features {
+    z-index: 5;
+    grid-column: 1 / -1;
+    grid-row: 2;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    align-items: center;
+    padding: 0 21px;
+    border-top: 1px solid #e7dcec;
+    background: linear-gradient(90deg, #ffffffc9, #f8edffd9 44%, #ffffffbc);
+  }
+  .hero__features > div { display: flex; align-items: center; gap: 11px; padding: 9px 18px; color: #6525a0; }
+  .hero__features > div + div { border-left: 1px solid #e5d8ed; }
+  .hero__features span { display: flex; flex-direction: column; gap: 4px; }
+  .hero__features strong { font-size: 11px; color: #30153d; line-height: 1.15; }
+  .hero__features small { font-size: 10px; color: #655172; }
+  .categories-section { padding: 16px 0 21px; }
+  .categories-grid { gap: 12px; }
+  .category-card { height: 158px; border-radius: 10px; }
+  .category-card__copy { padding: 17px 8px 12px 16px; }
+  .category-card h3 { font-size: 16px; letter-spacing: -.25px; }
+  .category-card p { font-size: 10px; max-width: 115px; }
+  .circle-arrow { background: #6820a7; }
+  .featured-section { padding-top: 19px; padding-bottom: 20px; }
+  .section-heading h2 { margin-top: 3px; font-size: 24px; }
+  .section-heading__eyebrow { color: #56218e; gap: 10px; font-size: 11px; }
+  .featured-crown { font-size: 31px; line-height: .8; color: #d6a000; }
+  .section-heading__link {
+    display: inline-flex; align-items: center; justify-content: center; gap: 12px;
+    min-width: 132px; min-height: 38px; padding: 8px 14px;
+    border-radius: 10px; background: linear-gradient(95deg, #7424ae, #67309b);
+    color: white; font-size: 12px; font-weight: 800;
+  }
+  .section-heading__link:hover { background: #53218a; }
+  .products-grid { gap: 12px; }
+  .product-card { padding: 9px; min-height: 265px; }
+  .product-card__image { height: 160px; }
+  .product-card__bottom { margin-top: 9px; display: flex; justify-content: space-between; align-items: center; gap: 6px; }
+  .product-card__pending { margin: 0; font-size: 10px; }
+  .product-card__cart {
+    flex: none; display: grid; place-items: center;
+    width: 31px; height: 31px; border: 0; border-radius: 7px;
+    background: #ef0b55; color: #fff; opacity: .62;
+  }
+  .product-card h3 { min-height: 34px; font-size: 12px; }
+  .benefits-section { grid-template-columns: repeat(4, minmax(0, 1fr)); margin: 12px 0; }
+  .benefits-section > div { gap: 10px; padding: 15px 8px; }
+  .benefits-section strong { font-size: 11px; }
+  .benefits-section small { font-size: 9px; }
+  .about-banner { margin-top: 7px; min-height: 138px; background: linear-gradient(112deg, #5f209d, #9650c7); }
+}
+@media (min-width: 801px) and (max-width: 1050px) {
+  .header-main { grid-template-columns: 195px minmax(190px, 1fr) auto; gap: 14px; }
+  .header-actions { gap: 9px; }
+  .hero__copy { padding-left: 26px; }
+  .hero__features { padding-inline: 10px; }
+  .hero__features > div { padding-inline: 9px; }
+  .hero__book--middle { right: 28%; }
+  .category-card h3 { font-size: 14px; }
+  .category-card__copy { padding-left: 11px; }
+}
+@media (max-width: 800px) {
+  .hero__features { display: none; }
+  .section-heading__link { display: none; }
+  .product-card__bottom { display: flex; gap: 5px; align-items: center; justify-content: space-between; margin-top: 8px; }
+  .product-card__cart {
+    display: grid; place-items: center; border: 0; border-radius: 6px;
+    background: #ec0753; color: #fff; opacity: .62; width: 27px; height: 27px; flex: none;
+  }
+  .featured-crown { display: none; }
+}
+/* Strictly no fixed bottom actions: mobile is a responsive website, not the future native app. */

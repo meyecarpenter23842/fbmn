@@ -30,6 +30,11 @@ export default function HomePage() {
               </div>
               <span className="hero__bubble">Học mỗi ngày<br />Khám phá điều hay!</span>
             </div>
+            <div className="hero__features" aria-label="Khám phá nội dung Futurebook">
+              <div><Icon name="book" size={28} /><span><strong>Danh mục học tập</strong><small>Tập, vở và sổ ghi chép</small></span></div>
+              <div><Icon name="pencil" size={28} /><span><strong>Sản phẩm văn phòng</strong><small>Khám phá các nhóm hàng</small></span></div>
+              <div><Icon name="shield" size={28} /><span><strong>Catalogue chính thức</strong><small>Thông tin đang cập nhật</small></span></div>
+            </div>
           </section>
 
           <section id="categories" className="categories-section" aria-labelledby="categories-heading">
@@ -60,11 +65,11 @@ export default function HomePage() {
           <Container>
             <div className="section-heading">
               <div>
-                <span className="section-heading__eyebrow"><Icon name="sparkles" size={24} /> GÓC SẢN PHẨM</span>
+                <span className="section-heading__eyebrow"><span aria-hidden="true" className="featured-crown">♕</span> KHÁM PHÁ SẢN PHẨM</span>
                 <h2 id="featured-heading">Sản phẩm Futurebook</h2>
                 <p>Bố cục trưng bày mẫu; danh sách sản phẩm và giá thực tế sẽ được cập nhật sau khi xác minh.</p>
               </div>
-              <span className="section-heading__pending">Catalogue đang cập nhật</span>
+              <a className="section-heading__link" href="#categories">Xem danh mục <Icon name="arrow" size={17} /></a>
             </div>
             <div className="products-grid" aria-label="Các thẻ sản phẩm minh họa">
               {previewProducts.map((product) => (
@@ -73,7 +78,12 @@ export default function HomePage() {
                   <div className="product-card__image"><NotebookArt cover={product.cover} title="FUTUREBOOK" /></div>
                   <p className="product-card__group">{product.group}</p>
                   <h3>{product.title}</h3>
-                  <p className="product-card__pending">Chưa công bố sản phẩm và giá</p>
+                  <div className="product-card__bottom">
+                    <p className="product-card__pending">Chưa công bố giá</p>
+                    <button className="product-card__cart" type="button" disabled aria-label={`Giỏ hàng chưa mở cho ${product.title}`} title="Chưa mở đặt hàng">
+                      <Icon name="cart" size={17} />
+                    </button>
+                  </div>
                 </Card>
               ))}
             </div>
@@ -83,9 +93,10 @@ export default function HomePage() {
 
         <Container>
           <section className="benefits-section" aria-label="Các nhóm nội dung Futurebook">
-            <div><Icon name="book" size={29} /><span><strong>Tập vở học tập</strong><small>Khám phá danh mục</small></span></div>
-            <div><Icon name="pencil" size={29} /><span><strong>Sổ và văn phòng phẩm</strong><small>Đa dạng nhu cầu sử dụng</small></span></div>
-            <div><Icon name="heart" size={29} /><span><strong>Kết nối đại lý</strong><small>Thông tin đang cập nhật</small></span></div>
+            <div><Icon name="book" size={29} /><span><strong>Tập học sinh</strong><small>Khám phá danh mục</small></span></div>
+            <div><Icon name="pencil" size={29} /><span><strong>Sổ ghi chép</strong><small>Nhiều phong cách</small></span></div>
+            <div><Icon name="package" size={29} /><span><strong>Văn phòng phẩm</strong><small>Nhóm sản phẩm</small></span></div>
+            <div><Icon name="heart" size={29} /><span><strong>Kết nối đại lý</strong><small>Đang cập nhật</small></span></div>
           </section>
 
           <section id="about" className="about-banner" aria-labelledby="about-heading">

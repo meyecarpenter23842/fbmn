@@ -3,9 +3,11 @@ import Link from "next/link";
 
 export type IconName =
   | "menu" | "x" | "search" | "cart" | "user" | "arrow" | "chevron"
-  | "book" | "sparkles" | "pencil" | "shield" | "heart" | "package";
+  | "book" | "sparkles" | "pencil" | "shield" | "heart" | "package" | "home" | "down";
 
 const drawings: Record<IconName, ReactNode> = {
+  home: <><path d="M3 10.5 12 3l9 7.5M5 10v11h14V10M9 21v-7h6v7" /></>,
+  down: <><path d="m6 9 6 6 6-6" /></>,
   menu: <><path d="M4 6h16M4 12h16M4 18h16" /></>,
   x: <><path d="M18 6 6 18M6 6l12 12" /></>,
   search: <><circle cx="11" cy="11" r="7" /><path d="m20 20-4-4" /></>,

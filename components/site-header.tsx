@@ -33,7 +33,7 @@ export function SiteHeader() {
       <div className="announcement">
         <Container className="announcement__inner">
           <span>✦ Chào mừng bạn đến với Futurebook Miền Nam!</span>
-          <span>Website đang trong giai đoạn hoàn thiện</span>
+          <span className="announcement__contact">Catalogue và thông tin liên hệ đang cập nhật <span aria-hidden="true">✦</span></span>
         </Container>
       </div>
 
@@ -87,7 +87,9 @@ export function SiteHeader() {
                 onClick={() => setMenuOpen(false)}
                 aria-current={index === 0 ? "page" : undefined}
               >
+                {index === 0 ? <Icon name="home" size={15} /> : null}
                 {item.label}
+                {index === 2 ? <Icon name="down" size={14} /> : null}
               </Link>
             )
           )}
