@@ -1,0 +1,116 @@
+name: Deploy by comment (manual)
+
+on:
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: read
+  actions: read
+  issues: read
+  pull-requests: read
+
+concurrency:
+  group: fbmn-web-comment-deploy
+  cancel-in-progress: false
+
+jobs:
+  authorize:
+    name: Validate owner / PR / CI
+    if: >-
+      github.event.issue.pull_request != null &&
+      github.event.comment.user.login == github.repository_owner &&
+      (github.event.comment.body == '/deploy preview' || github.event.comment.body == '/deploy production')
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      sha: ${{ steps.auth.outputs.sha }}
+      target: ${{ steps.auth.outputs.target }}
+      pr_number: ${{ steps.auth.outputs.pr_number }}
+    steps:
+      - name: Checkout trusted workflow scripts from main
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: main
+          persist-credentials: false
+      - name: Validate request against GitHub API
+        id: auth
+        run: node scripts/authorize-deploy.mjs
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          REQUESTED_BY: ${{ github.event.comment.user.login }}
+          DEPLOY_COMMAND: ${{ github.event.comment.body }}
+
+  deploy:
+    name: Deploy approved commit
+    needs: authorize
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: ${{ needs.authorize.outputs.target }}
+    permissions:
+      contents: read
+    env:
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      VERCEL_ORG_ID: team_hUFtVIsg2fKzwGlfi2Lrw1du
+      VERCEL_PROJECT_ID: prj_PlxssxAIqvTWCgOzX2SAc81dRCGq
+      VERCEL_CLI_VERSION: '63.1.2'
+      NEXT_TELEMETRY_DISABLED: '1'
+    steps:
+      - name: Checkout authorized SHA
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: ${{ needs.authorize.outputs.sha }}
+          persist-credentials: false
+      - name: Setup Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '22'
+      - name: Ensure token is configured
+        run: |
+          test -n "$VERCEL_TOKEN" || { echo 'VERCEL_TOKEN secret missing'; exit 1; }
+      - name: Install pinned CLI
+        run: npm install -g "vercel@${VERCEL_CLI_VERSION}" --no-audit --no-fund
+      - name: Pull preview env
+        if: needs.authorize.outputs.target == 'preview'
+        run: vercel pull --yes --environment=preview
+      - name: Pull production env
+        if: needs.authorize.outputs.target == 'production'
+        run: vercel pull --yes --environment=production
+      - name: Build preview
+        if: needs.authorize.outputs.target == 'preview'
+        run: vercel build
+      - name: Build production
+        if: needs.authorize.outputs.target == 'production'
+        run: vercel build --prod
+      - name: Deploy preview
+        if: needs.authorize.outputs.target == 'preview'
+        id: preview
+        run: |
+          set -euo pipefail
+          url="$(vercel deploy --prebuilt)"
+          DEPLOY_URL="$url" node --input-type=module -e 'const u = new URL(process.env.DEPLOY_URL); if (u.protocol !== "https:" || !u.hostname.endsWith(".vercel.app")) process.exit(1)'
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+      - name: Stage production without attaching domain
+        if: needs.authorize.outputs.target == 'production'
+        id: prod
+        run: |
+          set -euo pipefail
+          url="$(vercel deploy --prebuilt --prod --skip-domain)"
+          DEPLOY_URL="$url" node --input-type=module -e 'const u = new URL(process.env.DEPLOY_URL); if (u.protocol !== "https:" || !u.hostname.endsWith(".vercel.app")) process.exit(1)'
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+      - name: Publish release summary
+        env:
+          SHA: ${{ needs.authorize.outputs.sha }}
+          TARGET: ${{ needs.authorize.outputs.target }}
+          PREVIEW_URL: ${{ steps.preview.outputs.url }}
+          PROD_URL: ${{ steps.prod.outputs.url }}
+        run: |
+          echo "### Manual website deployment" >> "$GITHUB_STEP_SUMMARY"
+          echo "Target: $TARGET" >> "$GITHUB_STEP_SUMMARY"
+          echo "Commit: $SHA" >> "$GITHUB_STEP_SUMMARY"
+          echo "Requester: $GITHUB_ACTOR" >> "$GITHUB_STEP_SUMMARY"
+          echo "URL: ${PREVIEW_URL:-$PROD_URL}" >> "$GITHUB_STEP_SUMMARY"
+          if [[ "$TARGET" == production ]]; then
+            echo "Status: STAGED ONLY, no production domain promotion." >> "$GITHUB_STEP_SUMMARY"
+          fi

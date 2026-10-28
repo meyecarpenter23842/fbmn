@@ -1,0 +1,13 @@
+:root { color-scheme: light; --ink: #28143d; --purple: #6625a0; --muted: #5e536b; }
+* { box-sizing: border-box; }
+html, body { margin: 0; min-height: 100%; }
+body { font-family: Arial, Helvetica, sans-serif; color: var(--ink); background: linear-gradient(135deg, #faf7ff, #e9ddfb); }
+.foundation { min-height: 100vh; display: flex; flex-direction: column; padding: 1.5rem clamp(1rem, 4vw, 4rem); }
+.brand { display: flex; align-items: center; gap: .75rem; color: var(--purple); font-size: .75rem; letter-spacing: .06em; font-weight: 700; }
+.brandMark { border: 2px solid var(--purple); border-radius: .5rem; padding: .45rem; font-weight: 900; font-size: 1rem; }
+.notice { width: min(100%, 700px); margin: auto; padding: clamp(1.75rem, 6vw, 4rem); border: 1px solid #e3d6f3; border-radius: 1.25rem; background: #fff; box-shadow: 0 20px 60px #37114c16; }
+.eyebrow { color: var(--purple); font-size: .75rem; letter-spacing: .08em; font-weight: bold; }
+h1 { margin: 1rem 0; font-size: clamp(2rem, 5vw, 3.75rem); line-height: 1.12; }
+p { color: var(--muted); line-height: 1.65; max-width: 55ch; }
+.status { display: inline-block; margin-top: 1rem; padding: .7rem 1rem; border-radius: 999px; color: #4b217d; background: #f2e9ff; font-size: .875rem; font-weight: 600; }
+footer { color: #6a6075; font-size: .75rem; text-align: center; }
