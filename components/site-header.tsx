@@ -6,25 +6,23 @@ import { Container, Icon } from "./ui";
 import { VerifiedMediaImage } from "./verified-media-image";
 import { approvedSiteMedia } from "@/lib/media/approved-site-media";
 
-const navigation = [
+const desktopNavigation = [
   { label: "Trang chủ", href: "#home" },
   { label: "Giới thiệu", href: "#about" },
   { label: "Sản phẩm", href: "#categories" },
-  { label: "Khuyến mãi", href: "", disabled: true },
+  { label: "Khuyến mãi", href: "#collections" },
+  { label: "Dành cho đại lý", href: "#agency" },
   { label: "Tin tức", href: "", disabled: true },
   { label: "Liên hệ", href: "#contact" },
 ] as const;
 
 function Brand() {
   return (
-    <Link href="/#home" className="brand-logo" aria-label="Futurebook Miền Nam — về trang chủ">
-      <span className="brand-logo__mark" aria-hidden="true">
-        <VerifiedMediaImage asset={approvedSiteMedia.brandLogo} fallback="FB" className="brand-logo__real" priority sizes="52px" />
+    <Link className="ref-brand" href="/#home" aria-label="Futurebook Miền Nam — Trang chủ">
+      <span className="ref-brand__emblem" aria-hidden="true">
+        <VerifiedMediaImage asset={approvedSiteMedia.brandLogo} fallback="FB" className="ref-brand__img" priority sizes="54px" />
       </span>
-      <span className="brand-logo__type">
-        <strong>FBMN</strong>
-        <small>FUTUREBOOK MIỀN NAM</small>
-      </span>
+      <span className="ref-brand__name"><strong>FBMN</strong><small>FUTUREBOOK MIỀN NAM</small></span>
     </Link>
   );
 }
@@ -36,96 +34,55 @@ export function SiteHeader() {
 
   useEffect(() => {
     if (!menuOpen && !searchOpen) return;
-    function onKeyDown(event: KeyboardEvent) {
+    const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         setMenuOpen(false);
         setSearchOpen(false);
         menuButton.current?.focus();
       }
-    }
+    };
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
   }, [menuOpen, searchOpen]);
 
   return (
-    <header className="site-header">
-      <div className="announcement">
-        <Container className="announcement__inner">
-          <span>✦ Chào mừng bạn đến với Futurebook Miền Nam!</span>
-          <span className="announcement__contact">Catalogue và thông tin liên hệ đang cập nhật <span aria-hidden="true">✦</span></span>
-        </Container>
-      </div>
-
-      <Container className="header-main">
-        <button
-          className="icon-button menu-toggle"
-          ref={menuButton}
-          type="button"
-          onClick={() => { setMenuOpen((open) => !open); setSearchOpen(false); }}
-          aria-expanded={menuOpen}
-          aria-controls="site-navigation"
-          aria-label={menuOpen ? "Đóng menu" : "Mở menu"}
-        >
-          <Icon name={menuOpen ? "x" : "menu"} size={24} />
-        </button>
+    <header className="ref-header">
+      <Container className="ref-header__inner">
         <Brand />
-
-        <div className="header-search" role="search" aria-label="Tìm kiếm sản phẩm">
-          <label className="sr-only" htmlFor="desktop-search">Tìm kiếm sản phẩm</label>
-          <input id="desktop-search" placeholder="Tìm tập vở, sổ tay, văn phòng phẩm..." disabled
-            title="Tìm kiếm sẽ triển khai trong giai đoạn catalogue" />
-          <button type="button" aria-label="Tìm kiếm — sắp ra mắt" disabled><Icon name="search" size={21} /></button>
+        <div className="ref-header__desktop-search" role="search" aria-label="Tìm kiếm sản phẩm">
+          <input type="search" aria-label="Tìm sản phẩm" placeholder="Tìm sản phẩm: vở A4, vở B5, sổ tay..." disabled title="Tìm kiếm chưa mở" />
+          <button type="button" disabled aria-label="Tìm kiếm chưa mở"><Icon name="search" size={22}/></button>
         </div>
-
-        <div className="header-actions">
-          <button className="header-account" type="button" disabled title="Tài khoản sẽ mở khi hoàn tất tích hợp">
-            <Icon name="user" size={25} />
-            <span><strong>Tài khoản</strong><small>Chưa mở đăng nhập</small></span>
-          </button>
-          <button className="header-cart" type="button" disabled title="Giỏ hàng chưa được triển khai">
-            <Icon name="cart" size={25} />
-            <span><strong>Giỏ hàng</strong><small>Chưa mở đặt hàng</small></span>
-          </button>
-          <button className="icon-button mobile-search" type="button"
-            aria-label={searchOpen ? "Đóng thông tin tìm kiếm" : "Mở thông tin tìm kiếm"}
-            aria-expanded={searchOpen} aria-controls="mobile-search-notice"
-            onClick={() => { setSearchOpen((open) => !open); setMenuOpen(false); }}>
-            <Icon name={searchOpen ? "x" : "search"} size={22} />
-          </button>
+        <div className="ref-header__right">
+          <div className="ref-header__contact"><small>Thông tin liên hệ</small><strong>Đang cập nhật</strong></div>
+          <button className="ref-header__desktop-action" type="button" disabled title="Tài khoản sẽ mở khi có phân quyền"><Icon name="user" size={24}/><span>Tài khoản</span></button>
+          <button className="ref-header__desktop-action" type="button" disabled title="Giỏ hàng chưa mở"><Icon name="cart" size={24}/><span>Giỏ hàng</span></button>
+          <button className="ref-header__mobile-icon" type="button"
+            aria-label={searchOpen ? "Đóng thông báo tìm kiếm" : "Mở thông báo tìm kiếm"}
+            aria-expanded={searchOpen} aria-controls="ref-mobile-search"
+            onClick={() => { setSearchOpen(!searchOpen); setMenuOpen(false); }}><Icon name="search" size={23}/></button>
+          <button className="ref-header__mobile-icon" type="button" disabled aria-label="Giỏ hàng chưa mở"><Icon name="cart" size={23}/></button>
+          <button className="ref-header__mobile-icon" type="button" ref={menuButton}
+            aria-label={menuOpen ? "Đóng danh mục điều hướng" : "Mở danh mục điều hướng"}
+            aria-expanded={menuOpen} aria-controls="site-navigation"
+            onClick={() => { setMenuOpen(!menuOpen); setSearchOpen(false); }}><Icon name={menuOpen ? "x" : "menu"} size={24}/></button>
         </div>
       </Container>
-
-      <div id="mobile-search-notice" className="mobile-search-notice" hidden={!searchOpen}>
-        <Container className="mobile-search-notice__inner">
-          <strong>Tìm kiếm sản phẩm đang được hoàn thiện.</strong>
-          <span>Trong thời gian này anh/chị có thể khám phá các nhóm tập vở, sổ và văn phòng phẩm.</span>
-          <a href="#categories" onClick={() => setSearchOpen(false)}>Xem danh mục sản phẩm</a>
-        </Container>
-      </div>
-
-      <nav id="site-navigation" className={["site-navigation", menuOpen ? "site-navigation--open" : ""].join(" ")}
-        aria-label="Điều hướng chính">
-        <Container className="site-navigation__inner">
-          {navigation.map((item, index) =>
-            "disabled" in item && item.disabled ? (
-              <span key={item.label} className="nav-item nav-item--disabled" aria-disabled="true"
-                title="Nội dung sắp được cập nhật">{item.label}</span>
-            ) : (
-              <Link
-                className={["nav-item", index === 0 ? "nav-item--active" : ""].filter(Boolean).join(" ")}
-                href={item.href}
-                key={item.label}
-                onClick={() => setMenuOpen(false)}
-                aria-current={index === 0 ? "page" : undefined}
-              >
-                {index === 0 ? <Icon name="home" size={15} /> : null}
-                {item.label}
-                {index === 2 ? <Icon name="down" size={14} /> : null}
-              </Link>
-            )
-          )}
+      <nav id="site-navigation" className={"ref-navigation" + (menuOpen ? " ref-navigation--open" : "")} aria-label="Điều hướng chính">
+        <Container className="ref-navigation__inner">
+          <Link className="ref-navigation__catalog" href="#categories" onClick={() => setMenuOpen(false)}><Icon name="menu" size={17}/> Danh mục sản phẩm <Icon name="down" size={15}/></Link>
+          {desktopNavigation.map(item => "disabled" in item && item.disabled ? (
+            <span className="ref-navigation__link ref-navigation__link--disabled" aria-disabled="true" key={item.label}>{item.label}</span>
+          ) : (
+            <Link className={"ref-navigation__link" + (item.href === "#home" ? " ref-navigation__link--active" : "")}
+              key={item.label} href={item.href} onClick={() => setMenuOpen(false)}
+              aria-current={item.href === "#home" ? "page" : undefined}>{item.label}</Link>
+          ))}
         </Container>
       </nav>
+      <div id="ref-mobile-search" className="ref-search-notice" hidden={!searchOpen} role="status">
+        <Container>Tìm kiếm sản phẩm đang được hoàn thiện. <Link href="#categories" onClick={() => setSearchOpen(false)}>Xem danh mục</Link></Container>
+      </div>
     </header>
   );
 }

@@ -1,7 +1,8 @@
 import { SiteHeader } from "@/components/site-header";
+import { MobileBottomNavigation } from "@/components/mobile-bottom-navigation";
 import { MobileCarousel } from "@/components/mobile-carousel";
 import { NotebookArt, StationeryArt } from "@/components/notebook-art";
-import { Badge, ButtonLink, Card, Container, Icon, Pill } from "@/components/ui";
+import { Card, Container, Icon } from "@/components/ui";
 import { categories, previewProducts } from "@/lib/ui-preview";
 import { VerifiedMediaImage } from "@/components/verified-media-image";
 import { approvedSiteMedia } from "@/lib/media/approved-site-media";
@@ -10,127 +11,106 @@ export default function HomePage() {
   return (
     <>
       <SiteHeader />
-      <main id="home" className="site-main">
-        <Container>
-          <section className="hero" aria-labelledby="hero-heading">
-            <div className="hero__decor hero__decor--sun" aria-hidden="true">☼</div>
-            <div className="hero__copy">
-              <Pill>GIAO DIỆN MẪU · ĐANG HOÀN THIỆN</Pill>
-              <p className="hero__lead">Cùng <span>Futurebook</span></p>
-              <h1 id="hero-heading">Bước vào năm học mới</h1>
-              <p className="hero__subtitle">Tập vở · Sổ ghi chép · Văn phòng phẩm</p>
-              <p className="hero__support">Không gian giới thiệu sản phẩm Futurebook Miền Nam đang được xây dựng theo mẫu thiết kế đã duyệt.</p>
-              <ButtonLink href="#categories">Khám phá danh mục <Icon name="arrow" size={18} /></ButtonLink>
-            </div>
-            <div className="hero__visual" aria-label="Minh họa bố cục tập vở Futurebook">
-              <span className="hero__halo" aria-hidden="true" />
-              <VerifiedMediaImage
-                asset={approvedSiteMedia.heroBanner}
-                priority
-                className="hero__verified-image"
-                sizes="(max-width: 800px) 100vw, 50vw"
-                fallback={(
-              <div className="hero__stack" aria-hidden="true">
-                <NotebookArt cover="sky" className="hero__book hero__book--back" title="NOTEBOOK" />
-                <NotebookArt cover="rose" className="hero__book hero__book--middle" title="HAPPINESS" />
-                <NotebookArt cover="lime" className="hero__book hero__book--front" title="FUTURE" />
-                <NotebookArt cover="kraft" className="hero__book hero__book--right" title="SO COOL" />
-                <StationeryArt />
+      <main className="ref-site" id="home">
+        <section className="ref-hero" aria-labelledby="hero-heading">
+          <Container className="ref-hero__inner">
+            <div className="ref-hero__copy">
+              <p className="ref-hero__eyebrow">FUTUREBOOK MIỀN NAM</p>
+              <h1 id="hero-heading">VỞ VIẾT<br/>FUTUREBOOK<br/>MIỀN NAM</h1>
+              <p className="ref-hero__brush">Đồng hành cùng tri thức<br/><span>Kiến tạo tương lai</span></p>
+              <div className="ref-hero__benefits">
+                <span><Icon name="shield" size={27}/> Thông tin<br/>rõ ràng</span>
+                <span><Icon name="book" size={27}/> Mẫu mã<br/>đa dạng</span>
+                <span><Icon name="package" size={27}/> Dành cho<br/>đại lý</span>
               </div>
+              <a className="ref-cta" href="#categories">Xem sản phẩm <Icon name="arrow" size={19}/></a>
+            </div>
+            <div className="ref-hero__visual" aria-label="Bố cục minh họa tập vở Futurebook">
+              <div className="ref-hero__rays" aria-hidden="true" />
+              <VerifiedMediaImage asset={approvedSiteMedia.heroBanner} priority
+                className="ref-hero__official-image"
+                sizes="(max-width: 800px) 100vw, 55vw"
+                fallback={(
+                  <div className="ref-hero__books" aria-hidden="true">
+                    <NotebookArt cover="kraft" className="ref-hero__book ref-hero__book--one" title="SO COOL"/>
+                    <NotebookArt cover="dark" className="ref-hero__book ref-hero__book--two" title="FUTURE"/>
+                    <NotebookArt cover="sky" className="ref-hero__book ref-hero__book--three" title="NOTEBOOK"/>
+                    <NotebookArt cover="rose" className="ref-hero__book ref-hero__book--four" title="HAPPINESS"/>
+                    <NotebookArt cover="violet" className="ref-hero__book ref-hero__book--five" title="FUTUREBOOK"/>
+                  </div>
                 )}
               />
-              <span className="hero__bubble">Học mỗi ngày<br />Khám phá điều hay!</span>
+              <p className="ref-hero__handwriting" aria-hidden="true">Vở đẹp<br/>cho hành trình<br/>tri thức!</p>
+              <div className="ref-hero__dots" aria-hidden="true"><i/><i/><i/><i/></div>
             </div>
-            <div className="hero__features" aria-label="Khám phá nội dung Futurebook">
-              <div><Icon name="book" size={28} /><span><strong>Danh mục học tập</strong><small>Tập, vở và sổ ghi chép</small></span></div>
-              <div><Icon name="pencil" size={28} /><span><strong>Sản phẩm văn phòng</strong><small>Khám phá các nhóm hàng</small></span></div>
-              <div><Icon name="shield" size={28} /><span><strong>Catalogue chính thức</strong><small>Thông tin đang cập nhật</small></span></div>
-            </div>
-          </section>
-
-          <section id="categories" className="categories-section" aria-labelledby="categories-heading">
-            <div className="section-intro section-intro--compact">
-              <h2 id="categories-heading" className="sr-only">Danh mục sản phẩm</h2>
-              <p>Khám phá danh mục Futurebook</p>
-            </div>
-            <div className="categories-grid">
-              {categories.map((category) => (
-                <Card key={category.title} className="category-card">
-                  <div className="category-card__copy">
-                    <h3>{category.title}</h3>
-                    <p>{category.note}</p>
-                    <span className="circle-arrow" aria-hidden="true"><Icon name="arrow" size={17} /></span>
-                  </div>
-                  <div className="category-card__illustration">
-                    {category.kind === "stationery" ? <StationeryArt /> : (
-                      <NotebookArt cover={category.kind} title="FUTUREBOOK" />
-                    )}
-                  </div>
-                </Card>
-              ))}
-            </div>
-          </section>
-        </Container>
-
-        <section id="collections" className="featured-section" aria-labelledby="featured-heading">
-          <Container>
-            <div className="section-heading">
-              <div>
-                <span className="section-heading__eyebrow"><span aria-hidden="true" className="featured-crown">♕</span> KHÁM PHÁ SẢN PHẨM</span>
-                <h2 id="featured-heading">Sản phẩm Futurebook</h2>
-                <p>Bố cục trưng bày mẫu; danh sách sản phẩm và giá thực tế sẽ được cập nhật sau khi xác minh.</p>
-              </div>
-              <a className="section-heading__link" href="#categories">Xem danh mục <Icon name="arrow" size={17} /></a>
-            </div>
-            <MobileCarousel itemCount={previewProducts.length}>
-              {previewProducts.map((product) => (
-                <Card key={product.title} className="product-card">
-                  <Badge>MẪU UI</Badge>
-                  <div className="product-card__image"><NotebookArt cover={product.cover} title="FUTUREBOOK" /></div>
-                  <p className="product-card__group">{product.group}</p>
-                  <h3>{product.title}</h3>
-                  <div className="product-card__bottom">
-                    <p className="product-card__pending">Chưa công bố giá</p>
-                    <button className="product-card__cart" type="button" disabled aria-label={`Giỏ hàng chưa mở cho ${product.title}`} title="Chưa mở đặt hàng">
-                      <Icon name="cart" size={17} />
-                    </button>
-                  </div>
-                </Card>
-              ))}
-            </MobileCarousel>
-            <p className="preview-note">* Các hình minh họa trên là thành phần dựng giao diện, không đại diện cho mã hàng hoặc giá bán hiện hành.</p>
           </Container>
         </section>
 
         <Container>
-          <section className="benefits-section" aria-label="Các nhóm nội dung Futurebook">
-            <div><Icon name="book" size={29} /><span><strong>Tập học sinh</strong><small>Khám phá danh mục</small></span></div>
-            <div><Icon name="pencil" size={29} /><span><strong>Sổ ghi chép</strong><small>Nhiều phong cách</small></span></div>
-            <div><Icon name="package" size={29} /><span><strong>Văn phòng phẩm</strong><small>Nhóm sản phẩm</small></span></div>
-            <div><Icon name="heart" size={29} /><span><strong>Kết nối đại lý</strong><small>Đang cập nhật</small></span></div>
+          <section id="categories" className="ref-categories" aria-label="Danh mục Futurebook">
+            <div className="ref-category-strip">
+              {categories.map(category => (
+                <a href="#collections" className="ref-category" key={category.title}
+                  aria-label={category.title + " — xem khu giới thiệu sản phẩm"}>
+                  <div className="ref-category__image">
+                    {category.kind === "stationery" ? <StationeryArt/> : <NotebookArt cover={category.kind} title="FBMN"/>}
+                  </div>
+                  <div className="ref-category__copy"><strong>{category.title}</strong><small>{category.note}</small></div>
+                </a>
+              ))}
+            </div>
           </section>
 
-          <section id="about" className="about-banner" aria-labelledby="about-heading">
-            <div className="about-banner__sparkle" aria-hidden="true">✦</div>
-            <div>
-              <p className="about-banner__eyebrow">FUTUREBOOK MIỀN NAM</p>
-              <h2 id="about-heading">Cùng bạn trên hành trình học tập</h2>
-              <p>Chúng tôi đang hoàn thiện website giới thiệu sản phẩm, hình ảnh và thông tin dành cho khách hàng, đại lý.</p>
+          <section id="collections" className="ref-featured" aria-labelledby="featured-heading">
+            <div className="ref-featured__intro" id="about">
+              <span className="ref-featured__crown" aria-hidden="true">♛</span>
+              <h2 id="featured-heading">Sản phẩm nổi bật</h2>
+              <p>Các mẫu được minh họa theo bố cục thiết kế. Sản phẩm và thông số chính thức đang cập nhật.</p>
+              <a className="ref-cta ref-cta--small" href="#categories">Xem danh mục <Icon name="arrow" size={17}/></a>
             </div>
-            <div className="about-banner__panel">
-              <Icon name="package" size={28} />
-              <strong>Catalogue sản phẩm</strong>
-              <span>Sẽ được cập nhật từ dữ liệu chính thức.</span>
+            <MobileCarousel itemCount={previewProducts.length}>
+              {previewProducts.map(product => (
+                <Card className="ref-product-card" key={product.title}>
+                  <span className="ref-demo-badge">MẪU GIAO DIỆN</span>
+                  <div className="ref-product-card__image"><NotebookArt cover={product.cover} title="FUTUREBOOK"/></div>
+                  <div className="ref-product-card__copy">
+                    <h3>{product.title}</h3>
+                    <p>{product.group}</p>
+                    <strong>Liên hệ báo giá</strong>
+                    <div className="ref-product-card__actions">
+                      <button type="button" disabled title="Giỏ hàng chưa mở" aria-label={"Chưa mở giỏ hàng cho " + product.title}><Icon name="cart" size={17}/></button>
+                      <a href="#contact">Xem thông tin</a>
+                    </div>
+                  </div>
+                </Card>
+              ))}
+            </MobileCarousel>
+          </section>
+          <p className="ref-preview-note">* Hình tập vở, thẻ sản phẩm và thứ tự hiển thị chỉ là mẫu UI, không phải catalogue, bảng giá hoặc sản phẩm bán chạy đã xác minh.</p>
+
+          <section className="ref-promos" aria-label="Khám phá nhóm sản phẩm">
+            <div className="ref-promo ref-promo--a4">
+              <div><h2>Vở A4</h2><p>Không gian học tập và làm việc</p><a href="#categories">Xem danh mục <Icon name="arrow" size={16}/></a></div>
+              <div className="ref-promo__art" aria-hidden="true"><NotebookArt cover="rose" title="A4"/><NotebookArt cover="sky" title="FBMN"/></div>
             </div>
+            <div className="ref-promo ref-promo--b5">
+              <div><h2>Vở B5</h2><p>Nhỏ gọn · Tiện lợi</p><a href="#categories">Xem danh mục <Icon name="arrow" size={16}/></a></div>
+              <div className="ref-promo__art" aria-hidden="true"><NotebookArt cover="kraft" title="B5"/><NotebookArt cover="lime" title="FBMN"/></div>
+            </div>
+          </section>
+
+          <section className="ref-trust" id="agency" aria-label="Thông tin hỗ trợ khách hàng và đại lý">
+            <div><Icon name="package" size={28}/><span><strong>Danh mục sản phẩm</strong><small>Đang được xác minh</small></span></div>
+            <div><Icon name="shield" size={28}/><span><strong>Thông tin rõ ràng</strong><small>Nguồn catalogue chính thức</small></span></div>
+            <div><Icon name="book" size={28}/><span><strong>Hỗ trợ đại lý</strong><small>Chính sách đang cập nhật</small></span></div>
+            <div><Icon name="heart" size={28}/><span><strong>Kết nối Futurebook</strong><small>Thông tin liên hệ sắp có</small></span></div>
           </section>
         </Container>
       </main>
-      <footer className="site-footer" id="contact">
-        <Container className="site-footer__inner">
-          <strong>FBMN · FUTUREBOOK MIỀN NAM</strong>
-          <span>Website đang xây dựng · Chưa mở đặt hàng trực tuyến</span>
-        </Container>
+      <footer className="ref-footer" id="contact">
+        <Container><strong>FUTUREBOOK MIỀN NAM</strong><span>Website giới thiệu · Catalogue và thông tin liên hệ đang cập nhật</span></Container>
       </footer>
+      <MobileBottomNavigation />
     </>
   );
 }

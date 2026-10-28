@@ -97,13 +97,13 @@ test("website uses verified media with legacy design fallback on both devices", 
   const read = file => readFileSync(new URL("../" + file, import.meta.url), "utf8");
   const header = read("components/site-header.tsx");
   const home = read("app/page.tsx");
-  const styles = read("app/globals.css");
+  const styles = read("app/rebaseline.css");
   const component = read("components/verified-media-image.tsx");
   assert.match(header, /VerifiedMediaImage/);
   assert.match(home, /asset=\{approvedSiteMedia.heroBanner\}/);
   assert.match(home, /NotebookArt cover="sky"/);
   assert.match(header, /fallback="FB"/);
-  assert.match(styles, /@media \(max-width: 800px\)[\s\S]*?\.hero__verified-image/);
+  assert.match(styles, /\.ref-hero__official-image/);
   assert.match(component, /onError/);
   assert.match(component, /unoptimized/);
   assert.doesNotMatch(header + home, /R2_SECRET|R2_ACCESS_KEY|DATABASE_URL/);

@@ -1,40 +1,50 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-const get = path => readFileSync(new URL("../" + path, import.meta.url), "utf8");
+const read = path => readFileSync(new URL("../" + path, import.meta.url), "utf8");
 
-test("mobile web has header menu and NO fixed/native bottom bar", () => {
-  const css = get("app/mobile.css").replace(/\/\*[\s\S]*?\*\//g, "");
-  const header = get("components/site-header.tsx");
-  assert.match(css, /@media \(max-width: 800px\)/);
-  assert.match(css, /grid-template-columns: 82px minmax\(0, 1fr\) 82px/);
-  assert.match(header, /aria-expanded=\{menuOpen\}/);
-  assert.match(header, /aria-controls="site-navigation"/);
-  assert.doesNotMatch(css, /position\s*:\s*(fixed|sticky)\b/i);
-  assert.doesNotMatch(css, /bottom-nav|tab-bar|fixed-dock|floating-cart/i);
+test("new explicit mobile reference shows a four-item fixed bottom navigation", () => {
+  const nav = read("components/mobile-bottom-navigation.tsx");
+  const css = read("app/rebaseline.css");
+  const page = read("app/page.tsx");
+  for (const label of ["Trang chủ", "Danh mục", "Giỏ hàng", "Tài khoản"]) {
+    assert.ok(nav.includes(label), "Missing mobile tab: " + label);
+  }
+  assert.match(page, /<MobileBottomNavigation/);
+  assert.match(css, /\.ref-bottom-nav \{ position: fixed/);
+  assert.match(css, /env\(safe-area-inset-bottom/);
+  assert.match(css, /\.ref-footer \{ padding: 16px 0 96px; \}/);
+  assert.match(nav, /href="#home"/);
+  assert.match(nav, /href="#categories"/);
+  assert.match(nav, /disabled aria-label="Giỏ hàng chưa mở"/);
+  assert.match(nav, /disabled aria-label="Tài khoản chưa mở"/);
 });
 
-test("mobile product carousel has accessible buttons and pagination", () => {
-  const carousel = get("components/mobile-carousel.tsx");
-  const page = get("app/page.tsx");
-  assert.match(page, /<MobileCarousel itemCount=\{previewProducts.length\}>/);
+test("mobile header hamburger and search notices are accessible", () => {
+  const header = read("components/site-header.tsx");
+  const css = read("app/rebaseline.css");
+  assert.match(header, /aria-expanded=\{menuOpen\}/);
+  assert.match(header, /aria-controls="site-navigation"/);
+  assert.match(header, /aria-controls="ref-mobile-search"/);
+  assert.match(header, /event\.key === "Escape"/);
+  assert.match(css, /\.ref-navigation--open \{ display: block; \}/);
+  assert.match(css, /\.ref-header__mobile-icon \{ display: grid; place-items: center; \}/);
+});
+
+test("category rail and products are swipeable, preserving carousel controls", () => {
+  const css = read("app/rebaseline.css");
+  const carousel = read("components/mobile-carousel.tsx");
+  assert.match(css, /\.ref-category-strip \{ display: flex; overflow-x: auto/);
+  assert.match(css, /\.ref-featured \.products-grid \{ display: grid; grid-auto-columns:/);
+  assert.match(css, /scroll-snap-type: x mandatory/);
   assert.match(carousel, /aria-roledescription="carousel"/);
   assert.match(carousel, /aria-label="Trang sản phẩm trước"/);
   assert.match(carousel, /aria-label="Trang sản phẩm tiếp theo"/);
-  assert.match(carousel, /aria-current=/);
-  assert.match(carousel, /scrollTo\(/);
 });
 
-test("mobile search never pretends a backend search or checkout is operational", () => {
-  const header = get("components/site-header.tsx");
+test("mobile buttons are not enabled without order/auth backend", () => {
+  const nav = read("components/mobile-bottom-navigation.tsx");
+  const header = read("components/site-header.tsx");
+  assert.doesNotMatch(nav, /checkout|login|order\/create/i);
   assert.match(header, /Tìm kiếm sản phẩm đang được hoàn thiện/);
-  assert.match(header, /className="header-cart" type="button" disabled/);
-});
-
-test("mobile shows content trust strip in document flow, not a dock", () => {
-  const page = get("app/page.tsx");
-  const css = get("app/mobile.css");
-  assert.match(page, /className="benefits-section"/);
-  assert.match(css, /\.benefits-section \{/);
-  assert.match(css, /grid-template-columns: repeat\(3, minmax\(0, 1fr\)\)/);
 });

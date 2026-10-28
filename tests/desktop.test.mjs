@@ -1,43 +1,46 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
+const read = file => readFileSync(new URL("../" + file, import.meta.url), "utf8");
 
-const read = (filename) => readFileSync(new URL("../" + filename, import.meta.url), "utf8");
-
-test("desktop reference sections exist in the approved order", () => {
+test("rebaselined desktop sections follow the new approved screenshot", () => {
   const page = read("app/page.tsx");
-  const names = ['className="hero"', 'className="hero__features"', 'className="categories-grid"',
-    'className="featured-section"', '<MobileCarousel itemCount={previewProducts.length}>', 'className="benefits-section"',
-    'className="about-banner"'];
-  assert.match(read("components/mobile-carousel.tsx"), /className="products-grid"/);
-  const offsets = names.map((name) => page.indexOf(name));
-  assert.ok(offsets.every((n) => n >= 0), "Missing desktop reference section");
-  assert.deepEqual([...offsets].sort((a, b) => a - b), offsets, "Sections out of order");
+  const order = ["ref-hero", "ref-categories", "ref-featured", "ref-promos", "ref-trust", "ref-footer"];
+  const offsets = order.map(s => page.indexOf(s));
+  assert.ok(offsets.every(n => n >= 0), "Missing required desktop section");
+  assert.deepEqual([...offsets].sort((a,b) => a-b), offsets);
+  assert.match(page, /VỞ VIẾT/);
+  assert.match(page, /FUTUREBOOK/);
+  assert.match(page, /Vở A4/);
+  assert.match(page, /Vở B5/);
 });
 
-test("desktop visual overrides are limited to desktop and do not add bottom nav", () => {
-  const css = read("app/desktop.css").replace(/\/\*[\s\S]*?\*\//g, "");
-  assert.match(css, /@media \(min-width: 801px\)/);
-  assert.match(css, /\.hero__features/);
-  assert.match(css, /\.categories-grid/);
-  assert.match(css, /\.products-grid/);
-  assert.doesNotMatch(css, /position\s*:\s*fixed|bottom-navigation|bottom-dock|bottom-tabs/i);
-});
-
-test("desktop search/cart remain non-operational until backend and catalogue review", () => {
+test("new desktop nav has catalogue selector and approved purple theme", () => {
   const header = read("components/site-header.tsx");
-  const page = read("app/page.tsx");
-  assert.match(header, /id="desktop-search"[\s\S]*?disabled/);
-  assert.match(header, /className="header-cart"[\s\S]*?disabled/);
-  assert.match(page, /className="product-card__cart"[\s\S]*?disabled/);
-  assert.doesNotMatch(page, /14\.500|25\.000|10\.000\+|0901\.567\.789/);
+  const css = read("app/rebaseline.css");
+  assert.match(header, /ref-navigation__catalog/);
+  assert.match(header, /Khuyến mãi/);
+  assert.match(header, /Dành cho đại lý/);
+  assert.match(css, /\.ref-navigation \{ background: linear-gradient/);
+  assert.match(css, /@media \(max-width: 800px\)/);
+  assert.match(css, /\.ref-bottom-nav \{ display: none; \}/);
 });
 
-test("desktop control links are meaningful in-page anchors", () => {
-  const page = read("app/page.tsx");
+test("mockup phone, price, code and popularity labels are not offered as true data", () => {
+  const source = read("app/page.tsx") + read("lib/ui-preview.ts") + read("components/site-header.tsx");
+  assert.doesNotMatch(source, /19\.500|28\.500|14\.500|32\.500|M483|M494|M885|M439|0901\.567\.890/);
+  assert.doesNotMatch(source, />Bán chạy<|>Mới Mở<|>Sản phẩm chính hãng</);
+  assert.match(source, /MẪU UI|MẪU GIAO DIỆN/);
+  assert.match(source, /Liên hệ báo giá/);
+  assert.match(source, /đang cập nhật|đang hoàn thiện/i);
+});
+
+test("unsupported search, cart and account actions remain disabled", () => {
   const header = read("components/site-header.tsx");
-  assert.match(page, /href="#categories"/);
-  assert.match(page, /id="categories"/);
-  assert.match(header, /aria-current/);
-  assert.match(header, /aria-expanded=\{menuOpen\}/);
+  const home = read("app/page.tsx");
+  assert.match(header, /type="search"[^>]*disabled/);
+  assert.match(header, /type="button" disabled title="Giỏ hàng chưa mở"/);
+  assert.match(home, /type="button" disabled title="Giỏ hàng chưa mở"/);
+  assert.match(home, /href="#categories"/);
+  assert.match(home, /id="categories"/);
 });

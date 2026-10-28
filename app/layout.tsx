@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import "./globals.css";
 import "./desktop.css";
 import "./mobile.css";
+import "./rebaseline.css";
 
 export const metadata: Metadata = {
   title: "Futurebook Miền Nam",

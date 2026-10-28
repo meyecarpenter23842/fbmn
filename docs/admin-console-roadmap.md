@@ -2,7 +2,7 @@
 
 ## Quyết định kiến trúc
 
-Ưu tiên **Web Admin riêng**, bảo vệ bằng Neon Auth + Cloudflare Workers API; khi cần desktop triển khai Tauri wrapper dùng cùng API, không copy database về máy. Không thực hiện app quản trị trong PR04. Website responsive vẫn không có bottom-tabs/sticky-cart Native.
+Ưu tiên **Web Admin riêng**, bảo vệ bằng Neon Auth + Cloudflare Workers API; khi cần desktop triển khai Tauri wrapper dùng cùng API, không copy database về máy. Không thực hiện app quản trị trong PR04. Theo ảnh UI chuẩn mới 28/10/2026, website mobile có thanh điều hướng dưới cùng 4 mục; đây không thay đổi kiến trúc dùng chung API và không tự mở cart/checkout.
 
                    [Web Admin]     [Tauri Desktop sau này]
                            \         /

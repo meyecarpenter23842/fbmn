@@ -36,7 +36,7 @@ Current PR adds vetted key/approval/origin validation and VerifiedMediaImage wit
 - Cross-origin img does not need admin-upload CORS. Future signed browser PUT requires narrowly scoped CORS origins, methods and headers.
 - Keep original file private; publish server-generated thumb/mobile/desktop derivatives after review. Actual responsive derivatives and image compression are pending real images and upload processing.
 - Logo fallback is FB text; hero fallback remains existing notebook illustration. Verified assets carry intrinsic pixel width/height and responsive sizes; network errors also fall back.
-- No bottom native tabs, dock or sticky cart are added.
+- Historical PR05 note superseded: the new 28/10/2026 UI reference explicitly requires a **4-item fixed mobile bottom navigation**; the R2 media pipeline remains unchanged.
 
 ## Acceptance gates
 
