@@ -23,7 +23,7 @@ test("new desktop nav has catalogue selector and approved purple theme", () => {
   assert.match(header, /Dành cho đại lý/);
   assert.match(css, /\.ref-navigation \{ background: linear-gradient/);
   assert.match(css, /@media \(max-width: 800px\)/);
-  assert.match(css, /\.ref-bottom-nav \{ display: none; \}/);
+  assert.doesNotMatch(css, /ref-bottom-nav|position:\s*fixed/);
 });
 
 test("mockup phone, price, code and popularity labels are not offered as true data", () => {

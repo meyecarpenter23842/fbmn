@@ -6,7 +6,7 @@ const get = path => readFileSync(new URL("../" + path, import.meta.url), "utf8")
 test("homepage uses the corrected desktop/mobile reference", () => {
   const page = get("app/page.tsx");
   assert.match(page, /SiteHeader/);
-  assert.match(page, /MobileBottomNavigation/);
+  assert.doesNotMatch(page, /MobileBottomNavigation|ref-bottom-nav/);
   assert.match(page, /ref-category-strip/);
   assert.match(page, /ref-featured/);
   assert.match(page, /MobileCarousel/);
@@ -20,16 +20,14 @@ test("mockup prices and unverified contacts never enter the public homepage", ()
 
 test("site does not contain database or storage secrets in client source", () => {
   const source = get("app/page.tsx") + get("app/layout.tsx") +
-    get("components/site-header.tsx") + get("components/mobile-bottom-navigation.tsx");
+    get("components/site-header.tsx");
   assert.doesNotMatch(source, /DATABASE_URL|NEON_API_KEY|R2_SECRET|VERCEL_TOKEN/);
 });
 
-test("new mobile bottom tab overrides earlier design decision", () => {
-  const nav = get("components/mobile-bottom-navigation.tsx");
+test("mobile website never injects native bottom tabs", () => {
+  const home = get("app/page.tsx");
   const css = get("app/rebaseline.css");
-  assert.match(nav, /aria-label="Điều hướng dưới cùng trên điện thoại"/);
-  assert.match(css, /\.ref-bottom-nav \{ position: fixed/);
-  assert.match(css, /\.ref-bottom-nav \{ display: none; \}/);
+  assert.doesNotMatch(home + css, /MobileBottomNavigation|ref-bottom-nav/);
 });
 
 test("design tokens and baseline widths remain documented", () => {

@@ -1,5 +1,4 @@
 import { SiteHeader } from "@/components/site-header";
-import { MobileBottomNavigation } from "@/components/mobile-bottom-navigation";
 import { MobileCarousel } from "@/components/mobile-carousel";
 import { NotebookArt, StationeryArt } from "@/components/notebook-art";
 import { Card, Container, Icon } from "@/components/ui";
@@ -110,7 +109,6 @@ export default function HomePage() {
       <footer className="ref-footer" id="contact">
         <Container><strong>FUTUREBOOK MIỀN NAM</strong><span>Website giới thiệu · Catalogue và thông tin liên hệ đang cập nhật</span></Container>
       </footer>
-      <MobileBottomNavigation />
     </>
   );
 }

@@ -5,7 +5,7 @@
 Chủ dự án xác nhận ảnh tổng hợp **desktop (laptop) + mobile (điện thoại)** gửi mới ngày 28/10/2026 là mẫu tham chiếu mới, THAY THẾ mẫu dùng cho WEB PR01–03. Bản tham chiếu người dùng: 1448×1086 JPEG, SHA-256:
 afe6e39d6e7cd9b99bc7ff245c914cd96c8acf27cbf287f607ba60031bd43c68
 
-**Quan trọng:** mẫu mới CÓ bottom navigation trên mobile (Trang chủ / Danh mục / Giỏ hàng / Tài khoản). Quy tắc cũ “không bottom nav” hết hiệu lực. Đây vẫn là website responsive, không biến thành Native App.
+**Quyết định cuối cùng sau khi kiểm tra staging trên iPhone (28/10/2026): website mobile KHÔNG có bottom navigation.** Ảnh composite có dock bốn mục, nhưng chủ dự án yêu cầu loại bỏ. Giữ logo, search, cart và hamburger ở header; đây vẫn là website responsive.
 
 ## Bố cục được duyệt theo ảnh mới
 
@@ -22,7 +22,7 @@ afe6e39d6e7cd9b99bc7ff245c914cd96c8acf27cbf287f607ba60031bd43c68
 2. Hero xếp dọc: headline/vệt cọ/icon phía trên, cụm hình bên dưới; không gây overflow.
 3. Category rail ngang hiển thị khoảng 4 ô mỗi khung, cuộn ngang để xem còn lại.
 4. Tiêu đề Sản phẩm nổi bật và 2 product cards mỗi trang, kéo ngang; banner A4/B5 cuộn ngang.
-5. **Thanh bottom nav cố định 4 mục**, có safe-area inset, nội dung được chừa đệm tránh che footer. Giỏ hàng/tài khoản hiện disabled cho đến khi có backend.
+5. Không có bottom nav/dock hoặc sticky cart. Footer cuộn bình thường; cart/account chưa mở cho đến khi backend được duyệt.
 
 ## Dữ liệu không được sao chép từ thiết kế
 
@@ -32,8 +32,8 @@ Các SKU M483/M494/M885/M439, giá 19.500đ/28.500đ/14.500đ/32.500đ, hotline 
 
 - Không tách ảnh SKU từ screenshot để dùng làm ảnh sản phẩm. Await owner-approved logo, hero banner, ảnh sản phẩm từng SKU; PR05 approved-only R2 pipeline giữ nguyên, fallback CSS cho tới khi có asset.
 - Không bật search, account, cart, checkout chưa nối API/Phân quyền.
-- Test tại 360px, 390px, 768px, 1280px, 1440px: không có scroll ngang bất thường, panel/CTA tương đối đúng ảnh, bottom nav không che nội dung, keyboard focus và ESC mobile menu.
-- File giao diện: app/page.tsx, components/site-header.tsx, components/mobile-bottom-navigation.tsx, app/rebaseline.css; CSS trước đây giữ lại phục vụ artwork được thay dần.
+- Test tại 360px, 390px, 768px, 1280px, 1440px: không có scroll ngang bất thường, panel/CTA tương đối đúng ảnh, không có bottom nav/dock, keyboard focus và ESC mobile menu.
+- File giao diện: app/page.tsx, components/site-header.tsx, app/rebaseline.css; CSS trước đây giữ lại phục vụ artwork được thay dần.
 - Chưa nghiệm thu pixel-perfect trên thiết bị thật hoặc ảnh R2 chính thức. Không deploy Vercel khi chưa có lệnh.
 
 ## Thiết kế tokens (giữ nhận diện Futurebook)
@@ -46,3 +46,11 @@ Các SKU M483/M494/M885/M439, giá 19.500đ/28.500đ/14.500đ/32.500đ, hotline 
 | Background lavender | --color-lavender: #eee6ff |
 | Card radius | --radius-card: 14px |
 | Container | --content-width: 1200px |
+
+
+## Nguồn ảnh danh mục và SKU (không cài chết)
+
+- Hiện tại: các thumbnail chỉ là minh họa CSS lấy từ lib/ui-preview.ts; chưa có ảnh thực. Đổi kích thước bìa CSS để không còn các card trống ở mobile.
+- Sau CMS: mỗi category.id tham chiếu thumbnailMediaId và sortOrder; mỗi product/variant tham chiếu coverMediaId + album, metadata/approval lưu Neon, bytes lưu Cloudflare R2.
+- Web Admin tạo/chọn/duyệt ảnh; Workers API chỉ trả URL CDN đã duyệt. Website và Native App cùng đọc API, không cần deploy khi anh thay ảnh hoặc sắp xếp danh mục.
+- Thiếu/ảnh lỗi: fallback an toàn với alt/placeholder; không tạo SKU hoặc claims từ mockup.

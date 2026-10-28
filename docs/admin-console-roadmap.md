@@ -2,7 +2,7 @@
 
 ## Quyết định kiến trúc
 
-Ưu tiên **Web Admin riêng**, bảo vệ bằng Neon Auth + Cloudflare Workers API; khi cần desktop triển khai Tauri wrapper dùng cùng API, không copy database về máy. Không thực hiện app quản trị trong PR04. Theo ảnh UI chuẩn mới 28/10/2026, website mobile có thanh điều hướng dưới cùng 4 mục; đây không thay đổi kiến trúc dùng chung API và không tự mở cart/checkout.
+Ưu tiên **Web Admin riêng**, bảo vệ bằng Neon Auth + Cloudflare Workers API; khi cần desktop triển khai Tauri wrapper dùng cùng API, không copy database về máy. Không thực hiện app quản trị trong PR04. Theo kiểm tra staging thực tế trên iPhone ngày 28/10/2026, website mobile không có bottom navigation; điều này không thay đổi kiến trúc dùng chung API hay làm hoạt động cart/checkout.
 
                    [Web Admin]     [Tauri Desktop sau này]
                            \         /
@@ -23,7 +23,7 @@ Bắt buộc **một nguồn dữ liệu sản phẩm**, nhưng tách private pr
 
 | Chức năng | Vai trò / điều kiện |
 |---|---|
-| Danh mục & sản phẩm | Editor tạo/sửa nháp, SKU, quy cách, SEO, ảnh, mã biến thể |
+| Danh mục & sản phẩm | Editor tạo/sửa nháp, SKU, quy cách, SEO, ảnh, mã biến thể, thumbnail riêng của danh mục và ảnh bìa của SKU |
 | Import CSV/XLSX | Xem bản so sánh trước nhập, phát hiện SKU trùng, nguồn và cảnh báo; không ghi thẳng DB |
 | Đối chiếu giá | Pricing role; NET/đại lý/hợp đồng không bao giờ gửi qua public API |
 | Phê duyệt xuất bản | Publisher xác minh nguồn, preview, duyệt phiên bản và rollback |
