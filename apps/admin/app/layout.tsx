@@ -4,9 +4,10 @@ import "./admin.css";
 
 export const metadata: Metadata = {
   title: "Quản trị Futurebook Miền Nam",
+  description: "Hệ thống quản trị nội bộ Futurebook Miền Nam",
   robots: { index: false, follow: false, nocache: true },
 };
 
-export default function AdminLayout({ children }: { children: ReactNode }) {
-  return <div className="fb-admin">{children}</div>;
+export default function RootLayout({ children }: { children: ReactNode }) {
+  return <html lang="vi"><body><div className="fb-admin">{children}</div></body></html>;
 }

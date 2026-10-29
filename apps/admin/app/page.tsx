@@ -52,7 +52,7 @@ export default function AdminPage() {
     setBusy(true);
     setError("");
     try {
-      const result = await authClient.signIn.social({ provider: "google", callbackURL: "/admin" });
+      const result = await authClient.signIn.social({ provider: "google", callbackURL: "/" });
       if (result.error) setError("Không khởi tạo được đăng nhập Google. Vui lòng thử lại.");
     } catch {
       setError("Không kết nối được dịch vụ đăng nhập.");

@@ -1,4 +1,4 @@
-import { adminAuth } from "@/lib/admin/auth-server";
+import { adminAuth } from "@/lib/auth-server";
 import type { NextRequest } from "next/server";
 
 export const dynamic = "force-dynamic";

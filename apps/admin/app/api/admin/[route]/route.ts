@@ -1,4 +1,4 @@
-import { adminAuth } from "@/lib/admin/auth-server";
+import { adminAuth } from "@/lib/auth-server";
 
 export const dynamic = "force-dynamic";
 const ALLOWED = new Set(["session", "channels", "publish-capability", "pricing-capability"]);

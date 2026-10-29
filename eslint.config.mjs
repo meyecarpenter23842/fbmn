@@ -1,3 +1,3 @@
 import nextVitals from "eslint-config-next/core-web-vitals";
-
-export default [...nextVitals];
+const config = [{ ignores: ["apps/admin/**"] }, ...nextVitals];
+export default config;
