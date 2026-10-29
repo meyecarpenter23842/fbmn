@@ -1,34 +1,31 @@
-# Futurebook Miền Nam — Website
+# Futurebook Miền Nam
 
-Website-first: Next.js App Router + TypeScript. Repo `order` đang tạm dừng, không bị thay đổi. Giao diện chuẩn mẫu desktop/mobile được triển khai ở các PR sau.
+**Một backend dùng chung cho Website + App Đại lý/NPP + App End-user.** Website đang chạy; app native iOS/Android sẽ phát triển phần frontend về sau. Backend admin đa kênh hiện đang ở giai đoạn lập kế hoạch.
 
-## Khởi chạy
-Yêu cầu Node.js 22+.
+## Kế hoạch & GitHub Issues
+
+- **[Roadmap duy nhất](docs/roadmap.md)** — scope, kênh, phân quyền, ưu tiên, điều kiện nghiệm thu và release.
+- **[Master tracking issue #1](https://github.com/alibaba240185/fbmn/issues/1)** — chỉ mục liên kết các issue thực thi, không là roadmap thứ hai.
+- Backend/Admin mới: ADM-01 [#11](https://github.com/alibaba240185/fbmn/issues/11), ADM-02 [#19](https://github.com/alibaba240185/fbmn/issues/19), ADM-03 [#20](https://github.com/alibaba240185/fbmn/issues/20), ADM-04 [#40](https://github.com/alibaba240185/fbmn/issues/40), ADM-05 [#41](https://github.com/alibaba240185/fbmn/issues/41).
+- [Thiết kế kỹ thuật Admin/CMS](docs/admin-console-roadmap.md) — chỉ tài liệu tham khảo, không sinh PR plan khác.
+
+## Chạy và kiểm thử website
+
+Yêu cầu Node.js 22+:
 
 ```sh
 npm install
 npm run dev
-```
-
-Truy cập http://localhost:3000. Đây chỉ là website foundation, không phải phiên bản thương mại đã duyệt.
-
-## Kiểm thử
-```sh
 npm run lint
 npm run typecheck
 npm test
 npm run build
 ```
 
-## Quy trình
-- [Kế hoạch #1](https://github.com/alibaba240185/fbmn/issues/1)
-- [PR 00 issue #2](https://github.com/alibaba240185/fbmn/issues/2)
-- CI: `.github/workflows/ci.yml`
-- Deploy comment: `.github/workflows/deploy-comment.yml`
-- [Hướng dẫn release](docs/release.md)
+Production Website: https://fbmn-web.vercel.app. Public Worker staging: `futurebook-mien-nam-public-api-staging`; Website production hiện sử dụng API này để đọc **Neon staging**, không phải database production thương mại. Danh mục/sản phẩm công khai hiện chưa có data đã duyệt.
 
-Vercel `fbmn-web`: không Git auto deploy. Backend dùng Cloudflare Workers / Neon sau; ảnh dùng R2.
+## Nguyên tắc phát hành
 
-Không đăng giá NET, dữ liệu cá nhân hoặc thông tin chưa xác minh. Ảnh mẫu giao diện không phải nguồn giá/hotline chính thức.
-
-**Chú ý:** vì môi trường khởi tạo chưa truy cập npm registry nên chưa có `package-lock.json`; CI dùng `npm install`, cần bổ sung lockfile rồi dùng `npm ci` trước production.
+- Branch → PR → CI xanh → Codex Review → merge; deploy Vercel **thủ công theo lệnh**, không bật Git auto-deploy. Xem [hướng dẫn release](docs/release.md) và [issue #2](https://github.com/alibaba240185/fbmn/issues/2) cho phần gating còn cần kiểm thử.
+- Web mobile không có bottom navigation kiểu native. Không tự tạo giá NET, sản phẩm, khuyến mãi, hình ảnh hoặc claim từ mockup.
+- Giá NET/khách hàng/đơn hàng chỉ qua API xác thực đúng kênh và quyền. Repo `order` nằm ngoài phạm vi dự án này.
