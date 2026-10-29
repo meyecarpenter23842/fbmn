@@ -2,10 +2,9 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { Container, Icon } from "./ui";
-import { VerifiedMediaImage } from "./verified-media-image";
-import { approvedSiteMedia } from "@/lib/media/approved-site-media";
 
 const desktopNavigation = [
   { label: "Trang chủ", href: "/#home" },
@@ -20,10 +19,7 @@ const desktopNavigation = [
 function Brand() {
   return (
     <Link className="ref-brand" href="/#home" aria-label="Futurebook Miền Nam — Trang chủ">
-      <span className="ref-brand__emblem" aria-hidden="true">
-        <VerifiedMediaImage asset={approvedSiteMedia.brandLogo} fallback="FB" className="ref-brand__img" priority sizes="54px" />
-      </span>
-      <span className="ref-brand__name"><strong>FBMN</strong><small>FUTUREBOOK MIỀN NAM</small></span>
+      <Image src="/brand/fbmn-official-logo.webp" alt="Logo chính thức Futurebook Miền Nam" width={300} height={84} priority className="ref-brand__official-image" />
     </Link>
   );
 }
@@ -33,6 +29,7 @@ export function SiteHeader() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const menuButton = useRef<HTMLButtonElement>(null);
+  const menuPanel = useRef<HTMLElement>(null);
 
   useEffect(() => {
     if (!menuOpen && !searchOpen) return;
@@ -43,8 +40,17 @@ export function SiteHeader() {
         menuButton.current?.focus();
       }
     };
+    const onPointerDown = (event: PointerEvent) => {
+      if (menuOpen && event.target instanceof Node && !menuPanel.current?.contains(event.target) && !menuButton.current?.contains(event.target)) {
+        setMenuOpen(false);
+      }
+    };
     document.addEventListener("keydown", onKeyDown);
-    return () => document.removeEventListener("keydown", onKeyDown);
+    document.addEventListener("pointerdown", onPointerDown);
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+      document.removeEventListener("pointerdown", onPointerDown);
+    };
   }, [menuOpen, searchOpen]);
 
   return (
@@ -70,7 +76,7 @@ export function SiteHeader() {
             onClick={() => { setMenuOpen(!menuOpen); setSearchOpen(false); }}><Icon name={menuOpen ? "x" : "menu"} size={24}/></button>
         </div>
       </Container>
-      <nav id="site-navigation" className={"ref-navigation" + (menuOpen ? " ref-navigation--open" : "")} aria-label="Điều hướng chính">
+      <nav ref={menuPanel} id="site-navigation" className={"ref-navigation" + (menuOpen ? " ref-navigation--open" : "")} aria-label="Điều hướng chính">
         <Container className="ref-navigation__inner">
           <Link className="ref-navigation__catalog" href="/san-pham" onClick={() => setMenuOpen(false)}><Icon name="menu" size={17}/> Danh mục sản phẩm <Icon name="down" size={15}/></Link>
           {desktopNavigation.map(item => {

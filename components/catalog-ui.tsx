@@ -5,18 +5,14 @@ import type { CatalogFilters } from "@/lib/catalog/query";
 import { GROUP_LABELS, SORT_OPTIONS, filtersToParams, searchCatalog } from "@/lib/catalog/query";
 import { getPublishedProductImageUrl } from "@/lib/catalog/product-image";
 import { SiteHeader } from "@/components/site-header";
+import { SiteFooter } from "@/components/site-footer";
 import { CatalogProductImage } from "@/components/catalog-product-image";
 
 export function CatalogShell({ children }: { children: ReactNode }) {
   return <>
     <SiteHeader/>
     <main className="catalog-main">{children}</main>
-    <footer className="catalog-footer">
-      <div className="catalog-wrap"><strong>FUTUREBOOK MIỀN NAM</strong>
-        <span>Thông tin sản phẩm được công khai sau khi xác minh.</span>
-        <Link href="/#contact">Thông tin liên hệ</Link>
-      </div>
-    </footer>
+    <SiteFooter />
   </>;
 }
 

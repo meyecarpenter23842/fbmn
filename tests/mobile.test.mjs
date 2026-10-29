@@ -26,15 +26,17 @@ test("mobile header hamburger/search panels remain accessible", () => {
   assert.match(css, /\.ref-header__mobile-icon \{ display: grid; place-items: center; \}/);
 });
 
-test("category images use bounded CSS fallback covers instead of blank scaled art", () => {
+test("category navigation has an image for each group and mobile scroll affordance", () => {
   const home = read("app/page.tsx");
-  const css = read("app/rebaseline.css");
-  assert.match(home, /className="ref-category__image"/);
-  assert.match(home, /<NotebookArt cover=\{category\.kind\}/);
-  assert.match(css, /\.ref-category__image \.notebook \{ width: 42px; height: 54px;/);
-  assert.match(css, /\.ref-category__image \.notebook \{ width: 40px; height: 50px;/);
-  assert.match(css, /\.ref-category-strip \{ display: flex; overflow-x: auto/);
-  assert.match(css, /scroll-snap-type: x mandatory/);
+  const nav = read("components/category-navigation.tsx");
+  const styles = read("app/category-navigation.css");
+  assert.match(home, /<CategoryNavigation\s*\/>/);
+  assert.match(nav, /categories\.map/);
+  assert.match(nav, /<NotebookArt cover=\{category\.kind\}/);
+  assert.match(nav, /<StationeryArt/);
+  assert.match(styles, /overflow-x:\s*auto/);
+  assert.match(styles, /scroll-snap-type:\s*x mandatory/);
+  assert.match(styles, /prefers-reduced-motion:\s*reduce/);
 });
 
 test("featured products remain a swipeable keyboard-accessible carousel", () => {

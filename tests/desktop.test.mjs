@@ -5,7 +5,7 @@ const read = file => readFileSync(new URL("../" + file, import.meta.url), "utf8"
 
 test("rebaselined desktop sections follow the new approved screenshot", () => {
   const page = read("app/page.tsx");
-  const order = ["ref-hero", "ref-categories", "ref-featured", "ref-promos", "ref-trust", "ref-footer"];
+  const order = ["ref-hero", "ref-categories", "ref-featured", "ref-promos", "ref-trust", "      <SiteFooter />"];
   const offsets = order.map(s => page.indexOf(s));
   assert.ok(offsets.every(n => n >= 0), "Missing required desktop section");
   assert.deepEqual([...offsets].sort((a,b) => a-b), offsets);

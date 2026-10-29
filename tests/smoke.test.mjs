@@ -7,7 +7,7 @@ test("homepage uses the corrected desktop/mobile reference", () => {
   const page = get("app/page.tsx");
   assert.match(page, /SiteHeader/);
   assert.doesNotMatch(page, /MobileBottomNavigation|ref-bottom-nav/);
-  assert.match(page, /ref-category-strip/);
+  assert.ok(page.includes("<CategoryNavigation />"));
   assert.match(page, /ref-featured/);
   assert.match(page, /MobileCarousel/);
 });

@@ -4,9 +4,11 @@ import "./globals.css";
 import "./desktop.css";
 import "./mobile.css";
 import "./rebaseline.css";
+import "./category-navigation.css";
 import "./catalog.css";
 import "./catalog-search.css";
 import "./content.css";
+import "./site-footer.css";
 
 export const metadata: Metadata = {
   title: "Futurebook Miền Nam",

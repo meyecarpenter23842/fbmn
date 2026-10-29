@@ -93,16 +93,17 @@ test("catalogue remains empty of official media pending owner validation", () =>
   assert.equal(getApprovedMediaUrl(approvedSiteMedia.brandLogo, cdn), null);
 });
 
-test("website uses verified media with legacy design fallback on both devices", () => {
+test("website uses the owner-approved logo and verified hero media fallback on both devices", () => {
   const read = file => readFileSync(new URL("../" + file, import.meta.url), "utf8");
   const header = read("components/site-header.tsx");
   const home = read("app/page.tsx");
   const styles = read("app/rebaseline.css");
   const component = read("components/verified-media-image.tsx");
-  assert.match(header, /VerifiedMediaImage/);
+  assert.ok(header.includes('src="/brand/fbmn-official-logo.webp"'));
+  assert.ok(readFileSync(new URL("../public/brand/fbmn-official-logo.webp", import.meta.url)).byteLength > 1000);
   assert.match(home, /asset=\{approvedSiteMedia.heroBanner\}/);
   assert.match(home, /NotebookArt cover="sky"/);
-  assert.match(header, /fallback="FB"/);
+  assert.match(header, /alt="Logo chính thức Futurebook Miền Nam"/);
   assert.match(styles, /\.ref-hero__official-image/);
   assert.match(component, /onError/);
   assert.match(component, /unoptimized/);

@@ -1,0 +1,132 @@
+/* Single source of truth for home category navigation. Intentionally NO cards.
+   Illustrated covers are placeholders; only vetted CMS images may replace them. */
+.ref-categories { padding: 21px 0 17px; }
+.category-nav {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: clamp(9px, 1.4vw, 22px);
+  align-items: stretch;
+}
+.category-nav__link {
+  position: relative;
+  min-width: 0;
+  min-height: 88px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 7px 0 12px;
+  color: #291b42;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  text-decoration: none;
+  transition: color 190ms ease;
+}
+.category-nav__link::after {
+  position: absolute;
+  content: "";
+  bottom: 3px;
+  left: 0;
+  width: 0;
+  height: 2px;
+  border-radius: 99px;
+  background: #6d249e;
+  transition: width 190ms ease;
+}
+.category-nav__art {
+  display: grid;
+  place-items: center;
+  flex: 0 0 62px;
+  width: 62px;
+  height: 70px;
+  overflow: hidden;
+}
+.category-nav__art .notebook {
+  flex: none;
+  width: 49px;
+  height: 64px;
+  transform: rotate(6deg);
+  transform-origin: center;
+  transition: transform 190ms ease;
+}
+.category-nav__art .stationery-art {
+  flex: none;
+  transform: scale(.45);
+  transform-origin: center;
+  transition: transform 190ms ease;
+}
+.category-nav__copy {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  min-width: 0;
+  gap: 5px;
+}
+.category-nav__copy strong {
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.28;
+  overflow-wrap: anywhere;
+}
+.category-nav__copy small {
+  color: #736780;
+  font-size: 10px;
+  line-height: 1.35;
+}
+@media (hover: hover) {
+  .category-nav__link:hover { color: #6d249e; }
+  .category-nav__link:hover::after { width: min(85%, 135px); }
+  .category-nav__link:hover .notebook { transform: rotate(6deg) translateY(-3px); }
+  .category-nav__link:hover .stationery-art { transform: scale(.45) translateY(-6px); }
+}
+.category-nav__link:focus-visible {
+  outline: 2px solid #6d249e;
+  outline-offset: 3px;
+  border-radius: 3px;
+  color: #6d249e;
+}
+.category-nav__link:focus-visible::after { width: min(85%, 135px); }
+
+@media (max-width: 1050px) and (min-width: 801px) {
+  .category-nav { gap: 8px; }
+  .category-nav__link { flex-direction: column; justify-content: center; gap: 3px; text-align: center; }
+  .category-nav__copy { align-items: center; }
+  .category-nav__copy small { display: none; }
+}
+@media (max-width: 800px) {
+  .ref-categories { padding: 15px 0 12px; }
+  .category-nav {
+    display: flex;
+    gap: 12px;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    scroll-padding-inline: 3px;
+    overscroll-behavior-inline: contain;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding: 2px 3px 7px;
+  }
+  .category-nav::-webkit-scrollbar { display: none; }
+  .category-nav__link {
+    flex: 0 0 clamp(110px, 31vw, 138px);
+    min-height: 108px;
+    padding: 4px 2px 9px;
+    flex-direction: column;
+    justify-content: flex-start;
+    gap: 5px;
+    text-align: center;
+    scroll-snap-align: start;
+  }
+  .category-nav__art { width: 62px; height: 66px; flex-basis: 66px; }
+  .category-nav__art .notebook { width: 45px; height: 60px; }
+  .category-nav__copy { align-items: center; gap: 0; }
+  .category-nav__copy strong { font-size: 11px; }
+  .category-nav__copy small { display: none; }
+  .category-nav__link:focus-visible::after { width: 80%; left: 10%; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .category-nav__link,
+  .category-nav__link::after,
+  .category-nav__art .notebook,
+  .category-nav__art .stationery-art { transition: none; }
+}

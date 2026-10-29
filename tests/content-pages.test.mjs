@@ -99,7 +99,8 @@ test("PR07 routes and responsive nav exist; no fake contact submission", () => {
   for(const slug of ["gioi-thieu","tin-tuc","khuyen-mai","dai-ly","lien-he"]) {
     assert.ok(header.includes('href: "/'+slug+'"'),slug);
   }
-  assert.match(read("app/page.tsx"),/Điều hướng trang thông tin/);
+  assert.match(read("app/page.tsx"),/<SiteFooter\s*\/>/);
+  assert.match(read("components/site-footer.tsx"),/aria-label="Khám phá Futurebook"/);
   const css=read("app/content.css");
   assert.match(css,/@media \(max-width: 800px\)/);
   assert.doesNotMatch(css,/position:\s*fixed|bottom-nav/);

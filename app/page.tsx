@@ -1,9 +1,11 @@
 import Link from "next/link";
 import { SiteHeader } from "@/components/site-header";
+import { SiteFooter } from "@/components/site-footer";
+import { CategoryNavigation } from "@/components/category-navigation";
 import { MobileCarousel } from "@/components/mobile-carousel";
-import { NotebookArt, StationeryArt } from "@/components/notebook-art";
+import { NotebookArt } from "@/components/notebook-art";
 import { Card, Container, Icon } from "@/components/ui";
-import { categories, previewProducts } from "@/lib/ui-preview";
+import { previewProducts } from "@/lib/ui-preview";
 import { VerifiedMediaImage } from "@/components/verified-media-image";
 import { approvedSiteMedia } from "@/lib/media/approved-site-media";
 
@@ -48,17 +50,7 @@ export default function HomePage() {
 
         <Container>
           <section id="categories" className="ref-categories" aria-label="Danh mục Futurebook">
-            <div className="ref-category-strip">
-              {categories.map(category => (
-                <a href={"/san-pham?q=" + encodeURIComponent(category.title)} className="ref-category" key={category.title}
-                  aria-label={category.title + " — xem khu giới thiệu sản phẩm"}>
-                  <div className="ref-category__image">
-                    {category.kind === "stationery" ? <StationeryArt/> : <NotebookArt cover={category.kind} title="FBMN"/>}
-                  </div>
-                  <div className="ref-category__copy"><strong>{category.title}</strong><small>{category.note}</small></div>
-                </a>
-              ))}
-            </div>
+            <CategoryNavigation />
           </section>
 
           <section id="collections" className="ref-featured" aria-labelledby="featured-heading">
@@ -103,19 +95,11 @@ export default function HomePage() {
             <div><Icon name="package" size={28}/><span><strong>Danh mục sản phẩm</strong><small>Đang được xác minh</small></span></div>
             <div><Icon name="shield" size={28}/><span><strong>Thông tin rõ ràng</strong><small>Nguồn catalogue chính thức</small></span></div>
             <div><Icon name="book" size={28}/><span><strong>Hỗ trợ đại lý</strong><small>Chính sách đang cập nhật</small></span></div>
-            <div><Icon name="heart" size={28}/><span><strong>Kết nối Futurebook</strong><small>Thông tin liên hệ sắp có</small></span></div>
+            <div><Icon name="heart" size={28}/><span><strong>Kết nối Futurebook</strong><small>Xem trang liên hệ</small></span></div>
           </section>
         </Container>
       </main>
-      <footer className="ref-footer" id="contact">
-        <Container>
-          <strong>FUTUREBOOK MIỀN NAM</strong>
-          <nav aria-label="Điều hướng trang thông tin">
-            <Link href="/gioi-thieu">Giới thiệu</Link> · <Link href="/tin-tuc">Tin tức</Link> · <Link href="/khuyen-mai">Khuyến mãi</Link> · <Link href="/dai-ly">Đại lý</Link> · <a href="/lien-he">Liên hệ</a>
-          </nav>
-          <span>Catalogue và thông tin liên hệ được công bố sau khi xác minh</span>
-        </Container>
-      </footer>
+      <SiteFooter />
     </>
   );
 }

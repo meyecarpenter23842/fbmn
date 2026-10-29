@@ -1,24 +1,14 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { SiteHeader } from "@/components/site-header";
+import { SiteFooter } from "@/components/site-footer";
 import type { PublicArticle, PublicPromotion } from "@/lib/content/schema";
 
 export function ContentShell({ children }: { children: ReactNode }) {
   return <>
     <SiteHeader />
     <main className="content-main"><div className="content-wrap">{children}</div></main>
-    <footer className="content-footer"><div className="content-wrap">
-      <strong>FUTUREBOOK MIỀN NAM</strong>
-      <nav aria-label="Điều hướng cuối trang">
-        <Link href="/gioi-thieu">Giới thiệu</Link>
-        <Link href="/san-pham">Sản phẩm</Link>
-        <Link href="/tin-tuc">Tin tức</Link>
-        <Link href="/khuyen-mai">Khuyến mãi</Link>
-        <Link href="/dai-ly">Đại lý</Link>
-        <Link href="/lien-he">Liên hệ</Link>
-      </nav>
-      <small>Thông tin được công khai sau xác minh và phê duyệt.</small>
-    </div></footer>
+    <SiteFooter />
   </>;
 }
 

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { ContentShell, ContentBreadcrumb, PageHeading } from "@/components/content-ui";
 import { getPublicContent } from "@/lib/content/adapter";
+import { fanpageContactReference as fanpage } from "@/lib/content/contact-reference";
 
 export const metadata: Metadata = {
   title: "Liên hệ | Futurebook Miền Nam",
@@ -12,17 +13,24 @@ export default async function ContactPage() {
   return <ContentShell>
     <ContentBreadcrumb items={[{ name: "Liên hệ" }]}/>
     <PageHeading eyebrow="KẾT NỐI FUTUREBOOK" title="Liên hệ Futurebook Miền Nam"
-      intro="Kênh liên hệ chính thức chỉ được công khai sau khi kiểm tra nguồn. Chúng tôi chưa kích hoạt tính năng nhận yêu cầu trực tuyến."/>
+      intro="Tham khảo thông tin liên hệ từ Fanpage Futurebook Miền Nam. Biểu mẫu trực tuyến hiện chưa kích hoạt tiếp nhận."/>
     <section className="content-intro-grid" aria-label="Thông tin liên hệ">
       <div className="content-outline-panel">
-        <h2>Thông tin chính thức</h2>
+        <h2>{company ? "Thông tin chính thức" : "Thông tin từ Fanpage"}</h2>
         {company ? <address className="content-contact-list">
           {company.legalName && <p><strong>Đơn vị:</strong> {company.legalName}</p>}
           {company.address && <p><strong>Địa chỉ:</strong> {company.address}</p>}
           {company.phone && <p><strong>Điện thoại:</strong> <a href={"tel:" + company.phone.replace(/[^+0-9]/g, "")}>{company.phone}</a></p>}
           {company.email && <p><strong>Email:</strong> <a href={"mailto:" + company.email}>{company.email}</a></p>}
           {company.hours && <p><strong>Thời gian làm việc:</strong> {company.hours}</p>}
-        </address> : <p role="status">Hotline, email, địa chỉ và thời gian làm việc đang chờ xác nhận. Chúng tôi không sử dụng thông tin minh họa làm thông tin liên hệ thực.</p>}
+        </address> : <div>
+          <address className="content-contact-list">
+            <p><strong>Điện thoại:</strong> <a href={fanpage.telephoneHref}>{fanpage.phone}</a></p>
+            <p><strong>Email:</strong> <a href={fanpage.emailHref}>{fanpage.email}</a></p>
+            <p><strong>Địa chỉ:</strong> {fanpage.address}</p>
+          </address>
+          <p className="content-small-note" role="note">Nguồn: thông tin hiển thị trên Fanpage Futurebook Miền Nam. Số điện thoại đang được đối chiếu do có danh bạ cũ ghi số khác. Giờ làm việc chưa được xác nhận.</p>
+        </div>}
       </div>
       <div className="content-intro-panel">
         <h2>Biểu mẫu liên hệ</h2>
