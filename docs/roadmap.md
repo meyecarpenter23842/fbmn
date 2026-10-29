@@ -74,7 +74,7 @@
 - **Import và nhập thủ công cùng UPSERT theo SKU công ty** (create/update/unchanged/conflict/error preview). Không ghi đè bản đã được duyệt âm thầm; concurrent revision, audit và staging review. Ảnh thiếu → báo thiếu, không lấy nhầm ảnh của SKU khác. Media gốc lưu một lần ở R2, nhiều quan hệ ảnh–SKU chỉ sau khi duyệt.
 - **Giá từ bảng nhập** thuộc `source_price` + `source_vat` + `effective_date` và tình trạng xác minh. Không tự suy ra `retail_price`, `NET` hay giá riêng cho từng kênh từ một cột mang nhãn `giá bảng VAT 8%`.
 
-### 4.2. Audit nguồn Excel đính kèm ngày 29/10/2026
+### 4.2. Audit lịch sử — master 228 SKU trước khi nhận XNT ngày 28/10/2026 (KHÔNG còn là phạm vi nhập đầy đủ)
 
 File người dùng cung cấp: `Futurebook_MASTER_SAN_PHAM_VA_ANH_2026.xlsx` (**chưa commit vào GitHub hoặc đưa vào database**; chứa giá nguồn). SHA-256 `0e25ae21ae2b0196dcbe7365b7681e9940f63c82b8bdf1246330c0ea128bc562` để đối chiếu lại nếu nhập sau.
 
@@ -89,6 +89,29 @@ File người dùng cung cấp: `Futurebook_MASTER_SAN_PHAM_VA_ANH_2026.xlsx` (*
 **Cảnh báo provenance:** lịch sử đối chiếu PDF ghi **40 ảnh có mã khớp trực tiếp** và **138 ảnh được suy luận theo tên/dòng/hình**. Trường `MATCHED` trong sheet hiện **không phân biệt hai mức bằng chứng**; `MATCHED` tuyệt đối **không đồng nghĩa đã duyệt**. Cần bổ sung `match_method`, `confidence`, `review_status`, `reviewed_by`, `source_file` và nút duyệt/loại tại Admin trước bulk publish. 17 ảnh shared-review phải được quản lý như asset gốc duy nhất và liên kết SKU ứng viên có phê duyệt; không phát hành mặc định.
 
 **Đầu vào hình ảnh:** XLSX mới chứa **tên file/đường dẫn trong ZIP**, không chứa bytes của 241 ảnh. Muốn upload R2 phải lấy ZIP ảnh gốc/V3 từ Drive hoặc tải ZIP; không tự cho rằng các tệp đã nằm trong R2. Không sửa hoặc ghi đè ảnh gốc trong Drive. **Mẫu Admin 3 hình cũ chỉ là minh họa**, SKU `FB-VHS-200`, `FB-VHS-200-H`, `FB-VHS-200-X` không thuộc bảng giá và bị cấm import làm SKU thật.
+
+### 4.3. Dữ liệu đầu vào mới đã được hợp nhất: XNT 28/10 + hai bảng giá + media (handoff 29/10/2026)
+
+**Đây là nguồn nhập mới nhất cho ADM-02 [#19](https://github.com/alibaba240185/fbmn/issues/19), thay thế việc hiểu nhầm 228 SKU của master cũ là toàn bộ danh mục.** File 228 SKU vẫn là nguồn lịch sử/bổ sung mapping ảnh và tên sản phẩm. **Nguồn thực tế trên Google Drive FBMN đã được xác nhận có đủ 5 tệp** (không sao chép giá NET/XNT vào Git):
+
+- [Thư mục Drive FBMN](https://drive.google.com/drive/folders/1XIDccMfHrJaYgjKUIRQYZv0NV5Fo3ude)
+- [Futurebook_Doi_Chieu_XNT_BangGia_Anh_28102026.xlsx](https://docs.google.com/spreadsheets/d/11dGYkh7e0bPgw1h4X6bss0b-dc1VbXGd/edit) — workbook đối chiếu 8 sheet, **613 SKU hợp nhất**.
+- [XNT 2810.xlsx](https://docs.google.com/spreadsheets/d/12u0UeWElt4WRUElJxkoovajtmRbTQ8sa/edit) — XNT thời điểm 28/10/2026, **609 mã**; dùng làm nguồn danh sách mã rộng hơn, dữ liệu tồn chỉ là snapshot.
+- [BBG Vở HS-SV 10.04.2026.pdf](https://drive.google.com/file/d/18ZwJGqDeQlrb8wA9bqlkPv_yK_bVdPko/view) — nguồn SKU, barcode, tên dòng, quy cách, giá bảng **đã gồm VAT 8%**.
+- [BG NET VPP & SP Giấy 05.10.2026 (update).pdf](https://drive.google.com/file/d/1wWrqxNwktPzNMIxde2URs_vdxoway4i6/view) — nguồn SKU, barcode, quy cách và **bảng NET VPP** (PDF ghi giá bao gồm VAT 8%).
+- [OneDrive_1_10-29-2026.zip](https://drive.google.com/file/d/1wKP0WmvKt9UvNVCWHm4V6zLXT_qeLvg3/view) — ZIP ảnh gốc khoảng 153 MB, **chưa khẳng định đã upload lên Cloudflare R2**.
+
+**Số liệu kiểm tra tại thời điểm bàn giao:** XNT 609 mã, master bảng giá 228 mã, trùng 224 mã, **385 mã chỉ trong XNT**, **4 mã chỉ trong bảng giá** (`8384`, `C5921`, `C5981`, `C8921`) → **613 SKU duy nhất**. Không tự động coi 385 mã XNT là hàng đang bán/được xuất bản; phải kiểm tra tình trạng, tên, quy cách, sai code. Có **541 SKU chưa liên kết được ảnh** trong dữ liệu hợp nhất; **cho phép để trống ảnh**, không tạo ảnh giả, không bỏ SKU. Kiểm tra hai mã tồn âm và các trường hợp `Sai Code`. Các mã gần giống `C592`/`C5921` không được tự gộp. `M422` có sai khác mô tả dòng kẻ (XNT Caro / bảng giá Kẻ ngang) phải duyệt. Sáu mã refill `P0041`, `P0042`, `P0051`, `P006`, `P0081`, `P0082` có giá dùng chung trong ô PDF gộp, **không phải chứng cứ giá thiếu**; giữ giá, nguồn và trạng thái xác minh đúng tài liệu gốc.
+
+**Hợp đồng import:**
+1. SKU = **mã công ty dạng chuỗi**, giữ số 0 đầu; UPSERT idempotent theo SKU, không tạo thêm SKU kiểu FB- hoặc SKU ảnh. Barcode không unique; giữ nguồn tên gốc XNT/bảng giá, tên chuẩn và evidence riêng.
+2. Import có preview phân loại **tạo mới / cập nhật / không thay đổi / xung đột / lỗi**; bắt buộc xác nhận các mã lệch, tồn âm, SKU chỉ có XNT. Không tự ghi đè dữ liệu đã duyệt.
+3. Ảnh/media là **nullable**: nếu chưa có ảnh, lưu trống và có thể xuất bản với **placeholder chung trung tính** sau khi tên/quy cách được duyệt. Không gán ảnh của SKU khác; khi bổ sung ảnh, liên kết đúng SKU và không tạo lại sản phẩm.
+4. Ảnh trùng hoặc tên suy luận từ ZIP phải lưu provenance `match_method`, `confidence`, `review_status`. `MATCHED` cũ không đồng nghĩa được duyệt; 138 liên kết suy luận vẫn cần kiểm chứng.
+5. **Không công bố giá NET hoặc dữ liệu tồn riêng qua public API.** Giá bán lẻ phải có nguồn/phê duyệt riêng; tách giá bảng, giá NET và giá hiển thị.
+6. Bước đầu **chỉ nhập vào Neon staging dưới trạng thái draft**, không ghi production, không tự bật bán, không tự đổi/cắt ảnh nguồn. Admin catalogue MVP tiếp theo là [ADM-05 #41](https://github.com/alibaba240185/fbmn/issues/41); nền Admin Auth ở [ADM-01 #11](https://github.com/alibaba240185/fbmn/issues/11).
+
+**Nghiệm thu bắt buộc trước khi ghi dữ liệu:** đọc trực tiếp 5 file trên Drive, tái tính counts và so sánh với workbook đối chiếu, kiểm tra schema XNT và câu hỏi tên/sai code; xuất danh sách create/update/conflict/missing-image. Mọi sai lệch so với các số liệu trên phải báo rõ và cập nhật chính roadmap này bằng PR review. Chi tiết bàn giao và PR đầu tiên ở [#19](https://github.com/alibaba240185/fbmn/issues/19).
 
 ## 5. Các việc website cũ vẫn mở — không được đè mã ADM
 
