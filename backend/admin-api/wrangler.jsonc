@@ -1,0 +1,12 @@
+{
+  // ADM-01: bundle-only skeleton; staging bindings and Auth claims must be verified
+  // before an explicit staging rollout. No routes, domains or production deployment.
+  "name": "futurebook-mien-nam-admin-api-staging",
+  "main": "./worker-entry.mjs",
+  "compatibility_date": "2026-10-29",
+  "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": false,
+  "vars": {
+    "EXPECTED_ADMIN_DB_ROLE": "fbmn_admin_http_staging"
+  }
+}

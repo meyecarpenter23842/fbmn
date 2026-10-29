@@ -1,0 +1,81 @@
+import { test } from "node:test";
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { createAdminApi } from "../backend/admin-api/handler.mjs";
+
+const origin="https://admin-staging.example.test";
+const actor=(role,channels=["public_web"])=>({role,enabled:true,channels});
+function make(options={}) {
+  const audit=[];
+  let revoked=false;
+  const api=createAdminApi({
+    allowedOrigins:[origin],
+    verifyToken:async token=>{if(token!=="signed.test.token")throw Error("invalid signature");return "user-01";},
+    loadActor:async()=>revoked?null:actor("editor"),
+    listChannels:async()=>[{code:"public_web",label:"Website"}],
+    recordAudit:async event=>{audit.push(event);},
+    ...options,
+  });
+  const hit=(path,init={})=>api.fetch(new Request("https://admin.invalid"+path,{
+    ...init,headers:{Authorization:"Bearer signed.test.token",...init.headers},
+  }));
+  return {hit,audit,revoke:()=>{revoked=true;}};
+}
+test("401 missing/invalid bearer; 403 missing DB allowlist",async()=>{
+  const f=make();
+  assert.equal((await f.hit("/v1/admin/session",{headers:{Authorization:""}})).status,401);
+  assert.equal((await f.hit("/v1/admin/session",{headers:{Authorization:"Bearer spoofed.payload.sig"}})).status,401);
+  assert.equal((await make({loadActor:async()=>null}).hit("/v1/admin/session")).status,403);
+  assert.equal((await make({loadActor:async()=>actor("admin")}).hit("/v1/admin/session")).status,200);
+});
+test("Server RBAC blocks self elevation and routes by role",async()=>{
+  const editor=make();
+  assert.equal((await editor.hit("/v1/admin/publish-capability")).status,403);
+  assert.equal((await editor.hit("/v1/admin/pricing-capability")).status,403);
+  assert.equal((await editor.hit("/v1/admin/publish-capability",{headers:{"X-Role":"admin"}})).status,403);
+  const pub=make({loadActor:async()=>actor("publisher")});
+  assert.equal((await pub.hit("/v1/admin/publish-capability")).status,200);
+  assert.equal((await pub.hit("/v1/admin/pricing-capability")).status,403);
+  assert.equal((await make({loadActor:async()=>actor("pricing")}).hit("/v1/admin/pricing-capability")).status,200);
+  assert.equal((await make({loadActor:async()=>actor("admin")}).hit("/v1/admin/publish-capability")).status,200);
+});
+test("Revoke is immediate on next lookup, scopes and audit are server-owned",async()=>{
+  const f=make();
+  const res=await f.hit("/v1/admin/session");
+  assert.equal(res.status,200);
+  assert.deepEqual((await res.json()).data,{role:"editor",channels:["public_web"]});
+  assert.equal(res.headers.get("cache-control"),"no-store");
+  assert.equal((await f.hit("/v1/admin/channels")).status,200);
+  assert.deepEqual(f.audit.map(a=>a.action),["session.read","channels.read"]);
+  f.revoke();
+  assert.equal((await f.hit("/v1/admin/session")).status,403);
+  assert.deepEqual(f.audit.at(-1),{subject:"user-01",action:"session.read",outcome:"denied"});
+});
+test("Origin, query, method, private-only endpoints",async()=>{
+  const f=make();
+  assert.equal((await f.hit("/v1/admin/session",{headers:{Origin:"https://untrusted.invalid"}})).status,403);
+  assert.equal((await f.hit("/v1/admin/session?role=admin")).status,400);
+  assert.equal((await f.hit("/v1/admin/session",{method:"POST"})).status,405);
+  assert.equal((await f.hit("/v1/admin/net-pricebook")).status,404);
+  assert.equal((await f.hit("/v1/admin/channels",{method:"OPTIONS",headers:{Origin:origin}})).status,204);
+  assert.equal((await f.hit("/v1/admin/channels",{method:"OPTIONS",headers:{Origin:"https://untrusted.invalid"}})).status,403);
+});
+test("Any audit outage or DB outage fails closed; disabled principal denied",async()=>{
+  assert.equal((await make({recordAudit:async()=>{throw Error("db");}}).hit("/v1/admin/session")).status,503);
+  assert.equal((await make({loadActor:async()=>{throw Error("db");}}).hit("/v1/admin/session")).status,503);
+  assert.equal((await make({loadActor:async()=>({...actor("admin"),enabled:false})}).hit("/v1/admin/session")).status,403);
+});
+test("Migration gate and isolated API contract",()=>{
+  const up=readFileSync(new URL("../backend/neon/migrations/20261029_adm01_admin_foundation.up.sql",import.meta.url),"utf8");
+  const down=readFileSync(new URL("../backend/neon/migrations/20261029_adm01_admin_foundation.down.sql",import.meta.url),"utf8");
+  assert.match(up,/CREATE SCHEMA fbmn_admin/);
+  assert.match(up,/CREATE ROLE fbmn_admin_runtime NOLOGIN/);
+  assert.match(up,/GRANT SELECT ON fbmn_admin.channels,fbmn_admin.principals/);
+  assert.doesNotMatch(up,/GRANT (INSERT|UPDATE|DELETE) ON fbmn_admin.principals/);
+  assert.match(up,/principal_channels/);
+  assert.match(up,/audit_events/);
+  assert.match(down,/fbmn.rollback_confirmed/);
+  assert.match(down,/DROP SCHEMA fbmn_admin/);
+  const publicContract=JSON.parse(readFileSync(new URL("../backend/public-api/openapi.json",import.meta.url),"utf8"));
+  assert.ok(Object.keys(publicContract.paths).every(path=>path.startsWith("/v1/public/")));
+});

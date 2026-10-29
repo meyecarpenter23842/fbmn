@@ -59,3 +59,24 @@ jobs:
       - name: Bundle Worker without deploying
         run: npx --no-install wrangler deploy --dry-run --outdir ../../.tmp-worker-bundle
         working-directory: backend/public-api
+
+
+  admin-worker-build:
+    name: Bundle Admin Worker (dry run only)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout exact commit
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Setup Node 22
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '22'
+      - name: Install Admin Worker dependencies
+        run: npm install --no-audit --no-fund
+        working-directory: backend/admin-api
+      - name: Bundle Admin Worker without deploying
+        run: npm run build:check
+        working-directory: backend/admin-api
