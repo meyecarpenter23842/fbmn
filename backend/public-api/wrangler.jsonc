@@ -1,0 +1,29 @@
+{
+  "name": "futurebook-mien-nam-public-api-staging",
+  "main": "./worker-entry.mjs",
+  "compatibility_date": "2026-10-29",
+  "compatibility_flags": [
+    "nodejs_compat"
+  ],
+  "workers_dev": false,
+  "vars": {
+    "PUBLIC_ALLOWED_ORIGINS": "https://fbmn-web.vercel.app",
+    "EXPECTED_DB_ROLE": "fbmn_public_http_staging"
+  },
+  "hyperdrive": [
+    {
+      "binding": "HYPERDRIVE",
+      "id": "SET_SEPARATE_READONLY_HYPERDRIVE_ID_BEFORE_DEPLOY"
+    }
+  ],
+  "ratelimits": [
+    {
+      "name": "RATE_LIMITER",
+      "namespace_id": "20261029",
+      "simple": {
+        "limit": 60,
+        "period": 60
+      }
+    }
+  ]
+}
