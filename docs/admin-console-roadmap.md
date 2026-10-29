@@ -6,10 +6,10 @@
 
 - Một Web Admin quản lý chung sản phẩm/ảnh/giá/nội dung cho ba business channels: `public_web`, `dealer_app`, `consumer_app`. `admin_web` là control plane, không phải nơi bán; `ios/android` là platforms, không phải data channels.
 - Backend sở hữu policy; client web/native chỉ gửi yêu cầu có quyền. Sử dụng PostgreSQL schema và R2 assets qua versioned API, không kết nối DB credentials trực tiếp từ browser.
-- Schema: master product/SKU/category/spec/packaging/media/evidence; per-channel publication/presentation; campaign targets/cooldown/schedule; pricebook/contract private per customer. Ghi `revision`, timestamps, actor và audit.
-- Admin role: viewer/editor/publisher/pricing/admin. Import Excel/CSV phải validate/dedupe/preview; ảnh R2 cần upload ticket, allowlist MIME/size, image-alt/order và approval. Giá NET chỉ trong API riêng tư.
+- Schema: **family/group hiển thị (không phải mã hàng)** → đúng SKU công ty (text, không sinh SKU phụ), spec/barcode/packaging, media ảnh nhiều mẫu trên cùng SKU, evidence/mapping approval; per-channel publication/presentation; campaign targets/cooldown/schedule; pricebook/contract private per customer. Barcode có thể trùng giữa SKU nên không unique; ghi revision, actor, audit.
+- Admin role: viewer/editor/publisher/pricing/admin. Import Excel/CSV và tạo thủ công phải **dùng SKU đúng mã công ty (giữ số 0 đầu)**, UPSERT/dedupe/preview, không sinh `FB-` hoặc SKU phụ từ màu bìa; tên sản phẩm từ bảng giá PDF cần audit nguồn. Ảnh R2 cần upload ticket, allowlist MIME/size, image-alt/order và **match_method + reviewer**. Giá PDF có VAT là giá nguồn, không mặc định retail/NET; NET chỉ ở API riêng tư.
 - CMS: hero/offer/popup/news, desktop/mobile media, CTA nội bộ hợp lệ, draft/approved/scheduled/published/paused/archived; account-specific B2B campaigns cần quyền.
-- UI concept gồm danh sách sản phẩm, thêm/sửa sản phẩm, upload nhiều ảnh và quản lý kênh. Mockup chỉ là **giao diện minh họa**, không xác thực thông số/giá/SKU/stock đã xuất hiện trên ảnh.
+- **Website-first:** triển khai Admin catalogue MVP ngay sau backend sản phẩm, để import hoặc thêm thủ công 228 SKU từ file nguồn và duyệt ảnh, rồi hoàn thiện website bằng nội dung thật; CMS và Dealer/End-user mở rộng sau. UI concept gồm danh sách sản phẩm, thêm/sửa sản phẩm, upload nhiều ảnh và quản lý kênh. Mockup chỉ là **giao diện minh họa**, không xác thực thông số/giá/SKU/stock đã xuất hiện trên ảnh.
 - Sau này desktop Tauri, nếu thật sự cần, chỉ là giao diện mỏng gọi chung backend; native iOS/Android làm UI riêng.
 
 ## Nguồn tham khảo giao diện (không copy source)
