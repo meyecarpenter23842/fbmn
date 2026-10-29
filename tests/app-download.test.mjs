@@ -1,0 +1,51 @@
+import { test } from "node:test";
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { getAppStoreLink, appStoreLinks } from "../lib/app-download/config.ts";
+import {
+  APP_PROMPT_INTERVAL_MS,
+  APP_PROMPT_FIRST_VISIT_DELAY_MS,
+  APP_PROMPT_STORAGE_KEY,
+  getNextAutoPromptDelay,
+} from "../lib/app-download/schedule.ts";
+
+const read = path => readFileSync(new URL("../" + path, import.meta.url), "utf8");
+
+test("app destinations remain empty until verified store listings are provided", () => {
+  assert.equal(appStoreLinks.ios, null);
+  assert.equal(appStoreLinks.android, null);
+  assert.equal(getAppStoreLink("ios"), null);
+  assert.equal(getAppStoreLink("android"), null);
+});
+
+test("app promotion is limited to once per two hours per browser", () => {
+  const now = 1_800_000_000_000;
+  assert.equal(APP_PROMPT_INTERVAL_MS, 7_200_000);
+  assert.match(APP_PROMPT_STORAGE_KEY, /last-shown/);
+  assert.ok(APP_PROMPT_FIRST_VISIT_DELAY_MS >= 500);
+  assert.equal(getNextAutoPromptDelay(now, null), APP_PROMPT_FIRST_VISIT_DELAY_MS);
+  assert.equal(getNextAutoPromptDelay(now, now), APP_PROMPT_INTERVAL_MS);
+  assert.equal(getNextAutoPromptDelay(now, now - 3_600_000), 3_600_000);
+  assert.equal(getNextAutoPromptDelay(now, now - 7_200_000), 0);
+  assert.equal(getNextAutoPromptDelay(now, -1), APP_PROMPT_FIRST_VISIT_DELAY_MS);
+});
+
+test("menu action and popup are global, dismissible and have recognized brand marks", () => {
+  const layout = read("app/layout.tsx"), header = read("components/site-header.tsx");
+  const ui = read("components/app-download.tsx");
+  const css = read("app/app-download.css");
+  assert.match(layout, /<AppDownloadProvider>/);
+  assert.match(header, /<AppDownloadMenuButton/);
+  assert.match(ui, /aria-haspopup="dialog"/);
+  assert.match(ui, /aria-label="Đóng thông báo tải ứng dụng"/);
+  assert.match(ui, /APP_PROMPT_STORAGE_KEY/);
+  assert.match(ui, /"visibilitychange"/);
+  assert.match(ui, /"storage"/);
+  assert.match(ui, /event\.key === "Escape"/);
+  assert.match(ui, /platform="ios"/);
+  assert.match(ui, /platform="android"/);
+  assert.match(ui, /Simple Icons/);
+  assert.match(css, /prefers-reduced-motion/);
+  assert.match(css, /z-index:\s*100/);
+  assert.doesNotMatch(ui, /href="https:\/\/(?:apps\.apple\.com|play\.google\.com)/);
+});

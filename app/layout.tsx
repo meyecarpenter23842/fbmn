@@ -9,6 +9,8 @@ import "./catalog.css";
 import "./catalog-search.css";
 import "./content.css";
 import "./site-footer.css";
+import "./app-download.css";
+import { AppDownloadProvider } from "@/components/app-download";
 
 export const metadata: Metadata = {
   title: "Futurebook Miền Nam",
@@ -19,7 +21,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
   return (
     <html lang="vi">
-      <body>{children}</body>
+      <body><AppDownloadProvider>{children}</AppDownloadProvider></body>
     </html>
   );
 }

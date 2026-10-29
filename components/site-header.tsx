@@ -5,6 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { Container, Icon } from "./ui";
+import { AppDownloadMenuButton } from "./app-download";
 
 const desktopNavigation = [
   { label: "Trang chủ", href: "/#home" },
@@ -85,6 +86,7 @@ export function SiteHeader() {
               key={item.label} href={item.href} onClick={() => setMenuOpen(false)}
               aria-current={active ? "page" : undefined}>{item.label}</Link>;
           })}
+          <AppDownloadMenuButton onOpen={() => setMenuOpen(false)} />
         </Container>
       </nav>
       <div id="ref-mobile-search" className="ref-search-notice" hidden={!searchOpen} role="status">

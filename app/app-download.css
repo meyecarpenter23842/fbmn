@@ -1,0 +1,104 @@
+/* WEB App Download UI: one compact non-blocking popup, shared on all routes. */
+.ref-navigation__download {
+  display: inline-flex;
+  align-self: center;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  flex: 0 0 auto;
+  margin-left: auto;
+  min-height: 34px;
+  border: 1px solid rgba(255,255,255,.5);
+  border-radius: 10px;
+  padding: 0 12px;
+  background: rgba(255,255,255,.13);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
+  transition: background-color .2s ease, transform .2s ease;
+}
+.ref-navigation__download:hover,
+.ref-navigation__download:focus-visible { background: rgba(255,255,255,.23); transform: translateY(-1px); }
+.app-download {
+  position: fixed;
+  z-index: 100;
+  bottom: 20px;
+  right: clamp(12px, 3vw, 36px);
+  width: min(370px, calc(100vw - 24px));
+  max-height: calc(100dvh - 24px);
+  overflow-y: auto;
+  padding: 17px 17px 13px;
+  border-radius: 18px;
+  border: 1px solid #e8d9f5;
+  border-top: 3px solid #782db0;
+  color: #291743;
+  background: rgba(255,255,255,.98);
+  box-shadow: 0 16px 46px rgba(47,14,86,.19), 0 2px 8px rgba(47,14,86,.08);
+  animation: app-download-enter .28s cubic-bezier(.21,1,.33,1) both;
+}
+.app-download__head { display: flex; align-items: center; gap: 10px; }
+.app-download__glyph {
+  width: 40px; height: 40px; border-radius: 12px; flex: 0 0 40px;
+  display: grid; place-items: center;
+  color: #fff; background: linear-gradient(140deg,#6a279c,#a04ec9);
+}
+.app-download__heading { display: grid; flex: 1; gap: 4px; min-width: 0; }
+.app-download__heading strong { font-size: 14px; font-weight: 850; line-height: 1.2; }
+.app-download__heading small { color: #786b83; font-size: 11px; line-height: 1.3; }
+.app-download__close {
+  align-self: flex-start; flex: 0 0 auto; display: grid; place-items: center;
+  width: 34px; height: 34px; border: 0; border-radius: 9px;
+  color: #645370; background: #f6f1fb;
+}
+.app-download__close:hover { color: #5b208b; background: #eee0f8; }
+.app-download__stores { display: grid; gap: 8px; margin-top: 15px; }
+.app-download__store {
+  display: flex; align-items: center; gap: 12px; min-width: 0; min-height: 58px;
+  padding: 9px 11px; border-radius: 12px; border: 1px solid #ebdff4;
+  background: #fdfbff; color: #2c2140; text-decoration: none;
+}
+a.app-download__store { transition: background-color .2s ease, border-color .2s ease; }
+a.app-download__store:hover { background: #f4e9ff; border-color: #b985db; }
+.app-download__store--unavailable { cursor: default; }
+.app-download__store-icon { display: grid; place-items: center; width: 31px; height: 31px; flex: 0 0 31px; }
+.app-download__store-icon--ios { color: #22212a; }
+.app-download__store-icon--android { color: #30b568; }
+.app-download__store-copy { display: grid; flex: 1; gap: 3px; min-width: 0; }
+.app-download__store-copy strong { font-size: 13px; font-weight: 850; }
+.app-download__store-copy small { color: #82738d; font-size: 10px; }
+.app-download__soon {
+  flex: 0 0 auto; border-radius: 99px; padding: 5px 8px;
+  background: #f1e9fa; color: #714795; font-weight: 750; font-size: 10px;
+}
+.app-download__note { color: #7f738a; font-size: 10px; line-height: 1.5; margin: 12px 2px 0; }
+.app-download__later { display: inline-block; border: 0; background: transparent; color: #6b2c96; font-size: 11px; font-weight: 800; padding: 7px 2px 1px; margin-top: 7px; }
+.app-download__later:hover { text-decoration: underline; }
+@keyframes app-download-enter {
+  from { opacity: 0; transform: translateY(12px) scale(.975); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+@media (max-width: 1060px) and (min-width: 801px) {
+  .ref-navigation__inner { gap: 4px; }
+  .ref-navigation__download { padding: 0 9px; font-size: 11px; }
+}
+@media (max-width: 800px) {
+  .ref-navigation__download {
+    align-self: stretch;
+    justify-content: flex-start;
+    width: 100%;
+    min-height: 44px;
+    margin: 7px 0 0;
+    border-radius: 9px;
+    padding: 10px 16px;
+    border-color: rgba(255,255,255,.22);
+    background: rgba(255,255,255,.12);
+    font-size: 13px;
+  }
+  .app-download { right: 12px; bottom: max(14px,env(safe-area-inset-bottom)); padding: 15px 14px 12px; }
+  .app-download__heading strong { font-size: 13px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .app-download { animation: none; }
+  .ref-navigation__download, a.app-download__store { transition: none; }
+}
