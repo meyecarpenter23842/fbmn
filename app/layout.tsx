@@ -10,7 +10,9 @@ import "./catalog-search.css";
 import "./content.css";
 import "./site-footer.css";
 import "./app-download.css";
+import "./chatbot.css";
 import { AppDownloadProvider } from "@/components/app-download";
+import { ChatbotWidget } from "@/components/chatbot-widget";
 
 export const metadata: Metadata = {
   title: "Futurebook Miền Nam",
@@ -21,7 +23,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
   return (
     <html lang="vi">
-      <body><AppDownloadProvider>{children}</AppDownloadProvider></body>
+      <body><AppDownloadProvider>{children}<ChatbotWidget /></AppDownloadProvider></body>
     </html>
   );
 }
