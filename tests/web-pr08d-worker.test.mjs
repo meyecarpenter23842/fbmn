@@ -82,11 +82,11 @@ test("OPTIONS preflight does not create DB connections",async()=>{
  }),env());
  assert.equal(r.status,204);assert.equal(history.connections,0);
 });
-test("separate Cloudflare staging Worker cannot be published without real Hyperdrive ID",()=>{
+test("staging Worker binds the dedicated public read-only Hyperdrive, never B2B",()=>{
  const config=JSON.parse(readFileSync(new URL("../backend/public-api/wrangler.jsonc",import.meta.url),"utf8"));
  assert.equal(config.workers_dev,false);
  assert.notEqual(config.hyperdrive[0].id,"680f8ad608b845039dcb889240ace3d2");
  assert.equal(config.ratelimits[0].name,"RATE_LIMITER");
  assert.equal(config.vars.EXPECTED_DB_ROLE,"fbmn_public_http_staging");
- assert.ok(config.hyperdrive[0].id.startsWith("SET_SEPARATE"));
+ assert.equal(config.hyperdrive[0].id,"a49c268446874bda9c9f0c0ec2777e7e");
 });
