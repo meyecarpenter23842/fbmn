@@ -1,0 +1,45 @@
+name: Staging Worker live HTTP smoke
+
+on:
+  pull_request:
+    branches: [main]
+    paths: [backend/public-api/**, .github/workflows/worker-staging-http-smoke.yml]
+  push:
+    branches: [main]
+    paths: [backend/public-api/**]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    name: Public API staging read-only live probe
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Verify public endpoints without secrets
+        shell: bash
+        env:
+          BASE: https://futurebook-mien-nam-public-api-staging.fbmn-alibaba240185.workers.dev
+        run: |
+          set -euo pipefail
+          check() {
+            local want="$1" method="$2" path="$3" origin="${4:-}"
+            local -a args=(--max-time 18 --retry 2 --retry-delay 1 --silent --show-error --request "$method")
+            if [[ -n "$origin" ]]; then args+=(--header "Origin: $origin"); fi
+            local got
+            got=$(curl "${args[@]}" --output ./response.json --write-out '%{http_code}' "$BASE$path")
+            echo "TEST $method $path origin=${origin:-none}: got=$got expected=$want"
+            head -c 400 ./response.json || true
+            echo
+            [[ "$got" == "$want" ]] || { echo "::error::Expected $want, got $got"; exit 1; }
+          }
+          check 200 GET /v1/public/categories
+          check 200 GET /v1/public/products
+          check 200 GET /v1/public/content
+          check 400 GET '/v1/public/products?net=1'
+          check 403 GET /v1/public/categories https://example.net
+          check 404 GET /v1/private/customers
+          check 405 POST /v1/public/content
+          check 204 OPTIONS /v1/public/categories https://fbmn-web.vercel.app
