@@ -1,0 +1,47 @@
+name: FBMN production SSR live smoke
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'app/**'
+      - 'lib/**'
+      - '.github/workflows/worker-staging-production-ssr-smoke.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'app/**'
+      - 'lib/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    name: Verify web production HTTP pages
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Check live website with SSR API enabled
+        shell: bash
+        env:
+          BASE: https://fbmn-web.vercel.app
+        run: |
+          set -euo pipefail
+          check() {
+            local path="$1" got
+            got=$(curl --location --max-redirs 2 --max-time 35 --retry 2 --retry-delay 1 --silent --show-error --output ./page.html --write-out '%{http_code}' "$BASE$path")
+            echo "TEST $BASE$path: HTTP $got bytes=$(wc -c < ./page.html)"
+            [[ "$got" == "200" ]] || { head -c 200 ./page.html || true; echo; exit 1; }
+            test -s ./page.html
+            grep -Eiq '(Futurebook|futurebook)' ./page.html || { echo "No Futurebook marker in $path"; exit 1; }
+          }
+          check /
+          check /san-pham
+          check /gioi-thieu
+          check /dai-ly
+          check /khuyen-mai
+          check /tin-tuc
+          check /lien-he
+          echo "PRODUCTION_SSR_SMOKE_OK"
