@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { fanpageContactReference as contact } from "@/lib/content/contact-reference";
+import { FooterSocialLinks } from "@/components/footer-social-links";
 
 /** Consistent site-wide footer for Home, Catalog and Editorial pages. */
 export function SiteFooter() {
@@ -16,6 +17,7 @@ export function SiteFooter() {
           </Link>
           <p>Tập vở, sổ và văn phòng phẩm Futurebook.</p>
           <p>Thông tin sản phẩm, hình ảnh và chính sách bán hàng được cập nhật sau khi kiểm tra nguồn.</p>
+          <FooterSocialLinks />
         </section>
         <nav aria-label="Khám phá Futurebook" className="site-footer__links">
           <h2>Khám phá</h2>

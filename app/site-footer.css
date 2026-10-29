@@ -38,3 +38,34 @@
  .site-footer__bottom { margin-top: 21px; align-items: flex-start; flex-direction: column; gap: 6px; }
 }
 @media (prefers-reduced-motion: reduce) { .site-footer * { transition: none !important; animation: none !important; } }
+
+/* Footer social network links — official glyph shapes, subtle glossy treatment. */
+.site-footer__social { margin-top: 17px; }
+.site-footer__social-title {
+  display: block; margin-bottom: 10px;
+  color: #eadcf7; font-size: 11px; font-weight: 750;
+}
+.site-footer__social-list { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; }
+.site-footer__social-icon {
+  display: inline-grid; place-items: center; flex: 0 0 40px;
+  width: 40px; height: 40px; border-radius: 12px;
+  color: #fff;
+  border: 1px solid rgba(255,255,255,.3);
+  box-shadow: inset 0 1.5px 1px rgba(255,255,255,.32), inset 0 -2px 4px rgba(0,0,0,.14), 0 5px 12px rgba(18,5,36,.23);
+  text-decoration: none;
+  position: relative;
+  transition: transform .2s ease, box-shadow .2s ease, filter .2s ease;
+}
+.site-footer__social-icon svg { display: block; width: 21px; height: 21px; }
+.site-footer__social-icon--facebook { background: linear-gradient(145deg, #439bff, #1877f2 60%, #0654bb); }
+.site-footer__social-icon--youtube { background: linear-gradient(145deg, #ff5555, #ff0033 60%, #b80024); }
+.site-footer__social-icon--tiktok { background: linear-gradient(145deg, #33353e, #13151c 62%, #050609); }
+.site-footer__social-icon--tiktok svg { filter: drop-shadow(-1px -1px 0 #25f4ee) drop-shadow(1px 1px 0 #fe2c55); }
+.site-footer__social-icon--pending { opacity: .78; cursor: default; }
+a.site-footer__social-icon:hover { color: #fff; transform: translateY(-2px); filter: brightness(1.09); box-shadow: inset 0 1.5px 1px rgba(255,255,255,.4), 0 8px 16px rgba(18,5,36,.32); }
+a.site-footer__social-icon:focus-visible { outline: 3px solid #fff; outline-offset: 3px; }
+@media (max-width: 700px) {
+  .site-footer__social { margin-top: 14px; }
+  .site-footer__social-icon { flex-basis: 38px; width: 38px; height: 38px; border-radius: 11px; }
+  .site-footer__social-list { gap: 9px; }
+}

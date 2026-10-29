@@ -40,3 +40,24 @@ test("contact reference is sourced and not misrepresented as official business r
   const contact = read("app/lien-he/page.tsx");
   assert.match(contact, /đang được đối chiếu/);
 });
+
+test("official social links: Facebook active, YouTube and TikTok pending", () => {
+  const social = read("components/footer-social-links.tsx");
+  const config = read("lib/content/social-profiles.ts");
+  const footer = read("components/site-footer.tsx");
+  const style = read("app/site-footer.css");
+  assert.match(footer, /<FooterSocialLinks\s*\/>/);
+  assert.match(config, /https:\/\/www\.facebook\.com\/futurebook\.miennam/);
+  assert.match(config, /youtube", name: "YouTube", url: null/);
+  assert.match(config, /tiktok", name: "TikTok", url: null/);
+  assert.match(social, /target="_blank"/);
+  assert.match(social, /rel="noopener noreferrer"/);
+  assert.match(social, /site-footer__social-icon--pending/);
+  assert.match(social, /aria-label=\{profile\.name \+ " — sắp cập nhật đường dẫn"\}/);
+  assert.match(social, /Simple Icons/);
+  assert.match(style, /\.site-footer__social-icon--facebook/);
+  assert.match(style, /\.site-footer__social-icon--youtube/);
+  assert.match(style, /\.site-footer__social-icon--tiktok/);
+  assert.match(style, /box-shadow:/);
+  assert.match(style, /prefers-reduced-motion/);
+});
