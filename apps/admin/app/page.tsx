@@ -139,9 +139,18 @@ export default function AdminPage() {
     setBusy(true);setNotice("");
     try {
       const result=await authClient.signIn.email({email:adminEmail.trim().toLowerCase(),password:adminPassword,rememberMe:false});
-      if(result.error) {setNotice("Email hoặc mật khẩu không hợp lệ, hoặc tài khoản chưa được kích hoạt.");return;}
+      if(result.error) {setNotice("Không đăng nhập được bằng mật khẩu này. Nếu là lần đầu sử dụng, chọn Kích hoạt / Xác minh Owner để nhận mã qua email và đặt mật khẩu mới.");return;}
       setAdminPassword("");void refresh();
-    }catch{setNotice("Không kết nối được dịch vụ đăng nhập Neon Auth.");}
+    }catch(error:unknown){
+      // The Neon Auth client may reject HTTP 401 as an exception rather than
+      // returning result.error. 401 is invalid credentials, not a network outage.
+      const status = typeof error==="object" && error!==null && "status" in error ? Number(error.status) : 0;
+      if(status===401 || status===403 || status===422){
+        setNotice("Đăng nhập chưa được chấp nhận. Tài khoản mới chưa có mật khẩu phải xác minh email và đặt mật khẩu trước.");
+      } else {
+        setNotice("Đăng nhập không thành công. Nếu chưa có mật khẩu, bấm Kích hoạt / Xác minh Owner; nếu lỗi tiếp diễn, kiểm tra kết nối.");
+      }
+    }
     finally{setBusy(false);}
   }
   async function sendVerification(){
@@ -250,6 +259,7 @@ export default function AdminPage() {
       {authState==="checking"?<><h1 id="auth-title">Đang xác minh phiên đăng nhập</h1><p className="modal-subtitle">Kiểm tra Neon Auth và quyền truy cập Futurebook…</p><div className="modal-spinner" role="status" aria-label="Đang tải"/></>:
        authState==="anonymous"?<><h1 id="auth-title">{loginMode==="verify"?"Xác minh email quản trị":loginMode==="forgot"?"Quên mật khẩu":loginMode==="reset"?"Đặt mật khẩu mới":"Đăng nhập Futurebook Admin"}</h1>
        <p className="modal-subtitle">{loginMode==="verify"?"Nhập mã được gửi đến email để xác minh quyền sở hữu hộp thư.":loginMode==="forgot"?"Nhận mã qua email để đặt lại mật khẩu an toàn.":loginMode==="reset"?"Nhập mã email và mật khẩu mới; không dùng lại mật khẩu đã chia sẻ.":"Dành riêng cho nhân sự quản trị được cấp quyền. Đăng nhập bằng email và mật khẩu."}</p>
+       {loginMode==="login"&&<p className="first-login-hint"><Glyph name="alert" size={16}/>Lần đầu dùng Owner? Tài khoản chưa có mật khẩu. Hãy chọn <b>Kích hoạt / Xác minh Owner</b> ở dưới để nhận mã qua email, sau đó đặt mật khẩu mới.</p>}
        <form className="admin-login-form" onSubmit={e=>{e.preventDefault();void (loginMode==="login"?signIn():loginMode==="verify"?verifyEmail():loginMode==="forgot"?requestReset():resetPassword());}}>
          <label className="login-label">Email quản trị<input type="email" value={adminEmail} onChange={e=>setAdminEmail(e.target.value)} placeholder="email@congty.vn" autoComplete="email" required maxLength={200}/></label>
          {(loginMode==="verify"||loginMode==="reset")&&<label className="login-label">Mã xác minh qua email<input inputMode="numeric" autoComplete="one-time-code" value={emailCode} onChange={e=>setEmailCode(e.target.value)} placeholder="Nhập mã đã nhận" required maxLength={12}/></label>}

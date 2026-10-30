@@ -15,6 +15,9 @@ test("Admin is isolated and website no longer owns auth/admin routes", () => {
   assert.match(text("apps/admin/app/page.tsx"), /authClient\.emailOtp\.requestPasswordReset/);
   assert.match(text("apps/admin/app/page.tsx"), /authClient\.emailOtp\.verifyEmail/);
   assert.ok(exists("apps/admin/public/brand/fbmn-official-logo.webp"));
+  assert.ok(exists("apps/admin/app/favicon.ico/route.ts"));
+  assert.match(text("apps/admin/app/favicon.ico/route.ts"),/brand\/fbmn-official-logo\.webp/);
+  assert.match(text("apps/admin/app/layout.tsx"),/icons: \{ icon:/);
 });
 test("Admin preview deployment cannot run automatically or target production", () => {
   const flow = text(".github/workflows/admin-preview-deploy.yml");
