@@ -14,8 +14,11 @@ test("Admin popup blocks the workspace until both Neon session and DB principal 
   assert.match(page,/setAuthState\("anonymous"\);return;/);
   assert.match(page,/className="first-login-hint" role="note"/);
   assert.doesNotMatch(page,/Lần đầu dùng Owner\? Tài khoản chưa có mật khẩu\. Hãy chọn/);
-  assert.match(page,/authClient\.token\(\)/);
-  assert.match(page,/headers:\{Authorization:"Bearer "\+jwtResult\.data\.token/);
+  assert.match(page,/fetch\("\/api\/auth\/token"/);
+  assert.match(page,/JWT_ENDPOINT_HTTP_/);
+  assert.match(page,/JWT_RESPONSE_MISSING/);
+  assert.match(page,/headers:\{Authorization:"Bearer "\+jwt,Accept:"application\/json"\}/);
+  assert.doesNotMatch(page,/authClient\.token\(\)/);
   assert.doesNotMatch(page,/try\{await authClient\.signOut\(\);\}/);
   assert.match(page,/Phiên đăng nhập được giữ nguyên/);
   assert.match(route,/invalid_bearer/);

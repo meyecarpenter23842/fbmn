@@ -125,16 +125,27 @@ export default function AdminPage() {
         setAuthState("anonymous");return;
       }
       setName(result.data.user.name || result.data.user.email || "Nhân sự Futurebook");
-      // Use the official Neon Auth client token from the browser session.
-      // Do not persist JWT or transmit it anywhere except the same-origin Admin BFF.
-      const jwtResult=await authClient.token();
-      if(jwtResult.error || !jwtResult.data?.token){
-        setNotice("Email và mật khẩu đã đăng nhập, nhưng Neon Auth chưa cấp JWT để kiểm tra quyền Admin (AUTH_TOKEN_MISSING). Không cần kích hoạt Owner lại.");
+      // Neon SDK 0.7.0-beta may classify /token as getSession and return a
+      // cached session response. Bypass its method cache via the trusted
+      // SAME-ORIGIN Neon Auth Next.js proxy; never fetch the token cross-origin.
+      const jwtResponse=await fetch("/api/auth/token",{
+        method:"GET",credentials:"same-origin",cache:"no-store",
+        headers:{Accept:"application/json"}
+      });
+      if(!jwtResponse.ok){
+        setNotice("Phiên Neon Auth tồn tại nhưng endpoint cấp JWT chưa thành công (JWT_ENDPOINT_HTTP_"+jwtResponse.status+"). Phiên vẫn được giữ nguyên.");
         setAuthState("unavailable");return;
       }
+      const jwtBody=await jwtResponse.json().catch(()=>null) as {token?:unknown}|null;
+      const jwt=typeof jwtBody?.token==="string" ? jwtBody.token : "";
+      if(jwt.length>12000 || !/^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/.test(jwt)){
+        setNotice("Neon Auth phản hồi nhưng không có JWT đúng định dạng (JWT_RESPONSE_MISSING). Không yêu cầu đặt lại mật khẩu.");
+        setAuthState("unavailable");return;
+      }
+      // Short-lived bearer exists only within this call; no storage or logging.
       const adminRequest=(route:string)=>fetch("/api/admin/"+route,{
         method:"GET",credentials:"same-origin",cache:"no-store",
-        headers:{Authorization:"Bearer "+jwtResult.data.token,Accept:"application/json"}
+        headers:{Authorization:"Bearer "+jwt,Accept:"application/json"}
       });
       const response=await adminRequest("session");
       if(response.status===401){

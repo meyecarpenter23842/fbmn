@@ -19,7 +19,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ rout
     }
   } catch { return jsonError(503, "admin_api_invalid_config"); }
 
-  // Neon recommends obtaining a short-lived JWT via authClient.token().
+  // Receive a short-lived JWT from the same-origin /api/auth/token endpoint.
   // The browser sends it in memory, same-origin only; the Worker cryptographically
   // verifies signature, issuer, expiry and database permissions on EVERY request.
   // Legacy server-cookie token lookup remains supported when no Bearer header is provided.
