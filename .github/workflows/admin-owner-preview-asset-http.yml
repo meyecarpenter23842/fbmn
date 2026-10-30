@@ -1,0 +1,56 @@
+name: Admin Owner preview PR54 live HTTP acceptance
+
+# One-time check of the explicitly reviewed PR54/55 Preview deployment.
+# The pinned URL MUST NOT gate future Admin source revisions.
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/admin-owner-preview-asset-http.yml'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/admin-owner-preview-asset-http.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  http:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    env:
+      BASE: https://fbmn-admin-4e4xxp8j9-alibaba240185.vercel.app
+    steps:
+      - name: Admin login is publicly reachable but data is not
+        shell: bash
+        run: |
+          set -euo pipefail
+          status=$(curl --location --max-redirs 2 --max-time 30 --retry 2 --silent --show-error --output ./page.html --write-out '%{http_code}' "$BASE/")
+          echo "Admin Owner login page HTTP $status"
+          test "$status" = "200"
+          grep -q 'Đang xác minh phiên đăng nhập' ./page.html
+          ! grep -qi 'Authentication Required' ./page.html
+          echo "LOGIN_PAGE_OK"
+      - name: Exact Futurebook official logo asset is served
+        shell: bash
+        run: |
+          set -euo pipefail
+          status=$(curl --max-time 30 --retry 2 --silent --show-error --output ./logo.webp --write-out '%{http_code}' "$BASE/brand/fbmn-official-logo.webp")
+          echo "Official logo HTTP $status"
+          test "$status" = "200"
+          test "$(wc -c < ./logo.webp)" -eq 3014
+          echo "14873e498f34495c3e0b493f85876448d37ea33bd31ec6e206c85be476dfcbff  ./logo.webp" | sha256sum --check --status
+          echo "OFFICIAL_BRAND_ASSET_OK"
+      - name: Neon anonymous session is healthy and Admin API denies unauthenticated access
+        shell: bash
+        run: |
+          set -euo pipefail
+          session=$(curl --max-time 30 --retry 2 --silent --show-error --output ./session.json --write-out '%{http_code}' "$BASE/api/auth/get-session")
+          echo "Neon Auth anonymous session HTTP $session"
+          test "$session" = "200"
+          node -e 'const fs=require("fs");const x=JSON.parse(fs.readFileSync("./session.json","utf8"));if(x?.user||x?.data?.user)process.exit(1);'
+          denied=$(curl --max-time 30 --retry 2 --silent --show-error --output ./admin.json --write-out '%{http_code}' "$BASE/api/admin/session")
+          echo "Unauthenticated Admin API HTTP $denied"
+          test "$denied" = "401"
+          echo "NEON_AUTH_AND_RBAC_GATE_OK"
