@@ -112,7 +112,7 @@ export default function CatalogueImportPreview() {
       if(!response.ok){
         if(response.status===401||response.status===403)throw new Error("Tài khoản chưa được cấp quyền xem trước import. Kiểm tra quyền Owner/Editor.");
         if(response.status===413)throw new Error("Tệp quá dung lượng cho phép.");
-        if(response.status===422||response.status===400)throw new Error("Excel chưa đúng cấu trúc đối chiếu 613 SKU (sheet/cột hoặc mã sai định dạng).");
+        if(response.status===422||response.status===400)throw new Error("Không đọc được file Excel. Hệ thống tự chọn sheet sản phẩm; không cần xóa sheet. Nếu file gốc vẫn lỗi, báo mã HTTP 422 để kiểm tra bộ đọc.");
         throw new Error("Admin staging chưa xử lý được XLSX (HTTP "+response.status+").");
       }
       const data=await response.json() as Preview;
@@ -149,7 +149,7 @@ export default function CatalogueImportPreview() {
       <br/>Kết quả “ứng viên tạo mới” được tính với giả định database trống, <b>không phải trạng thái thực tế Neon</b>.</div>
     <section className="import-upload-panel" aria-label="Tải file đối chiếu">
       <div className="import-upload-text"><div className="import-file-icon">XLSX</div><div><h2>Chọn file đối chiếu 613 SKU</h2>
-        <p>Sheet bắt buộc: <code>DOI CHIEU 613 SKU</code> · Giữ nguyên mã có số 0 đầu như 0114 và 0714 · Dung lượng tối đa 8 MB</p>
+        <p>Tự động đọc sheet <code>DOI CHIEU 613 SKU</code> và bỏ qua 7 sheet thống kê khác. Không cần chỉnh Excel · Giữ nguyên 0114, 0714 · Tối đa 8 MB</p>
         {file&&<div className="import-selected">Đã chọn: <b>{file.name}</b> ({(file.size/1024).toFixed(0)} KB)</div>}
       </div></div>
       <div className="import-upload-actions"><input ref={fileRef} type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" onChange={selectFile} className="import-file-hidden" aria-label="Chọn Excel" />

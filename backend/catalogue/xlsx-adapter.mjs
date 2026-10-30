@@ -1,5 +1,6 @@
 // ADM-02 #19: local-only XLSX -> allowlisted CSV/preview. NO database, pricing or stock writes.
 import ExcelJS from "exceljs";
+import JSZip from "jszip";
 import { previewSkuRows } from "./import-preview.mjs";
 
 export const MASTER_SHEET = "DOI CHIEU 613 SKU";
@@ -50,12 +51,59 @@ function cleanPreviewFields(row) {
   for (const field of IMPORT_FIELDS) if (Object.hasOwn(row, field)) clean[field] = row[field];
   return clean;
 }
+// Files exported by some spreadsheet editors use namespace-prefixed <x:workbook>
+// and Excel tables. ExcelJS 4.4.0 cannot load this otherwise valid form
+// (it fails before finding any sheets). Canonicalize XML IN MEMORY ONLY;
+// never change the owner's original file or send workbook contents to a log.
+const XLSX_MAIN_NS = "http://schemas.openxmlformats.org/spreadsheetml/2006/main";
+const MAX_EXPANDED_XML_BYTES = 36_000_000;
+async function excelJsCompatibleBytes(bytes) {
+  const zip = await JSZip.loadAsync(Buffer.from(bytes));
+  const workbookPart = zip.file("xl/workbook.xml");
+  if (!workbookPart) throw new Error("invalid_xlsx_workbook");
+  const workbookXml = await workbookPart.async("string");
+  if (!workbookXml.includes('xmlns:x="' + XLSX_MAIN_NS + '"')) return Buffer.from(bytes);
+  const entries = Object.entries(zip.files);
+  if (entries.length > 500) throw new Error("xlsx_too_many_parts");
+  let expanded = workbookXml.length;
+  if (expanded > MAX_EXPANDED_XML_BYTES) throw new Error("xlsx_xml_too_large");
+  for (const [name, part] of entries) {
+    if (part.dir || !name.startsWith("xl/") || !name.endsWith(".xml")) continue;
+    // Table cosmetics are not used for SKU imports. The source's prefixed
+    // table definitions otherwise fail in ExcelJS worksheet.model assignment.
+    if (name.startsWith("xl/tables/table")) {
+      zip.remove(name);
+      continue;
+    }
+    let xml = name === "xl/workbook.xml" ? workbookXml : await part.async("string");
+    expanded += xml.length;
+    if (expanded > MAX_EXPANDED_XML_BYTES) throw new Error("xlsx_xml_too_large");
+    if (xml.includes('xmlns:x="' + XLSX_MAIN_NS + '"')) {
+      xml = xml.replace('xmlns:x="' + XLSX_MAIN_NS + '"',
+        'xmlns="' + XLSX_MAIN_NS + '"')
+        .replaceAll("<x:", "<").replaceAll("</x:", "</");
+    }
+    if (name.startsWith("xl/worksheets/sheet")) {
+      // Drop Excel's presentation-only table references, not cells.
+      let begin = xml.indexOf("<tableParts");
+      while (begin !== -1) {
+        const end = xml.indexOf("</tableParts>", begin);
+        if (end < 0) throw new Error("invalid_xlsx_tables");
+        xml = xml.slice(0, begin) + xml.slice(end + "</tableParts>".length);
+        begin = xml.indexOf("<tableParts");
+      }
+    }
+    zip.file(name, xml);
+  }
+  return zip.generateAsync({ type: "nodebuffer", compression: "DEFLATE" });
+}
+
 /** Parse the canonical reconciliation sheet ONLY. No image/price/stock values leave the adapter. */
 export async function readXlsxSkuRows(bytes, options = {}) {
   if (!(bytes instanceof Uint8Array) || bytes.byteLength === 0 || bytes.byteLength > MAX_FILE_BYTES)
     throw new Error("invalid_xlsx_size");
   const workbook = new ExcelJS.Workbook();
-  await workbook.xlsx.load(Buffer.from(bytes));
+  await workbook.xlsx.load(await excelJsCompatibleBytes(bytes));
   const sheetName = options.sheetName || MASTER_SHEET;
   const sheet = workbook.getWorksheet(sheetName);
   if (!sheet) throw new Error("missing_master_sheet");

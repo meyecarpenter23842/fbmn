@@ -18,6 +18,8 @@ test("Admin bundle matches canonical read-only XLSX/CSV parsers, including sourc
   assert.equal(adminXlsx.replace(/^\/\/ Staging Admin bundle.*\n\/\/ Keep.*\n/,"").replace(
     'from "./sku-import-preview.mjs"', 'from "./import-preview.mjs"'),rootXlsx);
   assert.equal(adminPackage.dependencies.exceljs, "4.4.0");
+  assert.equal(adminPackage.dependencies.jszip, "3.10.1");
+  assert.equal(JSON.parse(read("package.json")).dependencies.jszip, "3.10.1");
 });
 
 test("Import endpoint allows only authenticated, DB-backed Admin preview, limits uploads and never writes", () => {

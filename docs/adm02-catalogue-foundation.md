@@ -70,3 +70,13 @@ Menu: Products → Nhập Excel/CSV. Excel XLSX is supported in this slice; CSV 
 5. Verify no Neon product rows, R2 objects or website public catalogue entries were created.
 
 The subsequent PR must add a protected DB snapshot comparison and owner-approved **draft-only** staging apply; media R2 and publishing remain separate approval gates. A working preview is NOT completed CRUD/import/publish.
+
+## 30/10/2026 — Real XLSX E2E regression fix (Admin import preview)
+
+Owner observed HTTP 422 and the generic "Excel chưa đúng cấu trúc" message when uploading the original **8-sheet**, 145,322-byte reconciliation XLSX. The source workbook is valid and already contains the exact `DOI CHIEU 613 SKU` header and 613 literal-text company codes. Removing other sheets is **not** required.
+
+**Actual cause:** ExcelJS 4.4.0 cannot parse this exporter’s namespace-prefixed OOXML (`<x:workbook>`, `<x:worksheet>`) and raises `Cannot read properties of undefined (reading 'sheets')`. Once namespace tags are normalized, it also fails on presentation-only Excel tables (`reading 'name'` during worksheet model assignment). Normalization now runs **in memory** on only prefixed XLSX sources: replace equivalent main-namespace tag prefixes, strip purely presentational table parts, then let the existing strict importer validate headers/rows. Other workbook formats pass to ExcelJS unchanged. No source file is modified or committed.
+
+**Reproduced end-to-end with the actual private XLSX bytes** on Node 22 + ExcelJS 4.4.0 in a temporary private Vercel diagnostic sandbox: `total_rows=613`, `unique_company_skus=613`, `totals.error=0`, `both=224`, `xnt_only=385`, `price_only=4`, `missing_images=541`, `image_candidates=72`; leading-zero `0114` retained. Source NET price, stock values and filenames do not appear in preview JSON. Diagnostic sandbox stored no Git commit or public share of the source.
+
+**Release scope:** strict read-only preview remains; no Neon import, no R2 upload, no catalogue publication. Owner may upload the **original 8-sheet XLSX without editing anything**. A one-sheet copy is offered for convenience, not a prerequisite. Follow-up UI shows that other sheets are ignored automatically.

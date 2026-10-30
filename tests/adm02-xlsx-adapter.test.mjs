@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import ExcelJS from "exceljs";
+import JSZip from "jszip";
 import { mkdtemp, writeFile, symlink, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, dirname, resolve } from "node:path";
@@ -34,6 +35,48 @@ async function fixture(rows, sheetName = MASTER_SHEET) {
   wb.addWorksheet("GIA PDF O GOP").addRow(["Price NOT a SKU", "Internal"]);
   return Buffer.from(await wb.xlsx.writeBuffer());
 }
+
+
+/** Mimic the owner's valid OOXML export, which uses <x:workbook>/<x:worksheet>.
+ * These namespace prefixes and Excel table definitions caused ExcelJS 4.4.0
+ * to throw even though Excel and artifact_tool read the file correctly.
+ */
+async function withPrefixedOfficeXml(bytes) {
+  const archive = await JSZip.loadAsync(bytes);
+  const ns = 'http://schemas.openxmlformats.org/spreadsheetml/2006/main';
+  for (const [name, entry] of Object.entries(archive.files)) {
+    if (entry.dir || !name.startsWith("xl/") || !name.endsWith(".xml")) continue;
+    let xml = await entry.async("string");
+    if (!xml.includes('xmlns="' + ns + '"')) continue;
+    xml = xml.replace('xmlns="' + ns + '"', 'xmlns:x="' + ns + '"');
+    xml = xml.replace(/<(\/?)([A-Za-z][A-Za-z0-9_-]*)(?=\s|\/?>)/g, '<$1x:$2');
+    archive.file(name, xml);
+  }
+  return Buffer.from(await archive.generateAsync({ type: "nodebuffer" }));
+}
+
+test("Owner-style prefixed OOXML and Excel table decorations import automatically with 0 missing rows", async () => {
+  const book = new ExcelJS.Workbook();
+  book.addWorksheet("TONG QUAN").addRow(["613 unique SKU", "DO NOT IMPORT"]);
+  const sheet = book.addWorksheet(MASTER_SHEET);
+  sheet.addTable({name:"FixtureSkuTable",ref:"A1",headerRow:true,totalsRow:false,
+    columns:HEADER.map(name=>({name})),rows:[
+      data("0114", "CẢ HAI", { stock: 259.1, price: 11200, images: "0114-01.png" }),
+      data("C5921", "CHỈ BẢNG GIÁ", { stock: null, price: 15999 }),
+    ],
+  });
+  book.addWorksheet("SKU CHUA ANH").addRow(["Should NOT be parsed"]);
+  const prefixed = await withPrefixedOfficeXml(await book.xlsx.writeBuffer());
+  const result = await previewXlsxImport(prefixed);
+  assert.equal(result.source_sheet, MASTER_SHEET);
+  assert.deepEqual(result.totals, { create: 2, update: 0, unchanged: 0, conflict: 0, error: 0 });
+  assert.deepEqual(result.items.map(row => row.sku_cong_ty), ["0114", "C5921"]);
+  assert.equal(result.counts.both, 1);
+  assert.equal(result.counts.price_only, 1);
+  assert.equal(result.counts.missing_images, 1);
+  const clean = JSON.stringify(result);
+  for (const secret of ["11200", "15999", "259.1", "0114-01.png"]) assert.ok(!clean.includes(secret));
+});
 
 test("Reads canonical XLSX by heading and preserves exact text company SKUs; no new variants", async () => {
   const file = await fixture([
