@@ -183,8 +183,10 @@ export default function AdminPage() {
       // The Neon Auth client may reject HTTP 401 as an exception rather than
       // returning result.error. 401 is invalid credentials, not a network outage.
       const status = typeof error==="object" && error!==null && "status" in error ? Number(error.status) : 0;
-      if(status===401 || status===403 || status===422){
-        setNotice("Đăng nhập chưa được chấp nhận. Tài khoản mới chưa có mật khẩu phải xác minh email và đặt mật khẩu trước.");
+      if(status===403){
+        setNotice("Yêu cầu đăng nhập bị từ chối (403). Vui lòng tải lại trang. Nếu lỗi tiếp diễn, cần kiểm tra domain Admin trong Neon Auth; không tự đặt lại mật khẩu.");
+      } else if(status===401 || status===422){
+        setNotice("Thông tin đăng nhập không được chấp nhận. Kiểm tra email và mật khẩu; dùng Kích hoạt / Xác minh Owner chỉ khi tài khoản chưa được thiết lập.");
       } else {
         setNotice("Đăng nhập không thành công. Nếu chưa có mật khẩu, bấm Kích hoạt / Xác minh Owner; nếu lỗi tiếp diễn, kiểm tra kết nối.");
       }
@@ -293,7 +295,7 @@ export default function AdminPage() {
     </div>
     <input type="file" multiple hidden ref={inputFile} accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" onChange={addPhotos}/>
     {authState!=="authorised" && <div className="auth-overlay" role="dialog" aria-modal="true" aria-labelledby="auth-title"><div className="auth-modal">
-      <div className="auth-top"><div className="auth-logo"><img src="/brand/fbmn-official-logo.webp" alt="Futurebook Miền Nam" width={240} height={84}/></div><span className="staging-pill">STAGING</span></div>
+      <div className="auth-top"><div className="auth-logo"><img src="/brand/fbmn-official-logo.webp" alt="Futurebook Miền Nam" width={240} height={84}/></div><span className="staging-pill">ADMIN</span></div>
       {authState==="checking"?<><h1 id="auth-title">Đang xác minh phiên đăng nhập</h1><p className="modal-subtitle">Kiểm tra Neon Auth và quyền truy cập Futurebook…</p><div className="modal-spinner" role="status" aria-label="Đang tải"/></>:
        authState==="anonymous"?<><h1 id="auth-title">{loginMode==="verify"?"Xác minh email":loginMode==="forgot"?"Khôi phục mật khẩu":loginMode==="reset"?"Đặt mật khẩu mới":"Đăng nhập quản trị"}</h1>
        <p className="modal-subtitle">{loginMode==="verify"?"Nhập mã được gửi đến email để xác minh quyền sở hữu hộp thư.":loginMode==="forgot"?"Nhận mã qua email để đặt lại mật khẩu an toàn.":loginMode==="reset"?"Nhập mã email và mật khẩu mới; không dùng lại mật khẩu đã chia sẻ.":"Dành riêng cho nhân sự quản trị được cấp quyền. Đăng nhập bằng email và mật khẩu."}</p>
