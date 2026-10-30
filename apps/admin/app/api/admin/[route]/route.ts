@@ -6,7 +6,7 @@ function jsonError(status: number, code: string) {
   return Response.json({ error: { code } }, { status, headers: { "Cache-Control": "no-store" } });
 }
 
-export async function GET(_request: Request, { params }: { params: Promise<{ route: string }> }) {
+export async function GET(request: Request, { params }: { params: Promise<{ route: string }> }) {
   const { route } = await params;
   if (!ALLOWED.has(route)) return jsonError(404, "not_found");
   const base = process.env.FBMN_ADMIN_API_BASE_URL;
@@ -19,15 +19,25 @@ export async function GET(_request: Request, { params }: { params: Promise<{ rou
     }
   } catch { return jsonError(503, "admin_api_invalid_config"); }
 
-  const auth = adminAuth();
-  if (!auth) return jsonError(503, "auth_not_configured");
-  // Fetch a fresh signed JWT on the server. Never put tokens in client storage or logs.
+  // Neon recommends obtaining a short-lived JWT via authClient.token().
+  // The browser sends it in memory, same-origin only; the Worker cryptographically
+  // verifies signature, issuer, expiry and database permissions on EVERY request.
+  // Legacy server-cookie token lookup remains supported when no Bearer header is provided.
+  const supplied=request.headers.get("authorization");
   let token: string | undefined;
-  try {
-    const result = await auth.token();
-    token = result.data?.token;
-  } catch { return jsonError(503, "auth_unavailable"); }
-  if (!token) return jsonError(401, "unauthenticated");
+  if (supplied!==null) {
+    const match=/^Bearer ([A-Za-z0-9._~+/-]+=*)$/.exec(supplied);
+    if(!match || match[1].length>12000)return jsonError(401,"invalid_bearer");
+    token=match[1];
+  } else {
+    const auth=adminAuth();
+    if(!auth)return jsonError(503,"auth_not_configured");
+    try{
+      const result=await auth.token();
+      token=result.data?.token;
+    }catch{return jsonError(503,"server_token_unavailable");}
+    if(!token)return jsonError(401,"server_token_missing");
+  }
 
   target.pathname = "/v1/admin/" + route;
   try {
@@ -45,6 +55,8 @@ export async function GET(_request: Request, { params }: { params: Promise<{ rou
     if (body.length > 32768 || !response.headers.get("content-type")?.includes("application/json")) {
       return jsonError(503, "upstream_invalid");
     }
+    // Only preserve safe error codes; never reflect JWT, cookies, upstream headers.
+    if(response.status===401)return jsonError(401,"upstream_jwt_rejected");
     return new Response(body, {
       status: response.status,
       headers: { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" },

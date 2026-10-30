@@ -125,13 +125,25 @@ export default function AdminPage() {
         setAuthState("anonymous");return;
       }
       setName(result.data.user.name || result.data.user.email || "Nhân sự Futurebook");
-      const response=await fetch("/api/admin/session",{credentials:"same-origin",cache:"no-store"});
+      // Use the official Neon Auth client token from the browser session.
+      // Do not persist JWT or transmit it anywhere except the same-origin Admin BFF.
+      const jwtResult=await authClient.token();
+      if(jwtResult.error || !jwtResult.data?.token){
+        setNotice("Email và mật khẩu đã đăng nhập, nhưng Neon Auth chưa cấp JWT để kiểm tra quyền Admin (AUTH_TOKEN_MISSING). Không cần kích hoạt Owner lại.");
+        setAuthState("unavailable");return;
+      }
+      const adminRequest=(route:string)=>fetch("/api/admin/"+route,{
+        method:"GET",credentials:"same-origin",cache:"no-store",
+        headers:{Authorization:"Bearer "+jwtResult.data.token,Accept:"application/json"}
+      });
+      const response=await adminRequest("session");
       if(response.status===401){
-        // Recover from a stale session instead of trapping the user behind a retry-only modal.
-        try{await authClient.signOut();}catch{/* Always keep the login form available. */}
-        setName("");setLoginMode("login");
-        setNotice("Phiên cũ không còn hợp lệ. Đăng nhập lại hoặc kích hoạt Owner lần đầu.");
-        setAuthState("anonymous");return;
+        // Never destroy a legitimate Neon session on a downstream JWT error.
+        // Leave it available for retry and use a safe, non-secret stage code.
+        const failure=await response.json().catch(()=>null) as {error?:{code?:string}}|null;
+        const code=failure?.error?.code || "upstream_unauthenticated";
+        setNotice("Neon Auth đã đăng nhập nhưng API quản trị từ chối JWT ("+code+"). Phiên đăng nhập được giữ nguyên để kiểm tra.");
+        setAuthState("unavailable");return;
       }
       if(response.status===403){setAuthState("forbidden");return;}
       if(!response.ok){setNotice("Neon Auth đã nhận tài khoản nhưng Admin API chưa xác minh được quyền. HTTP "+response.status+".");setAuthState("unavailable");return;}
@@ -139,12 +151,12 @@ export default function AdminPage() {
       if(!data.data?.role || !Array.isArray(data.data.channels))throw Error("Invalid API response");
       setSession(data.data);
       setAuthState("authorised");
-      const channelResult=await fetch("/api/admin/channels",{credentials:"same-origin",cache:"no-store"});
+      const channelResult=await adminRequest("channels");
       if(channelResult.ok){
         const body=await channelResult.json() as {data?:Channel[]};
         if(Array.isArray(body.data))setChannels(body.data);
       }
-    }catch{setNotice("Không kết nối được dịch vụ xác thực. Hãy thử lại.");setAuthState("unavailable");}
+    }catch{setNotice("Không kết nối được dịch vụ xác thực hoặc API quản trị. Phiên của anh được giữ nguyên, hãy thử lại.");setAuthState("unavailable");}
   },[]);
   useEffect(()=>{queueMicrotask(()=>{void refresh();});},[refresh]);
 

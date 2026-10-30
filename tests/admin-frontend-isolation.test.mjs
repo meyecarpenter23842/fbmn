@@ -12,6 +12,9 @@ test("Admin is isolated and website no longer owns auth/admin routes", () => {
   assert.equal(exists("app/api/admin/[route]/route.ts"), false);
   assert.equal(exists("app/api/auth/[...path]/route.ts"), false);
   assert.match(text("apps/admin/app/page.tsx"), /authClient\.signIn\.email/);
+  assert.match(text("apps/admin/app/page.tsx"), /authClient\.token\(\)/);
+  assert.doesNotMatch(text("apps/admin/app/page.tsx"), /localStorage|sessionStorage/);
+  assert.match(text("apps/admin/app/api/admin/[route]/route.ts"), /upstream_jwt_rejected/);
   assert.match(text("apps/admin/app/page.tsx"), /authClient\.emailOtp\.requestPasswordReset/);
   assert.match(text("apps/admin/app/page.tsx"), /authClient\.emailOtp\.verifyEmail/);
   assert.ok(exists("apps/admin/public/brand/fbmn-official-logo.webp"));
