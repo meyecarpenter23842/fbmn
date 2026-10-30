@@ -23,3 +23,30 @@
   Output files must be absolute paths **outside** the repository, are created with restricted permissions and cannot overwrite existing files. Without options the CLI prints only aggregate counts.
 - **Independent read-only audit 30/10/2026** of the canonical XLSX + original XNT workbook: 613 distinct company SKU rows = 224 both-source + 385 XNT-only + 4 price-only. XNT holds 609 distinct SKUs; 541 rows have no linked image; 72 have image candidates, not approvals; 2 stock-negative source rows. Original PDFs/ZIP remain private in Drive. This is a workbook audit, **not** an imported DB count.
 - Gate for later PR: approve exceptions/source names/media mapping, then import draft to **Neon staging only** after explicit sign-off. This PR has no database calls, migrations, API routes, production deployment or Auth/login changes.
+
+## 30/10/2026 — Independent reconciliation with private source workbooks
+
+The 8-tab XLSX was read without modifying it and checked against the **separate original XNT 2810.xlsx** (both remain outside Git). This is a *local source audit*, not a proof that the Node/ExcelJS CLI parsed the source and not a query of existing Neon records:
+
+| Source audit (no private price/stock values) | Verified |
+| --- | ---: |
+| Master unique company codes | 613 |
+| Original XNT codes present in reconciliation | 609/609 |
+| Exact XNT name mismatches | 0 |
+| XNT stock snapshot mismatches | 0 |
+| In both sources / XNT-only / price-only | 224 / 385 / 4 |
+| Source-linked image candidates / without image | 72 / 541 |
+| Blank stock snapshots (unknown, **not zero**) | 40 |
+| Negative stock (review) | 2 |
+| Pack/multipack or promotion unit review | 18 |
+| Near-similar company codes (never auto-collapse) | 7 |
+| Marked 'Sai Code' | 4 |
+| Source line-spec mismatch | 2 |
+| Regional-only SKU review | 2 |
+| Shared image review | 12 |
+| Merged-cell price evidence review | 6 |
+| Distinct SKU with at least one targeted exception (excluding general missing media/unverified price) | 92 |
+
+The follow-up adapter flags these anomalies **without emitting any private stock quantities, NET price values or original ZIP image filenames**. No SKU was deleted for missing media; shared media remains unapproved. Use `previewXlsxImport` with a vetted server-side snapshot of existing SKU records for actual create/update/unchanged/conflict figures. With an empty snapshot, `create:613` is only a hypothetical dry-run, **not** a statement about the database.
+
+The CSV/JSON review artifacts are local/private and are **not** committed into the repository. No import into staging or production occurs in this verification PR.

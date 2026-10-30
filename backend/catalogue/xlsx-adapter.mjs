@@ -106,6 +106,14 @@ export async function readXlsxSkuRows(bytes, options = {}) {
     if (!mediaCandidates) warnings.push("image_missing");
     else warnings.push("image_mapping_unapproved");
     if (stockNegative) warnings.push("negative_stock");
+    // Blank XNT stock is unknown, NOT zero; prices and quantities stay private.
+    if ((origin === "xnt_only" || origin === "both") && isBlank(stockCell))
+      warnings.push("stock_snapshot_missing");
+    if (/Có yếu tố lốc\/khuyến mãi|\blốc\b|\bTặng Nhãn\b/i.test(raw.warnings))
+      warnings.push("packaging_promotion_review");
+    if (/Mã gần giống giá:/i.test(raw.warnings)) warnings.push("similar_sku_review");
+    if (/Hàng ghi Miền Bắc/i.test(raw.warnings)) warnings.push("regional_channel_review");
+    if (/Ảnh shared-review/i.test(raw.warnings)) warnings.push("shared_media_review");
     if (/sai\s*code/i.test(raw.xntName + " " + raw.warnings)) warnings.push("suspected_company_code");
     if (/khác\s+dòng\s+kẻ|lệch\s+mô\s+tả/i.test(raw.warnings)) warnings.push("source_spec_conflict");
     if (PRICE_MERGED_SKUS.has(sku)) warnings.push("merged_pdf_price_cell_verify");
@@ -143,8 +151,10 @@ export async function previewXlsxImport(bytes, existing = [], options = {}) {
   const parsed = await readXlsxSkuRows(bytes, options);
   const preview = previewSkuRows(parsed.rows.map(cleanPreviewFields), existing);
   const counts = { xnt_only: 0, both: 0, price_only: 0, unknown: 0,
-    missing_images: 0, image_candidates: 0, negative_stock: 0, price_unverified: 0,
-    suspected_company_code: 0, source_spec_conflict: 0, merged_pdf_price_cells: 0 };
+    missing_images: 0, image_candidates: 0, negative_stock: 0, stock_snapshot_missing: 0,
+    price_unverified: 0, packaging_promotion_review: 0, similar_sku_review: 0,
+    regional_channel_review: 0, shared_media_review: 0, suspected_company_code: 0,
+    source_spec_conflict: 0, merged_pdf_price_cells: 0 };
   const seen = new Set();
   const items = preview.items.map((item, i) => {
     const ev = parsed.evidence[i];
@@ -154,8 +164,10 @@ export async function previewXlsxImport(bytes, existing = [], options = {}) {
     counts[origin]++;
     if (ev.media_missing) counts.missing_images++; else counts.image_candidates++;
     for (const [flag, countName] of Object.entries({
-      negative_stock: "negative_stock", price_unverified: "price_unverified",
-      suspected_company_code: "suspected_company_code",
+      negative_stock: "negative_stock", stock_snapshot_missing: "stock_snapshot_missing",
+      price_unverified: "price_unverified", packaging_promotion_review: "packaging_promotion_review",
+      similar_sku_review: "similar_sku_review", regional_channel_review: "regional_channel_review",
+      shared_media_review: "shared_media_review", suspected_company_code: "suspected_company_code",
       source_spec_conflict: "source_spec_conflict",
       merged_pdf_price_cell_verify: "merged_pdf_price_cells",
     })) if (ev.warnings.includes(flag)) counts[countName]++;

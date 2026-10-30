@@ -18,7 +18,7 @@ function data(sku, origin = "CẢ HAI", props = {}) {
   return [
     sku, origin === "CHỈ BẢNG GIÁ" ? "" : "Tên gốc " + sku,
     origin === "CHỈ XNT" ? "" : "Tên đề xuất " + sku,
-    origin, props.stock ?? 4, props.barcode ?? "8930000000000",
+    origin, Object.hasOwn(props, "stock") ? props.stock : 4, props.barcode ?? "8930000000000",
     "A5", "120 trang", "Kẻ Ngang", props.price ?? 11200,
     props.images ?? "", props.images ? "Có ảnh gán - CHƯA duyệt" : "Chưa có ảnh",
     props.note ?? "",
@@ -162,4 +162,32 @@ test("CLI output guard blocks repo paths even from another cwd and via symlinked
   } finally {
     await rm(dir, { recursive: true, force: true });
   }
+});
+
+
+test("Real-workbook exception categories: blank stock is not zero, promotions/near-codes/region/shared assets await review", async () => {
+  const rows = [
+    data("HQ643", "CHỈ XNT", { stock: null, note: "Tồn XNT để trống (không tự coi là 0)" }),
+    data("0154", "CHỈ XNT", { note: "Có yếu tố lốc/khuyến mãi; kiểm tra đơn vị SKU" }),
+    data("C592", "CHỈ XNT", { note: "Mã gần giống giá: C5921 (KHÔNG tự gộp)" }),
+    data("2311", "CHỈ XNT", { note: "Hàng ghi Miền Bắc; xác nhận kênh/địa bàn" }),
+    data("P0051", "CẢ HAI", { images: "candidate.png", note: "Ảnh shared-review: chưa xác nhận SKU" }),
+  ];
+  const result = await previewXlsxImport(await fixture(rows));
+  assert.equal(result.totals.error, 0);
+  assert.equal(result.counts.stock_snapshot_missing, 1);
+  assert.equal(result.counts.packaging_promotion_review, 1);
+  assert.equal(result.counts.similar_sku_review, 1);
+  assert.equal(result.counts.regional_channel_review, 1);
+  assert.equal(result.counts.shared_media_review, 1);
+  assert.equal(result.counts.merged_pdf_price_cells, 1);
+  assert.ok(result.items.every(row => row.requires_review));
+  assert.ok(result.items[0].warnings.includes("stock_snapshot_missing"));
+  assert.ok(result.items[1].warnings.includes("packaging_promotion_review"));
+  assert.ok(result.items[2].warnings.includes("similar_sku_review"));
+  assert.ok(result.items[3].warnings.includes("regional_channel_review"));
+  assert.ok(result.items[4].warnings.includes("shared_media_review"));
+  const serialized = JSON.stringify(result);
+  assert.ok(!serialized.includes("candidate.png")); // candidate filenames never leave preview
+  assert.ok(!serialized.includes("20000")); // source amounts must never leak
 });
