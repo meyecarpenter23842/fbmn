@@ -65,7 +65,7 @@ const menu: Array<{ key: Section; label: string; icon: GlyphName }> = [
 ];
 
 function Brand({ subtitle = "Admin" }: { subtitle?: string }) {
-  return <div className="brand"><span className="brand-symbol"><Glyph name="book" size={36} strokeWidth={2.2}/></span><span className="brand-copy"><strong>Futurebook</strong><small>{subtitle}</small></span></div>;
+  return <div className="brand"><span className="brand-symbol"><img src="/brand/fbmn-official-logo.webp" alt="Logo chính thức Futurebook Miền Nam" width={43} height={43}/></span><span className="brand-copy"><strong>Futurebook</strong><small>{subtitle}</small></span></div>;
 }
 function Button({ children, icon, variant = "light", disabled, onClick, title }: { children: ReactNode; icon?: GlyphName; variant?: "light"|"primary"|"outline"; disabled?: boolean; onClick?: () => void; title?: string }) {
   return <button type="button" title={title} className={"btn btn-"+variant} disabled={disabled} onClick={onClick}>{icon && <Glyph name={icon} size={17}/>}<span>{children}</span></button>;
@@ -90,6 +90,11 @@ export default function AdminPage() {
   const [name,setName] = useState("");
   const [notice,setNotice] = useState("");
   const [busy,setBusy] = useState(false);
+  const [loginMode,setLoginMode] = useState<"login"|"verify"|"forgot"|"reset">("login");
+  const [adminEmail,setAdminEmail] = useState("");
+  const [adminPassword,setAdminPassword] = useState("");
+  const [repeatPassword,setRepeatPassword] = useState("");
+  const [emailCode,setEmailCode] = useState("");
   const [section,setSection] = useState<Section>("products");
   const [menuOpen,setMenuOpen] = useState(false);
   const [query,setQuery] = useState("");
@@ -113,7 +118,7 @@ export default function AdminPage() {
       if(!result.data?.user){setAuthState("anonymous");return;}
       setName(result.data.user.name || result.data.user.email || "Nhân sự Futurebook");
       const response=await fetch("/api/admin/session",{credentials:"same-origin",cache:"no-store"});
-      if(response.status===401){setNotice("Phiên xác thực chưa hợp lệ. Hãy đăng xuất và thử lại.");setAuthState("anonymous");return;}
+      if(response.status===401){setNotice("Tài khoản đã đăng nhập nhưng chưa nhận được token Admin hợp lệ. Không mở quyền; kiểm tra cấu hình JWT phía máy chủ.");setAuthState("unavailable");return;}
       if(response.status===403){setAuthState("forbidden");return;}
       if(!response.ok){setNotice("Neon Auth đã nhận tài khoản nhưng Admin API chưa xác minh được quyền. HTTP "+response.status+".");setAuthState("unavailable");return;}
       const data=await response.json() as {data?:SessionData};
@@ -130,16 +135,58 @@ export default function AdminPage() {
   useEffect(()=>{queueMicrotask(()=>{void refresh();});},[refresh]);
 
   async function signIn(){
+    if(!adminEmail.includes("@") || adminPassword.length<1){setNotice("Nhập email và mật khẩu quản trị.");return;}
     setBusy(true);setNotice("");
     try {
-      const result=await authClient.signIn.social({provider:"google",callbackURL: "/"});
-      if(result.error){setNotice("Google từ chối đăng nhập: "+(result.error.message || result.error.code || "Vui lòng thử lại."));}
-      else if(result.data?.url && typeof window!=="undefined") {
-        // Better Auth sometimes returns the OAuth URL without navigating automatically.
-        const url=new URL(result.data.url,window.location.origin);
-        if(url.protocol==="https:" && url.username==="" && url.password==="") window.location.assign(url.href);
-      }
-    }catch{setNotice("Không khởi tạo được Google OAuth. Kiểm tra Neon Auth hoặc chặn popup/cookie.");}
+      const result=await authClient.signIn.email({email:adminEmail.trim().toLowerCase(),password:adminPassword,rememberMe:false});
+      if(result.error) {setNotice("Email hoặc mật khẩu không hợp lệ, hoặc tài khoản chưa được kích hoạt.");return;}
+      setAdminPassword("");void refresh();
+    }catch{setNotice("Không kết nối được dịch vụ đăng nhập Neon Auth.");}
+    finally{setBusy(false);}
+  }
+  async function sendVerification(){
+    if(!adminEmail.includes("@")){setNotice("Nhập email quản trị trước.");return;}
+    setBusy(true);setNotice("");
+    try{
+      const result=await authClient.emailOtp.sendVerificationOtp({email:adminEmail.trim().toLowerCase(),type:"email-verification"});
+      if(result.error){setNotice("Không thể gửi mã xác minh email. Kiểm tra hộp thư hoặc thử lại.");return;}
+      setLoginMode("verify");
+      setNotice("Nếu email tồn tại, mã xác minh đã được gửi. Vui lòng kiểm tra cả thư rác.");
+    }catch{setNotice("Dịch vụ xác minh email tạm thời không sẵn sàng.");}
+    finally{setBusy(false);}
+  }
+  async function verifyEmail(){
+    if(!adminEmail.includes("@")||emailCode.trim().length<4){setNotice("Nhập đầy đủ email và mã xác minh.");return;}
+    setBusy(true);setNotice("");
+    try{
+      const result=await authClient.emailOtp.verifyEmail({email:adminEmail.trim().toLowerCase(),otp:emailCode.trim()});
+      if(result.error){setNotice("Mã xác minh sai hoặc đã hết hạn.");return;}
+      setEmailCode("");setLoginMode("forgot");
+      setNotice("Đã xác minh email. Tiếp theo gửi mã để đặt mật khẩu quản trị mới.");
+    }catch{setNotice("Không kiểm tra được mã email.");}
+    finally{setBusy(false);}
+  }
+  async function requestReset(){
+    if(!adminEmail.includes("@")){setNotice("Nhập email quản trị trước.");return;}
+    setBusy(true);setNotice("");
+    try{
+      const result=await authClient.emailOtp.requestPasswordReset({email:adminEmail.trim().toLowerCase()});
+      if(result.error){setNotice("Không gửi được mã đặt lại mật khẩu. Kiểm tra dịch vụ email.");return;}
+      setLoginMode("reset");setEmailCode("");
+      setNotice("Nếu email tồn tại, mã đặt lại mật khẩu đã được gửi. Không chia sẻ mã với ai.");
+    }catch{setNotice("Dịch vụ khôi phục mật khẩu không sẵn sàng.");}
+    finally{setBusy(false);}
+  }
+  async function resetPassword(){
+    if(emailCode.trim().length<4){setNotice("Nhập mã xác minh được gửi qua email.");return;}
+    if(adminPassword.length<12||adminPassword!==repeatPassword){setNotice("Mật khẩu mới cần từ 12 ký tự và phải trùng nhau.");return;}
+    setBusy(true);setNotice("");
+    try{
+      const result=await authClient.emailOtp.resetPassword({email:adminEmail.trim().toLowerCase(),otp:emailCode.trim(),password:adminPassword});
+      if(result.error){setNotice("Mã không hợp lệ hoặc mật khẩu không đáp ứng yêu cầu. Vui lòng thử lại.");return;}
+      setAdminPassword("");setRepeatPassword("");setEmailCode("");setLoginMode("login");
+      setNotice("Đã đặt mật khẩu mới. Anh có thể đăng nhập bằng email và mật khẩu.");
+    }catch{setNotice("Không đổi được mật khẩu. Thử gửi lại mã.");}
     finally{setBusy(false);}
   }
   async function signOut(){
@@ -201,7 +248,21 @@ export default function AdminPage() {
       <div className="auth-top"><Brand subtitle="Miền Nam · Quản trị"/><span className="staging-pill">STAGING</span></div>
       <div className="auth-graphic"><span className="auth-graphic-icon"><Glyph name="shield" size={30}/></span></div>
       {authState==="checking"?<><h1 id="auth-title">Đang xác minh phiên đăng nhập</h1><p className="modal-subtitle">Kiểm tra Neon Auth và quyền truy cập Futurebook…</p><div className="modal-spinner" role="status" aria-label="Đang tải"/></>:
-       authState==="anonymous"?<><h1 id="auth-title">Đăng nhập Futurebook Admin</h1><p className="modal-subtitle">Vui lòng đăng nhập Google trước khi truy cập hệ thống quản trị.</p><button type="button" className="google-login" onClick={()=>void signIn()} disabled={busy}><b className="google-g">G</b><span>{busy?"Đang chuyển sang Google…":"Tiếp tục với Google"}</span></button><p className="login-footnote">Chỉ tài khoản được phê duyệt mới có quyền quản trị.</p></>:
+       authState==="anonymous"?<><h1 id="auth-title">{loginMode==="verify"?"Xác minh email quản trị":loginMode==="forgot"?"Quên mật khẩu":loginMode==="reset"?"Đặt mật khẩu mới":"Đăng nhập Futurebook Admin"}</h1>
+       <p className="modal-subtitle">{loginMode==="verify"?"Nhập mã được gửi đến email để xác minh quyền sở hữu hộp thư.":loginMode==="forgot"?"Nhận mã qua email để đặt lại mật khẩu an toàn.":loginMode==="reset"?"Nhập mã email và mật khẩu mới; không dùng lại mật khẩu đã chia sẻ.":"Dành riêng cho nhân sự quản trị được cấp quyền. Đăng nhập bằng email và mật khẩu."}</p>
+       <form className="admin-login-form" onSubmit={e=>{e.preventDefault();void (loginMode==="login"?signIn():loginMode==="verify"?verifyEmail():loginMode==="forgot"?requestReset():resetPassword());}}>
+         <label className="login-label">Email quản trị<input type="email" value={adminEmail} onChange={e=>setAdminEmail(e.target.value)} placeholder="email@congty.vn" autoComplete="email" required maxLength={200}/></label>
+         {(loginMode==="verify"||loginMode==="reset")&&<label className="login-label">Mã xác minh qua email<input inputMode="numeric" autoComplete="one-time-code" value={emailCode} onChange={e=>setEmailCode(e.target.value)} placeholder="Nhập mã đã nhận" required maxLength={12}/></label>}
+         {(loginMode==="login"||loginMode==="reset")&&<label className="login-label">{loginMode==="reset"?"Mật khẩu mới":"Mật khẩu"}<input type="password" value={adminPassword} onChange={e=>setAdminPassword(e.target.value)} placeholder={loginMode==="reset"?"Ít nhất 12 ký tự":"Nhập mật khẩu"} autoComplete={loginMode==="login"?"current-password":"new-password"} required minLength={loginMode==="reset"?12:1}/></label>}
+         {loginMode==="reset"&&<label className="login-label">Xác nhận mật khẩu mới<input type="password" value={repeatPassword} onChange={e=>setRepeatPassword(e.target.value)} placeholder="Nhập lại mật khẩu" autoComplete="new-password" required minLength={12}/></label>}
+         <button type="submit" className="google-login admin-password-submit" disabled={busy}><Glyph name={loginMode==="login"?"shield":loginMode==="verify"?"check":"refresh"} size={18}/><span>{busy?"Đang xử lý…":loginMode==="verify"?"Xác minh email":loginMode==="forgot"?"Gửi mã đặt lại mật khẩu":loginMode==="reset"?"Đặt mật khẩu mới":"Đăng nhập Admin"}</span></button>
+       </form>
+       <div className="login-switch">
+         {loginMode==="login"?<><button type="button" onClick={()=>{setNotice("");setLoginMode("forgot");}}>Quên mật khẩu?</button><button type="button" onClick={()=>{setNotice("");void sendVerification();}} disabled={busy}>Kích hoạt / Xác minh Owner</button></>:
+          loginMode==="verify"?<><button type="button" onClick={()=>{void sendVerification();}} disabled={busy}>Gửi lại mã</button><button type="button" onClick={()=>{setNotice("");setLoginMode("login");}}>Về đăng nhập</button></>:
+          loginMode==="reset"?<><button type="button" onClick={()=>{setNotice("");setLoginMode("forgot");}}>Gửi lại mã</button><button type="button" onClick={()=>{setNotice("");setLoginMode("login");}}>Về đăng nhập</button></>:
+          <button type="button" onClick={()=>{setNotice("");setLoginMode("login");}}>Về đăng nhập</button>}
+       </div><p className="login-footnote">Không có đăng ký công khai. Chỉ tài khoản được phê duyệt mới truy cập Admin.</p></>:
        authState==="forbidden"?<><h1 id="auth-title">Tài khoản chưa được cấp quyền</h1><p className="modal-subtitle">Đã nhận phiên Google của <b>{name}</b>, nhưng tài khoản chưa được duyệt trên Neon staging. Admin vẫn được khóa.</p><button type="button" className="google-login" onClick={()=>void signOut()} disabled={busy}><Glyph name="logout" size={18}/>Đăng xuất / Đổi tài khoản</button><Button icon="refresh" onClick={()=>void refresh()} disabled={busy}>Kiểm tra quyền lại</Button></>:
        <><h1 id="auth-title">Chưa kết nối được đăng nhập</h1><p className="modal-subtitle">Không thể xác minh phiên hoặc quyền từ hệ thống thật. Admin được khóa an toàn.</p><div className="modal-actions"><Button icon="refresh" variant="primary" onClick={()=>void refresh()}>Thử lại</Button><Button icon="logout" onClick={()=>void signOut()}>Đổi tài khoản</Button></div></>}
       {notice && <p className="auth-notice" role="alert">{notice}</p>}

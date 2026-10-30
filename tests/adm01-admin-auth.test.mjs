@@ -98,3 +98,20 @@ test("Admin Cloudflare config is staging-only, least-privilege and does not cach
   assert.equal(conf.ratelimits[0].simple.period,60);
   assert.ok(conf.ratelimits[0].simple.limit<=60);
 });
+
+test("Owner is the top-most distinct role and cannot be created by a public Admin API",async()=>{
+  const owner=make({loadActor:async()=>actor("owner",[]),listChannels:async()=>[{code:"public_web",label:"Website"}]});
+  const session=await owner.hit("/v1/admin/session");
+  assert.equal(session.status,200);
+  assert.deepEqual((await session.json()).data,{role:"owner",channels:["public_web","dealer_app","consumer_app"]});
+  assert.equal((await owner.hit("/v1/admin/pricing-capability")).status,200);
+  assert.equal((await owner.hit("/v1/admin/publish-capability")).status,200);
+  assert.equal((await owner.hit("/v1/admin/create-owner",{method:"POST"})).status,404);
+  assert.equal((await make({loadActor:async()=>({...actor("owner"),enabled:false})}).hit("/v1/admin/session")).status,403);
+  const migration=readFileSync(new URL("../backend/neon/migrations/20261030_adm01_owner_staging.up.sql",import.meta.url),"utf8");
+  assert.match(migration,/ALTER TYPE fbmn_admin.admin_role ADD VALUE IF NOT EXISTS 'owner'/);
+  const indexMigration=readFileSync(new URL("../backend/neon/migrations/20261030_adm01_owner_staging_index.up.sql",import.meta.url),"utf8");
+  assert.match(indexMigration,/CREATE UNIQUE INDEX IF NOT EXISTS principals_single_owner_idx/);
+  assert.match(indexMigration,/AFTER migration/);
+  assert.doesNotMatch(migration,/enabled\s*=\s*true/i);
+});

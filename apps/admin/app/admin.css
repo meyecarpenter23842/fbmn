@@ -6,3 +6,17 @@
 @media(max-width:780px){.workspace{display:block}.sidebar{position:fixed;left:0;top:0;bottom:0;width:240px;transform:translateX(-100%);transition:transform .2s ease;box-shadow:6px 0 35px #19104b24}.sidebar.sidebar-open{transform:translateX(0)}.topbar{height:58px;padding:0 13px;gap:8px}.mobile-menu{display:flex}.breadcrumbs{gap:5px;font-size:11px}.breadcrumbs>span:not(.crumb-sep){display:none}.global-search{display:none}.top-actions{margin-left:auto;gap:7px}.profile-text{max-width:100px}.top-icon{padding:5px}.workspace-main{padding:22px 14px}.page-title{flex-direction:column;align-items:stretch}.page-title h1{font-size:23px}.action-row{width:100%;flex-wrap:wrap}.metric-grid{gap:9px}.metric{gap:8px;padding:10px}.metric-icon{height:40px;width:40px}.metric strong{font-size:20px}.filter-row{flex-wrap:wrap}.filter-search{flex-basis:100%}.filter-row select{flex:1;max-width:none}.side-panels,.editor-aside,.media-aside{display:flex}.gallery-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.form-grid.cols-3,.form-grid.cols-5{grid-template-columns:repeat(2,minmax(0,1fr))}.draft-warning{align-items:flex-start}.auth-modal{padding:20px 18px}.auth-top .brand-copy strong{font-size:17px}.brand-symbol{width:37px}.auth-modal h1{font-size:19px}}
 @media(max-width:480px){.form-grid.cols-3,.form-grid.cols-5{grid-template-columns:1fr}.gallery-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.page-title .btn{flex:1}.profile-text{display:none}.metric-grid{grid-template-columns:1fr 1fr}.metric small{font-size:10px}.metric em{font-size:9px}.side-panels{display:flex}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+
+/* Official Futurebook identity and internal email/password authentication */
+.brand-symbol{width:46px;height:46px;filter:none;flex-shrink:0;display:grid;place-items:center}
+.brand-symbol img{width:100%;height:100%;object-fit:contain}
+.auth-top .brand-symbol{color:inherit}
+.admin-login-form{display:flex;flex-direction:column;gap:13px;text-align:left;margin:10px auto 0;width:100%}
+.login-label{display:flex;flex-direction:column;gap:6px;font-weight:700;color:#34305f;font-size:12px}
+.login-label input{min-height:44px;width:100%;border:1px solid #dadbed;border-radius:9px;padding:0 12px;color:#252054;font-size:13px;outline:none;background:#fff}
+.login-label input:focus{border-color:#8b64ec;box-shadow:0 0 0 3px #7549ee1a}
+.admin-password-submit{color:#fff;border:0;background:linear-gradient(135deg,#7857f2,#5631da);margin-top:8px}
+.admin-password-submit:hover:not(:disabled){background:linear-gradient(135deg,#6845eb,#4d26d4);border:0}
+.login-switch{display:flex;justify-content:center;gap:12px;flex-wrap:wrap;margin:15px 0 3px}
+.login-switch button{border:0;background:transparent;text-decoration:underline;text-underline-offset:3px;color:#6847d5;font-size:11px;font-weight:700;padding:6px}
+.login-switch button:hover{color:#39249b}

@@ -6,12 +6,12 @@ const ROUTES = new Map([
   ["/v1/admin/publish-capability", "publish.check"],
   ["/v1/admin/pricing-capability", "pricing.check"],
 ]);
-const ROLES = new Set(["viewer", "editor", "publisher", "pricing", "admin"]);
+const ROLES = new Set(["viewer", "editor", "publisher", "pricing", "admin", "owner"]);
 const PERMITTED = Object.freeze({
   "session.read": ROLES,
   "channels.read": ROLES,
-  "publish.check": new Set(["publisher", "admin"]),
-  "pricing.check": new Set(["pricing", "admin"]),
+  "publish.check": new Set(["publisher", "admin", "owner"]),
+  "pricing.check": new Set(["pricing", "admin", "owner"]),
 });
 const error = (status, code, corsOrigin) =>
   reply(status, { error: { code, message: "Yêu cầu không thể xử lý." } }, corsOrigin);
@@ -79,9 +79,9 @@ export function createAdminApi({ verifyToken, loadActor, listChannels, recordAud
       try {
         let data;
         if (action === "session.read") {
-          data = { role: actor.role, channels: actor.role === "admin" ? ["public_web","dealer_app","consumer_app"] : actor.channels };
+          data = { role: actor.role, channels: ["admin","owner"].includes(actor.role) ? ["public_web","dealer_app","consumer_app"] : actor.channels };
         } else if (action === "channels.read") {
-          data = await listChannels(subject, actor.role === "admin");
+          data = await listChannels(subject, ["admin","owner"].includes(actor.role));
         } else {
           data = { allowed: true };
         }

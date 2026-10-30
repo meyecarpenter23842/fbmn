@@ -10,7 +10,9 @@ test("Admin popup blocks the workspace until both Neon session and DB principal 
   assert.match(page,/if\(response.status===403\)\{setAuthState\("forbidden"\)/);
   assert.match(page,/if\(response.status===401\)/);
   assert.match(page,/authState==="authorised" && <>/);
-  assert.match(page,/authClient\.signIn\.social\(\{provider:"google"/);
+  assert.match(page,/authClient\.signIn\.email\(/);
+  assert.match(page,/authClient\.emailOtp\.resetPassword\(/);
+  assert.match(page,/authClient\.emailOtp\.verifyEmail\(/);
   assert.match(page,/authClient\.signOut\(\)/);
   assert.match(page,/role="dialog" aria-modal="true"/);
 });
