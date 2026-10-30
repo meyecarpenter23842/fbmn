@@ -1,136 +1,211 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import type { ChangeEvent, ReactNode } from "react";
 import { createAuthClient } from "@neondatabase/auth/next";
 
-type State = "checking" | "anonymous" | "authorised" | "forbidden" | "unavailable";
-type AdminSession = { role: string; channels: string[] };
+type AuthState = "checking" | "anonymous" | "authorised" | "forbidden" | "unavailable";
+type Section = "dashboard" | "products" | "new-product" | "media" | "categories" | "banners" | "content" | "customers" | "accounts" | "settings";
+type GlyphName = "home" | "box" | "folder" | "image" | "layers" | "file" | "users" | "user" | "settings" | "search" | "bell" | "chevron" | "plus" | "upload" | "save" | "eye" | "edit" | "copy" | "trash" | "check" | "alert" | "logout" | "grid" | "arrow-left" | "link" | "book" | "sparkle" | "menu" | "close" | "shield" | "filter" | "refresh";
+type SessionData = { role: string; channels: string[] };
 type Channel = { code: string; label: string };
+type LocalImage = { id: number; name: string; url: string; bytes: number };
+type ProductDraft = { name: string; sku: string; slug: string; family: string; category: string; brand: string; description: string; size: string; pages: string; paper: string; unit: string; pack: string; metaTitle: string; metaDescription: string };
+const blankDraft: ProductDraft = { name:"",sku:"",slug:"",family:"",category:"",brand:"Futurebook",description:"",size:"",pages:"",paper:"",unit:"Quyển",pack:"",metaTitle:"",metaDescription:"" };
 const authClient = createAuthClient();
 
+function Glyph({ name, size = 20, strokeWidth = 1.85 }: { name: GlyphName; size?: number; strokeWidth?: number }) {
+  const shapes: Record<GlyphName, ReactNode> = {
+    home:<><path d="m3 10 9-7 9 7"/><path d="M5 9v12h14V9M9 21v-7h6v7"/></>,
+    box:<><path d="m12 2 9 5-9 5-9-5 9-5Z"/><path d="M3 7v10l9 5 9-5V7M12 12v10"/></>,
+    folder:<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v11H3V7Z"/>,
+    image:<><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8" cy="8" r="1.5"/><path d="m3 17 5-5 4 4 3-3 6 6"/></>,
+    layers:<><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></>,
+    file:<><path d="M6 2h8l5 5v15H6V2Z"/><path d="M14 2v6h5M9 12h7M9 16h7"/></>,
+    users:<><circle cx="9" cy="8" r="3"/><path d="M3 20v-2a6 6 0 0 1 12 0v2M17 5a3 3 0 0 1 0 6M18 15c2 0 4 2 4 5"/></>,
+    user:<><circle cx="12" cy="7" r="4"/><path d="M4 22v-2a8 8 0 0 1 16 0v2"/></>,
+    settings:<><circle cx="12" cy="12" r="3"/><path d="M10 2h4l1 3 3 1 3-1 2 4-2 3 1 3 1 2-3 3-3-1-3 1-2 2h-4l-1-3-3-1-3 1-2-4 2-3-1-3-1-2 3-3 3 1 3-1 2-2"/></>,
+    search:<><circle cx="10.5" cy="10.5" r="7"/><path d="m16 16 5 5"/></>,
+    bell:<><path d="M18 8a6 6 0 0 0-12 0c0 8-3 8-3 10h18c0-2-3-2-3-10ZM10 21h4"/></>,
+    chevron:<path d="m6 9 6 6 6-6"/>,
+    plus:<path d="M12 4v16M4 12h16"/>,
+    upload:<><path d="M12 16V3m-5 5 5-5 5 5M3 17v4h18v-4"/></>,
+    save:<><path d="M4 3h14l3 3v15H3V3h1Z"/><path d="M7 3v7h10V3M7 21v-8h10v8"/></>,
+    eye:<><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></>,
+    edit:<><path d="m4 16-1 5 5-1L20 8l-4-4L4 16ZM14 6l4 4"/></>,
+    copy:<><rect x="8" y="8" width="12" height="13" rx="2"/><path d="M16 8V4a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h3"/></>,
+    trash:<><path d="M4 6h16M9 6V4h6v2M6 6l1 15h10l1-15M10 10v7M14 10v7"/></>,
+    check:<path d="m5 12 5 5L20 7"/>,
+    alert:<><circle cx="12" cy="12" r="10"/><path d="M12 7v6M12 17h.01"/></>,
+    logout:<><path d="M10 3H4v18h6M14 16l4-4-4-4M8 12h10"/></>,
+    grid:<><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></>,
+    "arrow-left":<path d="m14 5-7 7 7 7M7 12h14"/>,
+    link:<><path d="M10 13a5 5 0 0 0 7 .3l3-3a5 5 0 0 0-7-7l-2 2M14 11a5 5 0 0 0-7-.3l-3 3a5 5 0 0 0 7 7l2-2"/></>,
+    book:<><path d="M12 6a9 9 0 0 0-9-2v15a9 9 0 0 1 9 2 9 9 0 0 1 9-2V4a9 9 0 0 0-9 2ZM12 6v15"/></>,
+    sparkle:<><path d="m12 2 2.5 7.5L22 12l-7.5 2.5L12 22l-2.5-7.5L2 12l7.5-2.5L12 2Z"/></>,
+    menu:<path d="M3 6h18M3 12h18M3 18h18"/>,
+    close:<path d="M5 5l14 14M19 5 5 19"/>,
+    shield:<><path d="M12 2 4 6v6c0 5 3.5 8.5 8 10 4.5-1.5 8-5 8-10V6l-8-4Z"/><path d="m9 12 2 2 4-4"/></>,
+    filter:<><path d="M4 6h16M7 12h10M10 18h4"/></>,
+    refresh:<><path d="M20 10a8 8 0 0 0-14-4L3 9M3 3v6h6M4 14a8 8 0 0 0 14 4l3-3M21 21v-6h-6"/></>,
+  };
+  return <svg aria-hidden="true" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round">{shapes[name]}</svg>;
+}
+
+const menu: Array<{ key: Section; label: string; icon: GlyphName }> = [
+  { key:"dashboard",label:"Tổng quan",icon:"home" },
+  { key:"products",label:"Sản phẩm",icon:"box" },
+  { key:"categories",label:"Danh mục",icon:"folder" },
+  { key:"banners",label:"Banner & Popup",icon:"image" },
+  { key:"content",label:"Nội dung",icon:"file" },
+  { key:"customers",label:"Khách hàng",icon:"users" },
+  { key:"media",label:"Media",icon:"image" },
+  { key:"accounts",label:"Tài khoản",icon:"user" },
+  { key:"settings",label:"Cài đặt",icon:"settings" },
+];
+
+function Brand({ subtitle = "Admin" }: { subtitle?: string }) {
+  return <div className="brand"><span className="brand-symbol"><Glyph name="book" size={36} strokeWidth={2.2}/></span><span className="brand-copy"><strong>Futurebook</strong><small>{subtitle}</small></span></div>;
+}
+function Button({ children, icon, variant = "light", disabled, onClick, title }: { children: ReactNode; icon?: GlyphName; variant?: "light"|"primary"|"outline"; disabled?: boolean; onClick?: () => void; title?: string }) {
+  return <button type="button" title={title} className={"btn btn-"+variant} disabled={disabled} onClick={onClick}>{icon && <Glyph name={icon} size={17}/>}<span>{children}</span></button>;
+}
+function Panel({ children, className = "" }: { children: ReactNode; className?: string }) {
+  return <section className={"surface "+className}>{children}</section>;
+}
+function SectionHeading({ icon, children }: { icon: GlyphName; children: ReactNode }) {
+  return <h2 className="panel-heading"><span className="heading-icon"><Glyph name={icon} size={18}/></span>{children}</h2>;
+}
+function Field({ label, value, setValue, placeholder, required, area = false, readOnly = false }: { label: string; value: string; setValue: (v:string)=>void; placeholder?:string; required?:boolean; area?:boolean; readOnly?:boolean }) {
+  return <label className="field"><span>{label}{required && <b> *</b>}</span>{area ? <textarea rows={4} value={value} placeholder={placeholder} onChange={e=>setValue(e.target.value)} readOnly={readOnly}/> : <input value={value} placeholder={placeholder} onChange={e=>setValue(e.target.value)} readOnly={readOnly}/>}</label>;
+}
+function Placeholder({ title, text }: { title:string;text:string }) {
+  return <Panel className="placeholder-state"><div className="placeholder-mark"><Glyph name="shield" size={29}/></div><h2>{title}</h2><p>{text}</p><span className="tag">Chưa có dữ liệu thật từ API</span></Panel>;
+}
+
 export default function AdminPage() {
-  const [state, setState] = useState<State>("checking");
-  const [session, setSession] = useState<AdminSession | null>(null);
-  const [channels, setChannels] = useState<Channel[]>([]);
-  const [name, setName] = useState("");
-  const [error, setError] = useState("");
-  const [busy, setBusy] = useState(false);
+  const [authState,setAuthState] = useState<AuthState>("checking");
+  const [session,setSession] = useState<SessionData|null>(null);
+  const [channels,setChannels] = useState<Channel[]>([]);
+  const [name,setName] = useState("");
+  const [notice,setNotice] = useState("");
+  const [busy,setBusy] = useState(false);
+  const [section,setSection] = useState<Section>("products");
+  const [menuOpen,setMenuOpen] = useState(false);
+  const [query,setQuery] = useState("");
+  const [draft,setDraft] = useState<ProductDraft>(blankDraft);
+  const [photos,setPhotos] = useState<LocalImage[]>([]);
+  const [selectedPhoto,setSelectedPhoto] = useState<number|null>(null);
+  const [coverId,setCoverId] = useState<number|null>(null);
+  const nextImageId = useRef(1);
+  const photoUrls = useRef<string[]>([]);
+  const inputFile=useRef<HTMLInputElement>(null);
 
-  const refresh = useCallback(async () => {
-    setState("checking");
-    setError("");
+  useEffect(()=>()=>{for(const url of photoUrls.current)URL.revokeObjectURL(url);},[]);
+
+  const refresh=useCallback(async()=>{
+    setAuthState("checking");
+    setNotice("");
+    setSession(null);
     try {
-      const auth = await authClient.getSession();
-      if (auth.error) { setState("unavailable"); return; }
-      if (!auth.data?.user) { setState("anonymous"); return; }
-      setName(auth.data.user.name || auth.data.user.email || "");
-      const response = await fetch("/api/admin/session", { cache: "no-store", credentials: "same-origin" });
-      if (response.status === 401) { setState("anonymous"); return; }
-      if (response.status === 403) { setState("forbidden"); return; }
-      if (!response.ok) { setState("unavailable"); return; }
-      const body = await response.json() as { data?: AdminSession };
-      if (!body.data?.role || !Array.isArray(body.data.channels)) throw new Error("Invalid server response");
-      setSession(body.data);
-      setState("authorised");
-      const ch = await fetch("/api/admin/channels", { cache: "no-store", credentials: "same-origin" });
-      if (ch.ok) {
-        const result = await ch.json() as { data?: Channel[] };
-        if (Array.isArray(result.data)) setChannels(result.data);
+      const result=await authClient.getSession();
+      if(result.error){setNotice("Không đọc được phiên Neon Auth. Kiểm tra kết nối hoặc cấu hình đăng nhập.");setAuthState("unavailable");return;}
+      if(!result.data?.user){setAuthState("anonymous");return;}
+      setName(result.data.user.name || result.data.user.email || "Nhân sự Futurebook");
+      const response=await fetch("/api/admin/session",{credentials:"same-origin",cache:"no-store"});
+      if(response.status===401){setNotice("Phiên xác thực chưa hợp lệ. Hãy đăng xuất và thử lại.");setAuthState("anonymous");return;}
+      if(response.status===403){setAuthState("forbidden");return;}
+      if(!response.ok){setNotice("Neon Auth đã nhận tài khoản nhưng Admin API chưa xác minh được quyền. HTTP "+response.status+".");setAuthState("unavailable");return;}
+      const data=await response.json() as {data?:SessionData};
+      if(!data.data?.role || !Array.isArray(data.data.channels))throw Error("Invalid API response");
+      setSession(data.data);
+      setAuthState("authorised");
+      const channelResult=await fetch("/api/admin/channels",{credentials:"same-origin",cache:"no-store"});
+      if(channelResult.ok){
+        const body=await channelResult.json() as {data?:Channel[]};
+        if(Array.isArray(body.data))setChannels(body.data);
       }
-    } catch {
-      setState("unavailable");
-    }
-  }, []);
+    }catch{setNotice("Không kết nối được dịch vụ xác thực. Hãy thử lại.");setAuthState("unavailable");}
+  },[]);
+  useEffect(()=>{queueMicrotask(()=>{void refresh();});},[refresh]);
 
-  useEffect(() => {
-    let active = true;
-    queueMicrotask(() => { if (active) void refresh(); });
-    return () => { active = false; };
-  }, [refresh]);
-
-  async function login() {
-    setBusy(true);
-    setError("");
+  async function signIn(){
+    setBusy(true);setNotice("");
     try {
-      const result = await authClient.signIn.social({ provider: "google", callbackURL: "/" });
-      if (result.error) setError("Không khởi tạo được đăng nhập Google. Vui lòng thử lại.");
-    } catch {
-      setError("Không kết nối được dịch vụ đăng nhập.");
-    } finally { setBusy(false); }
+      const result=await authClient.signIn.social({provider:"google",callbackURL: "/"});
+      if(result.error){setNotice("Google từ chối đăng nhập: "+(result.error.message || result.error.code || "Vui lòng thử lại."));}
+      else if(result.data?.url && typeof window!=="undefined") {
+        // Better Auth sometimes returns the OAuth URL without navigating automatically.
+        const url=new URL(result.data.url,window.location.origin);
+        if(url.protocol==="https:" && url.username==="" && url.password==="") window.location.assign(url.href);
+      }
+    }catch{setNotice("Không khởi tạo được Google OAuth. Kiểm tra Neon Auth hoặc chặn popup/cookie.");}
+    finally{setBusy(false);}
   }
-
-  async function logout() {
-    setBusy(true);
-    try { await authClient.signOut(); setSession(null); setChannels([]); setState("anonymous"); }
-    catch { setError("Không đăng xuất được. Vui lòng thử lại."); }
-    finally { setBusy(false); }
+  async function signOut(){
+    setBusy(true);setNotice("");
+    try{await authClient.signOut();setSession(null);setChannels([]);setName("");setAuthState("anonymous");}
+    catch{setNotice("Không đăng xuất được. Thử tải lại trang.");}
+    finally{setBusy(false);}
   }
-
-  return (
-    <main className="admin-shell">
-      <header className="admin-topbar">
-        <div className="admin-brand"><span className="admin-brand-mark">F</span>
-          <span><strong>Futurebook</strong><small>MIỀN NAM · QUẢN TRỊ</small></span>
-        </div>
-        <div className="admin-topright"><span className="admin-env">MÔI TRƯỜNG THỬ NGHIỆM</span>{name && state !== "anonymous" && <span className="admin-user">{name}</span>}</div>
-      </header>
-      <div className="admin-page">
-        <aside className="admin-side" aria-label="Điều hướng quản trị">
-          <div className="admin-side-title">TỔNG QUAN</div>
-          <div className="admin-menu current">▦ <span>Bảng điều khiển</span></div>
-          <div className="admin-side-title">QUẢN LÝ</div>
-          <div className="admin-menu locked">▤ <span>Sản phẩm · sắp triển khai</span></div>
-          <div className="admin-menu locked">▧ <span>Hình ảnh · sắp triển khai</span></div>
-          <div className="admin-menu locked">◫ <span>Banner · sắp triển khai</span></div>
-          <div className="admin-menu locked">⚙ <span>Cấu hình · sắp triển khai</span></div>
-          <div className="admin-side-bottom">Truy cập phải được cấp quyền. Không tự động tạo tài khoản Admin.</div>
-        </aside>
-        <section className="admin-content" aria-live="polite">
-          <div className="admin-intro"><p>HỆ THỐNG NỘI BỘ</p><h1>Quản trị Futurebook Miền Nam</h1>
-            <span>Quản lý quyền truy cập và các kênh xuất bản từ một hệ thống.</span></div>
-          {state === "checking" && <div className="admin-panel admin-center" role="status"><div className="admin-spinner" />Đang kiểm tra đăng nhập và quyền truy cập…</div>}
-          {state === "anonymous" && <div className="admin-panel admin-login">
-            <div className="admin-login-art">F</div>
-            <div className="admin-login-body"><div className="admin-kicker">CHỈ DÀNH CHO NHÂN SỰ ĐƯỢC DUYỆT</div>
-              <h2>Đăng nhập vào Admin</h2>
-              <p>Sử dụng tài khoản Google của anh. Đăng nhập thành công chưa đồng nghĩa được cấp quyền quản trị.</p>
-              <button disabled={busy} type="button" onClick={() => void login()} className="admin-google">
-                <span className="google-symbol" aria-hidden="true">G</span>{busy ? "Đang chuyển hướng…" : "Tiếp tục với Google"}
-              </button>
-              {error && <p className="admin-error" role="alert">{error}</p>}
-            </div>
-          </div>}
-          {state === "forbidden" && <div className="admin-panel admin-notice">
-            <span className="admin-notice-icon">!</span><h2>Tài khoản chưa được cấp quyền</h2>
-            <p>Google đã đăng nhập, nhưng tài khoản này chưa được phê duyệt trên hệ thống Futurebook. Không có quyền xem dữ liệu quản trị.</p>
-            <button type="button" className="admin-secondary" onClick={() => void logout()} disabled={busy}>Đăng xuất</button>
-          </div>}
-          {state === "unavailable" && <div className="admin-panel admin-notice">
-            <span className="admin-notice-icon">i</span><h2>Chưa kết nối được hệ thống thử nghiệm</h2>
-            <p>Chưa thể xác minh phiên và quyền truy cập. Không hiển thị dữ liệu mẫu như dữ liệu thật.</p>
-            <button type="button" className="admin-secondary" onClick={() => void refresh()}>Thử kiểm tra lại</button>
-          </div>}
-          {state === "authorised" && session && <>
-            <div className="admin-stat-grid">
-              <article className="admin-stat"><span>Trạng thái truy cập</span><strong>Đã xác thực</strong><small>Quyền kiểm tra trực tiếp từ backend</small></article>
-              <article className="admin-stat"><span>Vai trò được duyệt</span><strong>{session.role.toUpperCase()}</strong><small>Không lấy quyền từ trình duyệt</small></article>
-              <article className="admin-stat"><span>Kênh được xem</span><strong>{session.channels.length}</strong><small>Phân quyền theo kênh</small></article>
-            </div>
-            <div className="admin-panel admin-detail">
-              <div className="admin-panel-head"><h2>Kênh kinh doanh</h2><span>Chỉ đọc · ADM-01</span></div>
-              {channels.length ? <div className="admin-channels">{channels.map(channel => (
-                <div className="admin-channel" key={channel.code}><div><strong>{channel.label}</strong><small>{channel.code}</small></div>
-                  <span className={session.channels.includes(channel.code) || session.role === "admin" ? "admin-yes" : "admin-no"}>
-                    {session.channels.includes(channel.code) || session.role === "admin" ? "Có quyền xem" : "Không có quyền"}
-                  </span></div>
-              ))}</div> : <p>Không có kênh nào được cấp quyền.</p>}
-              <p className="admin-hint">Quản lý sản phẩm, hình ảnh và xuất bản sẽ được mở ở giai đoạn catalogue. Không có dữ liệu hoặc chức năng giả.</p>
-              <button type="button" className="admin-secondary" onClick={() => void logout()} disabled={busy}>Đăng xuất</button>
-            </div>
+  function navigate(to:Section){setSection(to);setMenuOpen(false);setQuery("");setNotice("");}
+  function updateDraft(key:keyof ProductDraft,value:string){
+    setDraft(prev=>({...prev,[key]:value,...(key==="name" && !prev.slug ? {slug:value.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/đ/g,"d").replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"")} : {})}));
+  }
+  function addFiles(fileList: FileList | File[]){
+    const files=Array.from(fileList).filter(file=>["image/png","image/jpeg","image/webp"].includes(file.type)&&file.size<=10*1024*1024).slice(0,Math.max(0,20-photos.length));
+    const added=files.map(file=>{const url=URL.createObjectURL(file);photoUrls.current.push(url);return {id:nextImageId.current++,name:file.name,url,bytes:file.size};});
+    setPhotos(prev=>prev.concat(added));if(selectedPhoto===null&&added.length)setSelectedPhoto(added[0].id);
+    if(coverId===null&&added.length)setCoverId(added[0].id);
+  }
+  function addPhotos(event:ChangeEvent<HTMLInputElement>){
+    if(event.target.files)addFiles(event.target.files);
+    event.target.value="";
+  }
+  function removePhoto(id:number){setPhotos(prev=>{const found=prev.find(p=>p.id===id);if(found){URL.revokeObjectURL(found.url);photoUrls.current=photoUrls.current.filter(u=>u!==found.url);}return prev.filter(p=>p.id!==id);});if(selectedPhoto===id)setSelectedPhoto(null);if(coverId===id)setCoverId(null);}
+  const activePhoto=photos.find(p=>p.id===selectedPhoto)||photos[0];
+  const roleLabel=session?.role?.toUpperCase() || "";
+  const sectionName:Record<Section,string>={dashboard:"Tổng quan",products:"Quản lý sản phẩm","new-product":"Thêm sản phẩm",media:"Quản lý ảnh",categories:"Danh mục",banners:"Banner & Popup",content:"Nội dung",customers:"Khách hàng",accounts:"Tài khoản",settings:"Cài đặt"};
+  return <div className="admin-app">
+    <div className={"workspace "+(authState!=="authorised"?"workspace-locked":"")}>
+      <aside className={"sidebar "+(menuOpen?"sidebar-open":"")}>
+        <Brand/>
+        <nav className="side-menu" aria-label="Điều hướng quản trị">{menu.map(item=><button type="button" key={item.key} className={"side-link "+(section===item.key || (section==="new-product"&&item.key==="products")?"active":"")} onClick={()=>navigate(item.key)} disabled={authState!=="authorised"}><Glyph name={item.icon} size={21}/><span>{item.label}</span></button>)}</nav>
+        <div className="side-footer"><div className="decorative-books" aria-hidden="true"><div/><div/><div/></div><p>Tri thức hôm nay<br/>Kiến tạo ngày mai</p><i/></div>
+      </aside>
+      <div className="work-area">
+        <header className="topbar"><button type="button" className="mobile-menu" onClick={()=>setMenuOpen(v=>!v)} aria-label="Mở menu"><Glyph name="menu"/></button>
+          <div className="breadcrumbs"><Glyph name="home" size={21}/><span className="crumb-sep">›</span><span>{section==="new-product"?"Sản phẩm":section==="media"?"Sản phẩm":"Quản trị"}</span><span className="crumb-sep">›</span><b>{sectionName[section]}</b></div>
+          <label className="global-search"><Glyph name="search" size={20}/><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Tìm sản phẩm, đơn hàng, khách hàng..." disabled={authState!=="authorised"}/><kbd>⌘ K</kbd></label>
+          <div className="top-actions"><button type="button" className="top-icon" title="Thông báo chưa được kết nối" disabled><Glyph name="bell"/></button><div className="profile-avatar">{name.slice(0,1).toUpperCase()||"F"}</div><div className="profile-text"><b>{name || "Futurebook Admin"}</b><small>{session?roleLabel:"Yêu cầu đăng nhập"}</small></div><button type="button" className="top-icon" onClick={()=>void signOut()} disabled={authState!=="authorised"} title="Đăng xuất"><Glyph name="logout" size={18}/></button></div>
+        </header>
+        <main className="workspace-main">
+          {authState==="authorised" && <>
+            {section==="products" && <><div className="page-title"><div><h1>Quản lý sản phẩm</h1><p>Quản lý danh mục sản phẩm Futurebook cho Web và App.</p></div><div className="action-row"><Button icon="upload" variant="outline" disabled title="Chờ API nhập Excel/CSV ở ADM-02">Nhập Excel/CSV</Button><Button icon="plus" variant="primary" onClick={()=>navigate("new-product")}>Thêm sản phẩm</Button></div></div>
+              <div className="metric-grid"><div className="metric"><span className="metric-icon purple"><Glyph name="box"/></span><div><small>Tổng sản phẩm</small><strong>—</strong><em>Chờ đồng bộ catalogue</em></div></div><div className="metric"><span className="metric-icon green"><Glyph name="check"/></span><div><small>Đang xuất bản</small><strong>—</strong><em>Chưa có API công bố</em></div></div><div className="metric"><span className="metric-icon blue"><Glyph name="file"/></span><div><small>Bản nháp</small><strong>—</strong><em>Chưa đồng bộ dữ liệu</em></div></div><div className="metric"><span className="metric-icon red"><Glyph name="alert"/></span><div><small>Hết hàng</small><strong>—</strong><em>Chờ dữ liệu XNT</em></div></div></div>
+              <div className="data-layout"><div><div className="filter-row"><label className="filter-search"><Glyph name="search" size={19}/><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Tìm theo mã SKU hoặc tên sản phẩm..."/></label><select aria-label="Nhóm hàng" defaultValue="all"><option value="all">Nhóm hàng · Tất cả</option><option>Vở học sinh</option><option>Văn phòng phẩm</option></select><select aria-label="Trạng thái" defaultValue="all"><option value="all">Trạng thái · Tất cả</option><option>Bản nháp</option><option>Xuất bản</option></select><Button icon="filter" disabled title="Chờ dữ liệu catalogue">Sắp xếp</Button></div><Panel className="table-panel"><div className="table-scroll"><table><thead><tr><th><input type="checkbox" disabled aria-label="Chọn tất cả"/></th><th>Ảnh</th><th>Mã SKU</th><th>Tên sản phẩm</th><th>Nhóm hàng</th><th>Quy cách</th><th>Trạng thái</th><th>Thao tác</th></tr></thead><tbody><tr><td colSpan={8}><div className="empty-table"><Glyph name="box" size={34}/><b>Chưa có danh sách sản phẩm thực tế</b><span>Catalogue đang chờ kết nối API. Không sử dụng sản phẩm hoặc số liệu giả từ ảnh thiết kế.</span></div></td></tr></tbody></table></div><div className="table-pager"><span>Không hiển thị sản phẩm khi chưa tải được dữ liệu.</span><span>Chỉ đọc · Staging</span></div></Panel></div><div className="side-panels"><Panel><SectionHeading icon="sparkle">Gợi ý quản trị</SectionHeading><div className="tip-box"><Glyph name="file"/><span><strong>Danh mục đang chuẩn hóa</strong><small>613 mã SKU đã đối chiếu từ XNT và bảng giá, chưa nhập vào Admin.</small></span></div><div className="side-tip"><Glyph name="image"/><span>Ảnh chưa ghép SKU sẽ được bổ sung sau.</span></div><div className="side-tip"><Glyph name="shield"/><span>Giá NET nội bộ không xuất bản công khai.</span></div></Panel><Panel><SectionHeading icon="grid">Kênh dữ liệu</SectionHeading>{channels.length?channels.map(c=><div key={c.code} className="channel-row"><span>{c.label}</span><b>{session?.channels.includes(c.code)?"Được xem":"Chưa cấp"}</b></div>):<p className="subtle">Chưa tải được thông tin kênh.</p>}</Panel></div></div>
+            </>}
+            {section==="new-product" && <><div className="page-title"><div><h1>Thêm sản phẩm mới</h1><p>Chuẩn bị thông tin sản phẩm cho Website và App Futurebook.</p></div><div className="action-row"><Button icon="arrow-left" variant="outline" onClick={()=>navigate("products")}>Quay lại</Button><Button icon="save" disabled title="API ghi bản nháp chưa triển khai">Lưu nháp</Button><Button icon="eye" variant="outline" disabled title="Cần bản nháp thật để xem trước">Xem trước</Button><Button icon="upload" variant="primary" disabled title="Cần quyền publisher và API duyệt/xuất bản">Xuất bản</Button></div></div><p className="draft-warning"><Glyph name="alert" size={17}/>Mẫu nhập liệu đang ở chế độ giao diện thử nghiệm. Thông tin chưa lưu lên database; nút lưu và xuất bản bị khóa cho đến khi có API catalogue.</p>
+              <div className="editor-grid"><div className="editor-main"><Panel><SectionHeading icon="file">Thông tin cơ bản</SectionHeading><div className="form-grid cols-3"><Field label="Tên sản phẩm" required value={draft.name} setValue={v=>updateDraft("name",v)} placeholder="Nhập tên theo catalogue"/><Field label="Mã SKU" required value={draft.sku} setValue={v=>updateDraft("sku",v)} placeholder="Giữ nguyên mã công ty"/><Field label="Slug" required value={draft.slug} setValue={v=>updateDraft("slug",v)} placeholder="ten-san-pham"/><Field label="Nhóm hàng" required value={draft.family} setValue={v=>updateDraft("family",v)} placeholder="Tập học sinh / Văn phòng phẩm"/><Field label="Danh mục" required value={draft.category} setValue={v=>updateDraft("category",v)} placeholder="Danh mục sản phẩm"/><Field label="Thương hiệu" value={draft.brand} setValue={v=>updateDraft("brand",v)}/></div></Panel><Panel><SectionHeading icon="layers">Mô tả sản phẩm</SectionHeading><Field label="Thông tin mô tả" value={draft.description} area setValue={v=>updateDraft("description",v)} placeholder="Mô tả đúng thông số đã xác minh"/></Panel><Panel><SectionHeading icon="grid">Quy cách & thông số</SectionHeading><div className="form-grid cols-5"><Field label="Kích thước" value={draft.size} setValue={v=>updateDraft("size",v)} placeholder="Ví dụ A4"/><Field label="Số trang/tờ" value={draft.pages} setValue={v=>updateDraft("pages",v)}/><Field label="Chất liệu" value={draft.paper} setValue={v=>updateDraft("paper",v)}/><Field label="Đơn vị tính" value={draft.unit} setValue={v=>updateDraft("unit",v)}/><Field label="Đóng gói" value={draft.pack} setValue={v=>updateDraft("pack",v)}/></div></Panel><Panel><div className="panel-title-line"><SectionHeading icon="box">Biến thể / SKU phụ</SectionHeading><Button icon="plus" variant="outline" disabled title="Chờ API quản lý biến thể">Thêm biến thể</Button></div><div className="empty-mini">Một sản phẩm có thể chứa nhiều mẫu bìa, quy cách và màu sắc. Dữ liệu biến thể sẽ liên kết theo SKU công ty sau khi kích hoạt API.</div></Panel></div>
+              <div className="editor-aside"><Panel><SectionHeading icon="image">Ảnh sản phẩm</SectionHeading><div className="photo-feature">{activePhoto?<img src={activePhoto.url} alt={activePhoto.name}/>:<div className="photo-placeholder"><Glyph name="image" size={37}/><span>Chưa có ảnh sản phẩm</span></div>}</div><div className="mini-thumbs">{photos.slice(0,4).map(p=><button type="button" key={p.id} className={selectedPhoto===p.id?"selected":""} onClick={()=>setSelectedPhoto(p.id)}><img src={p.url} alt={p.name}/></button>)}<button type="button" className="add-thumb" onClick={()=>{navigate("media");inputFile.current?.click();}}><Glyph name="plus"/></button></div><Button variant="outline" icon="image" onClick={()=>navigate("media")}>Quản lý ảnh</Button><p className="subtle">JPG, PNG, WEBP • tối đa 10MB/ảnh. Ảnh chỉ xem tạm trên máy.</p></Panel><Panel><SectionHeading icon="search">SEO / hiển thị</SectionHeading><Field label="Meta title" value={draft.metaTitle} setValue={v=>updateDraft("metaTitle",v)} placeholder="Tên sản phẩm - Futurebook Miền Nam"/><Field label="Meta description" value={draft.metaDescription} setValue={v=>updateDraft("metaDescription",v)} area/><small className="subtle">Địa chỉ web và SEO thật sẽ tạo sau khi xuất bản.</small></Panel><div className="suggestion-box"><Glyph name="sparkle"/><div><b>Gợi ý nhập liệu</b><p>Không tự đoán giá, mã SKU hoặc chất lượng giấy. Dùng bảng giá và catalogue đã đối chiếu.</p></div></div></div></div>
+            </>}
+            {section==="media" && <><div className="page-title"><div><h1>Upload & quản lý ảnh</h1><p>Chuẩn bị hình ảnh sản phẩm trước khi xuất bản.</p></div><div className="action-row"><Button variant="outline" onClick={()=>navigate("products")}>Hủy</Button><Button icon="save" variant="primary" disabled title="Chưa tích hợp R2/Media API">Lưu thay đổi</Button></div></div><p className="draft-warning"><Glyph name="alert" size={17}/>Ảnh ở màn hình này chỉ xem tạm trên trình duyệt; chưa tải lên Cloudflare R2, chưa gắn vào SKU hay xuất bản.</p><div className="media-grid"><Panel className="upload-card"><button type="button" className="drop-zone" onClick={()=>inputFile.current?.click()} onDragOver={event=>event.preventDefault()} onDrop={event=>{event.preventDefault();addFiles(event.dataTransfer.files);}}> <span className="upload-symbol"><Glyph name="upload" size={35}/></span><b>Kéo thả ảnh vào đây<br/>hoặc bấm để tải lên</b><small>JPG, PNG, WEBP • tối đa 10MB/ảnh</small><span className="btn btn-outline"><Glyph name="folder" size={17}/>Chọn từ máy</span></button><p className="subtle">Có thể chọn nhiều ảnh cùng lúc. Giới hạn xem thử 20 ảnh.</p></Panel><Panel className="gallery-card"><div className="panel-title-line"><SectionHeading icon="image">Ảnh đã chọn ({photos.length} ảnh)</SectionHeading><span className="tag">Chưa lưu lên R2</span></div><div className="gallery-grid">{photos.map(p=><div key={p.id} className={"gallery-item "+(selectedPhoto===p.id?"selected":"")}><button className="gallery-preview" type="button" onClick={()=>setSelectedPhoto(p.id)}><img src={p.url} alt={p.name}/>{coverId===p.id&&<span className="cover-badge">★ Ảnh bìa</span>}</button><div className="gallery-controls"><button type="button" title="Chọn ảnh" onClick={()=>setSelectedPhoto(p.id)}><Glyph name="eye" size={16}/></button><button type="button" title="Đặt ảnh bìa" onClick={()=>setCoverId(p.id)}><Glyph name="check" size={16}/></button><button type="button" title="Xóa ảnh tạm" onClick={()=>removePhoto(p.id)}><Glyph name="trash" size={16}/></button></div><small title={p.name}>{p.name}</small></div>)}{photos.length===0&&<div className="gallery-empty"><Glyph name="image" size={35}/><b>Chưa chọn ảnh</b><span>Chọn ảnh từ máy để xem trước.</span></div>}</div></Panel><div className="media-aside"><Panel><SectionHeading icon="image">Chi tiết ảnh</SectionHeading><div className="detail-preview">{activePhoto?<img src={activePhoto.url} alt={activePhoto.name}/>:<Glyph name="image" size={42}/>}</div><Field label="Tên ảnh" value={activePhoto?.name||""} setValue={()=>{}} readOnly/><p className="subtle">Thứ tự hiển thị và ALT text sẽ lưu khi Media API hoạt động.</p>{activePhoto&&<><Button icon="check" variant="outline" onClick={()=>setCoverId(activePhoto.id)}>{coverId===activePhoto.id?"Đã là ảnh đại diện":"Đặt làm ảnh đại diện"}</Button><Button icon="trash" variant="outline" onClick={()=>removePhoto(activePhoto.id)}>Xóa ảnh tạm</Button></>}</Panel><Panel><SectionHeading icon="shield">Hướng dẫn ảnh chuẩn</SectionHeading><p className="subtle">Ảnh rõ nét, nền sạch, đúng mẫu bìa và đúng sản phẩm. Chỉ gắn SKU sau khi đối chiếu.</p></Panel></div></div></>}
+            {section==="dashboard"&&<><div className="page-title"><div><h1>Tổng quan quản trị</h1><p>Thông tin truy cập được xác minh trực tiếp từ Admin API staging.</p></div><span className="tag">Chỉ đọc · Staging</span></div><div className="metric-grid"><div className="metric"><span className="metric-icon green"><Glyph name="shield"/></span><div><small>Trạng thái</small><strong className="metric-word">Đã xác thực</strong><em>Kiểm tra từ database</em></div></div><div className="metric"><span className="metric-icon purple"><Glyph name="user"/></span><div><small>Vai trò</small><strong className="metric-word">{roleLabel}</strong><em>Chưa cấp quyền ghi sản phẩm</em></div></div><div className="metric"><span className="metric-icon blue"><Glyph name="layers"/></span><div><small>Kênh được xem</small><strong>{session?.channels.length||0}</strong><em>Phạm vi theo tài khoản</em></div></div></div><Panel><SectionHeading icon="layers">Kênh kinh doanh được cấp quyền</SectionHeading>{channels.map(c=><div className="channel-row" key={c.code}><span>{c.label}</span><b>{session?.role==="admin"||session?.channels.includes(c.code)?"Có quyền":"Không có quyền"}</b></div>)}<p className="subtle">Không tự tạo quyền từ thông tin Google hoặc giao diện.</p></Panel></>}
+            {!["dashboard","products","new-product","media"].includes(section)&&<><div className="page-title"><div><h1>{sectionName[section]}</h1><p>Giao diện Futurebook Miền Nam · phân quyền theo chức năng.</p></div></div><Placeholder title={sectionName[section]+" chưa kích hoạt"} text="Module này đang chờ API nghiệp vụ và dữ liệu thật. Không hiển thị dữ liệu mẫu như đã được nhập hoặc xuất bản."/></>}
           </>}
-          <div className="admin-footer">Futurebook Miền Nam · Bản kiểm tra đăng nhập và phân quyền · Không phải trang quản trị sản phẩm hoàn chỉnh.</div>
-        </section>
+        </main>
       </div>
-    </main>
-  );
+    </div>
+    <input type="file" multiple hidden ref={inputFile} accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" onChange={addPhotos}/>
+    {authState!=="authorised" && <div className="auth-overlay" role="dialog" aria-modal="true" aria-labelledby="auth-title"><div className="auth-modal">
+      <div className="auth-top"><Brand subtitle="Miền Nam · Quản trị"/><span className="staging-pill">STAGING</span></div>
+      <div className="auth-graphic"><span className="auth-graphic-icon"><Glyph name="shield" size={30}/></span></div>
+      {authState==="checking"?<><h1 id="auth-title">Đang xác minh phiên đăng nhập</h1><p className="modal-subtitle">Kiểm tra Neon Auth và quyền truy cập Futurebook…</p><div className="modal-spinner" role="status" aria-label="Đang tải"/></>:
+       authState==="anonymous"?<><h1 id="auth-title">Đăng nhập Futurebook Admin</h1><p className="modal-subtitle">Vui lòng đăng nhập Google trước khi truy cập hệ thống quản trị.</p><button type="button" className="google-login" onClick={()=>void signIn()} disabled={busy}><b className="google-g">G</b><span>{busy?"Đang chuyển sang Google…":"Tiếp tục với Google"}</span></button><p className="login-footnote">Chỉ tài khoản được phê duyệt mới có quyền quản trị.</p></>:
+       authState==="forbidden"?<><h1 id="auth-title">Tài khoản chưa được cấp quyền</h1><p className="modal-subtitle">Đã nhận phiên Google của <b>{name}</b>, nhưng tài khoản chưa được duyệt trên Neon staging. Admin vẫn được khóa.</p><button type="button" className="google-login" onClick={()=>void signOut()} disabled={busy}><Glyph name="logout" size={18}/>Đăng xuất / Đổi tài khoản</button><Button icon="refresh" onClick={()=>void refresh()} disabled={busy}>Kiểm tra quyền lại</Button></>:
+       <><h1 id="auth-title">Chưa kết nối được đăng nhập</h1><p className="modal-subtitle">Không thể xác minh phiên hoặc quyền từ hệ thống thật. Admin được khóa an toàn.</p><div className="modal-actions"><Button icon="refresh" variant="primary" onClick={()=>void refresh()}>Thử lại</Button><Button icon="logout" onClick={()=>void signOut()}>Đổi tài khoản</Button></div></>}
+      {notice && <p className="auth-notice" role="alert">{notice}</p>}
+      <div className="modal-footer"><Glyph name="shield" size={16}/>Neon Auth + Cloudflare Admin API · Futurebook Miền Nam</div>
+    </div></div>}
+  </div>;
 }
