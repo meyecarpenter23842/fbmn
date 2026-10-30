@@ -116,6 +116,14 @@ export default function AdminPage() {
       const result=await authClient.getSession();
       if(result.error){setNotice("Không đọc được phiên hiện tại. Anh có thể đăng nhập lại bằng email và mật khẩu.");setAuthState("anonymous");return;}
       if(!result.data?.user){setAuthState("anonymous");return;}
+      // A pre-created Owner with unverified email cannot obtain an Admin JWT.
+      // Offer onboarding before ever calling the protected Admin API.
+      if(result.data.user.emailVerified===false){
+        setAdminEmail(result.data.user.email?.trim().toLowerCase() || "");
+        setLoginMode("login");
+        setNotice("Email Owner chưa xác minh. Chọn Kích hoạt / Xác minh Owner để nhận mã qua email.");
+        setAuthState("anonymous");return;
+      }
       setName(result.data.user.name || result.data.user.email || "Nhân sự Futurebook");
       const response=await fetch("/api/admin/session",{credentials:"same-origin",cache:"no-store"});
       if(response.status===401){
@@ -262,9 +270,9 @@ export default function AdminPage() {
     {authState!=="authorised" && <div className="auth-overlay" role="dialog" aria-modal="true" aria-labelledby="auth-title"><div className="auth-modal">
       <div className="auth-top"><div className="auth-logo"><img src="/brand/fbmn-official-logo.webp" alt="Futurebook Miền Nam" width={240} height={84}/></div><span className="staging-pill">STAGING</span></div>
       {authState==="checking"?<><h1 id="auth-title">Đang xác minh phiên đăng nhập</h1><p className="modal-subtitle">Kiểm tra Neon Auth và quyền truy cập Futurebook…</p><div className="modal-spinner" role="status" aria-label="Đang tải"/></>:
-       authState==="anonymous"?<><h1 id="auth-title">{loginMode==="verify"?"Xác minh email quản trị":loginMode==="forgot"?"Quên mật khẩu":loginMode==="reset"?"Đặt mật khẩu mới":"Đăng nhập Futurebook Admin"}</h1>
+       authState==="anonymous"?<><h1 id="auth-title">{loginMode==="verify"?"Xác minh email":loginMode==="forgot"?"Khôi phục mật khẩu":loginMode==="reset"?"Đặt mật khẩu mới":"Đăng nhập quản trị"}</h1>
        <p className="modal-subtitle">{loginMode==="verify"?"Nhập mã được gửi đến email để xác minh quyền sở hữu hộp thư.":loginMode==="forgot"?"Nhận mã qua email để đặt lại mật khẩu an toàn.":loginMode==="reset"?"Nhập mã email và mật khẩu mới; không dùng lại mật khẩu đã chia sẻ.":"Dành riêng cho nhân sự quản trị được cấp quyền. Đăng nhập bằng email và mật khẩu."}</p>
-       {loginMode==="login"&&<p className="first-login-hint"><Glyph name="alert" size={16}/>Lần đầu dùng Owner? Tài khoản chưa có mật khẩu. Hãy chọn <b>Kích hoạt / Xác minh Owner</b> ở dưới để nhận mã qua email, sau đó đặt mật khẩu mới.</p>}
+       {loginMode==="login"&&<div className="first-login-hint" role="note"><Glyph name="alert" size={17}/><span><strong>Lần đầu dùng Owner?</strong> Chọn <b>Kích hoạt / Xác minh Owner</b> bên dưới để nhận mã email và đặt mật khẩu mới.</span></div>}
        <form className="admin-login-form" onSubmit={e=>{e.preventDefault();void (loginMode==="login"?signIn():loginMode==="verify"?verifyEmail():loginMode==="forgot"?requestReset():resetPassword());}}>
          <label className="login-label">Email quản trị<input type="email" value={adminEmail} onChange={e=>setAdminEmail(e.target.value)} placeholder="email@congty.vn" autoComplete="email" required maxLength={200}/></label>
          {(loginMode==="verify"||loginMode==="reset")&&<label className="login-label">Mã xác minh qua email<input inputMode="numeric" autoComplete="one-time-code" value={emailCode} onChange={e=>setEmailCode(e.target.value)} placeholder="Nhập mã đã nhận" required maxLength={12}/></label>}
@@ -277,11 +285,11 @@ export default function AdminPage() {
           loginMode==="verify"?<><button type="button" onClick={()=>{void sendVerification();}} disabled={busy}>Gửi lại mã</button><button type="button" onClick={()=>{setNotice("");setLoginMode("login");}}>Về đăng nhập</button></>:
           loginMode==="reset"?<><button type="button" onClick={()=>{setNotice("");setLoginMode("forgot");}}>Gửi lại mã</button><button type="button" onClick={()=>{setNotice("");setLoginMode("login");}}>Về đăng nhập</button></>:
           <button type="button" onClick={()=>{setNotice("");setLoginMode("login");}}>Về đăng nhập</button>}
-       </div><p className="login-footnote">Không có đăng ký công khai. Chỉ tài khoản được phê duyệt mới truy cập Admin.</p></>:
+       </div><p className="login-footnote">Chỉ tài khoản đã được cấp quyền mới truy cập khu vực quản trị.</p></>:
        authState==="forbidden"?<><h1 id="auth-title">Tài khoản chưa được cấp quyền</h1><p className="modal-subtitle">Đã nhận phiên đăng nhập của <b>{name}</b>, nhưng tài khoản chưa được duyệt trên Neon staging. Admin vẫn được khóa.</p><button type="button" className="google-login" onClick={()=>void signOut()} disabled={busy}><Glyph name="logout" size={18}/>Đăng xuất / Đổi tài khoản</button><Button icon="refresh" onClick={()=>void refresh()} disabled={busy}>Kiểm tra quyền lại</Button></>:
        <><h1 id="auth-title">Chưa kết nối được đăng nhập</h1><p className="modal-subtitle">Không thể xác minh phiên hoặc quyền từ hệ thống thật. Admin được khóa an toàn.</p><div className="modal-actions"><Button icon="refresh" variant="primary" onClick={()=>void refresh()}>Thử lại</Button><Button icon="logout" onClick={()=>void signOut()}>Đăng nhập lại</Button><Button icon="user" onClick={()=>{setNotice("Đăng nhập bằng email quản trị hoặc chọn Kích hoạt / Xác minh Owner.");setLoginMode("login");setAuthState("anonymous");}}>Mở form đăng nhập</Button></div></>}
       {notice && <p className="auth-notice" role="alert">{notice}</p>}
-      <div className="modal-footer"><Glyph name="shield" size={16}/>Neon Auth + Cloudflare Admin API · Futurebook Miền Nam</div>
+      <div className="modal-footer"><Glyph name="shield" size={15}/>Khu vực bảo mật · Futurebook Miền Nam</div>
     </div></div>}
   </div>;
 }

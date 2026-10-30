@@ -3,12 +3,17 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 const page=readFileSync(new URL("../apps/admin/app/page.tsx",import.meta.url),"utf8");
 const styles=readFileSync(new URL("../apps/admin/app/admin.css",import.meta.url),"utf8");
+const authStyles=readFileSync(new URL("../apps/admin/app/activation.css",import.meta.url),"utf8");
 const route=readFileSync(new URL("../apps/admin/app/api/admin/[route]/route.ts",import.meta.url),"utf8");
 
 test("Admin popup blocks the workspace until both Neon session and DB principal are approved",()=>{
   assert.match(page,/authState!=="authorised" && <div className="auth-overlay"/);
   assert.match(page,/if\(response.status===403\)\{setAuthState\("forbidden"\)/);
   assert.match(page,/if\(response.status===401\)/);
+  assert.match(page,/if\(result\.data\.user\.emailVerified===false\)/);
+  assert.match(page,/setAuthState\("anonymous"\);return;/);
+  assert.match(page,/className="first-login-hint" role="note"/);
+  assert.doesNotMatch(page,/Lần đầu dùng Owner\? Tài khoản chưa có mật khẩu\. Hãy chọn/);
   assert.match(page,/try\{await authClient\.signOut\(\);\}/);
   assert.match(page,/minLength=\{loginMode==="reset"\?8:1\}/);
   assert.match(page,/if\(adminPassword\.length<8\|\|adminPassword!==repeatPassword\)/);
@@ -39,5 +44,6 @@ test("Admin does not invent catalogue, prices, customer counts or persist upload
 
 test("Admin reference UI retains purple side navigation, responsive panels and mandatory login overlay",()=>{
   for(const item of ["Quản lý sản phẩm","Thêm sản phẩm mới","Upload & quản lý ảnh","Banner & Popup","Media","Thêm biến thể"])assert.ok(page.includes(item),item);
-  for(const rule of [".sidebar",".auth-overlay",".auth-logo",".gallery-grid",".editor-grid",".metric-grid","@media(max-width:780px)"])assert.ok(styles.includes(rule),rule);
+  for(const rule of [".sidebar",".auth-overlay",".gallery-grid",".editor-grid",".metric-grid","@media(max-width:780px)"])assert.ok(styles.includes(rule),rule);
+  for(const rule of [".auth-modal",".auth-logo img",".first-login-hint span","background:#fff","@media(max-width:480px)"])assert.ok(authStyles.includes(rule),rule);
 });

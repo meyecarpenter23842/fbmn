@@ -1,1 +1,48 @@
-.first-login-hint{display:flex;align-items:flex-start;gap:9px;text-align:left;background:#f5f0ff;border:1px solid #e3d8ff;border-radius:9px;padding:12px;color:#58449b;font-size:11px;line-height:1.65;margin:0 0 14px}.first-login-hint svg{flex-shrink:0;margin-top:2px}.first-login-hint b{color:#4321a7}
+/* Owner onboarding: compact information banner, no inline flex fragments. */
+.first-login-hint{display:flex;align-items:flex-start;gap:11px;border-radius:12px;padding:12px 13px;line-height:1.6;margin:0 0 16px;font-size:12px}
+.first-login-hint svg{flex-shrink:0;margin-top:2px}
+.first-login-hint span{display:block;min-width:0}
+.first-login-hint strong{font-weight:800}
+.first-login-hint b{font-weight:750}
+
+/* Light neutral administration login. Brand purple used as an accent, not wallpaper. */
+.auth-overlay{
+  background:radial-gradient(ellipse at 13% 12%,rgba(125,96,207,.20),transparent 50%),radial-gradient(ellipse at 90% 83%,rgba(74,89,130,.13),transparent 52%),rgba(24,29,44,.46);
+  backdrop-filter:blur(9px);-webkit-backdrop-filter:blur(9px);padding:20px;
+}
+.auth-modal{
+  width:min(458px,100%);max-height:calc(100dvh - 36px);overflow-y:auto;
+  border-radius:20px;background:#fff;color:#22273a;
+  border:1px solid #e6e8ef;box-shadow:0 26px 75px rgba(15,22,43,.28);
+  padding:0 30px 23px;text-align:left;
+}
+.auth-top{background:#fff;border-bottom:1px solid #edf0f4;margin:0 -30px 24px;padding:19px 30px 17px;display:flex;align-items:center;gap:14px}
+.auth-logo{display:flex;align-items:center;justify-content:flex-start;flex:1;min-width:0}
+.auth-logo img{display:block;object-fit:contain;object-position:left center;width:min(230px,100%);height:68px;filter:none;mix-blend-mode:multiply}
+.auth-top .staging-pill{background:#f5f3ff;border:1px solid #ddd6fe;border-radius:8px;color:#6d4ec8;font-size:9px;font-weight:800;padding:7px 9px;letter-spacing:.4px;flex-shrink:0}
+.auth-modal h1{color:#22263b;font-size:22px;line-height:1.4;text-align:left;margin:0;letter-spacing:-.45px;font-weight:800}
+.auth-modal .modal-subtitle{color:#667085;font-size:12px;line-height:1.7;text-align:left;margin:9px 0 19px}
+.auth-modal .first-login-hint{background:#f3f5fb;border:1px solid #e4e8f4;color:#4e556a;margin:0 0 17px}
+.auth-modal .first-login-hint svg{color:#7253ce}
+.auth-modal .first-login-hint strong{display:block;color:#29304a;margin-bottom:2px}
+.auth-modal .first-login-hint b{color:#5c3cbd}
+.auth-modal .admin-login-form{display:flex;flex-direction:column;gap:15px;text-align:left;margin:12px 0 0;width:100%}
+.auth-modal .login-label{font-size:12px;font-weight:700;color:#35405b;gap:8px}
+.auth-modal .login-label input{height:48px;min-height:48px;background:#fbfcfe;border:1px solid #cfd5e1;border-radius:11px;padding:0 13px;color:#22283a;font-size:13px;box-shadow:none}
+.auth-modal .login-label input::placeholder{color:#8e96a5}
+.auth-modal .login-label input:focus{background:#fff;border-color:#8162da;box-shadow:0 0 0 3px #7553d91b}
+.auth-modal .admin-password-submit{min-height:48px;border-radius:11px;background:linear-gradient(110deg,#7251d6,#6044b7);color:#fff;border:0;margin-top:5px;box-shadow:0 8px 16px #6d4ace25}
+.auth-modal .admin-password-submit:hover:not(:disabled){border:0;background:linear-gradient(110deg,#6040c6,#5335ac)}
+.auth-modal .login-switch{display:flex;justify-content:space-between;align-items:center;gap:12px;margin:14px 0 4px;flex-wrap:wrap}
+.auth-modal .login-switch button{padding:8px 0;font-size:11px;font-weight:750;text-align:left;color:#6948c3;text-decoration:none}
+.auth-modal .login-switch button:hover{text-decoration:underline;text-underline-offset:3px;color:#4f32a8}
+.auth-modal .login-footnote{color:#768092;font-size:11px;line-height:1.6;text-align:center;margin:15px 0 0}
+.auth-modal .auth-notice{background:#eff4fa;color:#435470;border:1px solid #dce6f2;border-radius:10px;font-size:11px;line-height:1.65;text-align:left;margin:14px 0;padding:12px}
+.auth-modal .modal-footer{border-top:1px solid #edf0f4;color:#8b94a4;font-size:10px;display:flex;justify-content:center;gap:7px;align-items:center;margin-top:19px;padding-top:16px}
+.auth-modal .modal-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin:16px auto 0}
+.auth-modal .modal-actions .btn{justify-content:center;min-height:42px;width:100%;white-space:normal;font-size:12px}
+.auth-modal .btn-light{background:#f7f8fb;border:1px solid #e3e5ee;color:#4b5067}
+.auth-modal .btn-primary{background:#7251d6;color:#fff}
+.auth-modal .google-login:not(.admin-password-submit){background:#f5f2ff;color:#5a42ac;border:1px solid #e0d8f7;padding:11px}
+@media(max-width:480px){.auth-overlay{padding:12px}.auth-modal{padding:0 20px 20px;border-radius:16px;max-height:calc(100dvh - 24px)}.auth-top{padding:15px 20px;margin:0 -20px 19px}.auth-logo img{height:58px;width:min(190px,100%)}.auth-modal h1{font-size:20px}.auth-modal .modal-actions{grid-template-columns:1fr}}
+@media(max-width:350px){.auth-top{gap:7px}.auth-logo img{width:155px}.auth-top .staging-pill{padding:6px 7px}}
