@@ -1,12 +1,35 @@
+// ADM-01 #11 — staging Worker only. Bound to RESTRICTED Neon staging role,
+// never production/public Hyperdrive. API token verification remains fail-closed;
+// verify real JWT iss/aud with an approved Google staging session before UAT sign-off.
 {
-  // ADM-01: bundle-only skeleton; staging bindings and Auth claims must be verified
-  // before an explicit staging rollout. No routes, domains or production deployment.
   "name": "futurebook-mien-nam-admin-api-staging",
   "main": "./worker-entry.mjs",
   "compatibility_date": "2026-10-29",
-  "compatibility_flags": ["nodejs_compat"],
-  "workers_dev": false,
+  "compatibility_flags": [
+    "nodejs_compat"
+  ],
+  "workers_dev": true,
   "vars": {
-    "EXPECTED_ADMIN_DB_ROLE": "fbmn_admin_http_staging"
-  }
+    "EXPECTED_ADMIN_DB_ROLE": "fbmn_admin_http_staging",
+    "ADMIN_ALLOWED_ORIGINS": "https://fbmn-admin-g19nfukpu-alibaba240185.vercel.app",
+    "NEON_AUTH_JWKS_URL": "https://ep-old-moon-b5lq2yse.neonauth.c-7.us-east-2.aws.neon.tech/neondb/auth/.well-known/jwks.json",
+    "NEON_AUTH_ISSUER": "https://ep-old-moon-b5lq2yse.neonauth.c-7.us-east-2.aws.neon.tech",
+    "NEON_AUTH_AUDIENCE": "https://ep-old-moon-b5lq2yse.neonauth.c-7.us-east-2.aws.neon.tech/neondb/auth"
+  },
+  "hyperdrive": [
+    {
+      "binding": "ADMIN_HYPERDRIVE",
+      "id": "fb85a0f952de42f4a21cd8e3c7a9bf8b"
+    }
+  ],
+  "ratelimits": [
+    {
+      "name": "ADMIN_RATE_LIMITER",
+      "namespace_id": "20261030",
+      "simple": {
+        "limit": 30,
+        "period": 60
+      }
+    }
+  ]
 }

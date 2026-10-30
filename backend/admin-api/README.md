@@ -24,9 +24,11 @@ public_web, dealer_app, consumer_app. Admin is a control plane, not a channel.
 - Configure ADMIN_HYPERDRIVE, ADMIN_RATE_LIMITER, ADMIN_ALLOWED_ORIGINS,
   NEON_AUTH_JWKS_URL, NEON_AUTH_ISSUER, NEON_AUTH_AUDIENCE as staging
   Cloudflare bindings/secrets. Check issuer/audience against real Neon tokens.
-  The committed Wrangler config has no live Hyperdrive binding/routes.
+  The staging-only Wrangler config binds `fbmn-admin-staging-restricted` via `ADMIN_HYPERDRIVE` (Neon branch `pr08b-public-readmodel-20261029`, database `neondb`, login `fbmn_admin_http_staging`) and `ADMIN_RATE_LIMITER`. Only the staging `workers.dev` endpoint is enabled. Cache MUST remain disabled (role revocations must be immediate). No custom domain or production route is configured.
+- `NEON_AUTH_ISSUER` is the Neon Auth origin and `NEON_AUTH_AUDIENCE` is provisionally set to the Neon Auth branch base URL. **Do not approve real JWT E2E until both are verified against a genuine signed staging JWT**; verification fails closed if either mismatches. Never log or copy a bearer JWT into issues or chat.
+- Authenticated users get no Admin permissions until their subject is explicitly approved in staging `fbmn_admin.principals`. The DB runtime login cannot grant roles.
 
-## Required staging acceptance before merge
+## Staging rollout / verification
 
 1. Review and apply the up migration on an approved Neon staging branch,
    verify rollback on disposable staging branch, not production.

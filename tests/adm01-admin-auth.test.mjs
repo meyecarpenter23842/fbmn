@@ -79,3 +79,22 @@ test("Migration gate and isolated API contract",()=>{
   const publicContract=JSON.parse(readFileSync(new URL("../backend/public-api/openapi.json",import.meta.url),"utf8"));
   assert.ok(Object.keys(publicContract.paths).every(path=>path.startsWith("/v1/public/")));
 });
+
+
+test("Admin Cloudflare config is staging-only, least-privilege and does not cache grants",()=>{
+  const jsonc=readFileSync(new URL("../backend/admin-api/wrangler.jsonc",import.meta.url),"utf8");
+  const conf=JSON.parse(jsonc.slice(jsonc.indexOf("{")));
+  assert.equal(conf.name,"futurebook-mien-nam-admin-api-staging");
+  assert.equal(conf.workers_dev,true);
+  assert.equal(conf.routes,undefined);
+  assert.deepEqual(conf.hyperdrive,[{binding:"ADMIN_HYPERDRIVE",id:"fb85a0f952de42f4a21cd8e3c7a9bf8b"}]);
+  assert.equal(conf.vars.EXPECTED_ADMIN_DB_ROLE,"fbmn_admin_http_staging");
+  assert.ok(conf.vars.ADMIN_ALLOWED_ORIGINS.includes("fbmn-admin-g19nfukpu-alibaba240185.vercel.app"));
+  assert.ok(conf.vars.NEON_AUTH_JWKS_URL.startsWith("https://"));
+  assert.ok(conf.vars.NEON_AUTH_JWKS_URL.endsWith("/.well-known/jwks.json"));
+  assert.match(conf.vars.NEON_AUTH_ISSUER,/^https:\/\//);
+  assert.ok(conf.vars.NEON_AUTH_AUDIENCE);
+  assert.equal(conf.ratelimits[0].name,"ADMIN_RATE_LIMITER");
+  assert.equal(conf.ratelimits[0].simple.period,60);
+  assert.ok(conf.ratelimits[0].simple.limit<=60);
+});
