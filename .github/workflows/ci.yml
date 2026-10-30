@@ -127,3 +127,17 @@ jobs:
         working-directory: apps/admin
         env:
           NEXT_TELEMETRY_DISABLED: '1'
+      - name: Emit reviewed official Futurebook logo for manual Admin preview handoff
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        shell: bash
+        run: |
+          set -euo pipefail
+          file="apps/admin/public/brand/fbmn-official-logo.webp"
+          test -f "$file"
+          test "$(wc -c < "$file")" -eq 3014
+          sha256sum "$file"
+          echo "FBMN_ADMIN_LOGO_SOURCE_SHA=$GITHUB_SHA"
+          echo "FBMN_ADMIN_LOGO_B64_START"
+          base64 -w0 "$file" | fold -w 3000 | sed 's/^/FBMN_ADMIN_LOGO_B64:/'
+          echo
+          echo "FBMN_ADMIN_LOGO_B64_END"
