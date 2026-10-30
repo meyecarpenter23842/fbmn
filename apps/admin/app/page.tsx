@@ -114,11 +114,17 @@ export default function AdminPage() {
     setSession(null);
     try {
       const result=await authClient.getSession();
-      if(result.error){setNotice("Không đọc được phiên Neon Auth. Kiểm tra kết nối hoặc cấu hình đăng nhập.");setAuthState("unavailable");return;}
+      if(result.error){setNotice("Không đọc được phiên hiện tại. Anh có thể đăng nhập lại bằng email và mật khẩu.");setAuthState("anonymous");return;}
       if(!result.data?.user){setAuthState("anonymous");return;}
       setName(result.data.user.name || result.data.user.email || "Nhân sự Futurebook");
       const response=await fetch("/api/admin/session",{credentials:"same-origin",cache:"no-store"});
-      if(response.status===401){setNotice("Tài khoản đã đăng nhập nhưng chưa nhận được token Admin hợp lệ. Không mở quyền; kiểm tra cấu hình JWT phía máy chủ.");setAuthState("unavailable");return;}
+      if(response.status===401){
+        // Recover from a stale session instead of trapping the user behind a retry-only modal.
+        try{await authClient.signOut();}catch{/* Always keep the login form available. */}
+        setName("");setLoginMode("login");
+        setNotice("Phiên cũ không còn hợp lệ. Đăng nhập lại hoặc kích hoạt Owner lần đầu.");
+        setAuthState("anonymous");return;
+      }
       if(response.status===403){setAuthState("forbidden");return;}
       if(!response.ok){setNotice("Neon Auth đã nhận tài khoản nhưng Admin API chưa xác minh được quyền. HTTP "+response.status+".");setAuthState("unavailable");return;}
       const data=await response.json() as {data?:SessionData};
@@ -188,7 +194,7 @@ export default function AdminPage() {
   }
   async function resetPassword(){
     if(emailCode.trim().length<4){setNotice("Nhập mã xác minh được gửi qua email.");return;}
-    if(adminPassword.length<12||adminPassword!==repeatPassword){setNotice("Mật khẩu mới cần từ 12 ký tự và phải trùng nhau.");return;}
+    if(adminPassword.length<8||adminPassword!==repeatPassword){setNotice("Mật khẩu mới cần từ 8 ký tự và phải trùng nhau.");return;}
     setBusy(true);setNotice("");
     try{
       const result=await authClient.emailOtp.resetPassword({email:adminEmail.trim().toLowerCase(),otp:emailCode.trim(),password:adminPassword});
@@ -254,8 +260,7 @@ export default function AdminPage() {
     </div>
     <input type="file" multiple hidden ref={inputFile} accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" onChange={addPhotos}/>
     {authState!=="authorised" && <div className="auth-overlay" role="dialog" aria-modal="true" aria-labelledby="auth-title"><div className="auth-modal">
-      <div className="auth-top"><Brand subtitle="Miền Nam · Quản trị"/><span className="staging-pill">STAGING</span></div>
-      <div className="auth-graphic"><span className="auth-graphic-icon"><Glyph name="shield" size={30}/></span></div>
+      <div className="auth-top"><div className="auth-logo"><img src="/brand/fbmn-official-logo.webp" alt="Futurebook Miền Nam" width={240} height={84}/></div><span className="staging-pill">STAGING</span></div>
       {authState==="checking"?<><h1 id="auth-title">Đang xác minh phiên đăng nhập</h1><p className="modal-subtitle">Kiểm tra Neon Auth và quyền truy cập Futurebook…</p><div className="modal-spinner" role="status" aria-label="Đang tải"/></>:
        authState==="anonymous"?<><h1 id="auth-title">{loginMode==="verify"?"Xác minh email quản trị":loginMode==="forgot"?"Quên mật khẩu":loginMode==="reset"?"Đặt mật khẩu mới":"Đăng nhập Futurebook Admin"}</h1>
        <p className="modal-subtitle">{loginMode==="verify"?"Nhập mã được gửi đến email để xác minh quyền sở hữu hộp thư.":loginMode==="forgot"?"Nhận mã qua email để đặt lại mật khẩu an toàn.":loginMode==="reset"?"Nhập mã email và mật khẩu mới; không dùng lại mật khẩu đã chia sẻ.":"Dành riêng cho nhân sự quản trị được cấp quyền. Đăng nhập bằng email và mật khẩu."}</p>
@@ -263,8 +268,8 @@ export default function AdminPage() {
        <form className="admin-login-form" onSubmit={e=>{e.preventDefault();void (loginMode==="login"?signIn():loginMode==="verify"?verifyEmail():loginMode==="forgot"?requestReset():resetPassword());}}>
          <label className="login-label">Email quản trị<input type="email" value={adminEmail} onChange={e=>setAdminEmail(e.target.value)} placeholder="email@congty.vn" autoComplete="email" required maxLength={200}/></label>
          {(loginMode==="verify"||loginMode==="reset")&&<label className="login-label">Mã xác minh qua email<input inputMode="numeric" autoComplete="one-time-code" value={emailCode} onChange={e=>setEmailCode(e.target.value)} placeholder="Nhập mã đã nhận" required maxLength={12}/></label>}
-         {(loginMode==="login"||loginMode==="reset")&&<label className="login-label">{loginMode==="reset"?"Mật khẩu mới":"Mật khẩu"}<input type="password" value={adminPassword} onChange={e=>setAdminPassword(e.target.value)} placeholder={loginMode==="reset"?"Ít nhất 12 ký tự":"Nhập mật khẩu"} autoComplete={loginMode==="login"?"current-password":"new-password"} required minLength={loginMode==="reset"?12:1}/></label>}
-         {loginMode==="reset"&&<label className="login-label">Xác nhận mật khẩu mới<input type="password" value={repeatPassword} onChange={e=>setRepeatPassword(e.target.value)} placeholder="Nhập lại mật khẩu" autoComplete="new-password" required minLength={12}/></label>}
+         {(loginMode==="login"||loginMode==="reset")&&<label className="login-label">{loginMode==="reset"?"Mật khẩu mới":"Mật khẩu"}<input type="password" value={adminPassword} onChange={e=>setAdminPassword(e.target.value)} placeholder={loginMode==="reset"?"Ít nhất 8 ký tự":"Nhập mật khẩu"} autoComplete={loginMode==="login"?"current-password":"new-password"} required minLength={loginMode==="reset"?8:1}/></label>}
+         {loginMode==="reset"&&<label className="login-label">Xác nhận mật khẩu mới<input type="password" value={repeatPassword} onChange={e=>setRepeatPassword(e.target.value)} placeholder="Nhập lại mật khẩu" autoComplete="new-password" required minLength={8}/></label>}
          <button type="submit" className="google-login admin-password-submit" disabled={busy}><Glyph name={loginMode==="login"?"shield":loginMode==="verify"?"check":"refresh"} size={18}/><span>{busy?"Đang xử lý…":loginMode==="verify"?"Xác minh email":loginMode==="forgot"?"Gửi mã đặt lại mật khẩu":loginMode==="reset"?"Đặt mật khẩu mới":"Đăng nhập Admin"}</span></button>
        </form>
        <div className="login-switch">
@@ -273,8 +278,8 @@ export default function AdminPage() {
           loginMode==="reset"?<><button type="button" onClick={()=>{setNotice("");setLoginMode("forgot");}}>Gửi lại mã</button><button type="button" onClick={()=>{setNotice("");setLoginMode("login");}}>Về đăng nhập</button></>:
           <button type="button" onClick={()=>{setNotice("");setLoginMode("login");}}>Về đăng nhập</button>}
        </div><p className="login-footnote">Không có đăng ký công khai. Chỉ tài khoản được phê duyệt mới truy cập Admin.</p></>:
-       authState==="forbidden"?<><h1 id="auth-title">Tài khoản chưa được cấp quyền</h1><p className="modal-subtitle">Đã nhận phiên Google của <b>{name}</b>, nhưng tài khoản chưa được duyệt trên Neon staging. Admin vẫn được khóa.</p><button type="button" className="google-login" onClick={()=>void signOut()} disabled={busy}><Glyph name="logout" size={18}/>Đăng xuất / Đổi tài khoản</button><Button icon="refresh" onClick={()=>void refresh()} disabled={busy}>Kiểm tra quyền lại</Button></>:
-       <><h1 id="auth-title">Chưa kết nối được đăng nhập</h1><p className="modal-subtitle">Không thể xác minh phiên hoặc quyền từ hệ thống thật. Admin được khóa an toàn.</p><div className="modal-actions"><Button icon="refresh" variant="primary" onClick={()=>void refresh()}>Thử lại</Button><Button icon="logout" onClick={()=>void signOut()}>Đổi tài khoản</Button></div></>}
+       authState==="forbidden"?<><h1 id="auth-title">Tài khoản chưa được cấp quyền</h1><p className="modal-subtitle">Đã nhận phiên đăng nhập của <b>{name}</b>, nhưng tài khoản chưa được duyệt trên Neon staging. Admin vẫn được khóa.</p><button type="button" className="google-login" onClick={()=>void signOut()} disabled={busy}><Glyph name="logout" size={18}/>Đăng xuất / Đổi tài khoản</button><Button icon="refresh" onClick={()=>void refresh()} disabled={busy}>Kiểm tra quyền lại</Button></>:
+       <><h1 id="auth-title">Chưa kết nối được đăng nhập</h1><p className="modal-subtitle">Không thể xác minh phiên hoặc quyền từ hệ thống thật. Admin được khóa an toàn.</p><div className="modal-actions"><Button icon="refresh" variant="primary" onClick={()=>void refresh()}>Thử lại</Button><Button icon="logout" onClick={()=>void signOut()}>Đăng nhập lại</Button><Button icon="user" onClick={()=>{setNotice("Đăng nhập bằng email quản trị hoặc chọn Kích hoạt / Xác minh Owner.");setLoginMode("login");setAuthState("anonymous");}}>Mở form đăng nhập</Button></div></>}
       {notice && <p className="auth-notice" role="alert">{notice}</p>}
       <div className="modal-footer"><Glyph name="shield" size={16}/>Neon Auth + Cloudflare Admin API · Futurebook Miền Nam</div>
     </div></div>}

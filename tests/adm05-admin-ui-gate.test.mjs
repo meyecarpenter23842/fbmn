@@ -9,6 +9,12 @@ test("Admin popup blocks the workspace until both Neon session and DB principal 
   assert.match(page,/authState!=="authorised" && <div className="auth-overlay"/);
   assert.match(page,/if\(response.status===403\)\{setAuthState\("forbidden"\)/);
   assert.match(page,/if\(response.status===401\)/);
+  assert.match(page,/try\{await authClient\.signOut\(\);\}/);
+  assert.match(page,/minLength=\{loginMode==="reset"\?8:1\}/);
+  assert.match(page,/if\(adminPassword\.length<8\|\|adminPassword!==repeatPassword\)/);
+  assert.doesNotMatch(page,/Ít nhất 12 ký tự/);
+  assert.match(page,/className="auth-logo"/);
+  assert.doesNotMatch(page,/<Brand subtitle="Miền Nam · Quản trị"\/>/);
   assert.match(page,/authState==="authorised" && <>/);
   assert.match(page,/authClient\.signIn\.email\(/);
   assert.match(page,/Lần đầu dùng Owner/);
@@ -33,5 +39,5 @@ test("Admin does not invent catalogue, prices, customer counts or persist upload
 
 test("Admin reference UI retains purple side navigation, responsive panels and mandatory login overlay",()=>{
   for(const item of ["Quản lý sản phẩm","Thêm sản phẩm mới","Upload & quản lý ảnh","Banner & Popup","Media","Thêm biến thể"])assert.ok(page.includes(item),item);
-  for(const rule of [".sidebar",".auth-overlay",".gallery-grid",".editor-grid",".metric-grid","@media(max-width:780px)"])assert.ok(styles.includes(rule),rule);
+  for(const rule of [".sidebar",".auth-overlay",".auth-logo",".gallery-grid",".editor-grid",".metric-grid","@media(max-width:780px)"])assert.ok(styles.includes(rule),rule);
 });

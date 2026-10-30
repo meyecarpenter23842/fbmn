@@ -20,3 +20,34 @@
 .login-switch{display:flex;justify-content:center;gap:12px;flex-wrap:wrap;margin:15px 0 3px}
 .login-switch button{border:0;background:transparent;text-decoration:underline;text-underline-offset:3px;color:#6847d5;font-size:11px;font-weight:700;padding:6px}
 .login-switch button:hover{color:#39249b}
+
+/* Owner login – dark-violet premium panel; official logo at its natural horizontal aspect. */
+.auth-overlay{background:radial-gradient(ellipse at 15% 18%,rgba(132,82,244,.5),transparent 46%),radial-gradient(ellipse at 86% 80%,rgba(103,52,192,.46),transparent 50%),linear-gradient(130deg,rgba(10,7,35,.92),rgba(33,15,71,.92));backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
+.auth-modal{width:min(450px,100%);border-radius:22px;background:linear-gradient(145deg,#211944,#302255 60%,#21183f);border:1px solid rgba(209,185,255,.22);box-shadow:0 36px 100px rgba(8,5,29,.54),inset 0 1px rgba(255,255,255,.1);padding:28px 33px 26px;color:#f8f4ff;text-align:left}
+.auth-top{padding:0 0 20px;margin:0 0 22px;border-bottom:1px solid rgba(220,203,255,.17);align-items:center}
+.auth-logo{display:flex;align-items:center;justify-content:flex-start;min-width:0;flex:1}
+.auth-logo img{width:min(230px,100%);height:82px;object-fit:contain;object-position:left center;filter:drop-shadow(0 5px 12px #0002)}
+.auth-top .staging-pill{color:#e8dcff;border:1px solid rgba(180,153,255,.42);background:rgba(118,81,226,.25);border-radius:8px;letter-spacing:.7px;font-size:9px;padding:7px 9px;flex-shrink:0}
+.auth-modal h1{color:#fff;font-size:22px;font-weight:800;letter-spacing:-.6px;text-align:left;line-height:1.35;margin:0 0 6px}
+.auth-modal .modal-subtitle{color:#c7badf;font-size:12px;line-height:1.7;text-align:left;margin:8px 0 19px}
+.auth-modal .admin-login-form{gap:14px;margin-top:13px}
+.auth-modal .login-label{color:#ede4ff;font-size:12px;gap:8px}
+.auth-modal .login-label input{height:49px;border-radius:11px;background:rgba(12,9,33,.55);border:1px solid rgba(194,173,246,.28);color:#fff;font-size:13px;padding:0 15px}
+.auth-modal .login-label input::placeholder{color:#aca2c7}
+.auth-modal .login-label input:focus{border-color:#ad8aff;box-shadow:0 0 0 3px rgba(139,101,245,.2)}
+.auth-modal .admin-password-submit{min-height:50px;margin-top:9px;color:#fff;background:linear-gradient(110deg,#966bff,#6536dc);border:1px solid rgba(255,255,255,.12);box-shadow:0 9px 22px rgba(92,52,198,.3);border-radius:11px;font-size:13px}
+.auth-modal .admin-password-submit:hover:not(:disabled){background:linear-gradient(110deg,#a47dff,#7947f2);border-color:rgba(255,255,255,.3)}
+.auth-modal .first-login-hint{color:#e0d5ff;background:rgba(125,94,216,.16);border-color:rgba(194,162,255,.22);border-radius:11px;margin:0 0 16px;padding:12px;font-size:11px}
+.auth-modal .first-login-hint b{color:#fff}
+.auth-modal .login-switch{justify-content:space-between;gap:10px;margin:17px 0 5px}
+.auth-modal .login-switch button{color:#d8c6ff;text-decoration:none;font-size:11px;padding:7px 0}
+.auth-modal .login-switch button:hover{text-decoration:underline;color:#fff}
+.auth-modal .login-footnote{color:#aea3c7;font-size:10px;margin:16px 0 0;text-align:center}
+.auth-modal .auth-notice{background:rgba(239,89,103,.12);border:1px solid rgba(255,140,151,.25);color:#ffd1d6;font-size:11px;border-radius:10px;margin:14px 0}
+.auth-modal .modal-footer{color:#aea0cc;border-top:1px solid rgba(220,203,255,.14);font-size:10px;margin-top:21px;padding-top:15px}
+.auth-modal .modal-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:20px}
+.auth-modal .modal-actions .btn{width:100%;justify-content:center;min-height:42px;white-space:normal}
+.auth-modal .btn-light{color:#ede4ff;border:1px solid rgba(197,173,255,.29);background:rgba(100,71,166,.33)}
+.auth-modal .btn-primary{background:linear-gradient(110deg,#966bff,#6536dc)}
+.auth-modal .google-login:not(.admin-password-submit){background:rgba(100,71,166,.3);color:#fff;border:1px solid rgba(197,173,255,.3);padding:11px}
+@media(max-width:480px){.auth-modal{padding:23px 20px 21px;border-radius:17px}.auth-logo img{height:67px;width:min(188px,100%)}.auth-top{margin-bottom:19px}.auth-modal h1{font-size:20px}.auth-modal .modal-actions{grid-template-columns:1fr}}
