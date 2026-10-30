@@ -80,6 +80,25 @@ jobs:
       - name: Bundle Admin Worker without deploying
         run: npm run build:check
         working-directory: backend/admin-api
+      - name: Publish audited bundle handoff (reviewed main only; no deploy)
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        working-directory: backend/admin-api
+        shell: bash
+        run: |
+          set -euo pipefail
+          mapfile -t modules < <(find ../../.tmp-admin-worker-bundle -maxdepth 1 -type f \( -name '*.js' -o -name '*.mjs' \) -print)
+          test "${#modules[@]}" -eq 1
+          file="${modules[0]}"
+          bytes="$(wc -c < "$file")"
+          test "$bytes" -gt 0 && test "$bytes" -lt 1000000
+          sha256sum "$file"
+          echo "FBMN_ADMIN_STAGING_BUILD_SHA=$GITHUB_SHA"
+          echo "FBMN_ADMIN_STAGING_BUNDLE_BYTES=$bytes"
+          echo "FBMN_ADMIN_STAGING_BUNDLE_START"
+          base64 -w0 "$file" | fold -w 3500 | sed 's/^/FBMN_ADMIN_STAGING_B64:/'
+          # base64 -w0 does not add a final newline; keep marker on a new line.
+          echo
+          echo "FBMN_ADMIN_STAGING_BUNDLE_END"
 
   admin-frontend-build:
     name: Build independent Admin frontend (dry run only)
