@@ -93,6 +93,9 @@ test("Admin Cloudflare config is staging-only, least-privilege and does not cach
   assert.ok(conf.vars.NEON_AUTH_JWKS_URL.startsWith("https://"));
   assert.ok(conf.vars.NEON_AUTH_JWKS_URL.endsWith("/.well-known/jwks.json"));
   assert.match(conf.vars.NEON_AUTH_ISSUER,/^https:\/\//);
+  assert.equal(new URL(conf.vars.NEON_AUTH_ISSUER).origin,conf.vars.NEON_AUTH_ISSUER);
+  assert.equal(new URL(conf.vars.NEON_AUTH_AUDIENCE).origin,conf.vars.NEON_AUTH_ISSUER);
+  assert.notEqual(conf.vars.NEON_AUTH_AUDIENCE,conf.vars.NEON_AUTH_ISSUER);
   assert.ok(conf.vars.NEON_AUTH_AUDIENCE);
   assert.equal(conf.ratelimits[0].name,"ADMIN_RATE_LIMITER");
   assert.equal(conf.ratelimits[0].simple.period,60);

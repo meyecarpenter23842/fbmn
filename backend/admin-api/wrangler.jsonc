@@ -1,6 +1,7 @@
 // ADM-01 #11 — staging Worker only. Bound to RESTRICTED Neon staging role,
 // never production/public Hyperdrive. API token verification remains fail-closed;
-// verify real JWT iss/aud with an approved Google staging session before UAT sign-off.
+// issuer is the Auth HOST ORIGIN per Neon Functions authentication guide;
+// audience remains the exact branch Auth URL (strict, not skipped). Verify real E2E.
 {
   "name": "futurebook-mien-nam-admin-api-staging",
   "main": "./worker-entry.mjs",
@@ -13,7 +14,7 @@
     "EXPECTED_ADMIN_DB_ROLE": "fbmn_admin_http_staging",
     "ADMIN_ALLOWED_ORIGINS": "https://fbmn-admin-g19nfukpu-alibaba240185.vercel.app",
     "NEON_AUTH_JWKS_URL": "https://ep-old-moon-b5lq2yse.neonauth.c-7.us-east-2.aws.neon.tech/neondb/auth/.well-known/jwks.json",
-    "NEON_AUTH_ISSUER": "https://ep-old-moon-b5lq2yse.neonauth.c-7.us-east-2.aws.neon.tech/neondb/auth",
+    "NEON_AUTH_ISSUER": "https://ep-old-moon-b5lq2yse.neonauth.c-7.us-east-2.aws.neon.tech",
     "NEON_AUTH_AUDIENCE": "https://ep-old-moon-b5lq2yse.neonauth.c-7.us-east-2.aws.neon.tech/neondb/auth"
   },
   "hyperdrive": [
