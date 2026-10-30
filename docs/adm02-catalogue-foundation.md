@@ -50,3 +50,23 @@ The 8-tab XLSX was read without modifying it and checked against the **separate 
 The follow-up adapter flags these anomalies **without emitting any private stock quantities, NET price values or original ZIP image filenames**. No SKU was deleted for missing media; shared media remains unapproved. Use `previewXlsxImport` with a vetted server-side snapshot of existing SKU records for actual create/update/unchanged/conflict figures. With an empty snapshot, `create:613` is only a hypothetical dry-run, **not** a statement about the database.
 
 The CSV/JSON review artifacts are local/private and are **not** committed into the repository. No import into staging or production occurs in this verification PR.
+
+## ADM-05 #41 — Browser-testable Admin XLSX import preview (read-only)
+
+Menu: Products → Nhập Excel/CSV. Excel XLSX is supported in this slice; CSV import still not exposed. Existing Owner login unchanged; preview accepts only editor/admin/owner roles.
+
+- Owner uploads the private 8-tab reconciliation XLSX over HTTPS to a **private Next.js Admin staging endpoint**. It checks same-origin, validates short-lived Neon JWT against staging Admin Worker and current DB principal role. Multipart and XLSX uploads capped; file parsed in memory only.
+- Server runs the same read-only business parser as backend/catalogue/xlsx-adapter.mjs, bundled inside standalone Admin; CI tests enforce exact parser parity.
+- Searchable, paginated 613-SKU list with source names, specification, missing-image count, review flags and safe CSV export. NET prices, warehouse quantities, raw image filenames, source workbook and customer data are not included in responses/exports.
+- Create count is hypothetical assuming an empty existing catalogue; there is **no database snapshot query**, so update/unchanged/conflict are not yet reliable against live Neon.
+- No DB writes, migrations, R2 uploads, publication, public API or login changes. Deployment must be manual to separate Admin preview project after 4/4 CI and Codex review clean.
+
+### Owner acceptance steps after manual staging preview deploy
+
+1. Sign in with the existing Owner account and open Products → Nhập Excel/CSV.
+2. Choose the private XLSX matching the 613-SKU reconciliation workbook; click Phân tích & xem trước.
+3. Verify 613 distinct codes, 541 image-missing codes, original 0114 and 0714, distinct C592/C5921, source breakdown 224/385/4 and required review exceptions.
+4. Filter 'Ngoại lệ cần duyệt' and 'Thiếu ảnh', inspect source names/specification and export a **safe CSV** for review. Do not upload raw CSV to GitHub.
+5. Verify no Neon product rows, R2 objects or website public catalogue entries were created.
+
+The subsequent PR must add a protected DB snapshot comparison and owner-approved **draft-only** staging apply; media R2 and publishing remain separate approval gates. A working preview is NOT completed CRUD/import/publish.

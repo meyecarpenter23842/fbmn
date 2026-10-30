@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import type { Metadata } from "next";
 import "./admin.css";
 import "./activation.css";
+import "./import-preview.css";
 
 export const metadata: Metadata = {
   title: "Quản trị Futurebook Miền Nam",
