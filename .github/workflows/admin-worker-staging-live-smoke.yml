@@ -1,0 +1,47 @@
+name: Admin Worker staging live HTTP smoke (unauthenticated only)
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'backend/admin-api/**'
+      - '.github/workflows/admin-worker-staging-live-smoke.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'backend/admin-api/**'
+      - '.github/workflows/admin-worker-staging-live-smoke.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  staging:
+    name: Verify independent Admin staging HTTP contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Probe staging Worker, no tokens or customer data
+        shell: bash
+        env:
+          BASE: https://futurebook-mien-nam-admin-api-staging.fbmn-alibaba240185.workers.dev
+          GOOD_ORIGIN: https://fbmn-admin-g19nfukpu-alibaba240185.vercel.app
+        run: |
+          set -euo pipefail
+          check() {
+            local want="$1" method="$2" path="$3" origin="${4:-}" auth="${5:-}"
+            local -a args=(--max-time 18 --retry 2 --retry-delay 1 --silent --show-error --request "$method")
+            if [[ -n "$origin" ]]; then args+=(--header "Origin: $origin"); fi
+            if [[ -n "$auth" ]]; then args+=(--header "Authorization: $auth"); fi
+            local got
+            got=$(curl "${args[@]}" --output ./response.json --write-out '%{http_code}' "$BASE$path")
+            echo "Admin staging $method $path: HTTP $got expected $want"
+            [[ "$got" == "$want" ]] || { head -c 200 ./response.json || true; echo; exit 1; }
+          }
+          check 401 GET /v1/admin/session
+          check 401 GET /v1/admin/channels '' 'Bearer invalid.parts.sig'
+          check 403 GET /v1/admin/session https://untrusted.invalid
+          check 404 GET /v1/admin/no-such-route
+          check 204 OPTIONS /v1/admin/session "$GOOD_ORIGIN"
+          echo "ADMIN_STAGING_HTTP_SMOKE_OK"
