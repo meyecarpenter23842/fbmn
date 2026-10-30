@@ -4,7 +4,7 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "build:check": "wrangler deploy --dry-run --outdir ../../.tmp-admin-worker-bundle"
+    "build:check": "node --test tests/*.test.mjs && wrangler deploy --dry-run --outdir ../../.tmp-admin-worker-bundle"
   },
   "dependencies": {
     "jose": "6.1.0",

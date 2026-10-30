@@ -1,4 +1,5 @@
-import { createRemoteJWKSet, jwtVerify } from "jose";
+import { createRemoteJWKSet } from "jose";
+import { verifyManagedNeonJwt } from "./verify-jwt.mjs";
 import { Client } from "pg";
 import { createAdminApi } from "./handler.mjs";
 
@@ -22,7 +23,10 @@ export function createAdminStagingWorker({ createDbClient = opts => new Client(o
     async fetch(request, env) {
       if (!env?.ADMIN_HYPERDRIVE?.connectionString || env.EXPECTED_ADMIN_DB_ROLE !== "fbmn_admin_http_staging" ||
           !httpsUrl(env.NEON_AUTH_JWKS_URL) || !httpsUrl(env.NEON_AUTH_ISSUER) ||
-          !env.NEON_AUTH_AUDIENCE || !env.ADMIN_ALLOWED_ORIGINS ||
+          !httpsUrl(env.NEON_AUTH_AUDIENCE) || !env.ADMIN_ALLOWED_ORIGINS ||
+          // Require an exact branch-scoped JWKS; no untrusted key sources.
+          new URL(env.NEON_AUTH_AUDIENCE).origin !== env.NEON_AUTH_ISSUER ||
+          env.NEON_AUTH_JWKS_URL !== env.NEON_AUTH_AUDIENCE.replace(/\/$/,"") + "/.well-known/jwks.json" ||
           typeof env.ADMIN_RATE_LIMITER?.limit !== "function") return unavailable();
       let limit;
       try { limit = await env.ADMIN_RATE_LIMITER.limit({ key: (request.headers.get("CF-Connecting-IP") || "unknown").slice(0,100) }); }
@@ -50,14 +54,7 @@ export function createAdminStagingWorker({ createDbClient = opts => new Client(o
       };
       const api = createAdminApi({
         allowedOrigins: env.ADMIN_ALLOWED_ORIGINS.split(",").map(s => s.trim()).filter(Boolean),
-        verifyToken: async token => {
-          const {payload} = await jwtVerify(token, jwks, {
-            issuer: env.NEON_AUTH_ISSUER, audience: env.NEON_AUTH_AUDIENCE,
-            algorithms: ["EdDSA", "ES256", "RS256"], maxTokenAge: "15 minutes"
-          });
-          if (typeof payload.sub !== "string") throw new Error("Invalid subject");
-          return payload.sub;
-        },
+        verifyToken: token => verifyManagedNeonJwt(token, jwks, env.NEON_AUTH_ISSUER),
         loadActor: subject => db(async client => {
           const result = await client.query(ACCOUNT,[subject]);
           if (result.rows.length !== 1) return null;
