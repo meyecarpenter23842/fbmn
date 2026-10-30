@@ -1,0 +1,46 @@
+name: Admin PR52 deployed preview manual HTTP smoke
+
+# Manual, one-off probe of the exact PR #52 deployment below.
+# Deliberately NOT a PR/push gate: a static URL must never approve new source revisions.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  preview:
+    name: Admin Google login modal and Neon Auth public session endpoint
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    env:
+      # Deployed and reviewed PR #52: 1095a951dd0577eae91383ba977c649761d04e7a
+      BASE: https://fbmn-admin-m4jdk0k22-alibaba240185.vercel.app
+    steps:
+      - name: Verify app login gate serves HTML without Vercel SSO
+        shell: bash
+        run: |
+          set -euo pipefail
+          status=$(curl --location --max-redirs 2 --max-time 30 --retry 2 --retry-delay 1 --silent --show-error --output ./admin.html --write-out '%{http_code}' "$BASE/")
+          echo "Admin login modal HTTP: $status"
+          [[ "$status" == "200" ]] || { echo "::error::Admin Preview is not accessible as a login page"; exit 1; }
+          grep -q 'Đang xác minh phiên đăng nhập' ./admin.html || { echo "::error::Expected server-rendered login gate missing"; exit 1; }
+          ! grep -qi 'Authentication Required' ./admin.html || { echo "::error::Vercel SSO still blocks Neon login"; exit 1; }
+          echo "ADMIN_MODAL_LIVE_HTTP_OK"
+      - name: Verify anonymous Neon Auth session endpoint
+        shell: bash
+        run: |
+          set -euo pipefail
+          status=$(curl --max-time 30 --retry 2 --retry-delay 1 --silent --show-error --header 'Accept: application/json' --output ./session.json --write-out '%{http_code}' "$BASE/api/auth/get-session")
+          echo "Anonymous Neon Auth GET session HTTP: $status"
+          [[ "$status" == "200" ]] || { echo "::error::Neon Auth session endpoint not healthy"; exit 1; }
+          node -e 'const fs=require("fs");const x=JSON.parse(fs.readFileSync("./session.json","utf8"));if(x?.user||x?.data?.user)process.exit(1);'
+          echo "ANONYMOUS_AUTH_SESSION_OK"
+      - name: Verify no Admin API access without authentication
+        shell: bash
+        run: |
+          set -euo pipefail
+          status=$(curl --max-time 30 --silent --show-error --output ./admin-session.json --write-out '%{http_code}' "$BASE/api/admin/session")
+          echo "Anonymous Admin API HTTP: $status"
+          [[ "$status" == "401" ]] || { echo "::error::Unauthenticated Admin request should return 401"; exit 1; }
+          echo "ADMIN_NO_SESSION_BLOCKED_OK"
