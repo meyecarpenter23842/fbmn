@@ -1,0 +1,25 @@
+name: Admin favicon live smoke
+on:
+  pull_request:
+    branches: [main]
+    paths: ['.github/workflows/admin-pr57-preview-http.yml']
+permissions:
+  contents: read
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check official favicon redirect on fixed Admin preview
+        run: |
+          set -euo pipefail
+          url='https://fbmn-admin-l1ay0py8p-alibaba240185.vercel.app'
+          status=$(curl -sS -m 25 -o /tmp/favicon -w '%{http_code}' "$url/favicon.ico")
+          echo "Favicon redirect HTTP: $status"
+          test "$status" = "307"
+          code=$(curl -sSL -m 25 -o /tmp/logo.webp -w '%{http_code}' "$url/favicon.ico")
+          echo "Company favicon HTTP: $code"
+          test "$code" = "200"
+          test "$(wc -c < /tmp/logo.webp)" -eq 3014
+          echo '14873e498f34495c3e0b493f85876448d37ea33bd31ec6e206c85be476dfcbff  /tmp/logo.webp' | sha256sum --check --status
+          echo "FAVICON_STAGING_OK"
