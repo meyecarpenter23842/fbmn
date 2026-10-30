@@ -97,12 +97,25 @@ export async function POST(request: Request) {
   if (bytes[0] !== 0x50 || bytes[1] !== 0x4B) return fail(400, "invalid_xlsx_file");
 
   try {
-    // No existing-db snapshot yet: create is a WHAT-IF classification only.
-    // No NET prices, warehouse quantities, image filenames or raw file are returned.
-    const result = await previewXlsxImport(bytes, []);
+    // Verify CURRENT records in the restricted private Neon staging catalogue,
+    // never guess that all 613 entries are new. Fail closed if DB is inaccessible.
+    const snapshotResponse = await fetch(base + "/v1/admin/catalogue/snapshot", {
+      method: "GET", cache: "no-store", redirect: "manual",
+      headers: { Authorization: "Bearer " + match[1], Accept:"application/json" },
+      signal: AbortSignal.timeout(9000),
+    });
+    if (!snapshotResponse.ok || !snapshotResponse.headers.get("content-type")?.includes("application/json"))
+      return fail(503, "catalogue_snapshot_unavailable");
+    const snapshotJson = await snapshotResponse.json();
+    const existing = snapshotJson?.data?.items;
+    if (!Array.isArray(existing) || existing.length > 20000 ||
+        existing.some((record: {sku_cong_ty?:unknown}) => typeof record?.sku_cong_ty !== "string"))
+      return fail(503, "catalogue_snapshot_invalid");
+    // No NET prices, warehouse quantities, original image filenames or raw file.
+    const result = await previewXlsxImport(bytes, existing);
     return Response.json({
-      ...result, baseline: "empty_snapshot_hypothetical",
-      database_queried: false, media_uploaded: false, applied: false,
+      ...result, baseline: "actual_neon_staging_snapshot",
+      database_queried: true, media_uploaded: false, applied: false,
     }, { headers: noStore });
   } catch (e: unknown) {
     // Never echo raw spreadsheet content or library exception messages.

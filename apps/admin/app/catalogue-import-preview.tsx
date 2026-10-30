@@ -22,8 +22,8 @@ type Item = {
 };
 type Preview = {
   applied: false;
-  database_queried: false;
-  baseline: "empty_snapshot_hypothetical";
+  database_queried: true;
+  baseline: "actual_neon_staging_snapshot";
   totals: Record<RowStatus, number>;
   counts: {
     total_rows: number; unique_company_skus: number;
@@ -79,6 +79,9 @@ export default function CatalogueImportPreview() {
   const [file,setFile]=useState<File|null>(null);
   const [preview,setPreview]=useState<Preview|null>(null);
   const [busy,setBusy]=useState(false);
+  const [approving,setApproving]=useState(false);
+  const [approved,setApproved]=useState(false);
+  const [receipt,setReceipt]=useState("");
   const [error,setError]=useState("");
   const [search,setSearch]=useState("");
   const [filter,setFilter]=useState("all");
@@ -87,7 +90,7 @@ export default function CatalogueImportPreview() {
   function selectFile(event:ChangeEvent<HTMLInputElement>){
     const item=event.target.files?.[0]||null;
     event.target.value="";
-    setPreview(null);setError("");setPage(1);setSearch("");setFilter("all");setExpanded(null);
+    setPreview(null);setError("");setPage(1);setSearch("");setFilter("all");setExpanded(null);setApproved(false);setReceipt("");
     if(!item)return;
     if(!/\.xlsx$/i.test(item.name)||item.size===0||item.size>8_000_000){
       setFile(null);setError("Chỉ chọn file .xlsx tối đa 8 MB.");return;
@@ -116,12 +119,49 @@ export default function CatalogueImportPreview() {
         throw new Error("Admin staging chưa xử lý được XLSX (HTTP "+response.status+").");
       }
       const data=await response.json() as Preview;
-      if(data.database_queried!==false || data.applied!==false || !Array.isArray(data.items) ||
+      if(data.database_queried!==true || data.applied!==false || !Array.isArray(data.items) ||
          data.counts?.total_rows!==data.items.length || data.items.length>20_000)
         throw new Error("Báo cáo không đúng hợp đồng dry-run; đã từ chối hiển thị.");
       setPreview(data);
     }catch(ex:unknown){setError(ex instanceof Error?ex.message:"Không đọc được file Excel.");}
     finally{setBusy(false);}
+  }
+  async function applyDrafts(){
+    if(!file||!preview||!approved||busy||approving)return;
+    const eligible=preview.database_queried===true && preview.totals.create>0 &&
+      preview.totals.create===preview.counts.total_rows &&
+      preview.totals.error===0 && preview.totals.conflict===0 &&
+      preview.totals.update===0 && preview.totals.unchanged===0;
+    if(!eligible){setError("Danh sách còn mã trùng/cập nhật/xung đột. Chưa cho phép nhập hàng loạt.");return;}
+    if(!window.confirm("Xác nhận lưu "+preview.totals.create+" mã SKU thành BẢN NHÁP trong Neon? KHÔNG xuất bản."))return;
+    setApproving(true);setError("");setReceipt("");
+    try{
+      const tokenResponse=await fetch("/api/auth/token",{credentials:"same-origin",cache:"no-store"});
+      if(!tokenResponse.ok)throw new Error("Phiên đăng nhập hết hạn.");
+      const auth=await tokenResponse.json() as {token?:unknown};
+      const token=typeof auth.token==="string"?auth.token:"";
+      if(!/^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/.test(token))
+        throw new Error("Không xác minh được Owner.");
+      const form=new FormData();
+      form.append("file",file,file.name);
+      form.append("confirm","NHAP_BAN_NHAP");
+      form.append("expectedCreate",String(preview.totals.create));
+      const response=await fetch("/api/catalogue/apply",{
+        method:"POST",credentials:"same-origin",cache:"no-store",
+        headers:{Authorization:"Bearer "+token},body:form,
+      });
+      if(!response.ok){
+        if(response.status===403)throw new Error("Chỉ tài khoản Owner được phê duyệt nhập hàng loạt.");
+        if(response.status===409)throw new Error("Dữ liệu Neon đã đổi hoặc có mã trùng. Hãy chạy lại Phân tích & xem trước.");
+        throw new Error("Không lưu được bản nháp (HTTP "+response.status+").");
+      }
+      const data=await response.json() as {data?:{drafts_saved?:number,published?:number}};
+      if(!Number.isSafeInteger(data.data?.drafts_saved)||data.data?.published!==0)
+        throw new Error("Phản hồi nhập liệu không hợp lệ.");
+      setReceipt("Đã lưu "+data.data?.drafts_saved+" SKU dạng BẢN NHÁP. Không xuất bản.");
+      setPreview(null);setApproved(false);
+    }catch(ex:unknown){setError(ex instanceof Error?ex.message:"Nhập nháp thất bại.");}
+    finally{setApproving(false);}
   }
   const filtered=useMemo(()=>{
     if(!preview)return [];
@@ -143,10 +183,10 @@ export default function CatalogueImportPreview() {
   const targeted=preview?.items.filter(item=>item.warnings.some(w=>TARGETED.has(w))||item.status==="conflict"||item.status==="error").length??0;
   return <div className="import-preview">
     <div className="page-title"><div><h1>Nhập Excel · Xem trước</h1><p>ADM-02 · Kiểm tra mã SKU công ty và ngoại lệ trước khi duyệt nhập liệu</p></div>
-      <span className="import-readonly">CHỈ XEM TRƯỚC · STAGING</span></div>
-    <div className="import-information"><strong>Không ghi dữ liệu.</strong> Excel được gửi đến API Admin staging có kiểm tra quyền, chỉ xử lý trong bộ nhớ.
+      <span className="import-readonly">ĐỐI CHIẾU NEON · CHƯA XUẤT BẢN</span></div>
+    <div className="import-information"><strong>Xem trước không ghi dữ liệu.</strong> Excel được gửi đến API Admin được phân quyền và đối chiếu trực tiếp với danh mục nháp Neon.
       Không đưa giá NET, tồn kho hoặc tên file ảnh vào báo cáo; không upload R2 và không công bố SKU.
-      <br/>Kết quả “ứng viên tạo mới” được tính với giả định database trống, <b>không phải trạng thái thực tế Neon</b>.</div>
+      <br/>Các con số tạo mới, trùng và xung đột được tính theo <b>snapshot thật của Neon</b>. Nhập dữ liệu nháp chỉ thực hiện khi Owner tích chọn xác nhận và bấm nút nhập.</div>
     <section className="import-upload-panel" aria-label="Tải file đối chiếu">
       <div className="import-upload-text"><div className="import-file-icon">XLSX</div><div><h2>Chọn file đối chiếu 613 SKU</h2>
         <p>Tự động đọc sheet <code>DOI CHIEU 613 SKU</code> và bỏ qua 7 sheet thống kê khác. Không cần chỉnh Excel · Giữ nguyên 0114, 0714 · Tối đa 8 MB</p>
@@ -158,6 +198,7 @@ export default function CatalogueImportPreview() {
       </div>
     </section>
     {error&&<div className="import-error" role="alert">{error}</div>}
+    {receipt&&<div className="import-review-banner" role="status"><b>{receipt}</b></div>}
     {preview&&<section aria-label="Báo cáo xem trước">
       <div className="import-kpis">
         <div><small>SKU trong file</small><strong>{preview.counts.total_rows}</strong><span>{preview.counts.unique_company_skus} mã phân biệt</span></div>
@@ -167,8 +208,23 @@ export default function CatalogueImportPreview() {
         <div><small>Lỗi dữ liệu</small><strong>{preview.totals.error}</strong><span>Không được tự bỏ qua</span></div>
       </div>
       <div className="import-review-banner">
-        <b>{preview.totals.create} ứng viên tạo mới (giả định DB trống)</b>
+        <b>{preview.totals.create} SKU mới theo Neon · {preview.totals.unchanged} đã có · {preview.totals.update} cần cập nhật · {preview.totals.conflict} xung đột</b>
         <span>Chỉ bảng giá: {preview.counts.price_only} · Tồn âm: {preview.counts.negative_stock} · Tồn trống: {preview.counts.stock_snapshot_missing} · Ảnh ứng viên chưa duyệt: {preview.counts.image_candidates}</span>
+      </div>
+      <div className="import-information" aria-label="Phê duyệt nhập nháp">
+        <label style={{display:"flex",gap:10,alignItems:"center"}}>
+          <input type="checkbox" checked={approved} onChange={event=>setApproved(event.target.checked)} />
+          <span>Tôi xác nhận chỉ nhập các mã SKU công ty nguyên gốc thành bản nháp; chưa xuất bản.</span>
+        </label>
+        <div style={{marginTop:10}}>
+          <button type="button" className="import-btn import-primary" onClick={()=>void applyDrafts()}
+            disabled={!approved||busy||approving||preview.totals.create!==preview.counts.total_rows||
+              preview.totals.conflict!==0||preview.totals.error!==0||preview.totals.update!==0||
+              preview.totals.unchanged!==0}>
+            {approving?"Đang lưu bản nháp…":"Xác nhận nhập "+preview.totals.create+" SKU nháp vào Neon"}
+          </button>
+        </div>
+        <small>Chỉ Owner thực hiện được. Nếu có mã đã tồn tại, hãy xử lý từng mã trong Quản lý sản phẩm.</small>
       </div>
       <div className="import-controls">
         <label className="import-search-label"><span>Tìm SKU / tên</span><input value={search} onChange={e=>{setSearch(e.target.value);setPage(1);}} placeholder="0114, C5921, tên sản phẩm…" /></label>

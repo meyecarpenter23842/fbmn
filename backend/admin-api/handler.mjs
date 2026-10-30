@@ -1,4 +1,5 @@
 // ADM-01. Every admin route requires a verified external identity and a DB grant.
+import { handleCatalogue } from "./catalogue-service.mjs";
 // No cookie/JWT claims may supply roles or channel scopes.
 const ROUTES = new Map([
   ["/v1/admin/session", "session.read"],
@@ -12,6 +13,7 @@ const PERMITTED = Object.freeze({
   "channels.read": ROLES,
   "publish.check": new Set(["publisher", "admin", "owner"]),
   "pricing.check": new Set(["pricing", "admin", "owner"]),
+  "catalogue.manage": new Set(["owner", "admin", "editor"]),
 });
 const error = (status, code, corsOrigin) =>
   reply(status, { error: { code, message: "Yêu cầu không thể xử lý." } }, corsOrigin);
@@ -25,7 +27,7 @@ function reply(status, body, corsOrigin) {
   if (corsOrigin) headers.set("Access-Control-Allow-Origin", corsOrigin);
   return new Response(JSON.stringify(body), { status, headers });
 }
-export function createAdminApi({ verifyToken, loadActor, listChannels, recordAudit, allowedOrigins = [] }) {
+export function createAdminApi({ verifyToken, loadActor, listChannels, recordAudit, catalogueDb, allowedOrigins = [] }) {
   if (![verifyToken,loadActor,listChannels,recordAudit].every(f => typeof f === "function")) {
     throw new Error("ADM-01 dependencies required");
   }
@@ -40,7 +42,7 @@ export function createAdminApi({ verifyToken, loadActor, listChannels, recordAud
       const corsOrigin = origin && origins.has(origin) ? origin : null;
       if (origin && !corsOrigin) return error(403, "origin_forbidden", null);
       const url = new URL(request.url);
-      const action = ROUTES.get(url.pathname);
+      const action = url.pathname.startsWith("/v1/admin/catalogue/") ? "catalogue.manage" : ROUTES.get(url.pathname);
       if (!action) return error(404, "not_found", corsOrigin);
       if (request.method === "OPTIONS") {
         if (!corsOrigin) return error(403, "origin_forbidden", null);
@@ -73,6 +75,11 @@ export function createAdminApi({ verifyToken, loadActor, listChannels, recordAud
         try { await recordAudit({ subject, action, outcome: "denied" }); }
         catch { return error(503, "service_unavailable", corsOrigin); }
         return error(403, "forbidden", corsOrigin);
+      }
+      if (action === "catalogue.manage") {
+        const result = await handleCatalogue({ request, actor:{...actor,subject}, db:catalogueDb });
+        // Worker and database both retain their own audit trail; never echo SQL errors.
+        return result;
       }
       if (request.method !== "GET") return error(405, "method_not_allowed", corsOrigin);
       if (url.search !== "") return error(400, "invalid_query", corsOrigin);

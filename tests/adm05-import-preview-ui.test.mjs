@@ -32,23 +32,23 @@ test("Import endpoint allows only authenticated, DB-backed Admin preview, limits
   assert.match(api,/\/v1\/admin\/session/);
   assert.match(api,/Authorization: "Bearer " \+ match\[1\]/);
   assert.match(api,/if \(response\.status === 403\) return fail\(403/);
-  assert.match(api,/await previewXlsxImport\(bytes, \[\]\)/);
-  assert.match(api,/database_queried: false, media_uploaded: false, applied: false/);
+  assert.match(api,/await previewXlsxImport\(bytes, existing\)/);
+  assert.match(api,/database_queried: true, media_uploaded: false, applied: false/);
   assert.match(api,/private, no-store/);
   assert.doesNotMatch(api,/\b(INSERT|UPDATE|DELETE|CREATE TABLE|r2\.put|upsert|localStorage|console\.log)\b/i);
 });
 
 test("Import preview is reachable inside existing login-gated Admin without altering login", () => {
   assert.match(page,/section==="import-products" && <CatalogueImportPreview\/>/);
-  assert.match(page,/onClick=\{\(\)=>navigate\("import-products"\)\}>Nhập Excel\/CSV/);
+  assert.match(page,/<CatalogueManager onImport=\{\(\)=>navigate\("import-products"\)\}/);
   assert.match(page,/authState==="authorised" && <>/);
   assert.match(ui,/fetch\("\/api\/auth\/token"/);
   assert.match(ui,/fetch\("\/api\/catalogue\/preview"/);
   assert.match(ui,/Filter|filter|Lọc theo/);
   for (const text of ["Ngoại lệ cần duyệt","Thiếu ảnh","Chỉ XNT","Chỉ bảng giá","Lỗi / xung đột","Trang trước","Trang sau","Xuất báo cáo CSV"])
     assert.ok(ui.includes(text),text);
-  assert.match(ui,/database_queried!==false \|\| data\.applied!==false/);
-  assert.match(ui,/Giả định|giả định/);
+  assert.match(ui,/database_queried!==true \|\| data\.applied!==false/);
+  assert.match(ui,/snapshot thật của Neon/);
   assert.match(ui,/Prevent spreadsheet formula injection/);
   assert.doesNotMatch(ui,/localStorage|sessionStorage/);
   assert.match(style,/@media\(max-width:480px\)/);

@@ -1,4 +1,14 @@
 declare module "@/lib/sku-xlsx-adapter.mjs" {
+  export function readXlsxSkuRows(
+    bytes: Uint8Array,
+    options?: { sourceFile?: string; sheetName?: string }
+  ): Promise<{
+    rows: Array<Record<string, string>>;
+    evidence: Array<{
+      specifications: { pages: string | null; ruling: string | null };
+      warnings: string[];
+    }>;
+  }>;
   export function previewXlsxImport(
     bytes: Uint8Array,
     existing?: readonly object[],

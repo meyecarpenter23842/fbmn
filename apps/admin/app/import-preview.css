@@ -40,3 +40,20 @@
 @media(max-width:1200px){.import-kpis{grid-template-columns:repeat(3,minmax(0,1fr))}.import-upload-panel{align-items:flex-start;flex-direction:column}.import-controls{flex-wrap:wrap}.import-controls>.import-btn{margin-left:0}}
 @media(max-width:780px){.import-preview .page-title{align-items:flex-start;flex-direction:column}.import-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.import-upload-panel{padding:16px}.import-upload-text{align-items:flex-start}.import-upload-actions{width:100%;flex-wrap:wrap}.import-upload-actions .import-btn{flex:1}.import-controls{align-items:stretch;flex-direction:column}.import-filter-label select{width:100%}.import-controls>.import-btn{width:100%}.import-review-banner{flex-direction:column;align-items:flex-start}}
 @media(max-width:480px){.import-kpis{gap:8px}.import-kpis>div{padding:12px}.import-kpis strong{font-size:22px}.import-file-icon{width:51px;height:58px;font-size:11px}.import-upload-text h2{font-size:14px}.import-pagination{flex-wrap:wrap}.import-pagination .import-btn{padding:7px 10px}}
+
+/* ADM-06: editable private catalogue. No public price / publishing controls. */
+.catalogue-manager{max-width:1520px;margin:auto}
+.catalogue-manager .action-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.catalogue-editor{display:flex;flex-wrap:wrap;align-items:flex-end;gap:14px;
+  border:1px solid #e0e4ef;border-radius:14px;padding:17px;background:#fff;margin:15px 0}
+.catalogue-editor h3{width:100%;margin:0;color:#34345e;font-size:15px}
+.catalogue-editor p{width:100%;margin:0;font-size:12px;color:#707b96;line-height:1.65}
+.catalogue-editor label{display:flex;flex-direction:column;gap:7px;flex:1;min-width:180px;
+  font-size:11px;font-weight:700;color:#65708c}
+.catalogue-editor input,.catalogue-editor select{width:100%;min-height:40px;padding:8px 11px;
+  border:1px solid #dde1ef;border-radius:8px;background:#fff;color:#303b60;font-size:12px}
+.catalogue-editor .import-btn{margin-bottom:0}
+.catalogue-manager .import-table td:first-child b{background:transparent}
+.catalogue-manager .import-kpis{margin-top:18px}
+@media(max-width:650px){.catalogue-editor label{min-width:100%}.catalogue-editor .import-btn{flex:1}
+.catalogue-manager .page-title{display:flex;flex-direction:column;align-items:flex-start;gap:10px}}

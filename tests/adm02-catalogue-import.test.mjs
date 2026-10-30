@@ -59,3 +59,10 @@ test("Partial barcode update keeps existing name, but cannot erase final name", 
   assert.equal(erased.totals.error,1);
   assert.equal(erased.items[0].reason,"missing_product_name");
 });
+
+test("Company SKU is an exact original string, including leading zero, and not a barcode", () => {
+  const result=previewCsvImport("sku_cong_ty,ten_san_pham,barcode\n0114,Vở một,893000\n114,Vở hai,893000\nC592,Sổ ba,893000\nC5921,Sổ bốn,893000\n");
+  assert.equal(result.totals.create,4);
+  assert.deepEqual(result.items.map(item=>item.sku_cong_ty),["0114","114","C592","C5921"]);
+  assert.equal(result.applied,false);
+});

@@ -70,6 +70,7 @@ export function createAdminStagingWorker({ createDbClient = opts => new Client(o
           return rows.rows.filter(row=>permitted.has(row.code));
         }),
         recordAudit: ({subject,action,outcome}) => db(async client => { await client.query(AUDIT,[subject,action,outcome]); }),
+        catalogueDb: db,
       });
       return api.fetch(request);
     }

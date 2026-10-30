@@ -47,8 +47,8 @@ test("Admin popup blocks the workspace until both Neon session and DB principal 
 
 test("Admin does not invent catalogue, prices, customer counts or persist uploaded files locally",()=>{
   assert.doesNotMatch(page,/1\.248|2\.458|FB-VHS-200|18\.000/);
-  assert.match(page,/Chưa có danh sách sản phẩm thực tế/);
-  assert.match(page,/Chưa có API công bố/);
+  assert.match(page,/<CatalogueManager onImport=/);
+  assert.match(page,/<CatalogueManager onImport=/);
   assert.match(page,/chưa tải lên Cloudflare R2/);
   assert.doesNotMatch(page,/localStorage|sessionStorage/);
   assert.match(page,/URL\.revokeObjectURL/);
