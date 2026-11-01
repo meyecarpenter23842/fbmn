@@ -74,13 +74,13 @@ async function parsed(request) {
 export async function handleCatalogue({request,actor,db}) {
   const url=new URL(request.url);
   const route=url.pathname.slice("/v1/admin/catalogue/".length);
-  if(!["snapshot","skus","families","categories","apply","group"].includes(route))
+  if(!["snapshot","skus","families","categories","apply","sync","group"].includes(route))
     return fail("not_found",404);
   if(!roles.has(actor?.role))return fail("forbidden",403);
   if(url.search)return fail("invalid_query");
   if(!db)return fail("catalogue_db_unavailable",503);
   if(!["GET","POST","PATCH"].includes(request.method))return fail("method_not_allowed",405);
-  if(["apply","group"].includes(route) && actor.role!=="owner")
+  if(["apply","sync","group"].includes(route) && actor.role!=="owner")
     return fail("owner_required",403);
   if(request.method==="GET"){
     if(!["snapshot","skus","families","categories"].includes(route))return fail("method_not_allowed",405);
@@ -123,6 +123,82 @@ export async function handleCatalogue({request,actor,db}) {
         return saved.rowCount;
       });
       return reply(201,{data:{drafts_saved:count,published:0}});
+    }
+    if(route==="sync" && request.method==="POST"){
+      // Server-only one-sheet sync. Revalidated by Next against a fresh DB snapshot.
+      // Here the exact company SKU is immutable; transactional revisions prevent TOCTOU writes.
+      const ops=input?.operations;
+      if(input?.confirm!=="SYNC_SAN_PHAM"||!Array.isArray(ops)||
+         ops.length<1||ops.length>1000 ||
+         !Number.isSafeInteger(input.expectedCreate)||!Number.isSafeInteger(input.expectedUpdate)||
+         input.expectedCreate<0||input.expectedUpdate<0||
+         input.expectedCreate+input.expectedUpdate!==ops.length)
+        return fail("invalid_sync_request");
+      let createRows=[],updateRows=[];
+      try{
+        const seen=new Set();
+        for(const op of ops){
+          if(!validSku(op?.sku_cong_ty)||!["create","update"].includes(op.kind))
+            throw Error("invalid_sync");
+          const key=op.sku_cong_ty.toUpperCase();
+          if(seen.has(key))throw Error("duplicate_company_sku");
+          seen.add(key);
+          if(op.kind==="create"){
+            const row=safeDraft(op);
+            createRows.push(row);
+          }else{
+            if(!Number.isSafeInteger(op.expected_revision)||op.expected_revision<1||
+               !op.changes||typeof op.changes!=="object"||Array.isArray(op.changes))
+              throw Error("invalid_sync");
+            const keys=Object.keys(op.changes);
+            if(!keys.length || keys.some(k=>!["ten_san_pham","barcode","paper_size","product_spec"].includes(k)))
+              throw Error("invalid_sync");
+            for(const key of ["ten_san_pham","barcode","paper_size"]){
+              if(key in op.changes && (typeof op.changes[key]!=="string"||
+                 !op.changes[key].trim()||!validText(op.changes[key],1200)))
+                throw Error("invalid_sync");
+            }
+            const specs=("product_spec" in op.changes)?safeProductSpec(op.changes.product_spec):{};
+            if("product_spec" in op.changes && !Object.keys(specs).length)
+              throw Error("invalid_sync");
+            updateRows.push({sku_cong_ty:op.sku_cong_ty,
+              expected_revision:op.expected_revision,
+              changes:{...op.changes,...("product_spec" in op.changes?{product_spec:specs}:{})}});
+          }
+        }
+      }catch{return fail("invalid_sync_request");}
+      if(createRows.length!==input.expectedCreate||updateRows.length!==input.expectedUpdate)
+        return fail("invalid_sync_request");
+      const result=await transactional(db,async c=>{
+        if(updateRows.length){
+          const saved=await c.query(
+            "UPDATE fbmn_catalog.skus s SET "+
+            "ten_san_pham=CASE WHEN x.changes ? 'ten_san_pham' THEN x.changes->>'ten_san_pham' ELSE s.ten_san_pham END,"+
+            "barcode=CASE WHEN x.changes ? 'barcode' THEN x.changes->>'barcode' ELSE s.barcode END,"+
+            "paper_size=CASE WHEN x.changes ? 'paper_size' THEN x.changes->>'paper_size' ELSE s.paper_size END,"+
+            "product_spec=s.product_spec || COALESCE(x.changes->'product_spec','{}'::jsonb),"+
+            "revision=s.revision+1,updated_at=now() "+
+            "FROM jsonb_to_recordset($1::jsonb) AS x(sku_cong_ty text,expected_revision integer,changes jsonb) "+
+            "WHERE s.sku_cong_ty=x.sku_cong_ty AND s.revision=x.expected_revision "+
+            "AND s.review_status IN ('draft','needs_review') RETURNING s.sku_cong_ty",
+            [JSON.stringify(updateRows)]);
+          if(saved.rowCount!==updateRows.length)throw Error("catalogue_conflict");
+        }
+        if(createRows.length){
+          const saved=await c.query(
+            "INSERT INTO fbmn_catalog.skus "+
+            "(sku_cong_ty,ten_san_pham,barcode,paper_size,product_spec,review_status) "+
+            "SELECT x.sku_cong_ty,x.ten_san_pham,x.barcode,x.paper_size,x.product_spec,'draft' "+
+            "FROM jsonb_to_recordset($1::jsonb) AS x(sku_cong_ty text,ten_san_pham text,"+
+            "barcode text,paper_size text,product_spec jsonb) RETURNING sku_cong_ty",
+            [JSON.stringify(createRows)]);
+          if(saved.rowCount!==createRows.length)throw Error("catalogue_conflict");
+        }
+        await audit(c,actor.subject,"one_sheet_sync",{
+          created:createRows.length,updated:updateRows.length,published:false});
+        return {created:createRows.length,updated:updateRows.length,published:0};
+      });
+      return reply(201,{data:result});
     }
     if(route==="skus" && request.method==="POST"){
       const row=safeDraft(input);

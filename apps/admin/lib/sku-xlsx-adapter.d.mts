@@ -3,6 +3,7 @@ declare module "@/lib/sku-xlsx-adapter.mjs" {
     bytes: Uint8Array,
     options?: { sourceFile?: string; sheetName?: string }
   ): Promise<{
+    source_sheet: string;
     rows: Array<Record<string, string>>;
     evidence: Array<{
       specifications: { pages: string | null; ruling: string | null };

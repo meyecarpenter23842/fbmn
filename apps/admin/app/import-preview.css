@@ -144,3 +144,9 @@
 .catalogue-spec-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:15px}
 .catalogue-spec-grid label{min-width:0}
 @media(max-width:620px){.catalogue-spec-grid{grid-template-columns:1fr}}
+
+/* ADM-05 P3 old to new comparison stays inside the import popup. */
+.import-diff-table{width:100%;border-collapse:collapse;margin-top:9px;font-size:11px}
+.import-diff-table th,.import-diff-table td{padding:6px 8px;border:1px solid #e0e3ee;text-align:left;white-space:normal;overflow-wrap:anywhere}
+.import-diff-table th{background:#f4f1fd;color:#4f448a}
+.import-diff-table td:last-child{color:#246b55;font-weight:700}

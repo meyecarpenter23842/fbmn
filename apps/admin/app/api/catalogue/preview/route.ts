@@ -1,4 +1,6 @@
-import { previewXlsxImport } from "@/lib/sku-xlsx-adapter.mjs";
+import { previewXlsxImport,readXlsxSkuRows } from "@/lib/sku-xlsx-adapter.mjs";
+import { planSheetSync } from "@/lib/sheet-sync.mjs";
+import { createHash } from "node:crypto";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -113,6 +115,18 @@ export async function POST(request: Request) {
       return fail(503, "catalogue_snapshot_invalid");
     // No NET prices, warehouse quantities, original image filenames or raw file.
     const result = await previewXlsxImport(bytes, existing);
+    if(result.source_sheet==="SAN PHAM"){
+      const parsed=await readXlsxSkuRows(bytes);
+      const plan=planSheetSync(parsed,existing);
+      const previewFingerprint=createHash("sha256")
+        .update(bytes).update(JSON.stringify(plan.operations)).digest("hex");
+      return Response.json({
+        ...result,totals:plan.totals,items:plan.items,
+        previewFingerprint,source_sheet:"SAN PHAM",
+        baseline:"actual_neon_staging_snapshot",database_queried:true,
+        media_uploaded:false,applied:false,
+      },{headers:noStore});
+    }
     return Response.json({
       ...result, baseline: "actual_neon_staging_snapshot",
       database_queried: true, media_uploaded: false, applied: false,

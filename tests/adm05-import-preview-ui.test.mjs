@@ -35,7 +35,7 @@ test("Import endpoint allows only authenticated, DB-backed Admin preview, limits
   assert.match(api,/await previewXlsxImport\(bytes, existing\)/);
   assert.match(api,/database_queried: true, media_uploaded: false, applied: false/);
   assert.match(api,/private, no-store/);
-  assert.doesNotMatch(api,/\b(INSERT|UPDATE|DELETE|CREATE TABLE|r2\.put|upsert|localStorage|console\.log)\b/i);
+  assert.doesNotMatch(api,/\b(INSERT\s+INTO|UPDATE\s+fbmn_catalog|DELETE\s+FROM|CREATE\s+TABLE|r2\.put|upsert|localStorage|console\.log)\b/i);
 });
 
 test("Import preview is reachable inside existing login-gated Admin without altering login", () => {
@@ -50,7 +50,8 @@ test("Import preview is reachable inside existing login-gated Admin without alte
   for (const businessReviewUi of ["Ngoại lệ cần duyệt","Cần kiểm tra ngoại lệ","Ảnh ứng viên chưa duyệt","Xem cảnh báo"])
     assert.ok(!ui.includes(businessReviewUi),businessReviewUi);
   assert.match(ui,/database_queried!==true \|\| data\.applied!==false/);
-  assert.match(ui,/Mã đã tồn tại không bị tự động ghi đè/);
+  assert.match(ui,/mã đã có chỉ được cập nhật khi anh bấm lưu/);
+  assert.match(ui,/ô trống không xóa dữ liệu cũ/);
   assert.match(ui,/Prevent spreadsheet formula injection/);
   assert.doesNotMatch(ui,/localStorage|sessionStorage/);
   assert.match(style,/@media\(max-width:480px\)/);

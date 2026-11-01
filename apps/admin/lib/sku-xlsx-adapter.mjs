@@ -131,13 +131,18 @@ function readSingleSheet(sheet,sourceFile) {
     }catch{error="sku_must_be_literal_text";}
     try{
       title=cellText(cell(SIMPLE_HEADERS.title));
-      barcode=cellText(cell(SIMPLE_HEADERS.barcode));
+      const barcodeCell=cell(SIMPLE_HEADERS.barcode);
+      if(typeof barcodeCell.value==="number"||isFormula(barcodeCell.value))
+        throw Error("barcode_must_be_literal_text");
+      barcode=cellText(barcodeCell);
       size=cellText(cell(SIMPLE_HEADERS.size));
       pages=cellText(cell(SIMPLE_HEADERS.pages));
       ruling=cellText(cell(SIMPLE_HEADERS.ruling));
     }catch{error||="unsupported_or_formula_cell";}
     if(!sku&&!title&&!barcode&&!size&&!pages&&!ruling&&!error)continue;
-    if(!error&&(!sku||sku!==sku.trim()||!title.trim()))error="missing_sku_or_product_name";
+    if(!error&&(!sku||sku!==sku.trim()))error="missing_or_invalid_company_sku";
+// Title is required only for new products. A blank title in an existing SKU row
+// means retain the current title, and the server-side sync planner checks this.
     const row={__row:n,sku_cong_ty:sku,ten_goc_xnt:"",
       ten_san_pham:title,barcode,paper_size:size,...(error?{__error:error}:{})};
     rows.push(row);

@@ -135,6 +135,25 @@ export default function CatalogueManager({onImport}:{onImport:()=>void}){
     catch(e){setError(e instanceof Error?e.message:"Không lưu được sản phẩm.");}
     finally{setBusy(false);}
   };
+  const exportCatalogue=async(format:"xlsx"|"csv")=>{
+    if(busy)return;
+    setBusy(true);setError("");
+    try{
+      const token=await bearer();
+      const response=await fetch("/api/catalogue/export?format="+format,{
+        headers:{Authorization:"Bearer "+token,Accept:"application/octet-stream"},
+        credentials:"same-origin",cache:"no-store"});
+      if(!response.ok)throw Error("Không thể xuất danh mục ("+response.status+").");
+      const blob=await response.blob();
+      if(blob.size===0||blob.size>15_000_000)throw Error("File xuất không hợp lệ.");
+      const url=URL.createObjectURL(blob);
+      try{
+        const link=document.createElement("a");
+        link.href=url;link.download="Futurebook_DANH_MUC_SAN_PHAM_1_SHEET."+format;link.click();
+      }finally{queueMicrotask(()=>URL.revokeObjectURL(url));}
+    }catch(e){setError(e instanceof Error?e.message:"Xuất danh mục thất bại.");}
+    finally{setBusy(false);}
+  };
   const add=()=>void run(async()=>{
     if(!sku||sku!==sku.trim()||!name.trim())throw new Error("Cần mã công ty dạng text và tên sản phẩm.");
     const data=await api<{sku_cong_ty:string}>("skus","POST",{
@@ -176,6 +195,8 @@ export default function CatalogueManager({onImport}:{onImport:()=>void}){
       <div className="action-row">
         <button type="button" className="import-btn import-secondary" onClick={()=>setShowCategories(true)}>Danh mục</button>
         <button type="button" className="import-btn import-secondary" onClick={()=>void refresh()} disabled={busy||loading}>Làm mới</button>
+        <button type="button" className="import-btn import-secondary" onClick={()=>void exportCatalogue("xlsx")} disabled={busy}>Xuất Excel</button>
+        <button type="button" className="import-btn import-secondary" onClick={()=>void exportCatalogue("csv")} disabled={busy}>CSV</button>
         <button type="button" className="import-btn import-secondary" onClick={()=>setShowImport(true)}>Nhập Excel</button>
         <button type="button" className="import-btn import-primary" onClick={()=>{setSpec(blankSpec());setCreate(true)}}>+ Thêm sản phẩm</button>
       </div>

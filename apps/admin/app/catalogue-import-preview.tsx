@@ -10,6 +10,7 @@ type Item = {
   status: RowStatus;
   reason?: string | null;
   changes: string[];
+  diffs?: {field:string;from:string;to:string}[];
   source_name_xnt: string;
   proposed_name: string;
   specifications: { paper_size: string | null; pages: string | null; ruling: string | null };
@@ -35,6 +36,7 @@ type Preview = {
     regional_channel_review: number; merged_pdf_price_cells: number;
   };
   source_sheet: string;
+  previewFingerprint?: string;
   items: Item[];
 };
 const LABELS: Record<RowStatus,string> = {
@@ -114,13 +116,18 @@ export default function CatalogueImportPreview({onBusyChange,onSaved}:{onBusyCha
     finally{setBusy(false);}
   }
   async function applyDrafts(){
-    if(!file||!preview||!approved||busy||approving)return;
-    const eligible=preview.database_queried===true && preview.totals.create>0 &&
-      preview.totals.create===preview.counts.total_rows &&
-      preview.totals.error===0 && preview.totals.conflict===0 &&
-      preview.totals.update===0 && preview.totals.unchanged===0;
-    if(!eligible){setError("Danh sách còn mã trùng/cập nhật/xung đột. Chưa cho phép nhập hàng loạt.");return;}
-    if(!window.confirm("Lưu "+preview.totals.create+" sản phẩm vào danh mục? Sản phẩm chưa hiển thị công khai."))return;
+    if(!file||!preview||busy||approving)return;
+    const oneSheet=preview.source_sheet==="SAN PHAM";
+    const create=preview.totals.create,update=preview.totals.update;
+    const eligible=preview.database_queried===true &&
+      preview.totals.error===0&&preview.totals.conflict===0 &&
+      (oneSheet?(create+update>0&&/^[0-9a-f]{64}$/.test(preview.previewFingerprint||"")):
+        (approved&&create>0&&create===preview.counts.total_rows&&
+         update===0&&preview.totals.unchanged===0));
+    if(!eligible){setError("File còn lỗi hoặc dữ liệu đã thay đổi. Hãy phân tích lại trước khi lưu.");return;}
+    // P3 one-sheet: pressing the primary save button is the ONE explicit confirmation.
+    // Legacy 8-sheet stays create-only and preserves its prior double-check.
+    if(!oneSheet&&!window.confirm("Lưu "+create+" SKU mới? Chưa xuất bản."))return;
     setApproving(true);setError("");setReceipt("");
     try{
       const tokenResponse=await fetch("/api/auth/token",{credentials:"same-origin",cache:"no-store"});
@@ -131,24 +138,37 @@ export default function CatalogueImportPreview({onBusyChange,onSaved}:{onBusyCha
         throw new Error("Không xác minh được Owner.");
       const form=new FormData();
       form.append("file",file,file.name);
-      form.append("confirm","NHAP_BAN_NHAP");
-      form.append("expectedCreate",String(preview.totals.create));
-      const response=await fetch("/api/catalogue/apply",{
+      if(oneSheet){
+        form.append("confirm","SYNC_SAN_PHAM");
+        form.append("expectedCreate",String(create));
+        form.append("expectedUpdate",String(update));
+        form.append("fingerprint",preview.previewFingerprint||"");
+      }else{
+        form.append("confirm","NHAP_BAN_NHAP");
+        form.append("expectedCreate",String(create));
+      }
+      const response=await fetch(oneSheet?"/api/catalogue/sync":"/api/catalogue/apply",{
         method:"POST",credentials:"same-origin",cache:"no-store",
         headers:{Authorization:"Bearer "+token},body:form,
       });
       if(!response.ok){
-        if(response.status===403)throw new Error("Tài khoản không có quyền nhập Excel hàng loạt.");
-        if(response.status===409)throw new Error("Dữ liệu Neon đã đổi hoặc có mã trùng. Hãy chạy lại Phân tích & xem trước.");
-        throw new Error("Không lưu được bản nháp (HTTP "+response.status+").");
+        if(response.status===403)throw new Error("Chỉ Owner có quyền lưu hàng loạt.");
+        if(response.status===409)throw new Error("Danh mục hoặc phiên bản SKU đã thay đổi. Phân tích lại file rồi xác nhận.");
+        if(response.status===400)throw new Error("File hoặc xác nhận không hợp lệ.");
+        throw new Error("Không lưu được sản phẩm (HTTP "+response.status+").");
       }
-      const data=await response.json() as {data?:{drafts_saved?:number,published?:number}};
-      if(!Number.isSafeInteger(data.data?.drafts_saved)||data.data?.published!==0)
-        throw new Error("Phản hồi nhập liệu không hợp lệ.");
-      setReceipt("Đã thêm "+data.data?.drafts_saved+" SKU. Chưa hiển thị công khai.");
-      onSaved?.();
-      setPreview(null);setApproved(false);
-    }catch(ex:unknown){setError(ex instanceof Error?ex.message:"Nhập nháp thất bại.");}
+      const data=await response.json() as {data?:{drafts_saved?:number;created?:number;updated?:number;published?:number}};
+      if(data.data?.published!==0)throw new Error("API trả về trạng thái xuất bản không hợp lệ.");
+      if(oneSheet){
+        if(data.data?.created!==create||data.data?.updated!==update)
+          throw new Error("Kết quả cập nhật không khớp với bản xem trước.");
+        setReceipt("Đã thêm "+create+" SKU, cập nhật "+update+" SKU. Chưa hiển thị công khai.");
+      }else{
+        if(data.data?.drafts_saved!==create)throw new Error("Kết quả nhập không hợp lệ.");
+        setReceipt("Đã thêm "+create+" SKU. Chưa hiển thị công khai.");
+      }
+      onSaved?.();setPreview(null);setApproved(false);
+    }catch(ex:unknown){setError(ex instanceof Error?ex.message:"Không lưu được Excel.");}
     finally{setApproving(false);}
   }
   const filtered=useMemo(()=>{
@@ -165,11 +185,16 @@ export default function CatalogueImportPreview({onBusyChange,onSaved}:{onBusyCha
   },[preview,search,filter]);
   const paged=filtered.slice((page-1)*50,page*50);
   const pages=Math.max(1,Math.ceil(filtered.length/50));
+  const oneSheet=preview?.source_sheet==="SAN PHAM";
+  const eligibleSave=!!preview&&!busy&&!approving&&preview.totals.error===0&&preview.totals.conflict===0&&
+    (oneSheet?(preview.totals.create+preview.totals.update>0&&!!preview.previewFingerprint):
+      (approved&&preview.totals.create>0&&preview.totals.create===preview.counts.total_rows&&
+       preview.totals.update===0&&preview.totals.unchanged===0));
   return <div className="import-preview">
     <div className="page-title"><div><h1>Nhập sản phẩm Excel</h1><p>Chọn file → xem SKU mới và thay đổi → xác nhận lưu.</p></div>
       <span className="import-readonly">XEM TRƯỚC · CHƯA LƯU</span></div>
     <div className="import-information"><strong>Xem trước không ghi dữ liệu.</strong> Excel được so sánh với các SKU hiện có.
-      Giá NET, tồn kho và dữ liệu nội bộ không xuất ra báo cáo. Mã đã tồn tại không bị tự động ghi đè.
+      Giá NET, tồn kho và dữ liệu nội bộ không xuất ra báo cáo. Với Excel 1 sheet, mã đã có chỉ được cập nhật khi anh bấm lưu; ô trống không xóa dữ liệu cũ.
       <br/>Dữ liệu chỉ lưu khi anh chủ động xác nhận.</div>
     <section className="import-upload-panel" aria-label="Tải file đối chiếu">
       <div className="import-upload-text"><div className="import-file-icon">XLSX</div><div><h2>Chọn Excel sản phẩm</h2>
@@ -196,19 +221,19 @@ export default function CatalogueImportPreview({onBusyChange,onSaved}:{onBusyCha
         <span>Mã đã tồn tại sẽ không bị tự động ghi đè.</span>
       </div>
       <div className="import-information" aria-label="Xác nhận lưu sản phẩm">
-        <label style={{display:"flex",gap:10,alignItems:"center"}}>
+        {!oneSheet&&<label style={{display:"flex",gap:10,alignItems:"center"}}>
           <input type="checkbox" checked={approved} onChange={event=>setApproved(event.target.checked)} />
-          <span>Tôi xác nhận lưu các SKU mới, giữ nguyên mã công ty. Sản phẩm chưa hiển thị công khai.</span>
-        </label>
+          <span>Tôi xác nhận lưu các SKU mới. Không tự xuất bản.</span>
+        </label>}
         <div style={{marginTop:10}}>
           <button type="button" className="import-btn import-primary" onClick={()=>void applyDrafts()}
-            disabled={!approved||busy||approving||preview.totals.create!==preview.counts.total_rows||
-              preview.totals.conflict!==0||preview.totals.error!==0||preview.totals.update!==0||
-              preview.totals.unchanged!==0}>
-            {approving?"Đang lưu sản phẩm…":"Lưu "+preview.totals.create+" sản phẩm mới"}
+            disabled={!eligibleSave}>
+            {approving?"Đang lưu sản phẩm…":oneSheet?
+              "Xác nhận lưu "+(preview.totals.create+preview.totals.update)+" SKU (mới "+preview.totals.create+", sửa "+preview.totals.update+")":
+              "Lưu "+preview.totals.create+" SKU mới"}
           </button>
         </div>
-        <small>Hiện chỉ nhập hàng loạt SKU mới. Cập nhật SKU đã có qua Excel thuộc P3; có thể sửa từng mã trong danh sách.</small>
+        <small>{oneSheet?"Bấm lưu một lần. Dữ liệu được so sánh lại với Neon; nếu có revision mới sẽ hủy toàn bộ, không ghi đè.":"File đối chiếu 8 sheet cũ chỉ hỗ trợ nhập mới."}</small>
       </div>
       <div className="import-controls">
         <label className="import-search-label"><span>Tìm SKU / tên</span><input value={search} onChange={e=>{setSearch(e.target.value);setPage(1);}} placeholder="0114, C5921, tên sản phẩm…" /></label>
@@ -232,6 +257,11 @@ export default function CatalogueImportPreview({onBusyChange,onSaved}:{onBusyCha
               <b>Dòng Excel {item.row}</b>
               {item.reason&&<span>{item.reason}</span>}
               {item.changes.length>0&&<span>Thay đổi: {item.changes.join(", ")}</span>}
+              {!!item.diffs?.length&&<table className="import-diff-table"><thead>
+                <tr><th>Trường</th><th>Giá trị cũ</th><th>Giá trị mới</th></tr></thead><tbody>
+                {item.diffs.map(diff=><tr key={diff.field}><td>{diff.field}</td>
+                  <td>{diff.from||"—"}</td><td>{diff.to||"—"}</td></tr>)}
+              </tbody></table>}
             </div>}
           </td>
         </tr>)}
