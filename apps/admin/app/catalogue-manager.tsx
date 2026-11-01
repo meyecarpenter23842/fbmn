@@ -24,7 +24,7 @@ async function api<T>(route:string,method:"GET"|"POST"|"PATCH"="GET",body?:objec
     ...(body?{body:JSON.stringify(body)}:{})});
   const payload=await res.json() as ApiResult<T>;
   if(!res.ok){
-    if(res.status===409)throw new Error("Bản nháp đã được thay đổi hoặc SKU đã tồn tại. Tải lại để đối chiếu.");
+    if(res.status===409)throw new Error("SKU đã được thay đổi hoặc đã tồn tại. Hãy tải lại danh sách.");
     if(res.status===403)throw new Error("Tài khoản chưa được cấp quyền thao tác này.");
     throw new Error("Catalogue API chưa sẵn sàng ("+(payload.error?.code||res.status)+").");
   }
@@ -39,18 +39,17 @@ export default function CatalogueManager({onImport}:{onImport:()=>void}){
   const [error,setError]=useState("");
   const [message,setMessage]=useState("");
   const [query,setQuery]=useState("");
-  const [status,setStatus]=useState("all");
   const [page,setPage]=useState(1);
   const [selected,setSelected]=useState<string[]>([]);
   const [groupId,setGroupId]=useState("");
   const [newFamily,setNewFamily]=useState("");
   const [editing,setEditing]=useState<SKU|null>(null);
   const [editName,setEditName]=useState("");
-  const [editStatus,setEditStatus]=useState<"draft"|"needs_review"|"withdrawn">("draft");
   const [create,setCreate]=useState(false);
   const [showImport,setShowImport]=useState(false);
   const [importBusy,setImportBusy]=useState(false);
   const [showGroup,setShowGroup]=useState(false);
+  const [groupMode,setGroupMode]=useState(false);
   const [sku,setSku]=useState("");
   const [name,setName]=useState("");
   const [size,setSize]=useState("");
@@ -68,11 +67,10 @@ export default function CatalogueManager({onImport}:{onImport:()=>void}){
   useEffect(()=>{const task=setTimeout(()=>{void refresh()},0);return()=>clearTimeout(task)},[refresh]);
   const filtered=useMemo(()=>{
     const q=query.toLocaleLowerCase("vi");
-    return items.filter(row=>(status==="all"||row.review_status===status)&&
-      (!q||row.sku_cong_ty.toLocaleLowerCase("vi").includes(q)||
-      (row.ten_san_pham||row.ten_goc_xnt||"").toLocaleLowerCase("vi").includes(q)||
-      (row.family_label||"").toLocaleLowerCase("vi").includes(q)));
-  },[items,query,status]);
+    return items.filter(row=>!q||row.sku_cong_ty.toLocaleLowerCase("vi").includes(q)||
+      (row.ten_san_pham||row.ten_goc_xnt||row.ten_goc_bang_gia||"").toLocaleLowerCase("vi").includes(q)||
+      (row.family_label||"").toLocaleLowerCase("vi").includes(q));
+  },[items,query]);
   const importSaved=useCallback(()=>{void refresh()},[refresh]);
   const handleImportBusy=useCallback((value:boolean)=>setImportBusy(value),[]);
   const pages=Math.max(1,Math.ceil(filtered.length/50));
@@ -80,22 +78,22 @@ export default function CatalogueManager({onImport}:{onImport:()=>void}){
   const run=async(work:()=>Promise<void>)=>{
     if(busy)return;setBusy(true);setError("");setMessage("");
     try{await work();await refresh();}
-    catch(e){setError(e instanceof Error?e.message:"Không lưu được bản nháp.");}
+    catch(e){setError(e instanceof Error?e.message:"Không lưu được sản phẩm.");}
     finally{setBusy(false);}
   };
   const add=()=>void run(async()=>{
     if(!sku||sku!==sku.trim()||!name.trim())throw new Error("Cần mã công ty dạng text và tên sản phẩm.");
     const data=await api<{sku_cong_ty:string}>("skus","POST",{
       sku_cong_ty:sku,ten_san_pham:name,paper_size:size});
-    setMessage("Đã tạo bản nháp SKU "+data.sku_cong_ty+" (chưa xuất bản).");
+    setMessage("Đã thêm SKU "+data.sku_cong_ty+". Chưa hiển thị công khai.");
     setCreate(false);setSku("");setName("");setSize("");
   });
   const save=()=>void run(async()=>{
     if(!editing)return;
     if(!editName.trim()&&!editing.ten_goc_xnt?.trim()&&!editing.ten_goc_bang_gia?.trim())
-      throw new Error("Bản nháp phải có tên sản phẩm hợp lệ.");
+      throw new Error("Sản phẩm cần có tên hợp lệ.");
     await api("skus","PATCH",{sku_cong_ty:editing.sku_cong_ty,
-      expected_revision:editing.revision,ten_san_pham:editName,review_status:editStatus});
+      expected_revision:editing.revision,ten_san_pham:editName,review_status:editing.review_status});
     setMessage("Đã cập nhật SKU "+editing.sku_cong_ty+". Mã công ty không thay đổi.");
     setEditing(null);
   });
@@ -110,7 +108,7 @@ export default function CatalogueManager({onImport}:{onImport:()=>void}){
     if(!window.confirm("Gắn "+selected.length+" SKU công ty vào cùng một nhóm? Không đổi mã SKU."))return;
     await api("group","POST",{family_id:groupId,sku_cong_ty:selected});
     setMessage("Đã gắn "+selected.length+" mã vào nhóm. Mã công ty được giữ nguyên.");
-    setSelected([]);
+    setSelected([]);setShowGroup(false);setGroupMode(false);
   });
   return <section className="catalogue-manager">
     <div className="page-title"><div><h1>Quản lý sản phẩm</h1>
@@ -121,18 +119,10 @@ export default function CatalogueManager({onImport}:{onImport:()=>void}){
         <button type="button" className="import-btn import-primary" onClick={()=>setCreate(true)}>+ Thêm sản phẩm</button>
       </div>
     </div>
-    <div className="import-kpis catalogue-simple-kpis">
-      <div><small>Tổng sản phẩm</small><strong>{items.length}</strong></div>
-      <div><small>Cần kiểm tra</small><strong>{items.filter(x=>x.review_status==="needs_review").length}</strong></div>
-      <div><small>Nhóm mẫu</small><strong>{families.length}</strong></div>
+    <div className="catalogue-overview" aria-label="Tổng quan danh mục">
+      <strong>{items.length} sản phẩm</strong><span>{families.length} nhóm mẫu</span>
     </div>
-    <details className="catalogue-import-advanced">
-      <summary>Nhập dữ liệu ban đầu từ Excel</summary>
-      <p>Hằng ngày dùng mẫu Excel 1 sheet. File đối chiếu 8 sheet cũ vẫn được hỗ trợ; hệ thống tự chọn sheet cần đọc.</p>
-      <button type="button" className="import-btn import-secondary" onClick={()=>setShowImport(true)}>Nhập Excel trong popup</button>
-      <button type="button" className="import-btn import-secondary" onClick={onImport}>Mở trang nhập Excel riêng</button>
-    </details>
-    {error&&<div className="import-error" role="alert">{error}</div>}
+    {error&&!create&&!editing&&!showGroup&&<div className="import-error" role="alert">{error}</div>}
     {message&&<div className="import-review-banner" role="status"><b>{message}</b></div>}
     {create&&<ProductModal title="Thêm sản phẩm Futurebook" onClose={()=>setCreate(false)} locked={busy}>
       {error&&<div className="import-error" role="alert">{error}</div>}
@@ -150,67 +140,76 @@ export default function CatalogueManager({onImport}:{onImport:()=>void}){
       <h3>Sửa sản phẩm · {editing.sku_cong_ty}</h3>
       <p><strong>Mã công ty được giữ nguyên.</strong> Chỉnh sửa tên mà không thay đổi SKU.</p>
       <label>Tên sản phẩm<input value={editName} onChange={e=>setEditName(e.target.value)}/></label>
-      <details className="catalogue-editor-advanced">
-        <summary>Tùy chọn quản trị (cần kiểm tra / ngừng sử dụng)</summary>
-        <label>Trạng thái nội bộ<select value={editStatus} onChange={e=>setEditStatus(e.target.value as typeof editStatus)}>
-          <option value="draft">Bình thường</option><option value="needs_review">Cần kiểm tra</option>
-          <option value="withdrawn">Ngừng sử dụng (ẩn, không xóa mã)</option>
-        </select></label>
-      </details>
       <div className="fb-product-modal-actions"><button type="button" className="import-btn import-secondary" onClick={()=>setEditing(null)} disabled={busy}>Hủy</button>
       <button type="button" className="import-btn import-primary" disabled={busy} onClick={save}>Lưu thay đổi</button></div>
     </div></ProductModal>}
-    <div className="import-controls">
+    <div className="import-controls catalogue-search-controls">
       <label className="import-search-label">Tìm mã công ty / tên / nhóm
-        <input value={query} onChange={e=>{setQuery(e.target.value);setPage(1)}} placeholder="0114, C5921…"/></label>
-      <button type="button" className={"import-btn "+(status==="needs_review"?"import-primary":"import-secondary")}
-        aria-pressed={status==="needs_review"} onClick={()=>{setStatus(status==="needs_review"?"all":"needs_review");setPage(1)}}>
-        {status==="needs_review"?"Hiện tất cả sản phẩm":"Chỉ xem mã cần kiểm tra"}
-      </button>
+        <input value={query} onChange={e=>{setQuery(e.target.value);setPage(1)}} placeholder="Nhập mã, tên hoặc nhóm sản phẩm…"/></label>
+      <button type="button" className="import-btn import-secondary" aria-pressed={groupMode}
+        onClick={()=>{setGroupMode(x=>!x);setSelected([])}}>{groupMode?"Thoát chọn nhóm":"Nhóm mẫu"}</button>
     </div>
-    <div className="import-table-wrap"><table className="import-table"><thead><tr>
-      <th>Chọn nhóm</th><th>Mã công ty (nguyên gốc)</th><th>Tên sản phẩm</th>
-      <th>Quy cách</th><th>Nhóm mẫu</th><th>Lưu ý</th><th>Thao tác</th>
+    <div className="import-table-wrap"><table className="import-table catalogue-list-table"><thead><tr>
+      {groupMode&&<th>Chọn</th>}<th>Ảnh</th><th>Mã công ty</th><th>Tên sản phẩm</th>
+      <th>Quy cách</th><th>Nhóm mẫu</th><th>Hiển thị</th><th>Thao tác</th>
     </tr></thead><tbody>
-      {visible.map(row=><tr key={row.sku_cong_ty}>
-        <td><input type="checkbox" aria-label={"Chọn "+row.sku_cong_ty}
-          disabled={row.review_status==="approved"||row.review_status==="withdrawn"}
-          checked={selected.includes(row.sku_cong_ty)}
-          onChange={e=>setSelected(old=>e.target.checked?[...old,row.sku_cong_ty]:old.filter(x=>x!==row.sku_cong_ty))}/></td>
-        <td><b>{row.sku_cong_ty}</b></td>
-        <td><b>{row.ten_san_pham||row.ten_goc_xnt||"Chưa có tên"}</b></td>
+      {visible.map(row=>{
+        const editable=row.review_status==="draft"||row.review_status==="needs_review";
+        return <tr key={row.sku_cong_ty}>
+        {groupMode&&<td><input type="checkbox" aria-label={"Chọn SKU "+row.sku_cong_ty}
+          disabled={!editable} checked={selected.includes(row.sku_cong_ty)}
+          onChange={e=>setSelected(old=>e.target.checked?[...old,row.sku_cong_ty]:old.filter(x=>x!==row.sku_cong_ty))}/></td>}
+        <td className="catalogue-media-cell"><span className="catalogue-image-placeholder" role="img" aria-label="Ảnh sẽ bổ sung ở Media Manager">▧</span></td>
+        <td className="catalogue-sku-cell"><b>{row.sku_cong_ty}</b></td>
+        <td className="catalogue-name-cell"><b>{row.ten_san_pham||row.ten_goc_xnt||row.ten_goc_bang_gia||"Chưa có tên"}</b></td>
         <td>{[row.paper_size,row.product_spec?.pages,row.product_spec?.ruling].filter(Boolean).join(" · ")||"—"}</td>
         <td>{row.family_label||"Chưa nhóm"}</td>
-        <td>{row.review_status==="needs_review"?"Cần kiểm tra":row.review_status==="withdrawn"?"Đã ẩn":"—"}</td>
-        <td><button type="button" className="import-detail-btn"
-          disabled={!["draft","needs_review"].includes(row.review_status)}
-          onClick={()=>{setEditing(row);setEditName(row.ten_san_pham||"");setEditStatus(row.review_status as typeof editStatus)}}>Sửa</button></td>
-      </tr>)}
-      {!visible.length&&<tr><td colSpan={7} className="import-empty">
-        {loading?"Đang đọc dữ liệu Neon…":"Chưa có SKU phù hợp. Mã Excel chưa nhập sẽ không hiển thị ở đây."}</td></tr>}
+        <td><span className="catalogue-unconfigured" title="Hiển thị theo kênh sẽ được cấu hình ở P5">—</span></td>
+        <td>
+          <details className="catalogue-actions-menu">
+            <summary aria-label={"Thao tác sản phẩm "+row.sku_cong_ty} title="Thao tác">···</summary>
+            <div className="catalogue-actions-list">
+              <button type="button" disabled={!editable}
+                title={editable?"Sửa thông tin sản phẩm":"SKU hiện không thể chỉnh sửa qua API"}
+                onClick={event=>{event.currentTarget.closest("details")?.removeAttribute("open");
+                  setError("");setEditing(row);setEditName(row.ten_san_pham||"");}}>
+                Sửa sản phẩm
+              </button>
+              <button type="button" disabled={!editable}
+                onClick={event=>{event.currentTarget.closest("details")?.removeAttribute("open");
+                  setSelected(old=>old.includes(row.sku_cong_ty)?old:[...old,row.sku_cong_ty]);
+                  setGroupMode(true);setShowGroup(true);}}>
+                Nhóm cùng dòng
+              </button>
+            </div>
+          </details>
+        </td>
+      </tr>})}
+      {!visible.length&&<tr><td colSpan={groupMode?8:7} className="import-empty">
+        {loading?"Đang tải sản phẩm…":"Chưa có sản phẩm phù hợp."}</td></tr>}
     </tbody></table></div>
     <div className="import-pagination"><span>{filtered.length} SKU · Trang {Math.min(page,pages)}/{pages}</span><div>
       <button className="import-btn import-secondary" disabled={page<=1} onClick={()=>setPage(x=>Math.max(x-1,1))}>Trước</button>
       <button className="import-btn import-secondary" disabled={page>=pages} onClick={()=>setPage(x=>Math.min(x+1,pages))}>Sau</button>
     </div></div>
-    <div className="catalogue-group-trigger">
+    {groupMode&&<div className="catalogue-group-trigger">
       <span><b>Nhóm mẫu</b> · Đã chọn {selected.length} SKU để ghép nhiều mẫu trong một thẻ.</span>
       <button type="button" className="import-btn import-secondary" onClick={()=>setShowGroup(true)}>Quản lý nhóm mẫu</button>
-    </div>
+    </div>}
     {showGroup&&<ProductModal title="Nhóm mẫu sản phẩm" onClose={()=>setShowGroup(false)} locked={busy}>
       {error&&<div className="import-error" role="alert">{error}</div>}
       <div className="catalogue-editor catalogue-variant-details">
-      <p>Chọn ít nhất 2 SKU trong bảng. Ví dụ <b>0114</b> và <b>0714</b> vẫn là hai mã riêng, chỉ được chung thẻ khi đúng nhóm do anh xác nhận.</p>
+      <p>Chọn ít nhất 2 SKU trong danh sách để gắn cùng một nhóm hiển thị. Mã công ty không đổi.</p>
       <label>Nhóm có sẵn<select value={groupId} onChange={e=>setGroupId(e.target.value)}>
         <option value="">Chọn nhóm</option>{families.map(g=><option key={g.id} value={g.id}>{g.family_label}</option>)}
       </select></label>
       <button className="import-btn import-primary" type="button" disabled={busy||!groupId||selected.length<2} onClick={assign}>Gắn {selected.length} SKU vào nhóm</button>
-      <label>Tạo nhóm mới<input value={newFamily} onChange={e=>setNewFamily(e.target.value)} placeholder="Tên nhóm / quy cách đã xác minh"/></label>
+      <label>Tạo nhóm mới<input value={newFamily} onChange={e=>setNewFamily(e.target.value)} placeholder="Tên nhóm sản phẩm"/></label>
       <button className="import-btn import-secondary" type="button" disabled={busy||!newFamily.trim()} onClick={addFamily}>Tạo nhóm</button>
       </div></ProductModal>}
     {showImport&&<ProductModal title="Nhập sản phẩm từ Excel" wide locked={importBusy} onClose={()=>{if(!importBusy){setShowImport(false);void refresh()}}}>
       <CatalogueImportPreview onBusyChange={handleImportBusy} onSaved={importSaved} />
     </ProductModal>}
-    <p className="import-footnote">Không có chức năng xuất bản từ màn hình này. Dữ liệu NET, tồn kho và hình gốc không trả về từ API quản lý sản phẩm.</p>
+    <p className="import-footnote">Dữ liệu sản phẩm được lưu riêng, không tự đưa lên website. Tính năng hiển thị theo kênh và ảnh sản phẩm được bổ sung ở P4–P5; không công khai giá NET hay tồn kho.</p>
   </section>;
 }

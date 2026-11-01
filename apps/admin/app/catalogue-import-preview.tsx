@@ -37,22 +37,10 @@ type Preview = {
   source_sheet: string;
   items: Item[];
 };
-const LABELS: Record<string,string> = {
-  create:"Ứng viên tạo mới", update:"Dự kiến cập nhật", unchanged:"Không thay đổi",
-  conflict:"Xung đột", error:"Lỗi dữ liệu", price_unverified:"Chưa xác minh giá nguồn",
-  missing_xnt:"Không có trong XNT", image_missing:"Thiếu ảnh – được phép",
-  image_mapping_unapproved:"Ảnh chưa duyệt", negative_stock:"Tồn âm – cần xác minh",
-  stock_snapshot_missing:"Tồn trống – chưa xác định", packaging_promotion_review:"Lốc / hàng khuyến mãi",
-  similar_sku_review:"Mã gần giống – không gộp", suspected_company_code:"Nghi sai mã công ty",
-  source_spec_conflict:"Lệch quy cách / dòng kẻ", shared_media_review:"Ảnh dùng chung cần duyệt",
-  regional_channel_review:"Kiểm tra kênh Miền Bắc",
-  merged_pdf_price_cell_verify:"Giá ô PDF gộp cần kiểm tra", unknown_source:"Nguồn chưa rõ",
+const LABELS: Record<RowStatus,string> = {
+  create:"SKU mới",update:"SKU đã có — có thay đổi",unchanged:"Không thay đổi",
+  conflict:"Xung đột",error:"Lỗi kỹ thuật",
 };
-const TARGETED = new Set([
-  "negative_stock","stock_snapshot_missing","packaging_promotion_review","similar_sku_review",
-  "suspected_company_code","source_spec_conflict","shared_media_review",
-  "regional_channel_review","merged_pdf_price_cell_verify",
-]);
 function csvCell(value: string | number | null | undefined) {
   const plain=String(value??"");
   // Prevent spreadsheet formula injection in a locally exported CSV.
@@ -60,18 +48,16 @@ function csvCell(value: string | number | null | undefined) {
   return '"' + safe.replaceAll('"','""') + '"';
 }
 function downloadCsv(items: Item[]) {
-  const headers=["sku_cong_ty","ten_goc_xnt","ten_de_xuat","kho","so_trang","dong_ke",
-    "nguon_xnt","nguon_bang_gia","anh_thieu","tinh_trang","canh_bao","dong_excel"];
+  const headers=["ma_cong_ty","ten_san_pham","kho","so_trang","dong_ke","trang_thai","loi_ky_thuat","dong_excel"];
   const lines=[headers.join(","),...items.map(item=>[
-    item.sku_cong_ty,item.source_name_xnt,item.proposed_name,
+    item.sku_cong_ty,item.proposed_name||item.source_name_xnt,
     item.specifications?.paper_size,item.specifications?.pages,item.specifications?.ruling,
-    item.provenance.inventory_source?"co":"khong",item.provenance.price_document_source?"co":"khong",
-    item.media_missing?"co":"khong",item.status,item.warnings.join(" | "),item.row,
+    LABELS[item.status],item.status==="error"||item.status==="conflict"?item.reason||"":"",item.row,
   ].map(csvCell).join(","))];
   const blob=new Blob(["\uFEFF",lines.join("\r\n")+"\r\n"],{type:"text/csv;charset=utf-8"});
   const url=URL.createObjectURL(blob);
   const anchor=document.createElement("a");
-  anchor.href=url;anchor.download="fbmn-adm02-import-review-safe.csv";anchor.click();
+  anchor.href=url;anchor.download="futurebook-xem-truoc-nhap-san-pham.csv";anchor.click();
   queueMicrotask(()=>URL.revokeObjectURL(url));
 }
 export default function CatalogueImportPreview({onBusyChange,onSaved}:{onBusyChange?:(value:boolean)=>void;onSaved?:()=>void}={}) {
@@ -134,7 +120,7 @@ export default function CatalogueImportPreview({onBusyChange,onSaved}:{onBusyCha
       preview.totals.error===0 && preview.totals.conflict===0 &&
       preview.totals.update===0 && preview.totals.unchanged===0;
     if(!eligible){setError("Danh sách còn mã trùng/cập nhật/xung đột. Chưa cho phép nhập hàng loạt.");return;}
-    if(!window.confirm("Xác nhận lưu "+preview.totals.create+" mã SKU thành BẢN NHÁP trong Neon? KHÔNG xuất bản."))return;
+    if(!window.confirm("Lưu "+preview.totals.create+" sản phẩm vào danh mục? Sản phẩm chưa hiển thị công khai."))return;
     setApproving(true);setError("");setReceipt("");
     try{
       const tokenResponse=await fetch("/api/auth/token",{credentials:"same-origin",cache:"no-store"});
@@ -152,14 +138,14 @@ export default function CatalogueImportPreview({onBusyChange,onSaved}:{onBusyCha
         headers:{Authorization:"Bearer "+token},body:form,
       });
       if(!response.ok){
-        if(response.status===403)throw new Error("Chỉ tài khoản Owner được phê duyệt nhập hàng loạt.");
+        if(response.status===403)throw new Error("Tài khoản không có quyền nhập Excel hàng loạt.");
         if(response.status===409)throw new Error("Dữ liệu Neon đã đổi hoặc có mã trùng. Hãy chạy lại Phân tích & xem trước.");
         throw new Error("Không lưu được bản nháp (HTTP "+response.status+").");
       }
       const data=await response.json() as {data?:{drafts_saved?:number,published?:number}};
       if(!Number.isSafeInteger(data.data?.drafts_saved)||data.data?.published!==0)
         throw new Error("Phản hồi nhập liệu không hợp lệ.");
-      setReceipt("Đã lưu "+data.data?.drafts_saved+" SKU dạng BẢN NHÁP. Không xuất bản.");
+      setReceipt("Đã thêm "+data.data?.drafts_saved+" SKU. Chưa hiển thị công khai.");
       onSaved?.();
       setPreview(null);setApproved(false);
     }catch(ex:unknown){setError(ex instanceof Error?ex.message:"Nhập nháp thất bại.");}
@@ -172,23 +158,19 @@ export default function CatalogueImportPreview({onBusyChange,onSaved}:{onBusyCha
       if(q&&!String(item.sku_cong_ty??"").toLocaleLowerCase("vi").includes(q)&&
         !item.source_name_xnt.toLocaleLowerCase("vi").includes(q)&&
         !item.proposed_name.toLocaleLowerCase("vi").includes(q))return false;
-      if(filter==="targeted")return item.warnings.some(w=>TARGETED.has(w))||item.status==="conflict"||item.status==="error";
-      if(filter==="image_missing")return item.media_missing;
-      if(filter==="xnt_only")return item.provenance.inventory_source&&!item.provenance.price_document_source;
-      if(filter==="price_only")return !item.provenance.inventory_source&&item.provenance.price_document_source;
+      if(filter==="create"||filter==="update"||filter==="unchanged")return item.status===filter;
       if(filter==="error")return item.status==="error"||item.status==="conflict";
       return true;
     });
   },[preview,search,filter]);
   const paged=filtered.slice((page-1)*50,page*50);
   const pages=Math.max(1,Math.ceil(filtered.length/50));
-  const targeted=preview?.items.filter(item=>item.warnings.some(w=>TARGETED.has(w))||item.status==="conflict"||item.status==="error").length??0;
   return <div className="import-preview">
-    <div className="page-title"><div><h1>Nhập sản phẩm Excel</h1><p>1 file, 1 sheet là đủ. Xem trước và duyệt trước khi lưu bản nháp.</p></div>
-      <span className="import-readonly">ĐỐI CHIẾU NEON · CHƯA XUẤT BẢN</span></div>
-    <div className="import-information"><strong>Xem trước không ghi dữ liệu.</strong> Excel được gửi đến API Admin được phân quyền và đối chiếu trực tiếp với danh mục nháp Neon.
-      Không đưa giá NET, tồn kho hoặc tên file ảnh vào báo cáo; không upload R2 và không công bố SKU.
-      <br/>Các con số tạo mới, trùng và xung đột được tính theo <b>snapshot thật của Neon</b>. Nhập dữ liệu nháp chỉ thực hiện khi Owner tích chọn xác nhận và bấm nút nhập.</div>
+    <div className="page-title"><div><h1>Nhập sản phẩm Excel</h1><p>Chọn file → xem SKU mới và thay đổi → xác nhận lưu.</p></div>
+      <span className="import-readonly">XEM TRƯỚC · CHƯA LƯU</span></div>
+    <div className="import-information"><strong>Xem trước không ghi dữ liệu.</strong> Excel được so sánh với các SKU hiện có.
+      Giá NET, tồn kho và dữ liệu nội bộ không xuất ra báo cáo. Mã đã tồn tại không bị tự động ghi đè.
+      <br/>Dữ liệu chỉ lưu khi anh chủ động xác nhận.</div>
     <section className="import-upload-panel" aria-label="Tải file đối chiếu">
       <div className="import-upload-text"><div className="import-file-icon">XLSX</div><div><h2>Chọn Excel sản phẩm</h2>
         <p><b>Mẫu thông dụng: 1 sheet SAN PHAM.</b> File đối chiếu 8 sheet cũ cũng được chấp nhận, tự tìm sheet phù hợp. Giữ nguyên mã 0114, 0714 · Tối đa 8 MB.</p>
@@ -203,60 +185,63 @@ export default function CatalogueImportPreview({onBusyChange,onSaved}:{onBusyCha
     {error&&<div className="import-error" role="alert">{error}</div>}
     {receipt&&<div className="import-review-banner" role="status"><b>{receipt}</b></div>}
     {preview&&<section aria-label="Báo cáo xem trước">
-      <div className="import-kpis">
-        <div><small>SKU trong file</small><strong>{preview.counts.total_rows}</strong><span>{preview.counts.unique_company_skus} mã phân biệt</span></div>
-        <div><small>{preview.source_sheet==="SAN PHAM"?"Mẫu Excel chuẩn":"Chỉ nguồn XNT"}</small><strong>{preview.source_sheet==="SAN PHAM"?preview.counts.total_rows:preview.counts.xnt_only}</strong><span>{preview.source_sheet==="SAN PHAM"?"Nhập từ file 1 sheet":"Chưa xác minh giá nguồn"}</span></div>
-        <div><small>Thiếu ảnh</small><strong>{preview.counts.missing_images}</strong><span>Được giữ lại, không chặn</span></div>
-        <div><small>Cần kiểm tra ngoại lệ</small><strong>{targeted}</strong><span>Mã/nguồn/quy cách</span></div>
-        <div><small>Lỗi dữ liệu</small><strong>{preview.totals.error}</strong><span>Không được tự bỏ qua</span></div>
+      <div className="import-kpis import-kpis-simple">
+        <div><small>SKU trong file</small><strong>{preview.counts.total_rows}</strong></div>
+        <div><small>SKU mới</small><strong>{preview.totals.create}</strong></div>
+        <div><small>SKU đã có</small><strong>{preview.totals.update+preview.totals.unchanged}</strong></div>
+        <div><small>Lỗi / xung đột</small><strong>{preview.totals.error+preview.totals.conflict}</strong></div>
       </div>
       <div className="import-review-banner">
-        <b>{preview.totals.create} SKU mới theo Neon · {preview.totals.unchanged} đã có · {preview.totals.update} cần cập nhật · {preview.totals.conflict} xung đột</b>
-        <span>Chỉ bảng giá: {preview.counts.price_only} · Tồn âm: {preview.counts.negative_stock} · Tồn trống: {preview.counts.stock_snapshot_missing} · Ảnh ứng viên chưa duyệt: {preview.counts.image_candidates}</span>
+        <b>{preview.totals.create} SKU mới · {preview.totals.update} SKU có thay đổi · {preview.totals.unchanged} không đổi · {preview.totals.conflict} xung đột</b>
+        <span>Mã đã tồn tại sẽ không bị tự động ghi đè.</span>
       </div>
-      <div className="import-information" aria-label="Phê duyệt nhập nháp">
+      <div className="import-information" aria-label="Xác nhận lưu sản phẩm">
         <label style={{display:"flex",gap:10,alignItems:"center"}}>
           <input type="checkbox" checked={approved} onChange={event=>setApproved(event.target.checked)} />
-          <span>Tôi xác nhận chỉ nhập các mã SKU công ty nguyên gốc thành bản nháp; chưa xuất bản.</span>
+          <span>Tôi xác nhận lưu các SKU mới, giữ nguyên mã công ty. Sản phẩm chưa hiển thị công khai.</span>
         </label>
         <div style={{marginTop:10}}>
           <button type="button" className="import-btn import-primary" onClick={()=>void applyDrafts()}
             disabled={!approved||busy||approving||preview.totals.create!==preview.counts.total_rows||
               preview.totals.conflict!==0||preview.totals.error!==0||preview.totals.update!==0||
               preview.totals.unchanged!==0}>
-            {approving?"Đang lưu bản nháp…":"Xác nhận nhập "+preview.totals.create+" SKU nháp vào Neon"}
+            {approving?"Đang lưu sản phẩm…":"Lưu "+preview.totals.create+" sản phẩm mới"}
           </button>
         </div>
-        <small>Chỉ Owner thực hiện được. Nếu có mã đã tồn tại, hãy xử lý từng mã trong Quản lý sản phẩm.</small>
+        <small>Hiện chỉ nhập hàng loạt SKU mới. Cập nhật SKU đã có qua Excel thuộc P3; có thể sửa từng mã trong danh sách.</small>
       </div>
       <div className="import-controls">
         <label className="import-search-label"><span>Tìm SKU / tên</span><input value={search} onChange={e=>{setSearch(e.target.value);setPage(1);}} placeholder="0114, C5921, tên sản phẩm…" /></label>
         <label className="import-filter-label"><span>Lọc theo</span><select value={filter} onChange={e=>{setFilter(e.target.value);setPage(1);}}>
-          <option value="all">Tất cả SKU</option><option value="targeted">Ngoại lệ cần duyệt</option>
-          <option value="image_missing">Thiếu ảnh</option><option value="xnt_only">Chỉ XNT</option>
-          <option value="price_only">Chỉ bảng giá</option><option value="error">Lỗi / xung đột</option>
+          <option value="all">Tất cả SKU</option><option value="create">SKU mới</option>
+          <option value="update">Có thay đổi</option><option value="unchanged">Không thay đổi</option><option value="error">Lỗi / xung đột</option>
         </select></label>
-        <button type="button" className="import-btn import-secondary" onClick={()=>downloadCsv(filtered)} disabled={!filtered.length}>Xuất báo cáo CSV (đang lọc)</button>
+        <button type="button" className="import-btn import-secondary" onClick={()=>downloadCsv(filtered)} disabled={!filtered.length}>Xuất danh sách CSV</button>
       </div>
-      <div className="import-table-wrap"><table className="import-table"><thead><tr><th>SKU công ty</th><th>Tên sản phẩm / XNT</th><th>Quy cách</th><th>Nguồn</th><th>Ảnh</th><th>Đối chiếu</th><th>Chi tiết</th></tr></thead><tbody>
-        {paged.map((item,index)=><tr key={item.row} className={item.warnings.some(w=>TARGETED.has(w))?"import-flagged":""}>
+      <div className="import-table-wrap"><table className="import-table import-preview-simple-table">
+        <thead><tr><th>Mã công ty</th><th>Tên sản phẩm</th><th>Quy cách</th><th>Kết quả</th><th>Chi tiết</th></tr></thead><tbody>
+        {paged.map(item=><tr key={item.row}>
           <td><b>{item.sku_cong_ty||"—"}</b></td>
-          <td><b>{item.proposed_name||item.source_name_xnt||"Chưa có tên"}</b>{item.proposed_name&&item.source_name_xnt&&<small>{item.source_name_xnt}</small>}</td>
+          <td><b>{item.proposed_name||item.source_name_xnt||"Chưa có tên"}</b></td>
           <td>{[item.specifications?.paper_size,item.specifications?.pages,item.specifications?.ruling].filter(Boolean).join(" · ")||"—"}</td>
-          <td>{item.provenance.inventory_source?"XNT":""}{item.provenance.inventory_source&&item.provenance.price_document_source?" + ":""}{item.provenance.price_document_source?"Bảng giá":""}</td>
-          <td><span className={item.media_missing?"import-muted":"import-soft"}>{item.media_missing?"Chưa có ảnh":item.media_candidate_count+" ảnh ứng viên"}</span></td>
-          <td><span className={item.status==="error"||item.status==="conflict"?"import-bad":"import-good"}>{LABELS[item.status]||item.status}</span></td>
-          <td><button type="button" className="import-detail-btn" aria-expanded={expanded===item.row} onClick={()=>setExpanded(expanded===item.row?null:item.row)}>{expanded===item.row?"Thu gọn":"Xem cảnh báo"}</button>
-            {expanded===item.row&&<div className="import-details"><b>Excel dòng {item.row}</b>{item.reason&&<span>Lỗi: {item.reason}</span>}
-              {item.warnings.map((w,i)=><span key={i}>• {LABELS[w]||w}</span>)}<span>Ảnh chưa được phê duyệt hoặc xuất bản.</span></div>}</td>
+          <td><span className={item.status==="error"||item.status==="conflict"?"import-bad":"import-good"}>{LABELS[item.status]}</span></td>
+          <td>{(item.status==="error"||item.status==="conflict"||item.changes.length>0)&&
+            <button type="button" className="import-detail-btn" aria-expanded={expanded===item.row}
+              onClick={()=>setExpanded(expanded===item.row?null:item.row)}>{expanded===item.row?"Thu gọn":"Chi tiết"}</button>}
+            {expanded===item.row&&<div className="import-details">
+              <b>Dòng Excel {item.row}</b>
+              {item.reason&&<span>{item.reason}</span>}
+              {item.changes.length>0&&<span>Thay đổi: {item.changes.join(", ")}</span>}
+            </div>}
+          </td>
         </tr>)}
-        {!paged.length&&<tr><td colSpan={7} className="import-empty">Không tìm thấy SKU phù hợp bộ lọc.</td></tr>}
+        {!paged.length&&<tr><td colSpan={5} className="import-empty">Không có SKU phù hợp.</td></tr>}
       </tbody></table></div>
       <div className="import-pagination"><span>{filtered.length} SKU phù hợp · Trang {Math.min(page,pages)}/{pages}</span><div>
         <button type="button" className="import-btn import-secondary" onClick={()=>setPage(Math.max(1,page-1))} disabled={page<=1}>Trang trước</button>
         <button type="button" className="import-btn import-secondary" onClick={()=>setPage(Math.min(pages,page+1))} disabled={page>=pages}>Trang sau</button>
       </div></div>
-      <p className="import-footnote">Không lưu bản nháp, không cập nhật database. Duyệt nhập vào Neon staging sẽ thuộc bước riêng sau khi đối chiếu dữ liệu và phân quyền.</p>
+      <p className="import-footnote">Xem trước chỉ so sánh dữ liệu kỹ thuật. Chỉ xác nhận mới lưu sản phẩm; không tự xuất bản.</p>
     </section>}
   </div>;
 }

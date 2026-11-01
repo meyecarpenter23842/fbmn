@@ -13,7 +13,7 @@ const page=read("apps/admin/app/page.tsx");
 const style=read("apps/admin/app/import-preview.css");
 const adminPackage=JSON.parse(read("apps/admin/package.json"));
 
-test("Admin bundle matches canonical read-only XLSX/CSV parsers, including source warnings", () => {
+test("Admin bundle matches canonical read-only XLSX/CSV parsers, independent of UI review workflow", () => {
   assert.equal(adminCsv.replace(/^\/\/ Staging Admin bundle.*\n\/\/ Keep.*\n/,""),rootCsv);
   assert.equal(adminXlsx.replace(/^\/\/ Staging Admin bundle.*\n\/\/ Keep.*\n/,"").replace(
     'from "./sku-import-preview.mjs"', 'from "./import-preview.mjs"'),rootXlsx);
@@ -45,10 +45,12 @@ test("Import preview is reachable inside existing login-gated Admin without alte
   assert.match(ui,/fetch\("\/api\/auth\/token"/);
   assert.match(ui,/fetch\("\/api\/catalogue\/preview"/);
   assert.match(ui,/Filter|filter|Lọc theo/);
-  for (const text of ["Ngoại lệ cần duyệt","Thiếu ảnh","Chỉ XNT","Chỉ bảng giá","Lỗi / xung đột","Trang trước","Trang sau","Xuất báo cáo CSV"])
+  for (const text of ["SKU trong file","SKU mới","SKU đã có","Lỗi / xung đột","Trang trước","Trang sau","Xuất danh sách CSV"])
     assert.ok(ui.includes(text),text);
+  for (const businessReviewUi of ["Ngoại lệ cần duyệt","Cần kiểm tra ngoại lệ","Ảnh ứng viên chưa duyệt","Xem cảnh báo"])
+    assert.ok(!ui.includes(businessReviewUi),businessReviewUi);
   assert.match(ui,/database_queried!==true \|\| data\.applied!==false/);
-  assert.match(ui,/snapshot thật của Neon/);
+  assert.match(ui,/Mã đã tồn tại không bị tự động ghi đè/);
   assert.match(ui,/Prevent spreadsheet formula injection/);
   assert.doesNotMatch(ui,/localStorage|sessionStorage/);
   assert.match(style,/@media\(max-width:480px\)/);

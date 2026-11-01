@@ -104,3 +104,36 @@
   .fb-product-modal-actions .import-btn{flex:1}
   .catalogue-group-trigger{align-items:stretch;flex-direction:column}
 }
+
+/* ADM-09 P1: lean product-list UI; no business review dashboard or status workflow. */
+.catalogue-overview{display:flex;align-items:center;gap:15px;margin:14px 0 10px;color:#737b98;font-size:12px}
+.catalogue-overview strong{font-size:15px;color:#383273}
+.catalogue-overview span{border-left:1px solid #dfe1ed;padding-left:15px}
+.catalogue-search-controls{align-items:end}
+.catalogue-list-table{min-width:870px}
+.catalogue-list-table th:first-child,.catalogue-list-table td:first-child{width:54px}
+.catalogue-list-table td b{overflow-wrap:anywhere}
+.catalogue-list-table td:nth-child(4)>b{font-weight:700;color:#373b60}
+.catalogue-image-placeholder{display:grid;place-items:center;width:40px;height:44px;border:1px solid #e2e3ef;border-radius:9px;background:#f3f2fa;color:#9a96b8;font-size:24px;line-height:1}
+.catalogue-unconfigured{color:#a5a9bd}
+.catalogue-actions-menu{position:relative;min-width:120px}
+.catalogue-actions-menu>summary{list-style:none;display:inline-grid;place-items:center;width:36px;height:30px;border:1px solid #e1e2f0;border-radius:8px;background:white;color:#5344a1;font-size:22px;font-weight:700;cursor:pointer}
+.catalogue-actions-menu>summary::-webkit-details-marker{display:none}
+.catalogue-actions-menu>summary:focus-visible{outline:3px solid #a89bfa;outline-offset:2px}
+.catalogue-actions-list{display:grid;gap:2px;margin-top:6px;padding:4px;border:1px solid #e9e7f3;border-radius:9px;background:white}
+.catalogue-actions-list button{min-width:128px;text-align:left;border:0;border-radius:6px;background:transparent;padding:9px;color:#393968;font:inherit;font-weight:600;cursor:pointer}
+.catalogue-actions-list button:hover:not(:disabled){background:#f3f0ff;color:#4e39ab}
+.catalogue-actions-list button:disabled{cursor:not-allowed;color:#aaaebc}
+.import-kpis-simple{grid-template-columns:repeat(4,minmax(0,1fr))}
+.import-preview-simple-table{min-width:680px}
+.import-preview-simple-table td:nth-child(2){min-width:200px}
+@media(max-width:780px){.catalogue-overview{flex-wrap:wrap}.import-kpis-simple{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:560px){.catalogue-search-controls{align-items:stretch}.catalogue-search-controls>.import-btn{width:100%}.catalogue-overview{margin:10px 0}.catalogue-list-table{min-width:800px}}
+
+/* Stable column sizing regardless of optional grouping-checkbox column. */
+.catalogue-list-table td.catalogue-media-cell{min-width:56px;max-width:65px}
+.catalogue-list-table td.catalogue-sku-cell{min-width:100px;max-width:155px}
+.catalogue-list-table td.catalogue-name-cell{min-width:220px;max-width:330px}
+.catalogue-list-table td.catalogue-name-cell>b{display:block;color:#34355e;font-size:12px;line-height:1.5}
+.fb-product-modal-content .import-kpis-simple{grid-template-columns:repeat(4,minmax(0,1fr))}
+@media(max-width:780px){.fb-product-modal-content .import-kpis-simple{grid-template-columns:repeat(2,minmax(0,1fr))}}

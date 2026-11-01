@@ -5,33 +5,37 @@ const read=(path)=>readFileSync(new URL("../"+path,import.meta.url),"utf8");
 const manager=read("apps/admin/app/catalogue-manager.tsx");
 const importer=read("apps/admin/app/catalogue-import-preview.tsx");
 
-test("Everyday product management has one search and one actionable review toggle, not five status choices",()=>{
+test("Product management lists all SKUs with search, not business review filters",()=>{
   assert.match(manager,/Tìm mã công ty \/ tên \/ nhóm/);
-  assert.match(manager,/Chỉ xem mã cần kiểm tra/);
-  assert.match(manager,/status==="needs_review"\?"all":"needs_review"/);
-  assert.doesNotMatch(manager,/<option value="all">Tất cả<\/option>/);
-  assert.doesNotMatch(manager,/<option value="approved">Đã duyệt<\/option>/);
-  assert.match(manager,/<th>Lưu ý<\/th>/);
-  assert.match(manager,/catalogue-simple-kpis/);
+  assert.match(manager,/catalogue-overview/);
+  assert.match(manager,/<th>Ảnh<\/th>/);
+  assert.match(manager,/<th>Hiển thị<\/th>/);
+  assert.match(manager,/catalogue-image-placeholder/);
+  assert.doesNotMatch(manager,/Chỉ xem mã cần kiểm tra|Cần rà soát|Cần kiểm tra|catalogue-editor-advanced|setEditStatus|setStatus/);
+  assert.match(manager,/\[items,query\]/);
 });
 
-test("Advanced administration is collapsed by default without removing internal controls",()=>{
-  assert.match(manager,/<details className="catalogue-import-advanced">/);
-  assert.match(manager,/<details className="catalogue-editor-advanced">/);
+test("All routine operations keep real popup forms with a compact row actions menu",()=>{
+  assert.match(manager,/create&&<ProductModal/);
   assert.match(manager,/editing&&<ProductModal/);
   assert.match(manager,/showGroup&&<ProductModal/);
-  assert.match(manager,/onClick=\{\(\)=>setShowImport\(true\)\}/);
   assert.match(manager,/showImport&&<ProductModal/);
-  assert.match(manager,/value="withdrawn"/);
-  assert.match(manager,/review_status:editStatus/);
+  assert.match(manager,/catalogue-actions-menu/);
+  assert.match(manager,/Sửa sản phẩm/);
+  assert.match(manager,/Nhóm cùng dòng/);
   assert.match(manager,/sku_cong_ty:editing.sku_cong_ty/);
-  assert.match(manager,/Không có chức năng xuất bản/);
+  assert.match(manager,/review_status:editing.review_status/);
+  assert.doesNotMatch(manager,/review_status:editStatus/);
+  assert.match(manager,/importBusy/);
 });
 
-test("Reconciliation file import chooses one original workbook with no manual tab selection",()=>{
+test("Import accepts canonical 1-sheet or legacy format and shows technical outcomes only",()=>{
   assert.match(importer,/Mẫu thông dụng: 1 sheet SAN PHAM/);
   assert.match(importer,/tự tìm sheet phù hợp/);
   assert.match(importer,/File đối chiếu 8 sheet cũ/);
   assert.match(importer,/Tải mẫu Excel 1 sheet/);
   assert.match(importer,/database_queried!==true \|\| data.applied!==false/);
+  assert.match(importer,/import-kpis-simple/);
+  assert.match(importer,/Lỗi \/ xung đột/);
+  assert.doesNotMatch(importer,/Ngoại lệ cần duyệt|Cần kiểm tra ngoại lệ|Ảnh ứng viên chưa duyệt|Xem cảnh báo/);
 });
