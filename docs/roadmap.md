@@ -1,6 +1,6 @@
-# FUTUREBOOK MIỀN NAM — ROADMAP DUY NHẤT (v1.1, ưu tiên hoàn thiện Website)
+# FUTUREBOOK MIỀN NAM — ROADMAP DUY NHẤT (v1.2, ưu tiên hoàn thiện Website)
 
-**Chốt ngày:** 29/10/2026. **Chủ sở hữu scope:** Futurebook Miền Nam.  
+**Chốt ngày:** 01/11/2026 (quyết định mới cho module sản phẩm; giữ lịch sử nguồn 29/10). **Chủ sở hữu scope:** Futurebook Miền Nam.  
 **Đây là tài liệu kế hoạch DUY NHẤT.** GitHub [issue #1](https://github.com/alibaba240185/fbmn/issues/1) chỉ là **mục lục/trạng thái**, không là một kế hoạch thứ hai. Các issue thực thi phải dẫn về đây. `docs/admin-console-roadmap.md` được giữ như tài liệu tham khảo kỹ thuật, không còn roadmap độc lập.
 
 ## 1. Mục tiêu và hiện trạng đã xác minh
@@ -11,7 +11,7 @@
 - Website production `https://fbmn-web.vercel.app` chạy trên Vercel, đã bật SSR remote API, 7/7 public routes trả HTTP 200 (Actions `40884287308`).
 - Cloudflare Worker công khai **riêng** `futurebook-mien-nam-public-api-staging` với `/v1/public/categories`, `/v1/public/products`, `/v1/public/content` kết nối Neon **staging** (Actions `40883055487`).
 - Kênh B2B/Auth Worker cũ `futurebook-mien-nam-api-staging` **không được gộp, thay thế hoặc repurpose**.
-- **Chưa** có catalogue/danh mục/nội dung đã duyệt nhập vào public views; không có CRUD Web Admin, app native, nhập kho, checkout/order end-to-end. Website production đang đọc **Neon staging**, chưa migrate database production.
+- **Đã có** Admin tạo/sửa SKU bản nháp, nhập XLSX 1 sheet hoặc đối chiếu 8 sheet, popup thêm/sửa/nhóm mẫu; **chưa có** Media Manager R2, cập nhật SKU cũ hàng loạt, xuất bản catalogue thật lên web, app native, nhập kho hay checkout/order end-to-end. Catalogue public chưa được nghiệm thu với sản phẩm thật. Website production đang đọc **Neon staging**, chưa migrate database production.
 - Mockup màn Web Admin và SKU/giá/hình ảnh minh họa **không phải dữ liệu thật**. Nguồn thực tế là catalogue, bảng giá, hình ảnh Futurebook được cung cấp/duyệt.
 
 **Phạm vi:** chỉ repo `alibaba240185/fbmn` và hệ thống Futurebook Miền Nam; repo `order` không nằm trong kế hoạch này trừ khi có yêu cầu riêng.
@@ -50,28 +50,50 @@
 
 **Giữ NGUYÊN các mã ADM-01…05 và GitHub Issues; đây là thay đổi ưu tiên trên roadmap duy nhất, không phải kế hoạch thứ hai.** Các tên `PR09–PR13` trong mockup cũ không được dùng làm số gói; mỗi GitHub PR là một thay đổi nhỏ có số tự cấp.
 
-**Mốc mục tiêu gần nhất:** chủ dự án vào Web Admin → tạo/import SKU công ty thật → kiểm tra tên/quy cách/ảnh → duyệt xuất bản cho `public_web` → truy cập sản phẩm thật trên `fbmn-web.vercel.app` **không cần redeploy chỉ để thêm sản phẩm**.
+### 4.0. QUYẾT ĐỊNH OWNER 01/11/2026 — RÀ SOÁT DỮ LIỆU BÊN NGOÀI, KHÔNG ĐƯA VÀO APP
+
+**Đây là quyết định bắt buộc cho các PR mới, thay thế các ý tưởng UI rà soát/duyệt nằm trong tài liệu và mockup cũ.**
+
+- **Ngoài ứng dụng:** đối chiếu XNT, bảng giá, tên/quy cách, mã sai hoặc gần giống, barcode, ảnh chưa khớp và giá nguồn bằng file làm việc riêng. Kết quả bàn giao là **một file sản phẩm chuẩn đã xử lý**. Báo cáo ngoại lệ của 613 SKU là dữ liệu nội bộ phục vụ chuẩn hóa **ngoài app**, không phải module Admin.
+- **Trong Admin:** tìm kiếm/danh mục → thêm hoặc sửa bằng popup → lưu, import/xuất Excel 1 sheet, quản lý quy cách/đơn vị, nhóm mẫu, ảnh, bật/tắt hiển thị theo kênh. **Không có** bộ lọc “Cần duyệt”, “Cần rà soát”, hàng đợi phê duyệt tên/ảnh từng SKU, nút duyệt/reject mapping, KPI “cần kiểm tra”, bảng danh sách ngoại lệ XNT/PDF hoặc chuỗi trạng thái 4–5 bước. Những trạng thái kỹ thuật cũ có thể được giữ trong database để tương thích nhưng **không trở thành thao tác người dùng**.
+- **Chỉ kiểm tra lỗi kỹ thuật trong app:** mã công ty phải giữ nguyên kể cả số 0 đầu (0114 khác 114), mã trùng, cột thiếu, kiểu file sai, xung đột revision/cập nhật, quyền tài khoản. Thông báo chỉ rõ dòng/cột/lý do để sửa file **bên ngoài**, không tạo hàng đợi rà soát trong app. Thiếu ảnh/giá chưa xác minh không cản lưu SKU.
+- **Xuất bản tách riêng với nhập:** nhập không tự phát hành. Người quản trị có quyền chủ động bật/tắt hiển thị cho public_web, dealer_app hoặc consumer_app bằng **một thao tác rõ ràng**; backend xác thực quyền, kiểm soát dữ liệu công khai và ghi audit. Không bắt Owner bấm “Duyệt SKU” hoặc “Duyệt ảnh” trước khi bật hiển thị. Các trạng thái approved kỹ thuật nếu cần được xử lý nội bộ ở service, không tạo workflow kiểm duyệt ở UI.
+- Không commit workbook có giá NET, XNT hoặc dữ liệu nội bộ sang repo/public API. Lịch sử đối chiếu 613 SKU bên dưới chỉ là hồ sơ nguồn, **không là danh sách tính năng Admin phải làm**.
+
+**Thứ tự làm tiếp — thuộc gói ADM-02 #19 và ADM-05 #41, mỗi hạng mục một PR nhỏ:**
+
+| Ưu tiên | Phạm vi thực hiện | Nghiệm thu |
+|---|---|---|
+| **P1 — Dọn UI Sản phẩm** | Gỡ “Cần kiểm tra/Cần rà soát”, filter review, tùy chọn trạng thái phức tạp, nhóm thống kê thừa; bảng SKU–tên–ảnh–quy cách–nhóm–hiển thị, tìm kiếm và thao tác ...; Thêm/Sửa/Nhóm mẫu bằng popup. | Thêm/sửa trực tiếp, không form kéo dài xuống trang, không bước rà soát, giữ nguyên SKU; lỗi hiện trong popup. |
+| **P2 — Danh mục & thuộc tính** | Danh mục cha/con cho tập HS/SV và VPP/giấy, quy cách khổ/số trang/dòng kẻ/GSM/bìa, barcode, đóng gói, đơn vị tính và quy đổi khi cần. Family là nhóm hiển thị, SKU là mã công ty, mẫu bìa là ảnh của SKU. | Form mặc định chỉ trường chính, thuộc tính ít dùng trong tab phụ. Không tự sinh SKU theo màu/ảnh/thùng nếu không có mã công ty. |
+| **P3 — Excel nhập/cập nhật/xuất** | Một template SAN PHAM, một sheet sử dụng hằng ngày; nhập mới, cập nhật SKU cũ theo từng thuộc tính, xuất Excel/CSV, so sánh giá trị cũ → mới, cập nhật có xác nhận một lần; file 8 sheet chỉ để tương thích nguồn lịch sử. | Chọn file → xem thay đổi → lưu; báo lỗi kỹ thuật rõ ràng, không ép 8 sheet hay duyệt ngoại lệ; không ghi đè khi có xung đột. |
+| **P4 — Ảnh R2 & nhóm mẫu** | Upload nhiều ảnh, chọn bìa đại diện, sắp xếp/xóa/gắn lại theo mã SKU; gom SKU cùng dòng để chọn khổ/quy cách, một SKU có nhiều mẫu bìa; map ảnh từ file đã chuẩn hóa ngoài app. | Thiếu ảnh được để trống/placeholder; không tự gán ảnh suy luận hoặc sinh SKU phụ; không có hàng đợi duyệt ảnh. |
+| **P5 — Hiển thị theo kênh, kết nối web** | Công tắc hiển thị/ẩn cho kênh theo quyền, backend ghi audit; API công khai cho catalogue, lựa chọn mẫu, khổ, quy cách; website cập nhật khi đổi dữ liệu mà không redeploy. | Có thể bật một sản phẩm lên public_web, web thấy đúng mã/ảnh; giá NET/giá hợp đồng và XNT nội bộ không lộ. Không có hai lần phê duyệt. |
+
+**Release gate:** branch → CI xanh → Codex sạch → squash merge; chỉ deploy khi có lệnh thủ công. Không mở issue/roadmap song song. Không mở rộng CMS/giá B2B trước khi P1–P5 hoàn thành.
+
+**Mốc mục tiêu gần nhất:** chuẩn hóa dữ liệu ở ngoài app → nhập SKU công ty qua Excel 1 sheet hoặc popup → bổ sung quy cách/ảnh/nhóm mẫu → chủ động bật hiển thị public_web → sản phẩm thật xuất hiện trên fbmn-web.vercel.app **không cần redeploy khi thêm sản phẩm**.
 
 | Giai đoạn | Gói/issue đang có | Phạm vi và nghiệm thu thực tế |
 |---|---|---|
 | **1 — Nền tối thiểu** | **ADM-01 [#11](https://github.com/alibaba240185/fbmn/issues/11)** | Admin login, role/editor/publisher, schema kênh + audit, API admin riêng; test 401/403/không tự cấp Admin. Không làm toàn bộ B2B lúc này |
 | **2 — Dữ liệu sản phẩm** | **ADM-02 [#19](https://github.com/alibaba240185/fbmn/issues/19)** | Master SKU công ty + family/variant display, tên/quy cách/barcode, nguồn, importer XLSX/CSV, metadata ảnh R2, mapping và publish; test chống trùng/không bịa mã, giữ mã `0114` |
-| **3 — Admin catalogue MVP** | **ADM-05 [#41](https://github.com/alibaba240185/fbmn/issues/41)** | Web Admin login + danh mục + tạo/sửa SKU + import preview + upload ảnh R2 + kiểm duyệt/đăng public. Chỉ phần catalogue/media trước, không chờ toàn bộ màn quản trị |
+| **3 — Admin catalogue MVP** | **ADM-05 [#41](https://github.com/alibaba240185/fbmn/issues/41)** | Web Admin login + danh mục + popup tạo/sửa SKU + Excel 1 sheet/preview/update/export + nhiều ảnh R2 + bật/tắt hiển thị theo kênh. **Không có hàng đợi rà soát/duyệt sản phẩm trong UI.** Catalogue/media trước, không chờ toàn bộ màn quản trị |
 | **4 — Website sản phẩm thật** | **ADM-02 #19 + WEB CONTENT #9 + VISUAL #24** | Trang catalogue, ảnh, nhóm hiển thị/mẫu bìa/khổ/đường kẻ, tìm kiếm, lọc, chi tiết, thông tin chính thức lấy API thật; nghiệm thu một luồng nhập→publish→web |
 | **5 — Hoàn thiện nội dung website** | **ADM-03 [#20](https://github.com/alibaba240185/fbmn/issues/20)** và phần CMS của **ADM-05 #41** | Banner, popup, menu, nội dung/khuyến mãi, lịch và cấu hình `public_web`; phân kênh nền backend để dùng app native sau |
 | **6 — Nghiệm thu Website** | **QUALITY #12 + VISUAL #24 + RELEASE #13 + CONTACT #9 + INFRA #2** | Desktop/mobile đúng mẫu, ảnh/thông tin thật, contact E2E, SEO/a11y/performance, release/rollback, owner UAT. HTTP 200/CI xanh chưa phải hoàn thiện catalogue |
 | **7 — Mở rộng app sau Website** | **ADM-04 [#40](https://github.com/alibaba240185/fbmn/issues/40)**; các màn Admin nghiệp vụ tương ứng thuộc **ADM-05 #41** | API đại lý/End-user, bảng giá B2B đúng quyền, giỏ/đơn; **frontend iOS/Android native làm về sau**. Không đổi SKU/master data |
 
-**ADM-05 là một issue xuyên suốt:** phần catalogue/media MVP được làm sớm để website có dữ liệu; các màn CMS, giá và đơn chỉ mở sau API ADM-03/04 liên quan. Không mở một issue khác trùng Admin.
+**ADM-05 là một issue xuyên suốt:** phần catalogue/media MVP được làm sớm để website có dữ liệu; các màn CMS, giá và đơn chỉ mở sau API ADM-03/04 liên quan. Không mở một issue khác trùng Admin. **Mục 4.0 thay thế yêu cầu UI rà soát/duyệt trong các ghi chú lịch sử.**
 
 ### 4.1. Quy tắc bắt buộc cho SKU, ảnh và tên sản phẩm
 
 - **SKU gốc luôn là chuỗi**, lấy chính xác từ bảng giá/công ty, bảo toàn số 0 đầu (`0114`, `0714`), không sinh mã riêng cho website/app khi thêm thủ công, import, mapping ảnh. SKU công ty là khóa nghiệp vụ duy nhất; UUID là khóa hệ thống nội bộ và không được hiển thị như SKU mới.
 - **Một SKU có nhiều ảnh/mẫu bìa**, ví dụ `L536-01.png`, `L536-02.png`; phần `-01` là **số thứ tự ảnh**, không phải mã hàng. Ảnh chưa xác minh, ảnh chi tiết/phụ trợ và mẫu bìa phải tách trạng thái/vai trò.
 - **Nhóm hiển thị (family)** có thể chứa nhiều SKU khác khổ hoặc dòng kẻ, ví dụ NICE TRAVEL `L536` A5 và `L836` B5 có thể chọn từ một card. Khách chọn khổ → SKU thật thay đổi; chọn ảnh/mẫu bìa trong cùng SKU → không tự sinh SKU mới. Nếu kho không quản lý được mẫu bìa cụ thể, giao diện phải thông báo giao ngẫu nhiên hoặc không cam kết mẫu.
-- **Tên chính thức** cần giữ `ten_dong_goc_pdf`/nguyên bản và `ten_san_pham` tổng hợp **riêng biệt**, cho phép review/edit trên Admin; không dùng tên ảnh thay tên hàng.
+- **Tên chính thức** cần giữ `ten_dong_goc_pdf`/nguyên bản và `ten_san_pham` tổng hợp **riêng biệt**, cho phép sửa trên popup Admin; đối chiếu nguồn thực hiện ở file bên ngoài, không dùng tên ảnh thay tên hàng.
 - **Barcode không là unique SKU** (ví dụ 4/5 ô ly có thể trùng barcode); không tự động hợp nhất mã hàng dựa trên barcode.
-- **Import và nhập thủ công cùng UPSERT theo SKU công ty** (create/update/unchanged/conflict/error preview). Không ghi đè bản đã được duyệt âm thầm; concurrent revision, audit và staging review. Ảnh thiếu → báo thiếu, không lấy nhầm ảnh của SKU khác. Media gốc lưu một lần ở R2, nhiều quan hệ ảnh–SKU chỉ sau khi duyệt.
+- **Import và nhập thủ công cùng UPSERT theo SKU công ty** (create/update/unchanged/conflict/error preview). Không ghi đè SKU cũ âm thầm; cần so sánh giá trị cũ/mới, xác nhận cập nhật một lần, revision và audit; không mở luồng rà soát dữ liệu trong app. Ảnh thiếu → báo thiếu, không lấy nhầm ảnh của SKU khác. Media gốc lưu một lần ở R2, gắn nhiều quan hệ ảnh–SKU đúng theo dữ liệu đã đối chiếu bên ngoài.
 - **Giá từ bảng nhập** thuộc `source_price` + `source_vat` + `effective_date` và tình trạng xác minh. Không tự suy ra `retail_price`, `NET` hay giá riêng cho từng kênh từ một cột mang nhãn `giá bảng VAT 8%`.
 
 ### 4.2. Audit lịch sử — master 228 SKU trước khi nhận XNT ngày 28/10/2026 (KHÔNG còn là phạm vi nhập đầy đủ)
@@ -86,7 +108,7 @@ File người dùng cung cấp: `Futurebook_MASTER_SAN_PHAM_VA_ANH_2026.xlsx` (*
 | Bao phủ SKU | 61 SKU có `so_anh_da_gan>0`; 11 SKU chỉ có ảnh ở diện cần duyệt; **156 SKU chưa có ảnh liên kết** |
 | Khác | **11 SKU** có số 0 đầu; **6 SKU** thiếu `gia_trong_bang_gia_vat_8pct` (P0041, P0042, P0051, P006, P0081, P0082). Không coi giá nguồn là retail/NET chung |
 
-**Cảnh báo provenance:** lịch sử đối chiếu PDF ghi **40 ảnh có mã khớp trực tiếp** và **138 ảnh được suy luận theo tên/dòng/hình**. Trường `MATCHED` trong sheet hiện **không phân biệt hai mức bằng chứng**; `MATCHED` tuyệt đối **không đồng nghĩa đã duyệt**. Cần bổ sung `match_method`, `confidence`, `review_status`, `reviewed_by`, `source_file` và nút duyệt/loại tại Admin trước bulk publish. 17 ảnh shared-review phải được quản lý như asset gốc duy nhất và liên kết SKU ứng viên có phê duyệt; không phát hành mặc định.
+**HỒ SƠ ĐỐI CHIẾU BÊN NGOÀI — KHÔNG TRIỂN KHAI UI RÀ SOÁT:** lịch sử đối chiếu PDF ghi **40 ảnh có mã khớp trực tiếp** và **138 ảnh được suy luận theo tên/dòng/hình**. Trường `MATCHED` trong sheet hiện **không phân biệt hai mức bằng chứng**; `MATCHED` tuyệt đối **không đồng nghĩa đã duyệt**. Dấu vết nguồn/độ tin cậy thuộc **file đối chiếu bên ngoài**, không tạo nút duyệt/loại hoặc bước nhập trong Admin. 17 ảnh shared-review phải được quản lý như asset gốc duy nhất và liên kết SKU ứng viên có phê duyệt; không phát hành mặc định.
 
 **Đầu vào hình ảnh:** XLSX mới chứa **tên file/đường dẫn trong ZIP**, không chứa bytes của 241 ảnh. Muốn upload R2 phải lấy ZIP ảnh gốc/V3 từ Drive hoặc tải ZIP; không tự cho rằng các tệp đã nằm trong R2. Không sửa hoặc ghi đè ảnh gốc trong Drive. **Mẫu Admin 3 hình cũ chỉ là minh họa**, SKU `FB-VHS-200`, `FB-VHS-200-H`, `FB-VHS-200-X` không thuộc bảng giá và bị cấm import làm SKU thật.
 
@@ -103,15 +125,15 @@ File người dùng cung cấp: `Futurebook_MASTER_SAN_PHAM_VA_ANH_2026.xlsx` (*
 
 **Số liệu kiểm tra tại thời điểm bàn giao:** XNT 609 mã, master bảng giá 228 mã, trùng 224 mã, **385 mã chỉ trong XNT**, **4 mã chỉ trong bảng giá** (`8384`, `C5921`, `C5981`, `C8921`) → **613 SKU duy nhất**. Không tự động coi 385 mã XNT là hàng đang bán/được xuất bản; phải kiểm tra tình trạng, tên, quy cách, sai code. Có **541 SKU chưa liên kết được ảnh** trong dữ liệu hợp nhất; **cho phép để trống ảnh**, không tạo ảnh giả, không bỏ SKU. Kiểm tra hai mã tồn âm và các trường hợp `Sai Code`. Các mã gần giống `C592`/`C5921` không được tự gộp. `M422` có sai khác mô tả dòng kẻ (XNT Caro / bảng giá Kẻ ngang) phải duyệt. Sáu mã refill `P0041`, `P0042`, `P0051`, `P006`, `P0081`, `P0082` có giá dùng chung trong ô PDF gộp, **không phải chứng cứ giá thiếu**; giữ giá, nguồn và trạng thái xác minh đúng tài liệu gốc.
 
-**Hợp đồng import:**
+**Hợp đồng dữ liệu lịch sử (đầu vào; UI mới áp dụng mục 4.0):**
 1. SKU = **mã công ty dạng chuỗi**, giữ số 0 đầu; UPSERT idempotent theo SKU, không tạo thêm SKU kiểu FB- hoặc SKU ảnh. Barcode không unique; giữ nguồn tên gốc XNT/bảng giá, tên chuẩn và evidence riêng.
-2. Import có preview phân loại **tạo mới / cập nhật / không thay đổi / xung đột / lỗi**; bắt buộc xác nhận các mã lệch, tồn âm, SKU chỉ có XNT. Không tự ghi đè dữ liệu đã duyệt.
+2. Import có preview kỹ thuật **tạo mới / cập nhật / không thay đổi / xung đột / lỗi**. Mã lệch, tồn âm và SKU chỉ có XNT được đối chiếu **bên ngoài app** trước khi tạo file chuẩn; trong app chỉ chặn lỗi kỹ thuật và ghi đè xung đột.
 3. Ảnh/media là **nullable**: nếu chưa có ảnh, lưu trống và có thể xuất bản với **placeholder chung trung tính** sau khi tên/quy cách được duyệt. Không gán ảnh của SKU khác; khi bổ sung ảnh, liên kết đúng SKU và không tạo lại sản phẩm.
-4. Ảnh trùng hoặc tên suy luận từ ZIP phải lưu provenance `match_method`, `confidence`, `review_status`. `MATCHED` cũ không đồng nghĩa được duyệt; 138 liên kết suy luận vẫn cần kiểm chứng.
+4. Ảnh trùng hoặc tên suy luận từ ZIP phải được đối chiếu ở file nguồn **bên ngoài app**. Có thể giữ provenance nội bộ để truy vết; không đưa review_status hay các liên kết suy luận vào một hàng đợi duyệt của Admin.
 5. **Không công bố giá NET hoặc dữ liệu tồn riêng qua public API.** Giá bán lẻ phải có nguồn/phê duyệt riêng; tách giá bảng, giá NET và giá hiển thị.
 6. Bước đầu **chỉ nhập vào Neon staging dưới trạng thái draft**, không ghi production, không tự bật bán, không tự đổi/cắt ảnh nguồn. Admin catalogue MVP tiếp theo là [ADM-05 #41](https://github.com/alibaba240185/fbmn/issues/41); nền Admin Auth ở [ADM-01 #11](https://github.com/alibaba240185/fbmn/issues/11).
 
-**Nghiệm thu bắt buộc trước khi ghi dữ liệu:** đọc trực tiếp 5 file trên Drive, tái tính counts và so sánh với workbook đối chiếu, kiểm tra schema XNT và câu hỏi tên/sai code; xuất danh sách create/update/conflict/missing-image. Mọi sai lệch so với các số liệu trên phải báo rõ và cập nhật chính roadmap này bằng PR review. Chi tiết bàn giao và PR đầu tiên ở [#19](https://github.com/alibaba240185/fbmn/issues/19).
+**Đối chiếu nguồn thực hiện bên ngoài trước khi nhập dữ liệu:** đọc trực tiếp 5 file trên Drive, tái tính counts và so sánh với workbook đối chiếu, kiểm tra schema XNT và câu hỏi tên/sai code; xuất danh sách create/update/conflict/missing-image. Mọi sai lệch so với các số liệu trên phải báo rõ và cập nhật chính roadmap này bằng PR review. Chi tiết bàn giao và PR đầu tiên ở [#19](https://github.com/alibaba240185/fbmn/issues/19).
 
 ## 5. Các việc website cũ vẫn mở — không được đè mã ADM
 
