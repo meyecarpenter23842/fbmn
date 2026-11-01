@@ -117,7 +117,15 @@ export async function POST(request: Request) {
     const result = await previewXlsxImport(bytes, existing);
     if(result.source_sheet==="SAN PHAM"){
       const parsed=await readXlsxSkuRows(bytes);
-      const plan=planSheetSync(parsed,existing);
+      const categoryResponse=await fetch(base+"/v1/admin/catalogue/categories",{
+        method:"GET",cache:"no-store",redirect:"manual",
+        headers:{Authorization:"Bearer "+match[1],Accept:"application/json"},
+        signal:AbortSignal.timeout(9000),
+      });
+      if(!categoryResponse.ok)return fail(503,"categories_unavailable");
+      const categories=(await categoryResponse.json())?.data?.items;
+      if(!Array.isArray(categories)||categories.length>1000)return fail(503,"categories_unavailable");
+      const plan=planSheetSync(parsed,existing,categories);
       const previewFingerprint=createHash("sha256")
         .update(bytes).update(JSON.stringify(plan.operations)).digest("hex");
       return Response.json({

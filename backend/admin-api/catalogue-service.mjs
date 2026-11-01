@@ -151,13 +151,15 @@ export async function handleCatalogue({request,actor,db}) {
                !op.changes||typeof op.changes!=="object"||Array.isArray(op.changes))
               throw Error("invalid_sync");
             const keys=Object.keys(op.changes);
-            if(!keys.length || keys.some(k=>!["ten_san_pham","barcode","paper_size","product_spec"].includes(k)))
+            if(!keys.length || keys.some(k=>!["ten_san_pham","barcode","paper_size","product_spec","category_id"].includes(k)))
               throw Error("invalid_sync");
             for(const key of ["ten_san_pham","barcode","paper_size"]){
               if(key in op.changes && (typeof op.changes[key]!=="string"||
                  !op.changes[key].trim()||!validText(op.changes[key],1200)))
                 throw Error("invalid_sync");
             }
+            if("category_id" in op.changes&&(!validCategory(op.changes.category_id)||!op.changes.category_id))
+              throw Error("invalid_category");
             const specs=("product_spec" in op.changes)?safeProductSpec(op.changes.product_spec):{};
             if("product_spec" in op.changes && !Object.keys(specs).length)
               throw Error("invalid_sync");
@@ -170,12 +172,23 @@ export async function handleCatalogue({request,actor,db}) {
       if(createRows.length!==input.expectedCreate||updateRows.length!==input.expectedUpdate)
         return fail("invalid_sync_request");
       const result=await transactional(db,async c=>{
+        const categoryIds=[...new Set([
+          ...createRows.map(row=>row.category_id),
+          ...updateRows.map(row=>row.changes.category_id)
+        ].filter(Boolean))];
+        if(categoryIds.length){
+          const found=await c.query(
+            "SELECT id::text FROM fbmn_catalog.categories WHERE id::text=ANY($1::text[])",
+            [categoryIds]);
+          if(found.rowCount!==categoryIds.length)throw Error("invalid_category");
+        }
         if(updateRows.length){
           const saved=await c.query(
             "UPDATE fbmn_catalog.skus s SET "+
             "ten_san_pham=CASE WHEN x.changes ? 'ten_san_pham' THEN x.changes->>'ten_san_pham' ELSE s.ten_san_pham END,"+
             "barcode=CASE WHEN x.changes ? 'barcode' THEN x.changes->>'barcode' ELSE s.barcode END,"+
             "paper_size=CASE WHEN x.changes ? 'paper_size' THEN x.changes->>'paper_size' ELSE s.paper_size END,"+
+            "category_id=CASE WHEN x.changes ? 'category_id' THEN (x.changes->>'category_id')::uuid ELSE s.category_id END,"+
             "product_spec=s.product_spec || COALESCE(x.changes->'product_spec','{}'::jsonb),"+
             "revision=s.revision+1,updated_at=now() "+
             "FROM jsonb_to_recordset($1::jsonb) AS x(sku_cong_ty text,expected_revision integer,changes jsonb) "+
@@ -187,10 +200,10 @@ export async function handleCatalogue({request,actor,db}) {
         if(createRows.length){
           const saved=await c.query(
             "INSERT INTO fbmn_catalog.skus "+
-            "(sku_cong_ty,ten_san_pham,barcode,paper_size,product_spec,review_status) "+
-            "SELECT x.sku_cong_ty,x.ten_san_pham,x.barcode,x.paper_size,x.product_spec,'draft' "+
+            "(sku_cong_ty,ten_san_pham,barcode,paper_size,product_spec,category_id,review_status) "+
+            "SELECT x.sku_cong_ty,x.ten_san_pham,x.barcode,x.paper_size,x.product_spec,x.category_id,'draft' "+
             "FROM jsonb_to_recordset($1::jsonb) AS x(sku_cong_ty text,ten_san_pham text,"+
-            "barcode text,paper_size text,product_spec jsonb) RETURNING sku_cong_ty",
+            "barcode text,paper_size text,product_spec jsonb,category_id uuid) RETURNING sku_cong_ty",
             [JSON.stringify(createRows)]);
           if(saved.rowCount!==createRows.length)throw Error("catalogue_conflict");
         }

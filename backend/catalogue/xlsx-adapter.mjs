@@ -102,6 +102,8 @@ export const SIMPLE_SHEET = "SAN PHAM";
 const SIMPLE_HEADERS = Object.freeze({
   sku:"Mã công ty", title:"Tên sản phẩm", barcode:"Mã vạch",
   size:"Khổ", pages:"Số trang", ruling:"Dòng kẻ",
+  category_label:"Danh mục",gsm:"Định lượng GSM",cover_type:"Loại bìa",unit:"Đơn vị tính",
+  packaging:"Quy cách đóng gói",units_per_pack:"Số đơn vị / đóng gói",
 });
 // Routine imports deliberately do not infer or store family/group membership.
 // Those relationships require explicit confirmation in the Admin.
@@ -113,14 +115,16 @@ function readSingleSheet(sheet,sourceFile) {
     if(headings.has(label))throw new Error("duplicate_header");
     headings.set(label,index);
   });
-  for(const header of Object.values(SIMPLE_HEADERS))
-    if(!headings.has(header))throw new Error("missing_column:"+header);
+  if(!headings.has(SIMPLE_HEADERS.sku))throw new Error("missing_column:"+SIMPLE_HEADERS.sku);
+  if(!Object.values(SIMPLE_HEADERS).some(header=>header!==SIMPLE_HEADERS.sku&&headings.has(header)))
+    throw new Error("missing_column:editable_product_field");
   const rows=[],evidence=[];
   for(let n=2;n<=sheet.rowCount;n++){
     const current=sheet.getRow(n);
     if(!current.hasValues)continue;
-    const cell=(name)=>current.getCell(headings.get(name));
+    const cell=(name)=>headings.has(name)?current.getCell(headings.get(name)):{value:null};
     let sku="",title="",barcode="",size="",pages="",ruling="",error=null;
+    const optional={};
     try{
       const company=cell(SIMPLE_HEADERS.sku);
       if(typeof company.value==="number"||isFormula(company.value))
@@ -136,8 +140,13 @@ function readSingleSheet(sheet,sourceFile) {
       size=cellText(cell(SIMPLE_HEADERS.size));
       pages=cellText(cell(SIMPLE_HEADERS.pages));
       ruling=cellText(cell(SIMPLE_HEADERS.ruling));
+      for(const key of ["category_label","gsm","cover_type","unit","packaging","units_per_pack"]){
+        if(headings.has(SIMPLE_HEADERS[key])){
+          optional[key]=cellText(cell(SIMPLE_HEADERS[key]));
+        }
+      }
     }catch{error||="unsupported_or_formula_cell";}
-    if(!sku&&!title&&!barcode&&!size&&!pages&&!ruling&&!error)continue;
+    if(!sku&&!title&&!barcode&&!size&&!pages&&!ruling&&!Object.values(optional).some(Boolean)&&!error)continue;
     if(!error&&(!sku||sku!==sku.trim()))error="missing_or_invalid_company_sku";
 // Title is required only for new products. A blank title in an existing SKU row
 // means retain the current title, and the server-side sync planner checks this.
@@ -148,7 +157,7 @@ function readSingleSheet(sheet,sourceFile) {
       row:n,sku_cong_ty:sku,
       provenance:{source_file:sourceFile,source_sheet:SIMPLE_SHEET,excel_row:n,
         inventory_source:false,price_document_source:false},
-      specifications:{paper_size:size||null,pages:pages||null,ruling:ruling||null},
+      specifications:{paper_size:size||null,pages:pages||null,ruling:ruling||null,...optional},
       price_source_present:false,media_candidate_count:0,media_missing:true,
       warnings:["image_missing","price_unverified"],
     });

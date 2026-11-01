@@ -65,6 +65,7 @@ function downloadCsv(items: Item[]) {
 export default function CatalogueImportPreview({onBusyChange,onSaved}:{onBusyChange?:(value:boolean)=>void;onSaved?:()=>void}={}) {
   const fileRef=useRef<HTMLInputElement>(null);
   const [file,setFile]=useState<File|null>(null);
+  const [mode,setMode]=useState<"update"|"import">("update");
   const [preview,setPreview]=useState<Preview|null>(null);
   const [busy,setBusy]=useState(false);
   const [approving,setApproving]=useState(false);
@@ -76,6 +77,13 @@ export default function CatalogueImportPreview({onBusyChange,onSaved}:{onBusyCha
   const [page,setPage]=useState(1);
   const [expanded,setExpanded]=useState<number|null>(null);
   useEffect(()=>{onBusyChange?.(busy||approving)},[busy,approving,onBusyChange]);
+  function switchMode(next:"update"|"import"){
+    if(busy||approving)return;
+    setMode(next);setFile(null);setPreview(null);setReceipt("");
+    setError("");setPage(1);setExpanded(null);setApproved(false);
+    setSearch("");setFilter("all");
+    if(fileRef.current)fileRef.current.value="";
+  }
   function selectFile(event:ChangeEvent<HTMLInputElement>){
     const item=event.target.files?.[0]||null;
     event.target.value="";
@@ -119,12 +127,17 @@ export default function CatalogueImportPreview({onBusyChange,onSaved}:{onBusyCha
     if(!file||!preview||busy||approving)return;
     const oneSheet=preview.source_sheet==="SAN PHAM";
     const create=preview.totals.create,update=preview.totals.update;
-    const eligible=preview.database_queried===true &&
+    const eligible=preview.database_queried===true && (mode!=="update"||(oneSheet&&create===0)) &&
       preview.totals.error===0&&preview.totals.conflict===0 &&
       (oneSheet?(create+update>0&&/^[0-9a-f]{64}$/.test(preview.previewFingerprint||"")):
         (approved&&create>0&&create===preview.counts.total_rows&&
          update===0&&preview.totals.unchanged===0));
-    if(!eligible){setError("File còn lỗi hoặc dữ liệu đã thay đổi. Hãy phân tích lại trước khi lưu.");return;}
+    if(!eligible){
+      setError(mode==="update"&&create>0?
+        "Tệp có SKU mới. Chế độ Cập nhật chỉ sửa mã đã tồn tại; bỏ các dòng SKU mới hoặc chuyển sang tab Nhập mới / đồng bộ.":
+        "File còn lỗi hoặc dữ liệu đã thay đổi. Hãy phân tích lại trước khi lưu.");
+      return;
+    }
     // P3 one-sheet: pressing the primary save button is the ONE explicit confirmation.
     // Legacy 8-sheet stays create-only and preserves its prior double-check.
     if(!oneSheet&&!window.confirm("Lưu "+create+" SKU mới? Chưa xuất bản."))return;
@@ -187,18 +200,29 @@ export default function CatalogueImportPreview({onBusyChange,onSaved}:{onBusyCha
   const pages=Math.max(1,Math.ceil(filtered.length/50));
   const oneSheet=preview?.source_sheet==="SAN PHAM";
   const eligibleSave=!!preview&&!busy&&!approving&&preview.totals.error===0&&preview.totals.conflict===0&&
+    (mode!=="update"||(oneSheet&&preview.totals.create===0))&&
     (oneSheet?(preview.totals.create+preview.totals.update>0&&!!preview.previewFingerprint):
       (approved&&preview.totals.create>0&&preview.totals.create===preview.counts.total_rows&&
        preview.totals.update===0&&preview.totals.unchanged===0));
   return <div className="import-preview">
-    <div className="page-title"><div><h1>Nhập sản phẩm Excel</h1><p>Chọn file → xem SKU mới và thay đổi → xác nhận lưu.</p></div>
+    <div className="page-title"><div><h1>{mode==="update"?"Cập nhật sản phẩm hàng loạt":"Nhập mới / đồng bộ sản phẩm"}</h1>
+      <p>Xuất danh mục Excel → sửa nhiều dòng → nhập lại → xem giá trị cũ và mới → xác nhận lưu một lần.</p></div>
       <span className="import-readonly">XEM TRƯỚC · CHƯA LƯU</span></div>
+    <div className="catalogue-bulk-tabs" role="tablist" aria-label="Chế độ nhập sản phẩm">
+      <button type="button" role="tab" aria-selected={mode==="update"}
+        className={mode==="update"?"active":""} disabled={busy||approving}
+        onClick={()=>switchMode("update")}>Cập nhật SKU đã có</button>
+      <button type="button" role="tab" aria-selected={mode==="import"}
+        className={mode==="import"?"active":""} disabled={busy||approving}
+        onClick={()=>switchMode("import")}>Nhập mới / đồng bộ</button>
+    </div>
     <div className="import-information"><strong>Xem trước không ghi dữ liệu.</strong> Excel được so sánh với các SKU hiện có.
       Giá NET, tồn kho và dữ liệu nội bộ không xuất ra báo cáo. Với Excel 1 sheet, mã đã có chỉ được cập nhật khi anh bấm lưu; ô trống không xóa dữ liệu cũ.
+      {mode==="update"&&<b> Chế độ này chỉ cho lưu những SKU đã tồn tại; mã lạ sẽ phải xử lý ở tab Nhập mới / đồng bộ.</b>}
       <br/>Dữ liệu chỉ lưu khi anh chủ động xác nhận.</div>
     <section className="import-upload-panel" aria-label="Tải file đối chiếu">
-      <div className="import-upload-text"><div className="import-file-icon">XLSX</div><div><h2>Chọn Excel sản phẩm</h2>
-        <p><b>Mẫu thông dụng: 1 sheet SAN PHAM.</b> File đối chiếu 8 sheet cũ cũng được chấp nhận, tự tìm sheet phù hợp. Giữ nguyên mã 0114, 0714 · Tối đa 8 MB.</p>
+      <div className="import-upload-text"><div className="import-file-icon">XLSX</div><div><h2>{mode==="update"?"Chọn Excel đã chỉnh sửa nhiều SKU":"Chọn Excel sản phẩm"}</h2>
+        <p><b>Mẫu thông dụng: 1 sheet SAN PHAM.</b> File đối chiếu 8 sheet cũ cũng được chấp nhận, tự tìm sheet phù hợp. Gồm tên, danh mục, mã vạch, khổ, trang, dòng kẻ, GSM, bìa và đóng gói. Giữ nguyên mã 0114, 0714 · Tối đa 8 MB.</p>
         <a className="import-template-link" href="/api/catalogue/template" download>Tải mẫu Excel 1 sheet (.xlsx)</a>
         {file&&<div className="import-selected">Đã chọn: <b>{file.name}</b> ({(file.size/1024).toFixed(0)} KB)</div>}
       </div></div>
@@ -216,6 +240,9 @@ export default function CatalogueImportPreview({onBusyChange,onSaved}:{onBusyCha
         <div><small>SKU đã có</small><strong>{preview.totals.update+preview.totals.unchanged}</strong></div>
         <div><small>Lỗi / xung đột</small><strong>{preview.totals.error+preview.totals.conflict}</strong></div>
       </div>
+      {mode==="update"&&preview.totals.create>0&&<div className="import-error" role="alert">
+        Có {preview.totals.create} mã công ty chưa tồn tại. Chế độ Cập nhật sẽ không tạo SKU mới. Xóa dòng mã lạ khỏi Excel hoặc chọn tab Nhập mới / đồng bộ rồi xem trước lại.
+      </div>}
       <div className="import-review-banner">
         <b>{preview.totals.create} SKU mới · {preview.totals.update} SKU có thay đổi · {preview.totals.unchanged} không đổi · {preview.totals.conflict} xung đột</b>
         <span>Mã đã tồn tại sẽ không bị tự động ghi đè.</span>

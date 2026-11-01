@@ -99,6 +99,8 @@ export default function CatalogueManager({onImport}:{onImport:()=>void}){
   const [editName,setEditName]=useState("");
   const [create,setCreate]=useState(false);
   const [showImport,setShowImport]=useState(false);
+  const [exportOpen,setExportOpen]=useState(false);
+  const exportAnchor=useRef<HTMLDivElement|null>(null);
   const [importBusy,setImportBusy]=useState(false);
   const [showGroup,setShowGroup]=useState(false);
   const [groupMode,setGroupMode]=useState(false);
@@ -109,6 +111,25 @@ export default function CatalogueManager({onImport}:{onImport:()=>void}){
   const [actionMenu,setActionMenu]=useState<{sku:string;top:number;left:number}|null>(null);
   const actionTrigger=useRef<HTMLButtonElement|null>(null);
   const actionPopover=useRef<HTMLDivElement|null>(null);
+  useEffect(()=>{
+    if(!exportOpen)return;
+    const outside=(event:PointerEvent)=>{
+      if(event.target instanceof Node&&!exportAnchor.current?.contains(event.target))
+        setExportOpen(false);
+    };
+    const keydown=(event:KeyboardEvent)=>{
+      if(event.key==="Escape"){
+        event.preventDefault();setExportOpen(false);
+        exportAnchor.current?.querySelector<HTMLButtonElement>(".catalogue-export-trigger")?.focus();
+      }
+    };
+    document.addEventListener("pointerdown",outside);
+    document.addEventListener("keydown",keydown);
+    return ()=>{
+      document.removeEventListener("pointerdown",outside);
+      document.removeEventListener("keydown",keydown);
+    };
+  },[exportOpen]);
   useEffect(()=>{
     if(!actionMenu)return;
     const closeOutside=(event:PointerEvent)=>{
@@ -234,9 +255,19 @@ export default function CatalogueManager({onImport}:{onImport:()=>void}){
       <div className="action-row">
         <button type="button" className="import-btn import-secondary" onClick={()=>setShowCategories(true)}>Danh mục</button>
         <button type="button" className="import-btn import-secondary" onClick={()=>void refresh()} disabled={busy||loading}>Làm mới</button>
-        <button type="button" className="import-btn import-secondary" onClick={()=>void exportCatalogue("xlsx")} disabled={busy}>Xuất Excel</button>
-        <button type="button" className="import-btn import-secondary" onClick={()=>void exportCatalogue("csv")} disabled={busy}>CSV</button>
-        <button type="button" className="import-btn import-secondary" onClick={()=>setShowImport(true)}>Nhập Excel</button>
+        <div className="catalogue-export-anchor" ref={exportAnchor}>
+          <button type="button" className="import-btn import-secondary catalogue-export-trigger"
+            aria-haspopup="menu" aria-expanded={exportOpen} aria-controls="catalogue-export-format"
+            disabled={busy} onClick={()=>setExportOpen(value=>!value)}>
+            Xuất <span aria-hidden="true">⌄</span>
+          </button>
+          {exportOpen&&<div id="catalogue-export-format" className="catalogue-export-dropdown"
+            role="menu" aria-label="Chọn định dạng xuất">
+            <button role="menuitem" type="button" onClick={()=>{setExportOpen(false);void exportCatalogue("xlsx")}}>Xuất Excel (.xlsx)</button>
+            <button role="menuitem" type="button" onClick={()=>{setExportOpen(false);void exportCatalogue("csv")}}>Xuất CSV (.csv)</button>
+          </div>}
+        </div>
+        <button type="button" className="import-btn import-secondary" onClick={()=>{setExportOpen(false);setShowImport(true)}}>Nhập / Cập nhật Excel</button>
         <button type="button" className="import-btn import-primary" onClick={()=>{setSpec(blankSpec());setCreate(true)}}>+ Thêm sản phẩm</button>
       </div>
     </div>
@@ -345,7 +376,7 @@ export default function CatalogueManager({onImport}:{onImport:()=>void}){
             setActionMenu(null);
             setError("");
             setEditing(selectedActionRow);
-            setEditName(selectedActionRow.ten_san_pham||"");
+            setEditName(selectedActionRow.ten_san_pham||selectedActionRow.ten_goc_xnt||selectedActionRow.ten_goc_bang_gia||"");
             setSpec(specFromSku(selectedActionRow));
           }}>Sửa sản phẩm</button>
         <button type="button" role="menuitem"
@@ -377,7 +408,7 @@ export default function CatalogueManager({onImport}:{onImport:()=>void}){
       <label>Tạo nhóm mới<input value={newFamily} onChange={e=>setNewFamily(e.target.value)} placeholder="Tên nhóm sản phẩm"/></label>
       <button className="import-btn import-secondary" type="button" disabled={busy||!newFamily.trim()} onClick={addFamily}>Tạo nhóm</button>
       </div></ProductModal>}
-    {showImport&&<ProductModal title="Nhập sản phẩm từ Excel" wide locked={importBusy} onClose={()=>{if(!importBusy){setShowImport(false);void refresh()}}}>
+    {showImport&&<ProductModal title="Nhập / cập nhật sản phẩm bằng Excel" wide locked={importBusy} onClose={()=>{if(!importBusy){setShowImport(false);void refresh()}}}>
       <CatalogueImportPreview onBusyChange={handleImportBusy} onSaved={importSaved} />
     </ProductModal>}
     <p className="import-footnote">Dữ liệu sản phẩm được lưu riêng, không tự đưa lên website. Tính năng hiển thị theo kênh và ảnh sản phẩm được bổ sung ở P4–P5; không công khai giá NET hay tồn kho.</p>

@@ -74,7 +74,15 @@ export async function POST(request:Request){
   try{
     const parsed=await readXlsxSkuRows(bytes);
     if(parsed.source_sheet!=="SAN PHAM")return fail(400,"one_sheet_only");
-    const plan=planSheetSync(parsed,existing);
+    const categoryResponse=await fetch(base+"/v1/admin/catalogue/categories",{
+      method:"GET",cache:"no-store",redirect:"manual",
+      headers:{Authorization:auth,Accept:"application/json"},
+      signal:AbortSignal.timeout(9000),
+    });
+    if(!categoryResponse.ok)return fail(503,"categories_unavailable");
+    const categories=(await categoryResponse.json())?.data?.items;
+    if(!Array.isArray(categories)||categories.length>1000)return fail(503,"categories_unavailable");
+    const plan=planSheetSync(parsed,existing,categories);
     const digest=createHash("sha256").update(bytes)
       .update(JSON.stringify(plan.operations)).digest("hex");
     if(digest!==fingerprint||plan.totals.conflict||plan.totals.error||

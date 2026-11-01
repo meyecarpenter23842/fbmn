@@ -1,7 +1,8 @@
 import ExcelJS from "exceljs";
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
-const HDR=["Mã công ty","Tên sản phẩm","Mã vạch","Khổ","Số trang","Dòng kẻ"];
+const HDR=["Mã công ty","Tên sản phẩm","Mã vạch","Khổ","Số trang","Dòng kẻ",
+  "Danh mục","Định lượng GSM","Loại bìa","Đơn vị tính","Quy cách đóng gói","Số đơn vị / đóng gói"];
 const privateHeaders={"Cache-Control":"private, no-store","X-Content-Type-Options":"nosniff"};
 const fail=(status:number,code:string)=>Response.json({error:{code}},{status,headers:privateHeaders});
 function baseUrl(){
@@ -10,7 +11,7 @@ function baseUrl(){
   }catch{}return null;
 }
 function cell(row:Record<string,unknown>,key:string){
-  const v=key==="pages"||key==="ruling"?
+  const v=["pages","ruling","gsm","cover_type","unit","packaging","units_per_pack"].includes(key)?
     (row.product_spec && typeof row.product_spec==="object"?
       (row.product_spec as Record<string,unknown>)[key]:null):
     row[key];
@@ -29,26 +30,40 @@ export async function GET(request:Request){
   if(!/^Bearer [A-Za-z0-9._~+/-]+=*$/.test(auth)||auth.length>12010)return fail(401,"invalid_bearer");
   const base=baseUrl();if(!base)return fail(503,"admin_api_unavailable");
   let rows:Record<string,unknown>[];
+  let categories:{id:string;parent_id:string|null;category_label:string}[];
   try{
-    const [session,snapshot]=await Promise.all([
+    const [session,snapshot,taxonomy]=await Promise.all([
       fetch(base+"/v1/admin/session",{headers:{Authorization:auth,Accept:"application/json"},
         cache:"no-store",redirect:"manual",signal:AbortSignal.timeout(9000)}),
       fetch(base+"/v1/admin/catalogue/snapshot",{headers:{Authorization:auth,Accept:"application/json"},
+        cache:"no-store",redirect:"manual",signal:AbortSignal.timeout(10000)}),
+      fetch(base+"/v1/admin/catalogue/categories",{headers:{Authorization:auth,Accept:"application/json"},
         cache:"no-store",redirect:"manual",signal:AbortSignal.timeout(10000)})
     ]);
-    if(session.status===401||snapshot.status===401)return fail(401,"unauthenticated");
-    if(session.status===403||snapshot.status===403)return fail(403,"forbidden");
-    if(!session.ok||!snapshot.ok)return fail(503,"catalogue_unavailable");
+    if(session.status===401||snapshot.status===401||taxonomy.status===401)return fail(401,"unauthenticated");
+    if(session.status===403||snapshot.status===403||taxonomy.status===403)return fail(403,"forbidden");
+    if(!session.ok||!snapshot.ok||!taxonomy.ok)return fail(503,"catalogue_unavailable");
     const role=(await session.json())?.data?.role;
     if(!["owner","admin","editor"].includes(role))return fail(403,"forbidden");
     rows=(await snapshot.json())?.data?.items;
+    categories=(await taxonomy.json())?.data?.items;
     if(!Array.isArray(rows)||rows.length>20000 ||
-       rows.some(x=>typeof x?.sku_cong_ty!=="string"))return fail(503,"invalid_catalogue");
+       rows.some(x=>typeof x?.sku_cong_ty!=="string")||!Array.isArray(categories)||categories.length>1000)
+      return fail(503,"invalid_catalogue");
   }catch{return fail(503,"catalogue_unavailable");}
+  const byId=new Map(categories.map(c=>[c.id,c]));
+  const pathFor=(id:unknown)=>{
+    if(typeof id!=="string")return "";
+    const c=byId.get(id);if(!c)return "";
+    const p=c.parent_id?byId.get(c.parent_id):null;
+    return (p?p.category_label+" / ":"")+c.category_label;
+  };
   const lines=rows.map(row=>[
     cell(row,"sku_cong_ty"),
     cell(row,"ten_san_pham")||cell(row,"ten_goc_xnt")||cell(row,"ten_goc_bang_gia"),
-    cell(row,"barcode"),cell(row,"paper_size"),cell(row,"pages"),cell(row,"ruling")
+    cell(row,"barcode"),cell(row,"paper_size"),cell(row,"pages"),cell(row,"ruling"),
+    pathFor(row.category_id),cell(row,"gsm"),cell(row,"cover_type"),cell(row,"unit"),
+    cell(row,"packaging"),cell(row,"units_per_pack")
   ]);
   const name="Futurebook_DANH_MUC_SAN_PHAM_1_SHEET";
   if(format==="csv"){
@@ -57,13 +72,15 @@ export async function GET(request:Request){
       "Content-Disposition":'attachment; filename="'+name+'.csv"'}});
   }
   const book=new ExcelJS.Workbook();const sheet=book.addWorksheet("SAN PHAM");
-  sheet.addRow(HDR);sheet.getColumn(1).numFmt="@";sheet.getColumn(3).numFmt="@";
+  sheet.addRow(HDR);sheet.getColumn(1).numFmt="@";sheet.getColumn(3).numFmt="@";sheet.getColumn(12).numFmt="@";
   sheet.getColumn(1).width=20;sheet.getColumn(2).width=46;sheet.getColumn(3).width=22;
   sheet.getColumn(4).width=18;sheet.getColumn(5).width=16;sheet.getColumn(6).width=22;
+  for(let col=7;col<=HDR.length;col++)sheet.getColumn(col).width=col===7?38:23;
   for(const values of lines)sheet.addRow(values);
   for(let n=2;n<=sheet.rowCount;n++){
     sheet.getRow(n).getCell(1).numFmt="@";
     sheet.getRow(n).getCell(3).numFmt="@";
+    sheet.getRow(n).getCell(12).numFmt="@";
   }
   sheet.getRow(1).font={bold:true};
   sheet.views=[{state:"frozen",ySplit:1}];

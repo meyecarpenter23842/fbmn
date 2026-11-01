@@ -5,15 +5,37 @@ const FIELDS=[
   ["barcode","barcode","Mã vạch"],
   ["paper_size","paper_size","Khổ"],
   ["pages","product_spec","Số trang"],
-  ["ruling","product_spec","Dòng kẻ"]
+  ["ruling","product_spec","Dòng kẻ"],
+  ["gsm","product_spec","Định lượng GSM"],
+  ["cover_type","product_spec","Loại bìa"],
+  ["unit","product_spec","Đơn vị tính"],
+  ["packaging","product_spec","Quy cách đóng gói"],
+  ["units_per_pack","product_spec","Số đơn vị / đóng gói"]
 ];
 const skuKey=value=>value.toUpperCase();
 const clean=(value,max=1200)=>typeof value==="string"&&value.length<=max&&
   !/[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/.test(value);
-export function planSheetSync(parsed,existing=[]){
+export function planSheetSync(parsed,existing=[],categories=[]){
   if(parsed?.source_sheet!=="SAN PHAM"||!Array.isArray(parsed.rows)||
      !Array.isArray(parsed.evidence)||parsed.evidence.length!==parsed.rows.length||
-     !Array.isArray(existing))throw Error("invalid_sync_input");
+     !Array.isArray(existing)||!Array.isArray(categories))throw Error("invalid_sync_input");
+  const categoryById=new Map(categories.map(c=>[c.id,c]));
+  const categoryPaths=new Map();
+  const pathOf=(c)=>{
+    const parent=c.parent_id?categoryById.get(c.parent_id):null;
+    return (parent?parent.category_label+" / ":"")+c.category_label;
+  };
+  for(const c of categories){
+    if(typeof c?.id!=="string"||typeof c?.category_label!=="string")throw Error("invalid_categories");
+    const keys=[pathOf(c).trim().toLocaleLowerCase("vi")];
+    if(!c.parent_id)keys.push(c.category_label.trim().toLocaleLowerCase("vi"));
+    for(const key of new Set(keys)){
+      const list=categoryPaths.get(key)||[];
+      if(!list.includes(c.id))list.push(c.id);
+      categoryPaths.set(key,list);
+    }
+  }
+  const resolveCategory=label=>label.trim()?categoryPaths.get(label.trim().toLocaleLowerCase("vi"))||[]:[];
   const oldMap=new Map();
   for(const old of existing){
     if(typeof old?.sku_cong_ty!=="string"||oldMap.has(skuKey(old.sku_cong_ty)))
@@ -39,16 +61,29 @@ export function planSheetSync(parsed,existing=[]){
       const old=oldMap.get(skuKey(sku));
       const requested={ten_san_pham:row.ten_san_pham,barcode:row.barcode,
         paper_size:row.paper_size,pages:evidence?.specifications?.pages||"",
-        ruling:evidence?.specifications?.ruling||""};
-      if(Object.entries(requested).some(([name,value])=>!clean(value??"",name==="ten_san_pham"?1200:1200)))
+        ruling:evidence?.specifications?.ruling||"",
+        category_label:evidence?.specifications?.category_label||"",
+        gsm:evidence?.specifications?.gsm||"",cover_type:evidence?.specifications?.cover_type||"",
+        unit:evidence?.specifications?.unit||"",packaging:evidence?.specifications?.packaging||"",
+        units_per_pack:evidence?.specifications?.units_per_pack||""};
+      if(Object.entries(requested).some(([name,value])=>!clean(value??"",
+          name==="category_label"?323:["gsm","cover_type","unit","packaging","units_per_pack"].includes(name)?160:1200)) ||
+         (requested.gsm&&!/^\d{1,4}(?:\.\d{1,2})?$/.test(requested.gsm)) ||
+         (requested.units_per_pack&&!/^[1-9]\d{0,4}$/.test(requested.units_per_pack)))
         fail("error","invalid_field_length");
       else if(!old){
         if(!requested.ten_san_pham?.trim())fail("error","missing_product_name");
+        else if(requested.category_label&&resolveCategory(requested.category_label).length!==1)
+          fail("conflict","category_not_found_or_ambiguous");
         else {
           item.status="create";
           operations.push({kind:"create",sku_cong_ty:sku,ten_san_pham:requested.ten_san_pham,
+            category_id:requested.category_label?resolveCategory(requested.category_label)[0]:null,
             barcode:requested.barcode||null,paper_size:requested.paper_size||null,
-            product_spec:{pages:requested.pages||null,ruling:requested.ruling||null}});
+            product_spec:{pages:requested.pages||null,ruling:requested.ruling||null,
+              gsm:requested.gsm||null,cover_type:requested.cover_type||null,
+              unit:requested.unit||null,packaging:requested.packaging||null,
+              units_per_pack:requested.units_per_pack||null}});
         }
       }else if(old.sku_cong_ty!==sku){
         fail("conflict","sku_case_mismatch");
@@ -69,7 +104,19 @@ export function planSheetSync(parsed,existing=[]){
           }
         }
         if(Object.keys(spec).length)changes.product_spec=spec;
-        if(!item.changes.length)item.status="unchanged";
+        if(requested.category_label){
+          const matches=resolveCategory(requested.category_label);
+          if(matches.length!==1)fail("conflict","category_not_found_or_ambiguous");
+          else if(matches[0]!==old.category_id){
+            item.diffs.push({field:"Danh mục",
+              from:categoryById.has(old.category_id)?pathOf(categoryById.get(old.category_id)):"",
+              to:pathOf(categoryById.get(matches[0]))});
+            item.changes.push("Danh mục");
+            changes.category_id=matches[0];
+          }
+        }
+        if(item.status==="conflict"){} // Invalid category blocks the whole workbook.
+        else if(!item.changes.length)item.status="unchanged";
         else if(!Number.isSafeInteger(old.revision)||old.revision<1||
            !["draft","needs_review"].includes(old.review_status))fail("conflict","sku_locked_or_revision_invalid");
         else {
