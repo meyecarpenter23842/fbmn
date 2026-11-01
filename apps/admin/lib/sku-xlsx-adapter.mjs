@@ -100,12 +100,70 @@ async function excelJsCompatibleBytes(bytes) {
   return zip.generateAsync({ type: "nodebuffer", compression: "DEFLATE" });
 }
 
+export const SIMPLE_SHEET = "SAN PHAM";
+const SIMPLE_HEADERS = Object.freeze({
+  sku:"Mã công ty", title:"Tên sản phẩm", barcode:"Mã vạch",
+  size:"Khổ", pages:"Số trang", ruling:"Dòng kẻ",
+});
+// Routine imports deliberately do not infer or store family/group membership.
+// Those relationships require explicit confirmation in the Admin.
+function readSingleSheet(sheet,sourceFile) {
+  if (sheet.rowCount > MAX_SHEET_ROWS+1) throw new Error("too_many_rows");
+  const headings = new Map();
+  sheet.getRow(1).eachCell({includeEmpty:false},(cell,index)=>{
+    const label=cellText(cell).trim();
+    if(headings.has(label))throw new Error("duplicate_header");
+    headings.set(label,index);
+  });
+  for(const header of Object.values(SIMPLE_HEADERS))
+    if(!headings.has(header))throw new Error("missing_column:"+header);
+  const rows=[],evidence=[];
+  for(let n=2;n<=sheet.rowCount;n++){
+    const current=sheet.getRow(n);
+    if(!current.hasValues)continue;
+    const cell=(name)=>current.getCell(headings.get(name));
+    let sku="",title="",barcode="",size="",pages="",ruling="",error=null;
+    try{
+      const company=cell(SIMPLE_HEADERS.sku);
+      if(typeof company.value==="number"||isFormula(company.value))
+        throw new Error("sku_must_be_literal_text");
+      sku=cellText(company);
+    }catch{error="sku_must_be_literal_text";}
+    try{
+      title=cellText(cell(SIMPLE_HEADERS.title));
+      barcode=cellText(cell(SIMPLE_HEADERS.barcode));
+      size=cellText(cell(SIMPLE_HEADERS.size));
+      pages=cellText(cell(SIMPLE_HEADERS.pages));
+      ruling=cellText(cell(SIMPLE_HEADERS.ruling));
+    }catch{error||="unsupported_or_formula_cell";}
+    if(!sku&&!title&&!barcode&&!size&&!pages&&!ruling&&!error)continue;
+    if(!error&&(!sku||sku!==sku.trim()||!title.trim()))error="missing_sku_or_product_name";
+    const row={__row:n,sku_cong_ty:sku,ten_goc_xnt:"",
+      ten_san_pham:title,barcode,paper_size:size,...(error?{__error:error}:{})};
+    rows.push(row);
+    evidence.push({
+      row:n,sku_cong_ty:sku,
+      provenance:{source_file:sourceFile,source_sheet:SIMPLE_SHEET,excel_row:n,
+        inventory_source:false,price_document_source:false},
+      specifications:{paper_size:size||null,pages:pages||null,ruling:ruling||null},
+      price_source_present:false,media_candidate_count:0,media_missing:true,
+      warnings:["image_missing","price_unverified"],
+    });
+  }
+  if(!rows.length)throw new Error("empty_master_sheet");
+  return {rows,evidence,source_sheet:SIMPLE_SHEET,applied:false};
+}
 /** Parse the canonical reconciliation sheet ONLY. No image/price/stock values leave the adapter. */
 export async function readXlsxSkuRows(bytes, options = {}) {
   if (!(bytes instanceof Uint8Array) || bytes.byteLength === 0 || bytes.byteLength > MAX_FILE_BYTES)
     throw new Error("invalid_xlsx_size");
   const workbook = new ExcelJS.Workbook();
   await workbook.xlsx.load(await excelJsCompatibleBytes(bytes));
+  if(!options.sheetName && workbook.worksheets.length===1 &&
+     workbook.getWorksheet(SIMPLE_SHEET)){
+    return readSingleSheet(workbook.getWorksheet(SIMPLE_SHEET),
+      options.sourceFile||"Futurebook_MAU_NHAP_SAN_PHAM_1_SHEET.xlsx");
+  }
   const sheetName = options.sheetName || MASTER_SHEET;
   const sheet = workbook.getWorksheet(sheetName);
   if (!sheet) throw new Error("missing_master_sheet");

@@ -18,8 +18,10 @@ test("Everyday product management has one search and one actionable review toggl
 test("Advanced administration is collapsed by default without removing internal controls",()=>{
   assert.match(manager,/<details className="catalogue-import-advanced">/);
   assert.match(manager,/<details className="catalogue-editor-advanced">/);
-  assert.match(manager,/<details className="catalogue-editor catalogue-variant-details">/);
-  assert.match(manager,/onClick=\{onImport\}/);
+  assert.match(manager,/editing&&<ProductModal/);
+  assert.match(manager,/showGroup&&<ProductModal/);
+  assert.match(manager,/onClick=\{\(\)=>setShowImport\(true\)\}/);
+  assert.match(manager,/showImport&&<ProductModal/);
   assert.match(manager,/value="withdrawn"/);
   assert.match(manager,/review_status:editStatus/);
   assert.match(manager,/sku_cong_ty:editing.sku_cong_ty/);
@@ -27,9 +29,9 @@ test("Advanced administration is collapsed by default without removing internal 
 });
 
 test("Reconciliation file import chooses one original workbook with no manual tab selection",()=>{
-  assert.match(importer,/Chỉ chọn <b>một file đối chiếu<\/b>/);
-  assert.match(importer,/không phải chọn hay xóa sheet/);
-  assert.match(importer,/Futurebook_Doi_Chieu_XNT_BangGia_Anh_28102026.xlsx/);
-  assert.match(importer,/file MASTER ảnh là nguồn dữ liệu khác/);
+  assert.match(importer,/Mẫu thông dụng: 1 sheet SAN PHAM/);
+  assert.match(importer,/tự tìm sheet phù hợp/);
+  assert.match(importer,/File đối chiếu 8 sheet cũ/);
+  assert.match(importer,/Tải mẫu Excel 1 sheet/);
   assert.match(importer,/database_queried!==true \|\| data.applied!==false/);
 });

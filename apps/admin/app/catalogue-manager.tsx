@@ -1,5 +1,7 @@
 "use client";
 import {useCallback,useEffect,useMemo,useState} from "react";
+import ProductModal from "./product-modal";
+import CatalogueImportPreview from "./catalogue-import-preview";
 
 type SKU={sku_cong_ty:string;ten_san_pham:string|null;ten_goc_xnt:string|null;ten_goc_bang_gia?:string|null;
   barcode:string|null;paper_size:string|null;review_status:string;revision:number;
@@ -46,6 +48,9 @@ export default function CatalogueManager({onImport}:{onImport:()=>void}){
   const [editName,setEditName]=useState("");
   const [editStatus,setEditStatus]=useState<"draft"|"needs_review"|"withdrawn">("draft");
   const [create,setCreate]=useState(false);
+  const [showImport,setShowImport]=useState(false);
+  const [importBusy,setImportBusy]=useState(false);
+  const [showGroup,setShowGroup]=useState(false);
   const [sku,setSku]=useState("");
   const [name,setName]=useState("");
   const [size,setSize]=useState("");
@@ -68,6 +73,8 @@ export default function CatalogueManager({onImport}:{onImport:()=>void}){
       (row.ten_san_pham||row.ten_goc_xnt||"").toLocaleLowerCase("vi").includes(q)||
       (row.family_label||"").toLocaleLowerCase("vi").includes(q)));
   },[items,query,status]);
+  const importSaved=useCallback(()=>{void refresh()},[refresh]);
+  const handleImportBusy=useCallback((value:boolean)=>setImportBusy(value),[]);
   const pages=Math.max(1,Math.ceil(filtered.length/50));
   const visible=filtered.slice((page-1)*50,page*50);
   const run=async(work:()=>Promise<void>)=>{
@@ -110,7 +117,8 @@ export default function CatalogueManager({onImport}:{onImport:()=>void}){
       <p>Thêm, tìm và sửa sản phẩm. Mã công ty giữ nguyên, kể cả số 0 đầu.</p></div>
       <div className="action-row">
         <button type="button" className="import-btn import-secondary" onClick={()=>void refresh()} disabled={busy||loading}>Làm mới</button>
-        <button type="button" className="import-btn import-primary" onClick={()=>setCreate(!create)}>Thêm sản phẩm</button>
+        <button type="button" className="import-btn import-secondary" onClick={()=>setShowImport(true)}>Nhập Excel</button>
+        <button type="button" className="import-btn import-primary" onClick={()=>setCreate(true)}>+ Thêm sản phẩm</button>
       </div>
     </div>
     <div className="import-kpis catalogue-simple-kpis">
@@ -120,19 +128,25 @@ export default function CatalogueManager({onImport}:{onImport:()=>void}){
     </div>
     <details className="catalogue-import-advanced">
       <summary>Nhập dữ liệu ban đầu từ Excel</summary>
-      <p>Chỉ dành cho người quản trị khi cập nhật hàng loạt. Mỗi lần chọn một file Excel; hệ thống tự đọc sheet đối chiếu cần thiết. Khách hàng không thao tác bước này.</p>
-      <button type="button" className="import-btn import-secondary" onClick={onImport}>Chọn file Excel</button>
+      <p>Hằng ngày dùng mẫu Excel 1 sheet. File đối chiếu 8 sheet cũ vẫn được hỗ trợ; hệ thống tự chọn sheet cần đọc.</p>
+      <button type="button" className="import-btn import-secondary" onClick={()=>setShowImport(true)}>Nhập Excel trong popup</button>
+      <button type="button" className="import-btn import-secondary" onClick={onImport}>Mở trang nhập Excel riêng</button>
     </details>
     {error&&<div className="import-error" role="alert">{error}</div>}
     {message&&<div className="import-review-banner" role="status"><b>{message}</b></div>}
-    {create&&<div className="catalogue-editor">
+    {create&&<ProductModal title="Thêm sản phẩm Futurebook" onClose={()=>setCreate(false)} locked={busy}>
+      {error&&<div className="import-error" role="alert">{error}</div>}
+      <div className="catalogue-editor">
       <h3>Thêm sản phẩm</h3>
       <label>Mã SKU công ty (không tự sửa)<input value={sku} onChange={e=>setSku(e.target.value)} placeholder="Ví dụ 0114"/></label>
       <label>Tên sản phẩm<input value={name} onChange={e=>setName(e.target.value)} /></label>
       <label>Khổ<input value={size} onChange={e=>setSize(e.target.value)} /></label>
-      <button type="button" className="import-btn import-primary" disabled={busy} onClick={add}>Lưu sản phẩm</button>
-    </div>}
-    {editing&&<div className="catalogue-editor">
+      <div className="fb-product-modal-actions"><button type="button" className="import-btn import-secondary" onClick={()=>setCreate(false)} disabled={busy}>Hủy</button>
+      <button type="button" className="import-btn import-primary" disabled={busy} onClick={add}>Lưu sản phẩm</button></div>
+    </div></ProductModal>}
+    {editing&&<ProductModal title={"Sửa sản phẩm · "+editing.sku_cong_ty} onClose={()=>setEditing(null)} locked={busy}>
+      {error&&<div className="import-error" role="alert">{error}</div>}
+      <div className="catalogue-editor">
       <h3>Sửa sản phẩm · {editing.sku_cong_ty}</h3>
       <p><strong>Mã công ty được giữ nguyên.</strong> Chỉnh sửa tên mà không thay đổi SKU.</p>
       <label>Tên sản phẩm<input value={editName} onChange={e=>setEditName(e.target.value)}/></label>
@@ -143,9 +157,9 @@ export default function CatalogueManager({onImport}:{onImport:()=>void}){
           <option value="withdrawn">Ngừng sử dụng (ẩn, không xóa mã)</option>
         </select></label>
       </details>
-      <button type="button" className="import-btn import-primary" disabled={busy} onClick={save}>Lưu thay đổi</button>
-      <button type="button" className="import-btn import-secondary" onClick={()=>setEditing(null)}>Hủy</button>
-    </div>}
+      <div className="fb-product-modal-actions"><button type="button" className="import-btn import-secondary" onClick={()=>setEditing(null)} disabled={busy}>Hủy</button>
+      <button type="button" className="import-btn import-primary" disabled={busy} onClick={save}>Lưu thay đổi</button></div>
+    </div></ProductModal>}
     <div className="import-controls">
       <label className="import-search-label">Tìm mã công ty / tên / nhóm
         <input value={query} onChange={e=>{setQuery(e.target.value);setPage(1)}} placeholder="0114, C5921…"/></label>
@@ -179,8 +193,13 @@ export default function CatalogueManager({onImport}:{onImport:()=>void}){
       <button className="import-btn import-secondary" disabled={page<=1} onClick={()=>setPage(x=>Math.max(x-1,1))}>Trước</button>
       <button className="import-btn import-secondary" disabled={page>=pages} onClick={()=>setPage(x=>Math.min(x+1,pages))}>Sau</button>
     </div></div>
-    <details className="catalogue-editor catalogue-variant-details">
-      <summary>Nhóm nhiều mẫu cùng một sản phẩm (tùy chọn)</summary>
+    <div className="catalogue-group-trigger">
+      <span><b>Nhóm mẫu</b> · Đã chọn {selected.length} SKU để ghép nhiều mẫu trong một thẻ.</span>
+      <button type="button" className="import-btn import-secondary" onClick={()=>setShowGroup(true)}>Quản lý nhóm mẫu</button>
+    </div>
+    {showGroup&&<ProductModal title="Nhóm mẫu sản phẩm" onClose={()=>setShowGroup(false)} locked={busy}>
+      {error&&<div className="import-error" role="alert">{error}</div>}
+      <div className="catalogue-editor catalogue-variant-details">
       <p>Chọn ít nhất 2 SKU trong bảng. Ví dụ <b>0114</b> và <b>0714</b> vẫn là hai mã riêng, chỉ được chung thẻ khi đúng nhóm do anh xác nhận.</p>
       <label>Nhóm có sẵn<select value={groupId} onChange={e=>setGroupId(e.target.value)}>
         <option value="">Chọn nhóm</option>{families.map(g=><option key={g.id} value={g.id}>{g.family_label}</option>)}
@@ -188,7 +207,10 @@ export default function CatalogueManager({onImport}:{onImport:()=>void}){
       <button className="import-btn import-primary" type="button" disabled={busy||!groupId||selected.length<2} onClick={assign}>Gắn {selected.length} SKU vào nhóm</button>
       <label>Tạo nhóm mới<input value={newFamily} onChange={e=>setNewFamily(e.target.value)} placeholder="Tên nhóm / quy cách đã xác minh"/></label>
       <button className="import-btn import-secondary" type="button" disabled={busy||!newFamily.trim()} onClick={addFamily}>Tạo nhóm</button>
-    </details>
+      </div></ProductModal>}
+    {showImport&&<ProductModal title="Nhập sản phẩm từ Excel" wide locked={importBusy} onClose={()=>{if(!importBusy){setShowImport(false);void refresh()}}}>
+      <CatalogueImportPreview onBusyChange={handleImportBusy} onSaved={importSaved} />
+    </ProductModal>}
     <p className="import-footnote">Không có chức năng xuất bản từ màn hình này. Dữ liệu NET, tồn kho và hình gốc không trả về từ API quản lý sản phẩm.</p>
   </section>;
 }

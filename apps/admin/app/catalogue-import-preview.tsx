@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { ChangeEvent } from "react";
 
 type RowStatus = "create" | "update" | "unchanged" | "conflict" | "error";
@@ -74,7 +74,7 @@ function downloadCsv(items: Item[]) {
   anchor.href=url;anchor.download="fbmn-adm02-import-review-safe.csv";anchor.click();
   queueMicrotask(()=>URL.revokeObjectURL(url));
 }
-export default function CatalogueImportPreview() {
+export default function CatalogueImportPreview({onBusyChange,onSaved}:{onBusyChange?:(value:boolean)=>void;onSaved?:()=>void}={}) {
   const fileRef=useRef<HTMLInputElement>(null);
   const [file,setFile]=useState<File|null>(null);
   const [preview,setPreview]=useState<Preview|null>(null);
@@ -87,6 +87,7 @@ export default function CatalogueImportPreview() {
   const [filter,setFilter]=useState("all");
   const [page,setPage]=useState(1);
   const [expanded,setExpanded]=useState<number|null>(null);
+  useEffect(()=>{onBusyChange?.(busy||approving)},[busy,approving,onBusyChange]);
   function selectFile(event:ChangeEvent<HTMLInputElement>){
     const item=event.target.files?.[0]||null;
     event.target.value="";
@@ -115,7 +116,7 @@ export default function CatalogueImportPreview() {
       if(!response.ok){
         if(response.status===401||response.status===403)throw new Error("Tài khoản chưa được cấp quyền xem trước import. Kiểm tra quyền Owner/Editor.");
         if(response.status===413)throw new Error("Tệp quá dung lượng cho phép.");
-        if(response.status===422||response.status===400)throw new Error("File này không đúng mẫu đối chiếu SKU hiện hỗ trợ. Hãy chọn file Futurebook_Doi_Chieu_XNT_BangGia_Anh_28102026.xlsx; file MASTER ảnh là nguồn dữ liệu khác. Không cần xóa hoặc tách sheet.");
+        if(response.status===422||response.status===400)throw new Error("File không đúng mẫu sản phẩm. Dùng mẫu Excel 1 sheet SAN PHAM hoặc file đối chiếu 613 SKU cũ. Mã công ty phải là văn bản, kể cả 0114.");
         throw new Error("Admin staging chưa xử lý được XLSX (HTTP "+response.status+").");
       }
       const data=await response.json() as Preview;
@@ -159,6 +160,7 @@ export default function CatalogueImportPreview() {
       if(!Number.isSafeInteger(data.data?.drafts_saved)||data.data?.published!==0)
         throw new Error("Phản hồi nhập liệu không hợp lệ.");
       setReceipt("Đã lưu "+data.data?.drafts_saved+" SKU dạng BẢN NHÁP. Không xuất bản.");
+      onSaved?.();
       setPreview(null);setApproved(false);
     }catch(ex:unknown){setError(ex instanceof Error?ex.message:"Nhập nháp thất bại.");}
     finally{setApproving(false);}
@@ -182,14 +184,15 @@ export default function CatalogueImportPreview() {
   const pages=Math.max(1,Math.ceil(filtered.length/50));
   const targeted=preview?.items.filter(item=>item.warnings.some(w=>TARGETED.has(w))||item.status==="conflict"||item.status==="error").length??0;
   return <div className="import-preview">
-    <div className="page-title"><div><h1>Nhập Excel · Xem trước</h1><p>ADM-02 · Kiểm tra mã SKU công ty và ngoại lệ trước khi duyệt nhập liệu</p></div>
+    <div className="page-title"><div><h1>Nhập sản phẩm Excel</h1><p>1 file, 1 sheet là đủ. Xem trước và duyệt trước khi lưu bản nháp.</p></div>
       <span className="import-readonly">ĐỐI CHIẾU NEON · CHƯA XUẤT BẢN</span></div>
     <div className="import-information"><strong>Xem trước không ghi dữ liệu.</strong> Excel được gửi đến API Admin được phân quyền và đối chiếu trực tiếp với danh mục nháp Neon.
       Không đưa giá NET, tồn kho hoặc tên file ảnh vào báo cáo; không upload R2 và không công bố SKU.
       <br/>Các con số tạo mới, trùng và xung đột được tính theo <b>snapshot thật của Neon</b>. Nhập dữ liệu nháp chỉ thực hiện khi Owner tích chọn xác nhận và bấm nút nhập.</div>
     <section className="import-upload-panel" aria-label="Tải file đối chiếu">
-      <div className="import-upload-text"><div className="import-file-icon">XLSX</div><div><h2>Chọn file đối chiếu 613 SKU</h2>
-        <p>Chỉ chọn <b>một file đối chiếu</b>. Hệ thống tự tìm sheet sản phẩm trong file, không phải chọn hay xóa sheet. Giữ nguyên 0114, 0714 · Tối đa 8 MB.</p>
+      <div className="import-upload-text"><div className="import-file-icon">XLSX</div><div><h2>Chọn Excel sản phẩm</h2>
+        <p><b>Mẫu thông dụng: 1 sheet SAN PHAM.</b> File đối chiếu 8 sheet cũ cũng được chấp nhận, tự tìm sheet phù hợp. Giữ nguyên mã 0114, 0714 · Tối đa 8 MB.</p>
+        <a className="import-template-link" href="/api/catalogue/template" download>Tải mẫu Excel 1 sheet (.xlsx)</a>
         {file&&<div className="import-selected">Đã chọn: <b>{file.name}</b> ({(file.size/1024).toFixed(0)} KB)</div>}
       </div></div>
       <div className="import-upload-actions"><input ref={fileRef} type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" onChange={selectFile} className="import-file-hidden" aria-label="Chọn Excel" />
@@ -202,7 +205,7 @@ export default function CatalogueImportPreview() {
     {preview&&<section aria-label="Báo cáo xem trước">
       <div className="import-kpis">
         <div><small>SKU trong file</small><strong>{preview.counts.total_rows}</strong><span>{preview.counts.unique_company_skus} mã phân biệt</span></div>
-        <div><small>Chỉ nguồn XNT</small><strong>{preview.counts.xnt_only}</strong><span>Chưa xác minh giá nguồn</span></div>
+        <div><small>{preview.source_sheet==="SAN PHAM"?"Mẫu Excel chuẩn":"Chỉ nguồn XNT"}</small><strong>{preview.source_sheet==="SAN PHAM"?preview.counts.total_rows:preview.counts.xnt_only}</strong><span>{preview.source_sheet==="SAN PHAM"?"Nhập từ file 1 sheet":"Chưa xác minh giá nguồn"}</span></div>
         <div><small>Thiếu ảnh</small><strong>{preview.counts.missing_images}</strong><span>Được giữ lại, không chặn</span></div>
         <div><small>Cần kiểm tra ngoại lệ</small><strong>{targeted}</strong><span>Mã/nguồn/quy cách</span></div>
         <div><small>Lỗi dữ liệu</small><strong>{preview.totals.error}</strong><span>Không được tự bỏ qua</span></div>

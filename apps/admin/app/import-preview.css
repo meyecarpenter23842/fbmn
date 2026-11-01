@@ -69,3 +69,38 @@
 .catalogue-variant-details[open]{display:flex}
 .catalogue-variant-details summary{width:100%}
 @media(max-width:650px){.catalogue-simple-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.catalogue-import-advanced{padding:12px}}
+
+/* ADM-08 - fixed, accessible modal. Forms never expand the scrolling product page. */
+.fb-product-modal-overlay{position:fixed;z-index:12000;inset:0;display:flex;align-items:center;justify-content:center;padding:20px;background:rgba(18,18,54,.57);backdrop-filter:blur(5px)}
+.fb-product-modal{display:flex;flex-direction:column;width:min(100%,590px);max-height:min(92dvh,850px);min-height:0;overflow:hidden;background:#fff;border:1px solid #dedcf3;border-radius:20px;box-shadow:0 26px 90px rgba(27,22,76,.30)}
+.fb-product-modal-wide{width:min(100%,1100px)}
+.fb-product-modal-header{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:19px 22px;border-bottom:1px solid #eaebf5;flex-shrink:0}
+.fb-product-modal-header h2{margin:0;font-weight:800;font-size:19px;color:#242454}
+.fb-product-modal-close{flex-shrink:0;display:grid;place-items:center;width:36px;height:36px;border:0;border-radius:10px;background:#f0eefb;color:#413590;font-size:25px;cursor:pointer}
+.fb-product-modal-close:hover{background:#e1dafb}
+.fb-product-modal-close:focus-visible,.fb-product-modal :focus-visible{outline:3px solid #9f8bfd;outline-offset:2px}
+.fb-product-modal-content{padding:20px 22px;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;min-height:0;flex:1}
+.fb-product-modal-content .catalogue-editor{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-items:start;gap:16px;border:none;padding:0;margin:0;box-shadow:none}
+.fb-product-modal-content .catalogue-editor>h3,.fb-product-modal-content .catalogue-editor>p,.fb-product-modal-content .catalogue-editor-advanced,.fb-product-modal-actions{grid-column:1/-1}
+.fb-product-modal-content .catalogue-editor label{min-width:0}
+.fb-product-modal-actions{display:flex;justify-content:flex-end;gap:10px;padding-top:16px;border-top:1px solid #ececf5}
+.fb-product-modal-actions .import-btn{min-width:108px}
+.fb-product-modal-content .import-preview{margin:0;max-width:100%}
+.fb-product-modal-content .import-preview .page-title{padding-top:0}
+.fb-product-modal-content .import-preview .page-title h1{font-size:19px}
+.fb-product-modal-content .import-kpis{grid-template-columns:repeat(3,minmax(0,1fr))}
+.catalogue-group-trigger{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:14px 17px;background:#fff;border:1px solid #e0e4ef;border-radius:12px;margin:14px 0;color:#696f8e;font-size:12px}
+.catalogue-group-trigger b{color:#34305f}
+.import-template-link{display:inline-flex;margin-top:6px;font-size:12px;font-weight:800;color:#5a43bc;text-decoration:underline;text-underline-offset:3px}
+.import-template-link:hover{color:#39227d}
+@media(max-width:620px){
+  .fb-product-modal-overlay{align-items:flex-end;padding:0}
+  .fb-product-modal,.fb-product-modal-wide{width:100%;max-height:94dvh;border-radius:18px 18px 0 0}
+  .fb-product-modal-header{padding:15px 17px}
+  .fb-product-modal-content{padding:16px}
+  .fb-product-modal-content .catalogue-editor{grid-template-columns:1fr}
+  .fb-product-modal-content .import-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .fb-product-modal-actions{flex-wrap:wrap}
+  .fb-product-modal-actions .import-btn{flex:1}
+  .catalogue-group-trigger{align-items:stretch;flex-direction:column}
+}
