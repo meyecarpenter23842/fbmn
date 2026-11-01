@@ -1,0 +1,142 @@
+name: Deploy Admin production by owner comment (manual)
+
+on:
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: read
+  actions: read
+  issues: read
+  pull-requests: read
+
+concurrency:
+  group: fbmn-admin-production-comment-release
+  cancel-in-progress: false
+
+jobs:
+  authorize:
+    name: Authorize merged PR and reviewed main CI
+    if: >-
+      github.event.issue.pull_request != null &&
+      github.event.comment.user.login == github.repository_owner &&
+      github.event.comment.body == '/deploy admin production'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      sha: ${{ steps.gate.outputs.sha }}
+      pr_number: ${{ steps.gate.outputs.pr_number }}
+    steps:
+      - name: Checkout trusted release gate from main (no Vercel secret)
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: main
+          persist-credentials: false
+      - name: Validate owner, latest merged PR, green main CI and Codex review
+        id: gate
+        run: node scripts/authorize-admin-production.mjs
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          REQUESTED_BY: ${{ github.event.comment.user.login }}
+          DEPLOY_COMMAND: ${{ github.event.comment.body }}
+
+  deploy:
+    name: Build, stage and promote only fbmn-admin
+    needs: authorize
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    environment: production
+    permissions:
+      contents: read
+    env:
+      VERCEL_ORG_ID: team_hUFtVIsg2fKzwGlfi2Lrw1du
+      VERCEL_PROJECT_ID: prj_zfE2VTQuZJkEgOzOfJdokQsk5VZS
+      VERCEL_CLI_VERSION: '65.4.0'
+      NEXT_TELEMETRY_DISABLED: '1'
+    steps:
+      - name: Checkout exact authorized main commit
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: ${{ needs.authorize.outputs.sha }}
+          persist-credentials: false
+      - name: Use Node.js 22
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '22'
+      - name: Verify checkout and prevent stale branch release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          APPROVED_SHA: ${{ needs.authorize.outputs.sha }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$APPROVED_SHA"
+          current="$(GH_TOKEN="$GH_TOKEN" node --input-type=module -e '
+            const r=await fetch("https://api.github.com/repos/"+process.env.GITHUB_REPOSITORY+"/git/ref/heads/main",{
+              headers:{Authorization:"Bearer "+process.env.GH_TOKEN,Accept:"application/vnd.github+json"}});
+            if(!r.ok)process.exit(1);
+            console.log((await r.json()).object?.sha||"");
+          ')"
+          test "$current" = "$APPROVED_SHA" || { echo "main advanced; deployment canceled"; exit 1; }
+      - name: Install pinned Vercel CLI (no secret in install step)
+        run: npm install -g "vercel@${VERCEL_CLI_VERSION}" --no-audit --no-fund
+      - name: Link only Admin Vercel project
+        run: |
+          mkdir -p .vercel
+          printf '{"orgId":"%s","projectId":"%s"}\n' "$VERCEL_ORG_ID" "$VERCEL_PROJECT_ID" > .vercel/project.json
+      - name: Validate production environment token
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: test -n "$VERCEL_TOKEN" || { echo 'VERCEL_TOKEN missing from GitHub Environment production'; exit 1; }
+      - name: Pull Admin production environment
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: vercel pull --yes --environment=production
+      - name: Build Admin with production environment
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: vercel build --prod
+      - name: Stage Admin production without promoting domain yet
+        id: staged
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          set -euo pipefail
+          url="$(vercel deploy --prebuilt --prod --skip-domain)"
+          DEPLOY_URL="$url" node --input-type=module -e '
+            const v=new URL(process.env.DEPLOY_URL);
+            if(v.protocol!=="https:"||!v.hostname.endsWith(".vercel.app"))process.exit(1);
+          '
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+      - name: Verify main has not changed before domain promotion
+        env:
+          GH_TOKEN: ${{ github.token }}
+          APPROVED_SHA: ${{ needs.authorize.outputs.sha }}
+        run: |
+          set -euo pipefail
+          node --input-type=module -e '
+            const r=await fetch("https://api.github.com/repos/"+process.env.GITHUB_REPOSITORY+"/git/ref/heads/main",{
+              headers:{Authorization:"Bearer "+process.env.GH_TOKEN,Accept:"application/vnd.github+json"}});
+            if(!r.ok||(await r.json()).object?.sha!==process.env.APPROVED_SHA)
+              throw new Error("main advanced: refusing to promote stale deployment");
+          '
+      - name: Promote staged Admin to production alias
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          STAGED_URL: ${{ steps.staged.outputs.url }}
+        run: vercel promote "$STAGED_URL" --yes
+      - name: Publish release summary
+        env:
+          RELEASE_SHA: ${{ needs.authorize.outputs.sha }}
+          RELEASE_PR: ${{ needs.authorize.outputs.pr_number }}
+          RELEASE_URL: ${{ steps.staged.outputs.url }}
+        run: |
+          {
+            echo '### Futurebook Admin production deployment'
+            echo 'Project: fbmn-admin (not fbmn-web)'
+            echo "Approved PR: #$RELEASE_PR"
+            echo "Approved commit: $RELEASE_SHA"
+            echo "Staged build: $RELEASE_URL"
+            echo 'Published domain: https://fbmn-admin.vercel.app/'
+            echo 'Trigger: owner PR comment /deploy admin production'
+          } >> "$GITHUB_STEP_SUMMARY"
