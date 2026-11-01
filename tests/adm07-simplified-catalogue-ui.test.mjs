@@ -20,7 +20,9 @@ test("All routine operations keep real popup forms with a compact row actions me
   assert.match(manager,/editing&&<ProductModal/);
   assert.match(manager,/showGroup&&<ProductModal/);
   assert.match(manager,/showImport&&<ProductModal/);
-  assert.match(manager,/catalogue-actions-menu/);
+  assert.match(manager,/catalogue-actions-trigger/);
+  assert.match(manager,/catalogue-actions-popover/);
+  assert.match(manager,/createPortal\(/);
   assert.match(manager,/Sửa sản phẩm/);
   assert.match(manager,/Nhóm cùng dòng/);
   assert.match(manager,/sku_cong_ty:editing.sku_cong_ty/);

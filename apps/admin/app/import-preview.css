@@ -116,14 +116,21 @@
 .catalogue-list-table td:nth-child(4)>b{font-weight:700;color:#373b60}
 .catalogue-image-placeholder{display:grid;place-items:center;width:40px;height:44px;border:1px solid #e2e3ef;border-radius:9px;background:#f3f2fa;color:#9a96b8;font-size:24px;line-height:1}
 .catalogue-unconfigured{color:#a5a9bd}
-.catalogue-actions-menu{position:relative;min-width:120px}
-.catalogue-actions-menu>summary{list-style:none;display:inline-grid;place-items:center;width:36px;height:30px;border:1px solid #e1e2f0;border-radius:8px;background:white;color:#5344a1;font-size:22px;font-weight:700;cursor:pointer}
-.catalogue-actions-menu>summary::-webkit-details-marker{display:none}
-.catalogue-actions-menu>summary:focus-visible{outline:3px solid #a89bfa;outline-offset:2px}
-.catalogue-actions-list{display:grid;gap:2px;margin-top:6px;padding:4px;border:1px solid #e9e7f3;border-radius:9px;background:white}
-.catalogue-actions-list button{min-width:128px;text-align:left;border:0;border-radius:6px;background:transparent;padding:9px;color:#393968;font:inherit;font-weight:600;cursor:pointer}
-.catalogue-actions-list button:hover:not(:disabled){background:#f3f0ff;color:#4e39ab}
-.catalogue-actions-list button:disabled{cursor:not-allowed;color:#aaaebc}
+.catalogue-actions-trigger{display:inline-grid;place-items:center;width:36px;height:30px;
+  padding:0;border:1px solid #e1e2f0;border-radius:8px;background:#fff;color:#5344a1;
+  font-size:22px;font-weight:700;line-height:1;cursor:pointer}
+.catalogue-actions-trigger:hover,.catalogue-actions-trigger[aria-expanded="true"]{background:#f3f0ff;border-color:#b6a8ed}
+.catalogue-actions-trigger:focus-visible,.catalogue-actions-popover button:focus-visible{outline:3px solid #a89bfa;outline-offset:2px}
+/* Mounted in document.body, never inside the scrolling table or a table row. */
+.catalogue-actions-popover{position:fixed;z-index:11000;width:188px;display:grid;gap:2px;
+  padding:5px;border:1px solid #e6e3f1;border-radius:10px;background:#fff;
+  box-shadow:0 14px 35px rgba(39,28,92,.18)}
+.catalogue-actions-popover button{width:100%;min-height:42px;text-align:left;border:0;
+  border-radius:7px;background:transparent;padding:10px 12px;color:#393968;
+  font:inherit;font-size:12px;font-weight:650;cursor:pointer}
+.catalogue-actions-popover button:hover:not(:disabled),.catalogue-actions-popover button:focus-visible{
+  background:#f3f0ff;color:#4e39ab}
+.catalogue-actions-popover button:disabled{cursor:not-allowed;color:#aaaebc}
 .import-kpis-simple{grid-template-columns:repeat(4,minmax(0,1fr))}
 .import-preview-simple-table{min-width:680px}
 .import-preview-simple-table td:nth-child(2){min-width:200px}

@@ -1,5 +1,7 @@
 "use client";
-import {useCallback,useEffect,useMemo,useState} from "react";
+import {useCallback,useEffect,useMemo,useRef,useState} from "react";
+import {createPortal} from "react-dom";
+import {positionCatalogueActions} from "@/lib/catalogue-action-position.mjs";
 import ProductModal from "./product-modal";
 import CatalogueImportPreview from "./catalogue-import-preview";
 
@@ -103,8 +105,44 @@ export default function CatalogueManager({onImport}:{onImport:()=>void}){
   const [sku,setSku]=useState("");
   const [name,setName]=useState("");
   const [spec,setSpec]=useState<SpecFields>(blankSpec());
+  // One controlled menu for the whole table. Portal escapes overflow:auto table.
+  const [actionMenu,setActionMenu]=useState<{sku:string;top:number;left:number}|null>(null);
+  const actionTrigger=useRef<HTMLButtonElement|null>(null);
+  const actionPopover=useRef<HTMLDivElement|null>(null);
+  useEffect(()=>{
+    if(!actionMenu)return;
+    const closeOutside=(event:PointerEvent)=>{
+      if(!(event.target instanceof Node))return;
+      if(!actionTrigger.current?.contains(event.target) &&
+         !actionPopover.current?.contains(event.target))setActionMenu(null);
+    };
+    const keydown=(event:KeyboardEvent)=>{
+      if(event.key==="Escape"){
+        event.preventDefault();
+        setActionMenu(null);
+        actionTrigger.current?.focus();
+      }
+    };
+    const closeOnMove=()=>setActionMenu(null);
+    document.addEventListener("pointerdown",closeOutside);
+    document.addEventListener("keydown",keydown);
+    // Scroll or resize moves the anchor. Close instead of leaving a detached popover.
+    window.addEventListener("scroll",closeOnMove,true);
+    window.addEventListener("resize",closeOnMove);
+    const focusFrame=requestAnimationFrame(()=>{
+      actionPopover.current?.querySelector<HTMLButtonElement>('button:not(:disabled)')?.focus();
+    });
+    return ()=>{
+      cancelAnimationFrame(focusFrame);
+      document.removeEventListener("pointerdown",closeOutside);
+      document.removeEventListener("keydown",keydown);
+      window.removeEventListener("scroll",closeOnMove,true);
+      window.removeEventListener("resize",closeOnMove);
+    };
+  },[actionMenu]);
+
   const refresh=useCallback(async()=>{
-    setLoading(true);setError("");
+    setActionMenu(null);setLoading(true);setError("");
     try{
       const [catalogue,groups,taxonomy]=await Promise.all([
         api<{items:SKU[]}>("skus"),api<{items:Family[]}>("families"),
@@ -129,6 +167,7 @@ export default function CatalogueManager({onImport}:{onImport:()=>void}){
   const handleImportBusy=useCallback((value:boolean)=>setImportBusy(value),[]);
   const pages=Math.max(1,Math.ceil(filtered.length/50));
   const visible=filtered.slice((page-1)*50,page*50);
+  const selectedActionRow=actionMenu?visible.find(row=>row.sku_cong_ty===actionMenu.sku):null;
   const run=async(work:()=>Promise<void>)=>{
     if(busy)return;setBusy(true);setError("");setMessage("");
     try{await work();await refresh();}
@@ -243,14 +282,14 @@ export default function CatalogueManager({onImport}:{onImport:()=>void}){
     </ProductModal>}
     <div className="import-controls catalogue-search-controls">
       <label className="import-search-label">Tìm mã công ty / tên / nhóm
-        <input value={query} onChange={e=>{setQuery(e.target.value);setPage(1)}} placeholder="Nhập mã, tên hoặc nhóm sản phẩm…"/></label>
+        <input value={query} onChange={e=>{setQuery(e.target.value);setPage(1);setActionMenu(null)}} placeholder="Nhập mã, tên hoặc nhóm sản phẩm…"/></label>
       <label className="import-filter-label">Danh mục<select value={categoryFilter}
-        onChange={e=>{setCategoryFilter(e.target.value);setPage(1)}}>
+        onChange={e=>{setCategoryFilter(e.target.value);setPage(1);setActionMenu(null)}}>
         <option value="">Tất cả danh mục</option>
         {categories.map(c=><option value={c.id} key={c.id}>{c.parent_id?"↳ ":""}{c.category_label}</option>)}
       </select></label>
       <button type="button" className="import-btn import-secondary" aria-pressed={groupMode}
-        onClick={()=>{setGroupMode(x=>!x);setSelected([])}}>{groupMode?"Thoát chọn nhóm":"Nhóm mẫu"}</button>
+        onClick={()=>{setGroupMode(x=>!x);setSelected([]);setActionMenu(null)}}>{groupMode?"Thoát chọn nhóm":"Nhóm mẫu"}</button>
     </div>
     <div className="import-table-wrap"><table className="import-table catalogue-list-table"><thead><tr>
       {groupMode&&<th>Chọn</th>}<th>Ảnh</th><th>Mã công ty</th><th>Tên sản phẩm</th>
@@ -271,31 +310,57 @@ export default function CatalogueManager({onImport}:{onImport:()=>void}){
         <td>{row.family_label||"Chưa nhóm"}</td>
         <td><span className="catalogue-unconfigured" title="Hiển thị theo kênh sẽ được cấu hình ở P5">—</span></td>
         <td>
-          <details className="catalogue-actions-menu">
-            <summary aria-label={"Thao tác sản phẩm "+row.sku_cong_ty} title="Thao tác">···</summary>
-            <div className="catalogue-actions-list">
-              <button type="button" disabled={!editable}
-                title={editable?"Sửa thông tin sản phẩm":"SKU hiện không thể chỉnh sửa qua API"}
-                onClick={event=>{event.currentTarget.closest("details")?.removeAttribute("open");
-                  setError("");setEditing(row);setEditName(row.ten_san_pham||"");setSpec(specFromSku(row));}}>
-                Sửa sản phẩm
-              </button>
-              <button type="button" disabled={!editable}
-                onClick={event=>{event.currentTarget.closest("details")?.removeAttribute("open");
-                  setSelected(old=>old.includes(row.sku_cong_ty)?old:[...old,row.sku_cong_ty]);
-                  setGroupMode(true);setShowGroup(true);}}>
-                Nhóm cùng dòng
-              </button>
-            </div>
-          </details>
+          <button type="button" className="catalogue-actions-trigger"
+            aria-label={"Thao tác sản phẩm "+row.sku_cong_ty}
+            aria-haspopup="menu" aria-expanded={actionMenu?.sku===row.sku_cong_ty}
+            title="Thao tác"
+            onClick={event=>{
+              if(actionMenu?.sku===row.sku_cong_ty){setActionMenu(null);return;}
+              const position=positionCatalogueActions(
+                event.currentTarget.getBoundingClientRect(),window.innerWidth,window.innerHeight);
+              actionTrigger.current=event.currentTarget;
+              setActionMenu({sku:row.sku_cong_ty,...position});
+            }}>···</button>
         </td>
       </tr>})}
       {!visible.length&&<tr><td colSpan={groupMode?9:8} className="import-empty">
         {loading?"Đang tải sản phẩm…":"Chưa có sản phẩm phù hợp."}</td></tr>}
     </tbody></table></div>
+    {actionMenu&&selectedActionRow&&createPortal(
+      <div ref={actionPopover} className="catalogue-actions-popover" role="menu"
+        aria-label={"Thao tác sản phẩm "+selectedActionRow.sku_cong_ty}
+        style={{top:actionMenu.top,left:actionMenu.left}}
+        onKeyDown={event=>{
+          if(event.key!=="ArrowDown"&&event.key!=="ArrowUp")return;
+          event.preventDefault();
+          const buttons=[...event.currentTarget.querySelectorAll<HTMLButtonElement>('button:not(:disabled)')];
+          if(!buttons.length)return;
+          const index=buttons.findIndex(button=>button===document.activeElement);
+          buttons[(index+(event.key==="ArrowDown"?1:buttons.length-1))%buttons.length].focus();
+        }}>
+        <button type="button" role="menuitem"
+          disabled={!["draft","needs_review"].includes(selectedActionRow.review_status)}
+          title="Sửa thông tin sản phẩm"
+          onClick={()=>{
+            setActionMenu(null);
+            setError("");
+            setEditing(selectedActionRow);
+            setEditName(selectedActionRow.ten_san_pham||"");
+            setSpec(specFromSku(selectedActionRow));
+          }}>Sửa sản phẩm</button>
+        <button type="button" role="menuitem"
+          disabled={!["draft","needs_review"].includes(selectedActionRow.review_status)}
+          onClick={()=>{
+            setActionMenu(null);
+            setSelected(old=>old.includes(selectedActionRow.sku_cong_ty)?old:[...old,selectedActionRow.sku_cong_ty]);
+            setGroupMode(true);
+            setShowGroup(true);
+          }}>Nhóm cùng dòng</button>
+      </div>,document.body
+    )}
     <div className="import-pagination"><span>{filtered.length} SKU · Trang {Math.min(page,pages)}/{pages}</span><div>
-      <button className="import-btn import-secondary" disabled={page<=1} onClick={()=>setPage(x=>Math.max(x-1,1))}>Trước</button>
-      <button className="import-btn import-secondary" disabled={page>=pages} onClick={()=>setPage(x=>Math.min(x+1,pages))}>Sau</button>
+      <button className="import-btn import-secondary" disabled={page<=1} onClick={()=>{setPage(x=>Math.max(x-1,1));setActionMenu(null)}}>Trước</button>
+      <button className="import-btn import-secondary" disabled={page>=pages} onClick={()=>{setPage(x=>Math.min(x+1,pages));setActionMenu(null)}}>Sau</button>
     </div></div>
     {groupMode&&<div className="catalogue-group-trigger">
       <span><b>Nhóm mẫu</b> · Đã chọn {selected.length} SKU để ghép nhiều mẫu trong một thẻ.</span>
