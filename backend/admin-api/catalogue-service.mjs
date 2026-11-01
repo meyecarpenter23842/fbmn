@@ -10,6 +10,24 @@ const validSku = x => typeof x==="string" && x.length>0 && x.length<=80 &&
   x.trim()===x && !/[^\P{Cc}]/u.test(x);
 const validText = (x,max=500) => x===undefined || x===null ||
   (typeof x==="string" && x.length<=max && !Array.from(x).some(char=>char.charCodeAt(0)<32 && ![9,10,13].includes(char.charCodeAt(0))));
+const uuid = x => typeof x==="string" && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(x);
+const SPEC_FIELDS = new Set(["pages","ruling","gsm","cover_type","unit","packaging","units_per_pack"]);
+export function safeProductSpec(spec) {
+  if(spec===undefined)return {};
+  if(!spec || typeof spec!=="object" || Array.isArray(spec))throw Error("invalid_product_spec");
+  const out={};
+  for(const [key,value] of Object.entries(spec)){
+    if(!SPEC_FIELDS.has(key) || !(value===null || (typeof value==="string" && validText(value,["pages","ruling"].includes(key)?1200:160))))
+      throw Error("invalid_product_spec");
+    if(value!==null && key==="gsm" && value!=="" && !/^\d{1,4}(?:\.\d{1,2})?$/.test(value))
+      throw Error("invalid_product_spec");
+    if(value!==null && key==="units_per_pack" && value!=="" && !/^[1-9]\d{0,4}$/.test(value))
+      throw Error("invalid_product_spec");
+    out[key]=value===""?null:value;
+  }
+  return out;
+}
+const validCategory = value => value===undefined || value===null || uuid(value);
 const needsReview = new Set(["negative_stock","stock_snapshot_missing",
   "packaging_promotion_review","similar_sku_review","regional_channel_review",
   "shared_media_review","source_spec_conflict","suspected_company_code",
@@ -19,6 +37,8 @@ export function safeDraft(row) {
   for(const name of ["ten_san_pham","ten_goc_xnt","barcode","paper_size","pages","ruling"])
     if(!validText(row[name],1200))throw Error("invalid_field");
   if(!(row.ten_san_pham?.trim()||row.ten_goc_xnt?.trim()))throw Error("missing_name");
+  if(!validCategory(row.category_id))throw Error("invalid_category");
+  const product_spec=safeProductSpec(row.product_spec);
   if(row.warnings!==undefined && (!Array.isArray(row.warnings) ||
     row.warnings.length>30 || row.warnings.some(x=>!validText(x,80))))
     throw Error("invalid_warning_codes");
@@ -26,13 +46,15 @@ export function safeDraft(row) {
     sku_cong_ty:row.sku_cong_ty,ten_san_pham:row.ten_san_pham||null,
     ten_goc_xnt:row.ten_goc_xnt||null,barcode:row.barcode||null,
     paper_size:row.paper_size||null,pages:row.pages||null,ruling:row.ruling||null,
+    category_id:row.category_id??null,product_spec,
     warnings:row.warnings||[],
     review_status:(row.warnings||[]).some(x=>needsReview.has(x))?"needs_review":"draft"
   };
 }
 const rowsSql = "SELECT s.sku_cong_ty,s.ten_goc_xnt,s.ten_goc_bang_gia,s.ten_san_pham,s.barcode,s.paper_size,s.product_spec,"+
-  "s.review_status,s.revision,s.family_id,f.family_label FROM fbmn_catalog.skus s "+
-  "LEFT JOIN fbmn_catalog.families f ON f.id=s.family_id ORDER BY s.sku_cong_ty LIMIT 20000";
+  "s.review_status,s.revision,s.family_id,f.family_label,s.category_id,c.category_label FROM fbmn_catalog.skus s "+
+  "LEFT JOIN fbmn_catalog.families f ON f.id=s.family_id "+
+  "LEFT JOIN fbmn_catalog.categories c ON c.id=s.category_id ORDER BY s.sku_cong_ty LIMIT 20000";
 async function transactional(db,work) {
   return db(async c=>{await c.query("BEGIN");try{
     const data=await work(c);await c.query("COMMIT");return data;
@@ -52,7 +74,7 @@ async function parsed(request) {
 export async function handleCatalogue({request,actor,db}) {
   const url=new URL(request.url);
   const route=url.pathname.slice("/v1/admin/catalogue/".length);
-  if(!["snapshot","skus","families","apply","group"].includes(route))
+  if(!["snapshot","skus","families","categories","apply","group"].includes(route))
     return fail("not_found",404);
   if(!roles.has(actor?.role))return fail("forbidden",403);
   if(url.search)return fail("invalid_query");
@@ -61,11 +83,14 @@ export async function handleCatalogue({request,actor,db}) {
   if(["apply","group"].includes(route) && actor.role!=="owner")
     return fail("owner_required",403);
   if(request.method==="GET"){
-    if(!["snapshot","skus","families"].includes(route))return fail("method_not_allowed",405);
+    if(!["snapshot","skus","families","categories"].includes(route))return fail("method_not_allowed",405);
     try{
-      const result=await db(c=>c.query(route==="families"?
+      const sql=route==="families"?
         "SELECT id::text AS id,family_label,revision FROM fbmn_catalog.families ORDER BY family_label LIMIT 3000":
-        rowsSql));
+        route==="categories"?
+        "SELECT id::text AS id,parent_id::text AS parent_id,category_label FROM fbmn_catalog.categories ORDER BY category_label LIMIT 1000":
+        rowsSql;
+      const result=await db(c=>c.query(sql));
       return reply(200,{data:{items:result.rows,database_queried:true}});
     }catch{return fail("catalogue_db_unavailable",503);}
   }
@@ -102,10 +127,14 @@ export async function handleCatalogue({request,actor,db}) {
     if(route==="skus" && request.method==="POST"){
       const row=safeDraft(input);
       const result=await transactional(db,async c=>{
+        if(row.category_id){
+          const selected=await c.query("SELECT id FROM fbmn_catalog.categories WHERE id=$1",[row.category_id]);
+          if(!selected.rowCount)throw Error("invalid_category");
+        }
         const saved=await c.query(
-          "INSERT INTO fbmn_catalog.skus(sku_cong_ty,ten_goc_xnt,ten_san_pham,barcode,paper_size,review_status) "+
-          "VALUES($1,$2,$3,$4,$5,'draft') RETURNING sku_cong_ty",
-          [row.sku_cong_ty,row.ten_goc_xnt,row.ten_san_pham,row.barcode,row.paper_size]);
+          "INSERT INTO fbmn_catalog.skus(sku_cong_ty,ten_goc_xnt,ten_san_pham,barcode,paper_size,review_status,category_id,product_spec) "+
+          "VALUES($1,$2,$3,$4,$5,'draft',$6,$7::jsonb) RETURNING sku_cong_ty",
+          [row.sku_cong_ty,row.ten_goc_xnt,row.ten_san_pham,row.barcode,row.paper_size,row.category_id,JSON.stringify(row.product_spec)]);
         await audit(c,actor.subject,"draft_create",{sku_cong_ty:row.sku_cong_ty});
         return saved.rows[0];
       });
@@ -114,23 +143,58 @@ export async function handleCatalogue({request,actor,db}) {
     if(route==="skus" && request.method==="PATCH"){
       if(!validSku(input?.sku_cong_ty)||!Number.isSafeInteger(input?.expected_revision)||
          input.expected_revision<1||typeof input?.ten_san_pham!=="string"||!validText(input?.ten_san_pham,1200)||
-         !["draft","needs_review","withdrawn"].includes(input.review_status))
-        return fail("invalid_update");
+         !["draft","needs_review","withdrawn"].includes(input.review_status) ||
+         !validText(input.barcode,1200) || !validText(input.paper_size,1200) ||
+         !validCategory(input.category_id))return fail("invalid_update");
+      let spec;
+      try{spec=safeProductSpec(input.product_spec);}catch{return fail("invalid_product_spec");}
+      const has=k=>Object.prototype.hasOwnProperty.call(input,k);
       const result=await transactional(db,async c=>{
+        if(input.category_id){
+          const selected=await c.query("SELECT id FROM fbmn_catalog.categories WHERE id=$1",[input.category_id]);
+          if(!selected.rowCount)throw Error("invalid_category");
+        }
         const saved=await c.query(
           "UPDATE fbmn_catalog.skus SET ten_san_pham=NULLIF($3,''),review_status=$4,"+
+          "barcode=CASE WHEN $5::boolean THEN NULLIF($6::text,'') ELSE barcode END,"+
+          "paper_size=CASE WHEN $7::boolean THEN NULLIF($8::text,'') ELSE paper_size END,"+
+          "category_id=CASE WHEN $9::boolean THEN $10::uuid ELSE category_id END,"+
+          "product_spec=product_spec || $11::jsonb,"+
           "revision=revision+1,updated_at=now() WHERE sku_cong_ty=$1 AND revision=$2 "+
           "AND review_status IN ('draft','needs_review') "+
           "AND (NULLIF(BTRIM($3),'') IS NOT NULL OR "+
           "NULLIF(BTRIM(ten_goc_xnt),'') IS NOT NULL OR "+
           "NULLIF(BTRIM(ten_goc_bang_gia),'') IS NOT NULL) "+
           "RETURNING sku_cong_ty,revision",
-          [input.sku_cong_ty,input.expected_revision,input.ten_san_pham,input.review_status]);
+          [input.sku_cong_ty,input.expected_revision,input.ten_san_pham,input.review_status,
+           has("barcode"),input.barcode??null,has("paper_size"),input.paper_size??null,
+           has("category_id"),input.category_id??null,JSON.stringify(spec)]);
         if(!saved.rowCount)throw Error("catalogue_conflict");
         await audit(c,actor.subject,"draft_update",{sku_cong_ty:input.sku_cong_ty});
         return saved.rows[0];
       });
       return reply(200,{data:result});
+    }
+    if(route==="categories" && request.method==="POST"){
+      if(actor.role!=="owner")return fail("owner_required",403);
+      if(typeof input?.category_label!=="string"||!input.category_label.trim()||
+         !validText(input.category_label,160)||!validCategory(input.parent_id))
+        return fail("invalid_category");
+      const result=await transactional(db,async c=>{
+        if(input.parent_id){
+          const parent=await c.query(
+            "SELECT id FROM fbmn_catalog.categories WHERE id=$1 AND parent_id IS NULL",
+            [input.parent_id]);
+          if(!parent.rowCount)throw Error("invalid_category");
+        }
+        const saved=await c.query(
+          "INSERT INTO fbmn_catalog.categories(category_label,parent_id) VALUES($1,$2) "+
+          "RETURNING id::text AS id,parent_id::text AS parent_id,category_label",
+          [input.category_label.trim(),input.parent_id??null]);
+        await audit(c,actor.subject,"category_create",{id:saved.rows[0].id});
+        return saved.rows[0];
+      });
+      return reply(201,{data:result});
     }
     if(route==="families" && request.method==="POST"){
       if(typeof input?.family_label!=="string" || !input.family_label.trim()||
@@ -166,6 +230,10 @@ export async function handleCatalogue({request,actor,db}) {
       return reply(200,{data:{grouped:count,published:0}});
     }
     return fail("method_not_allowed",405);
-  }catch(e){return fail(e?.message==="catalogue_conflict"?"catalogue_conflict":"catalogue_db_unavailable",
-    e?.message==="catalogue_conflict"?409:503);}
+  }catch(e){
+    if(e?.message==="invalid_category")return fail("invalid_category");
+    if(e?.message==="invalid_product_spec")return fail("invalid_product_spec");
+    const collision=e?.message==="catalogue_conflict"||e?.code==="23505";
+    return fail(collision?"catalogue_conflict":"catalogue_db_unavailable",collision?409:503);
+  }
 }

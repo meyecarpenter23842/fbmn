@@ -12,7 +12,7 @@ test("Product management lists all SKUs with search, not business review filters
   assert.match(manager,/<th>Hiển thị<\/th>/);
   assert.match(manager,/catalogue-image-placeholder/);
   assert.doesNotMatch(manager,/Chỉ xem mã cần kiểm tra|Cần rà soát|Cần kiểm tra|catalogue-editor-advanced|setEditStatus|setStatus/);
-  assert.match(manager,/\[items,query\]/);
+  assert.match(manager,/\[items,query,categories,categoryFilter\]/);
 });
 
 test("All routine operations keep real popup forms with a compact row actions menu",()=>{

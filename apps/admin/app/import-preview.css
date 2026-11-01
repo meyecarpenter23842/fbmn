@@ -137,3 +137,10 @@
 .catalogue-list-table td.catalogue-name-cell>b{display:block;color:#34355e;font-size:12px;line-height:1.5}
 .fb-product-modal-content .import-kpis-simple{grid-template-columns:repeat(4,minmax(0,1fr))}
 @media(max-width:780px){.fb-product-modal-content .import-kpis-simple{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+/* ADM-05 P2: optional paper / stationery specification fields inside existing popups. */
+.catalogue-spec-details{grid-column:1/-1;border:1px solid #e4e4f0;border-radius:11px;padding:13px;background:#faf9fe}
+.catalogue-spec-details>summary{cursor:pointer;font-size:12px;font-weight:700;color:#564a93}
+.catalogue-spec-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:15px}
+.catalogue-spec-grid label{min-width:0}
+@media(max-width:620px){.catalogue-spec-grid{grid-template-columns:1fr}}
