@@ -107,50 +107,56 @@ export default function CatalogueManager({onImport}:{onImport:()=>void}){
   });
   return <section className="catalogue-manager">
     <div className="page-title"><div><h1>Quản lý sản phẩm</h1>
-      <p>Catalogue nháp Neon · SKU công ty là mã gốc, kể cả số 0 đầu · Chưa xuất bản</p></div>
+      <p>Thêm, tìm và sửa sản phẩm. Mã công ty giữ nguyên, kể cả số 0 đầu.</p></div>
       <div className="action-row">
         <button type="button" className="import-btn import-secondary" onClick={()=>void refresh()} disabled={busy||loading}>Làm mới</button>
-        <button type="button" className="import-btn import-secondary" onClick={onImport}>Nhập Excel</button>
-        <button type="button" className="import-btn import-primary" onClick={()=>setCreate(!create)}>Thêm SKU nháp</button>
+        <button type="button" className="import-btn import-primary" onClick={()=>setCreate(!create)}>Thêm sản phẩm</button>
       </div>
     </div>
-    <div className="import-kpis"><div><small>SKU đã lưu trong Neon</small><strong>{items.length}</strong><span>Không bao gồm Excel chưa nhập</span></div>
-      <div><small>Bản nháp</small><strong>{items.filter(x=>x.review_status==="draft").length}</strong></div>
-      <div><small>Cần rà soát</small><strong>{items.filter(x=>x.review_status==="needs_review").length}</strong></div>
-      <div><small>Nhóm mẫu</small><strong>{families.length}</strong><span>Chỉ nhóm theo lựa chọn của người quản trị</span></div>
-      <div><small>Đã xuất bản từ Admin</small><strong>0</strong><span>Chưa kích hoạt xuất bản</span></div>
+    <div className="import-kpis catalogue-simple-kpis">
+      <div><small>Tổng sản phẩm</small><strong>{items.length}</strong></div>
+      <div><small>Cần kiểm tra</small><strong>{items.filter(x=>x.review_status==="needs_review").length}</strong></div>
+      <div><small>Nhóm mẫu</small><strong>{families.length}</strong></div>
     </div>
+    <details className="catalogue-import-advanced">
+      <summary>Nhập dữ liệu ban đầu từ Excel</summary>
+      <p>Chỉ dành cho người quản trị khi cập nhật hàng loạt. Mỗi lần chọn một file Excel; hệ thống tự đọc sheet đối chiếu cần thiết. Khách hàng không thao tác bước này.</p>
+      <button type="button" className="import-btn import-secondary" onClick={onImport}>Chọn file Excel</button>
+    </details>
     {error&&<div className="import-error" role="alert">{error}</div>}
     {message&&<div className="import-review-banner" role="status"><b>{message}</b></div>}
     {create&&<div className="catalogue-editor">
-      <h3>Thêm SKU công ty — bản nháp</h3>
+      <h3>Thêm sản phẩm</h3>
       <label>Mã SKU công ty (không tự sửa)<input value={sku} onChange={e=>setSku(e.target.value)} placeholder="Ví dụ 0114"/></label>
       <label>Tên sản phẩm<input value={name} onChange={e=>setName(e.target.value)} /></label>
       <label>Khổ<input value={size} onChange={e=>setSize(e.target.value)} /></label>
-      <button type="button" className="import-btn import-primary" disabled={busy} onClick={add}>Lưu bản nháp</button>
+      <button type="button" className="import-btn import-primary" disabled={busy} onClick={add}>Lưu sản phẩm</button>
     </div>}
     {editing&&<div className="catalogue-editor">
-      <h3>Sửa bản nháp · {editing.sku_cong_ty}</h3>
-      <p><strong>Mã công ty không được chỉnh sửa</strong>. Nếu tên/mẫu sai, sửa tên hoặc đưa vào cần rà soát.</p>
+      <h3>Sửa sản phẩm · {editing.sku_cong_ty}</h3>
+      <p><strong>Mã công ty được giữ nguyên.</strong> Chỉnh sửa tên mà không thay đổi SKU.</p>
       <label>Tên sản phẩm<input value={editName} onChange={e=>setEditName(e.target.value)}/></label>
-      <label>Trạng thái<select value={editStatus} onChange={e=>setEditStatus(e.target.value as typeof editStatus)}>
-        <option value="draft">Bản nháp</option><option value="needs_review">Cần rà soát</option>
-        <option value="withdrawn">Ngừng dùng (xóa mềm)</option></select></label>
+      <details className="catalogue-editor-advanced">
+        <summary>Tùy chọn quản trị (cần kiểm tra / ngừng sử dụng)</summary>
+        <label>Trạng thái nội bộ<select value={editStatus} onChange={e=>setEditStatus(e.target.value as typeof editStatus)}>
+          <option value="draft">Bình thường</option><option value="needs_review">Cần kiểm tra</option>
+          <option value="withdrawn">Ngừng sử dụng (ẩn, không xóa mã)</option>
+        </select></label>
+      </details>
       <button type="button" className="import-btn import-primary" disabled={busy} onClick={save}>Lưu thay đổi</button>
       <button type="button" className="import-btn import-secondary" onClick={()=>setEditing(null)}>Hủy</button>
     </div>}
     <div className="import-controls">
       <label className="import-search-label">Tìm mã công ty / tên / nhóm
         <input value={query} onChange={e=>{setQuery(e.target.value);setPage(1)}} placeholder="0114, C5921…"/></label>
-      <label className="import-filter-label">Trạng thái
-        <select value={status} onChange={e=>{setStatus(e.target.value);setPage(1)}}>
-          <option value="all">Tất cả</option><option value="draft">Bản nháp</option>
-          <option value="needs_review">Cần rà soát</option><option value="withdrawn">Ngừng dùng</option>
-          <option value="approved">Đã duyệt</option></select></label>
+      <button type="button" className={"import-btn "+(status==="needs_review"?"import-primary":"import-secondary")}
+        aria-pressed={status==="needs_review"} onClick={()=>{setStatus(status==="needs_review"?"all":"needs_review");setPage(1)}}>
+        {status==="needs_review"?"Hiện tất cả sản phẩm":"Chỉ xem mã cần kiểm tra"}
+      </button>
     </div>
     <div className="import-table-wrap"><table className="import-table"><thead><tr>
       <th>Chọn nhóm</th><th>Mã công ty (nguyên gốc)</th><th>Tên sản phẩm</th>
-      <th>Quy cách</th><th>Nhóm mẫu</th><th>Trạng thái</th><th>Thao tác</th>
+      <th>Quy cách</th><th>Nhóm mẫu</th><th>Lưu ý</th><th>Thao tác</th>
     </tr></thead><tbody>
       {visible.map(row=><tr key={row.sku_cong_ty}>
         <td><input type="checkbox" aria-label={"Chọn "+row.sku_cong_ty}
@@ -161,7 +167,7 @@ export default function CatalogueManager({onImport}:{onImport:()=>void}){
         <td><b>{row.ten_san_pham||row.ten_goc_xnt||"Chưa có tên"}</b></td>
         <td>{[row.paper_size,row.product_spec?.pages,row.product_spec?.ruling].filter(Boolean).join(" · ")||"—"}</td>
         <td>{row.family_label||"Chưa nhóm"}</td>
-        <td>{row.review_status==="draft"?"Bản nháp":row.review_status==="needs_review"?"Cần rà soát":row.review_status==="withdrawn"?"Ngừng dùng":"Đã duyệt"}</td>
+        <td>{row.review_status==="needs_review"?"Cần kiểm tra":row.review_status==="withdrawn"?"Đã ẩn":"—"}</td>
         <td><button type="button" className="import-detail-btn"
           disabled={!["draft","needs_review"].includes(row.review_status)}
           onClick={()=>{setEditing(row);setEditName(row.ten_san_pham||"");setEditStatus(row.review_status as typeof editStatus)}}>Sửa</button></td>
@@ -173,8 +179,8 @@ export default function CatalogueManager({onImport}:{onImport:()=>void}){
       <button className="import-btn import-secondary" disabled={page<=1} onClick={()=>setPage(x=>Math.max(x-1,1))}>Trước</button>
       <button className="import-btn import-secondary" disabled={page>=pages} onClick={()=>setPage(x=>Math.min(x+1,pages))}>Sau</button>
     </div></div>
-    <div className="catalogue-editor">
-      <h3>Nhóm nhiều mẫu cùng quy cách (chọn thủ công)</h3>
+    <details className="catalogue-editor catalogue-variant-details">
+      <summary>Nhóm nhiều mẫu cùng một sản phẩm (tùy chọn)</summary>
       <p>Chọn ít nhất 2 SKU trong bảng. Ví dụ <b>0114</b> và <b>0714</b> vẫn là hai mã riêng, chỉ được chung thẻ khi đúng nhóm do anh xác nhận.</p>
       <label>Nhóm có sẵn<select value={groupId} onChange={e=>setGroupId(e.target.value)}>
         <option value="">Chọn nhóm</option>{families.map(g=><option key={g.id} value={g.id}>{g.family_label}</option>)}
@@ -182,7 +188,7 @@ export default function CatalogueManager({onImport}:{onImport:()=>void}){
       <button className="import-btn import-primary" type="button" disabled={busy||!groupId||selected.length<2} onClick={assign}>Gắn {selected.length} SKU vào nhóm</button>
       <label>Tạo nhóm mới<input value={newFamily} onChange={e=>setNewFamily(e.target.value)} placeholder="Tên nhóm / quy cách đã xác minh"/></label>
       <button className="import-btn import-secondary" type="button" disabled={busy||!newFamily.trim()} onClick={addFamily}>Tạo nhóm</button>
-    </div>
+    </details>
     <p className="import-footnote">Không có chức năng xuất bản từ màn hình này. Dữ liệu NET, tồn kho và hình gốc không trả về từ API quản lý sản phẩm.</p>
   </section>;
 }
