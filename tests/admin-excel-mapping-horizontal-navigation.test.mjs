@@ -1,0 +1,47 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import {readFileSync} from "node:fs";
+const read=path=>readFileSync(new URL("../"+path,import.meta.url),"utf8");
+test("Excel mapping keeps pinned immutable SKU while exposing all columns via visible buttons",()=>{
+  const ui=read("apps/admin/app/catalogue-import-preview.tsx");
+  const css=read("apps/admin/app/import-preview.css");
+  assert.match(ui,/aria-label="Điều hướng ngang các cột Excel"/);
+  assert.match(ui,/aria-label="Xem các cột Excel phía trước"/);
+  assert.match(ui,/aria-label="Xem các cột Excel tiếp theo"/);
+  assert.match(ui,/Cột tiếp/);
+  assert.match(ui,/Cột trước/);
+  assert.match(ui,/role="status" aria-live="polite"/);
+  assert.match(ui,/mappingViewport\.first/);
+  assert.match(ui,/mappingViewport\.last/);
+  assert.match(ui,/columns\.length/);
+  assert.match(ui,/Mã công ty · khóa đối chiếu/);
+  assert.match(ui,/role="region" aria-label="Bảng Excel có thể cuộn ngang" tabIndex=\{0\}/);
+  assert.match(ui,/ref=\{mappingScrollRef\}/);
+  assert.match(css,/\.catalogue-mapping-table th:first-child,\.catalogue-mapping-table td:first-child/);
+  assert.match(css,/position:sticky;left:0/);
+});
+test("mapping navigation scrolls one or more complete columns, updates at boundaries and cleans up",()=>{
+  const ui=read("apps/admin/app/catalogue-import-preview.tsx");
+  const css=read("apps/admin/app/import-preview.css");
+  assert.match(ui,/Math\.floor\(\(viewport\.clientWidth-columnWidth\)\/columnWidth\)/);
+  assert.match(ui,/viewport\.scrollBy\(\{left:direction\*count\*columnWidth,behavior:"smooth"\}\)/);
+  assert.match(ui,/viewport\.addEventListener\("scroll",update,\{passive:true\}\)/);
+  assert.match(ui,/viewport\.removeEventListener\("scroll",update\)/);
+  assert.match(ui,/observer\?\.disconnect\(\)/);
+  assert.match(ui,/window\.addEventListener\("resize",update\)/);
+  assert.match(ui,/disabled=\{!mappingViewport\.canPrev\}/);
+  assert.match(ui,/disabled=\{!mappingViewport\.canNext\}/);
+  assert.match(css,/\.catalogue-mapping-nav\{/);
+  assert.match(css,/\.catalogue-mapping-scroll::-webkit-scrollbar\{height:16px\}/);
+  assert.match(css,/scrollbar-color:#7263bf #e9e5f5/);
+});
+test("navigation never creates any database write or new product fields",()=>{
+  const ui=read("apps/admin/app/catalogue-import-preview.tsx");
+  const preview=read("apps/admin/app/api/catalogue/preview/route.ts");
+  const sync=read("apps/admin/app/api/catalogue/sync/route.ts");
+  assert.match(ui,/mappingReady/);
+  assert.match(ui,/form\.append\("mapping",JSON\.stringify\(mapping\)\)/);
+  assert.match(preview,/previewFingerprint/);
+  assert.match(sync,/digest!==fingerprint/);
+  assert.doesNotMatch(ui.slice(ui.indexOf("function moveMapping"),ui.indexOf("  const mappingReady")),/fetch\(|localStorage|write|save|mutation/i);
+});

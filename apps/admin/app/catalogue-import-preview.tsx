@@ -95,6 +95,10 @@ function downloadCsv(items: Item[]) {
 }
 export default function CatalogueImportPreview({onBusyChange,onSaved}:{onBusyChange?:(value:boolean)=>void;onSaved?:()=>void}={}) {
   const fileRef=useRef<HTMLInputElement>(null);
+  const mappingScrollRef=useRef<HTMLDivElement|null>(null);
+  const [mappingViewport,setMappingViewport]=useState({
+    first:2,last:2,canPrev:false,canNext:false
+  });
   const inspectionSeq=useRef(0);
   const [columns,setColumns]=useState<ProfileColumn[]>([]);
   const [mapping,setMapping]=useState<string[]>([]);
@@ -112,6 +116,44 @@ export default function CatalogueImportPreview({onBusyChange,onSaved}:{onBusyCha
   const [page,setPage]=useState(1);
   const [expanded,setExpanded]=useState<number|null>(null);
   useEffect(()=>{onBusyChange?.(busy||approving||inspecting)},[busy,approving,inspecting,onBusyChange]);
+  // Scrollbars can be hidden by OS/browser settings. Keep independent, always
+  // visible navigation controls outside the horizontally scrolling grid.
+  useEffect(()=>{
+    const viewport=mappingScrollRef.current;
+    if(!viewport||columns.length===0)return;
+    const update=()=>{
+      const firstHeader=viewport.querySelector<HTMLElement>(".catalogue-mapping-table th");
+      const step=firstHeader?.getBoundingClientRect().width||210;
+      const max=Math.max(0,viewport.scrollWidth-viewport.clientWidth);
+      const offset=Math.max(0,Math.min(viewport.scrollLeft,max));
+      const first=Math.min(columns.length,Math.max(2,Math.floor((offset+1)/step)+2));
+      const nonStickyWidth=Math.max(step,viewport.clientWidth-step);
+      const visible=Math.max(1,Math.ceil(nonStickyWidth/step));
+      setMappingViewport({
+        first,last:Math.min(columns.length,first+visible-1),
+        canPrev:offset>5,canNext:offset<max-5
+      });
+    };
+    viewport.addEventListener("scroll",update,{passive:true});
+    window.addEventListener("resize",update);
+    const observer=typeof ResizeObserver==="undefined"?null:new ResizeObserver(update);
+    observer?.observe(viewport);
+    update();
+    return ()=>{
+      observer?.disconnect();
+      viewport.removeEventListener("scroll",update);
+      window.removeEventListener("resize",update);
+    };
+  },[columns]);
+  function moveMapping(direction:-1|1){
+    const viewport=mappingScrollRef.current;
+    if(!viewport)return;
+    const columnWidth=viewport.querySelector<HTMLElement>(".catalogue-mapping-table th")
+      ?.getBoundingClientRect().width||210;
+    // A whole number of columns per click; preserve the pinned SKU column.
+    const count=Math.max(1,Math.floor((viewport.clientWidth-columnWidth)/columnWidth));
+    viewport.scrollBy({left:direction*count*columnWidth,behavior:"smooth"});
+  }
   const mappingReady=columns.length>=2&&mapping.length===columns.length&&mapping[0]==="sku"&&
     mapping.slice(1).some(key=>key!=="ignore")&&
     new Set(mapping.slice(1).filter(key=>key!=="ignore")).size===
@@ -326,7 +368,26 @@ export default function CatalogueImportPreview({onBusyChange,onSaved}:{onBusyCha
           <p>Cột 1 cố định là mã công ty. Với các cột còn lại, chọn trường cần sửa hoặc Bỏ qua. Mỗi trường chỉ được dùng một lần.</p></div>
         <span>{mapping.slice(1).filter(v=>v!=="ignore").length} trường được chọn</span>
       </div>
-      <div className="catalogue-mapping-scroll">
+      <div className="catalogue-mapping-nav" role="group" aria-label="Điều hướng ngang các cột Excel">
+        <span className="catalogue-mapping-position" role="status" aria-live="polite">
+          {columns.length>1?
+            "Đang xem cột "+mappingViewport.first+"–"+mappingViewport.last+
+              " / "+columns.length+" (mã công ty luôn cố định)":
+            "Mã công ty luôn cố định"}
+        </span>
+        <div className="catalogue-mapping-nav-actions">
+          <button type="button" aria-label="Xem các cột Excel phía trước"
+            onClick={()=>moveMapping(-1)} disabled={!mappingViewport.canPrev}>
+            <span aria-hidden="true">‹</span> Cột trước
+          </button>
+          <button type="button" aria-label="Xem các cột Excel tiếp theo"
+            onClick={()=>moveMapping(1)} disabled={!mappingViewport.canNext}>
+            Cột tiếp <span aria-hidden="true">›</span>
+          </button>
+        </div>
+      </div>
+      <div className="catalogue-mapping-scroll" ref={mappingScrollRef}
+        role="region" aria-label="Bảng Excel có thể cuộn ngang" tabIndex={0}>
         <table className="catalogue-mapping-table"><thead><tr>
           {columns.map((col,i)=><th key={col.index}>
             <span>Cột {col.index} · {col.header||"Không có tiêu đề"}</span>
@@ -342,7 +403,7 @@ export default function CatalogueImportPreview({onBusyChange,onSaved}:{onBusyCha
         </tbody></table>
       </div>
       {!mappingReady&&<small className="import-bad">Chọn ít nhất một thuộc tính ngoài mã công ty và không gán trùng trường.</small>}
-      <small>Ghép cột chỉ dùng cho lượt nhập hiện tại. Thay đổi lựa chọn sẽ hủy bản xem trước cũ; không sửa dữ liệu trước khi xác nhận.</small>
+      <small>Nhấn Cột tiếp / Cột trước để xem toàn bộ cột, hoặc kéo thanh ngang bên dưới bảng. Ghép cột chỉ dùng cho lượt nhập hiện tại. Thay đổi lựa chọn sẽ hủy bản xem trước cũ; không sửa dữ liệu trước khi xác nhận.</small>
     </section>}
     {error&&<div className="import-error" role="alert">{error}</div>}
     {receipt&&<div className="import-review-banner" role="status"><b>{receipt}</b></div>}
