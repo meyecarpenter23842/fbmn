@@ -115,9 +115,9 @@ export async function POST(request: Request) {
     if(typeof raw!=="string"||raw.length>500)return fail(400,"invalid_clear_fields");
     try{
       const decoded:unknown=JSON.parse(raw);
-      const allowed=new Set(["barcode","size","pages","ruling","category_label",
+      const allowed=new Set(["barcode","size","pages","ruling","category_label","category_code","family_code",
         "gsm","cover_type","unit","packaging","units_per_pack"]);
-      if(!Array.isArray(decoded)||decoded.length>10||
+      if(!Array.isArray(decoded)||decoded.length>12||
          decoded.some(key=>typeof key!=="string"||!allowed.has(key))||
          new Set(decoded).size!==decoded.length)
         return fail(400,"invalid_clear_fields");
@@ -159,11 +159,19 @@ export async function POST(request: Request) {
       });
       if(!categoryResponse.ok)return fail(503,"categories_unavailable");
       const categories=(await categoryResponse.json())?.data?.items;
+      const familyResponse=await fetch(base+"/v1/admin/catalogue/families",{
+        method:"GET",cache:"no-store",redirect:"manual",
+        headers:{Authorization:"Bearer "+match[1],Accept:"application/json"},
+        signal:AbortSignal.timeout(9000),
+      });
       if(!Array.isArray(categories)||categories.length>1000)return fail(503,"categories_unavailable");
+      if(!familyResponse.ok)return fail(503,"families_unavailable");
+      const families=(await familyResponse.json())?.data?.items;
+      if(!Array.isArray(families)||families.length>3000)return fail(503,"families_unavailable");
       const mappedFields=columnMapping?.filter(key=>key!=="sku"&&key!=="ignore")
         .map(key=>key==="size"?"paper_size":key==="title"?"ten_san_pham":key);
       const effectiveClear=clearFields?.map(key=>key==="size"?"paper_size":key);
-      const plan=planSheetSync(parsed,existing,categories,{mappedFields,clearFields:effectiveClear});
+      const plan=planSheetSync(parsed,existing,categories,{mappedFields,clearFields:effectiveClear,families});
       const previewFingerprint=createHash("sha256")
         .update(bytes).update(JSON.stringify(columnMapping??null))
         .update(JSON.stringify(clearFields??null))

@@ -6,6 +6,13 @@ import AdminToast from "./admin-toast";
 
 type RowStatus = "create" | "update" | "unchanged" | "conflict" | "error";
 type ProfileColumn={index:number;header:string;suggested:string;samples:string[]};
+const SYNC_REASON_LABELS:Record<string,string>={
+  category_code_not_found:"Mã danh mục không tồn tại. Kiểm tra mã DM-... trên trang Danh mục.",
+  family_code_not_found:"Mã nhóm mẫu không tồn tại. Kiểm tra mã NM-... trên trang Nhóm mẫu.",
+  category_code_name_mismatch:"Mã danh mục và tên danh mục không khớp. Hãy sửa Excel hoặc bỏ qua một cột.",
+  category_not_found_or_ambiguous:"Tên danh mục không tìm thấy hoặc bị trùng. Nên cập nhật bằng mã danh mục.",
+  sku_locked_or_revision_invalid:"Sản phẩm đang khóa hoặc dữ liệu đã thay đổi. Tải lại rồi xem trước.",
+};
 const XLSX_INSPECT_ERRORS:Record<string,string>={
   legacy_reconciliation_sheet:"Đây là file đối chiếu 613 SKU có cột XNT / bảng giá, không phải mẫu cập nhật thông thường. Hãy chọn tab Nhập mới / đồng bộ để dùng đúng luồng nhập đối chiếu.",
   multiple_worksheets:"File có nhiều worksheet. Chế độ Cập nhật hàng loạt chỉ nhận một worksheet; dùng tab Nhập mới / đồng bộ cho file đối chiếu nhiều sheet.",
@@ -29,6 +36,8 @@ const COLUMN_FIELDS=[
   {key:"pages",label:"Số trang"},
   {key:"ruling",label:"Dòng kẻ"},
   {key:"category_label",label:"Danh mục cha / con"},
+  {key:"category_code",label:"Mã danh mục (DM-...)"},
+  {key:"family_code",label:"Mã nhóm mẫu (NM-...)"},
   {key:"gsm",label:"Định lượng GSM"},
   {key:"cover_type",label:"Loại bìa"},
   {key:"unit",label:"Đơn vị tính"},
@@ -534,7 +543,7 @@ export default function CatalogueImportPreview({onBusyChange,onSaved}:{onBusyCha
               onClick={()=>setExpanded(expanded===item.row?null:item.row)}>{expanded===item.row?"Thu gọn":"Chi tiết"}</button>}
             {expanded===item.row&&<div className="import-details">
               <b>Dòng Excel {item.row}</b>
-              {item.reason&&<span>{item.reason}</span>}
+              {item.reason&&<span>{SYNC_REASON_LABELS[item.reason]||item.reason}</span>}
               {item.changes.length>0&&<span>Thay đổi: {item.changes.join(", ")}</span>}
               {!!item.diffs?.length&&<table className="import-diff-table"><thead>
                 <tr><th>Trường</th><th>Giá trị cũ</th><th>Giá trị mới</th></tr></thead><tbody>

@@ -15,10 +15,10 @@ type SKU={sku_cong_ty:string;ten_san_pham:string|null;ten_goc_xnt:string|null;te
   family_id:string|null;family_label:string|null;media_count?:number;
   cover_asset_id?:string|null;cover_sha256?:string|null;
   product_spec?:Partial<Omit<SpecFields,"paper_size"|"barcode"|"category_id">>};
-type Family={id:string;family_label:string;revision?:number};
+type Family={id:string;family_code:string;family_label:string;revision?:number};
 type Visibility={sku_cong_ty:string;channel_code:"public_web"|"dealer_app"|"consumer_app";state:string;revision:number};
 const CHANNELS=[{code:"public_web",label:"Web"},{code:"dealer_app",label:"Đại lý"},{code:"consumer_app",label:"Tiêu dùng"}] as const;
-type Category={id:string;parent_id:string|null;category_label:string};
+type Category={id:string;parent_id:string|null;category_code:string;category_label:string};
 type SpecFields={barcode:string;paper_size:string;category_id:string;pages:string;ruling:string;
   gsm:string;cover_type:string;packaging:string;unit:string;units_per_pack:string;
   short_description:string;long_description:string};
@@ -47,7 +47,7 @@ function CatalogueFields({spec,onChange,categories}:{spec:SpecFields;onChange:(v
   return <>
     <label>Danh mục<select value={spec.category_id} onChange={e=>set("category_id",e.target.value)}>
       <option value="">Chưa phân loại</option>
-      {options.map(c=><option value={c.id} key={c.id}>{c.parent_id?"↳ ":""}{c.category_label}</option>)}
+      {options.map(c=><option value={c.id} key={c.id}>{c.category_code} · {c.category_code} · {c.parent_id?"↳ ":""}{c.category_label}</option>)}
     </select></label>
     <label>Khổ<input value={spec.paper_size} onChange={e=>set("paper_size",e.target.value)} placeholder="A4, A5, B5…"/></label>
     <label>Mã vạch<input value={spec.barcode} onChange={e=>set("barcode",e.target.value)} placeholder="Có thể trùng giữa SKU"/></label>

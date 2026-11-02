@@ -2,7 +2,8 @@ import ExcelJS from "exceljs";
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
 const HDR=["Mã công ty","Tên sản phẩm","Mã vạch","Khổ","Số trang","Dòng kẻ",
-  "Danh mục","Định lượng GSM","Loại bìa","Đơn vị tính","Quy cách đóng gói","Số đơn vị / đóng gói"];
+  "Danh mục","Định lượng GSM","Loại bìa","Đơn vị tính","Quy cách đóng gói","Số đơn vị / đóng gói",
+  "Mã danh mục","Mã nhóm mẫu"];
 const privateHeaders={"Cache-Control":"private, no-store","X-Content-Type-Options":"nosniff"};
 const fail=(status:number,code:string)=>Response.json({error:{code}},{status,headers:privateHeaders});
 function baseUrl(){
@@ -63,7 +64,8 @@ export async function GET(request:Request){
     cell(row,"ten_san_pham")||cell(row,"ten_goc_xnt")||cell(row,"ten_goc_bang_gia"),
     cell(row,"barcode"),cell(row,"paper_size"),cell(row,"pages"),cell(row,"ruling"),
     pathFor(row.category_id),cell(row,"gsm"),cell(row,"cover_type"),cell(row,"unit"),
-    cell(row,"packaging"),cell(row,"units_per_pack")
+    cell(row,"packaging"),cell(row,"units_per_pack"),
+    cell(row,"category_code"),cell(row,"family_code")
   ]);
   const name="Futurebook_DANH_MUC_SAN_PHAM_1_SHEET";
   if(format==="csv"){
@@ -72,7 +74,7 @@ export async function GET(request:Request){
       "Content-Disposition":'attachment; filename="'+name+'.csv"'}});
   }
   const book=new ExcelJS.Workbook();const sheet=book.addWorksheet("SAN PHAM");
-  sheet.addRow(HDR);sheet.getColumn(1).numFmt="@";sheet.getColumn(3).numFmt="@";sheet.getColumn(12).numFmt="@";
+  sheet.addRow(HDR);sheet.getColumn(1).numFmt="@";sheet.getColumn(3).numFmt="@";sheet.getColumn(12).numFmt="@";sheet.getColumn(13).numFmt="@";sheet.getColumn(14).numFmt="@";
   sheet.getColumn(1).width=20;sheet.getColumn(2).width=46;sheet.getColumn(3).width=22;
   sheet.getColumn(4).width=18;sheet.getColumn(5).width=16;sheet.getColumn(6).width=22;
   for(let col=7;col<=HDR.length;col++)sheet.getColumn(col).width=col===7?38:23;
@@ -81,6 +83,8 @@ export async function GET(request:Request){
     sheet.getRow(n).getCell(1).numFmt="@";
     sheet.getRow(n).getCell(3).numFmt="@";
     sheet.getRow(n).getCell(12).numFmt="@";
+    sheet.getRow(n).getCell(13).numFmt="@";
+    sheet.getRow(n).getCell(14).numFmt="@";
   }
   sheet.getRow(1).font={bold:true};
   sheet.views=[{state:"frozen",ySplit:1}];

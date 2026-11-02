@@ -104,7 +104,7 @@ export const SIMPLE_SHEET = "SAN PHAM";
 const SIMPLE_HEADERS = Object.freeze({
   sku:"Mã công ty", title:"Tên sản phẩm", barcode:"Mã vạch",
   size:"Khổ", pages:"Số trang", ruling:"Dòng kẻ",
-  category_label:"Danh mục",gsm:"Định lượng GSM",cover_type:"Loại bìa",unit:"Đơn vị tính",
+  category_label:"Danh mục",category_code:"Mã danh mục",family_code:"Mã nhóm mẫu",gsm:"Định lượng GSM",cover_type:"Loại bìa",unit:"Đơn vị tính",
   packaging:"Quy cách đóng gói",units_per_pack:"Số đơn vị / đóng gói",
 });
 // A routine 1-sheet workbook may have any worksheet name (Sheet1, Sản phẩm,
@@ -175,7 +175,7 @@ function routineWorkbookSheet(workbook,options={}){
 }
 // One-sheet mapping is opt-in; never infer a company SKU from arbitrary columns.
 export const COLUMN_MAPPING_KEYS=Object.freeze([
-  "sku","ignore","title","barcode","size","pages","ruling","category_label",
+  "sku","ignore","title","barcode","size","pages","ruling","category_label","category_code","family_code",
   "gsm","cover_type","unit","packaging","units_per_pack"
 ]);
 export function validateColumnMapping(mapping,columnCount){
@@ -226,8 +226,7 @@ export async function inspectXlsxColumns(bytes){
   return {source_sheet:SIMPLE_SHEET,worksheet_name:sheet.name,header_row:headerRow,
     columns,total_rows:Math.max(0,sheet.rowCount-headerRow)};
 }
-// Routine imports deliberately do not infer or store family/group membership.
-// Those relationships require explicit confirmation in the Admin.
+// Group membership is only recognized via an explicitly mapped, stable family code. // No name guessing.
 function readSingleSheet(sheet,sourceFile,columnMapping,layout) {
   const {headerRow,columnCount}=layout||routineLayout(sheet);
   if (sheet.rowCount-headerRow > MAX_SHEET_ROWS) throw new Error("too_many_rows");
@@ -275,7 +274,7 @@ function readSingleSheet(sheet,sourceFile,columnMapping,layout) {
       size=cellText(cell(SIMPLE_HEADERS.size));
       pages=cellText(cell(SIMPLE_HEADERS.pages));
       ruling=cellText(cell(SIMPLE_HEADERS.ruling));
-      for(const key of ["category_label","gsm","cover_type","unit","packaging","units_per_pack"]){
+      for(const key of ["category_label","category_code","family_code","gsm","cover_type","unit","packaging","units_per_pack"]){
         if(headings.has(SIMPLE_HEADERS[key])){
           optional[key]=cellText(cell(SIMPLE_HEADERS[key]));
         }

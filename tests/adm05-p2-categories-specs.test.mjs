@@ -13,8 +13,8 @@ function memoryDb(){
   const queries=[];
   const db=async fn=>fn({query:async(sql,args=[])=>{
     queries.push({sql,args});
-    if(sql.includes("RETURNING id::text AS id,parent_id::text AS parent_id,category_label"))
-      return {rowCount:1,rows:[{id:uuid,parent_id:args[1],category_label:args[0]}]};
+    if(sql.includes("RETURNING id::text AS id,parent_id::text AS parent_id,category_code,category_label"))
+      return {rowCount:1,rows:[{id:uuid,parent_id:args[1],category_code:"DM-0001",category_label:args[0]}]};
     if(sql.startsWith("SELECT id FROM fbmn_catalog.categories"))
       return {rowCount:1,rows:[{id:args[0]}]};
     if(sql.includes("RETURNING sku_cong_ty")&&sql.startsWith("INSERT"))

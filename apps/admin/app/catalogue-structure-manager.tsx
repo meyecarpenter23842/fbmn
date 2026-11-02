@@ -1,8 +1,8 @@
 "use client";
 import {useMemo,useState} from "react";
 
-export type StructureCategory={id:string;parent_id:string|null;category_label:string};
-export type StructureFamily={id:string;family_label:string;revision?:number};
+export type StructureCategory={id:string;parent_id:string|null;category_code:string;category_label:string};
+export type StructureFamily={id:string;family_code:string;family_label:string;revision?:number};
 export type StructureSku={sku_cong_ty:string;revision:number;category_id:string|null;
   family_id:string|null;review_status:string;ten_san_pham:string|null;
   ten_goc_xnt:string|null;ten_goc_bang_gia?:string|null};
@@ -52,7 +52,25 @@ export default function CatalogueStructureManager({
       (s.ten_san_pham||s.ten_goc_xnt||"").toLocaleLowerCase("vi").includes(addSku.toLocaleLowerCase("vi")))).slice(0,30);
   const select=(id:string)=>{setSelectedId(id);setRename("");setMemberSearch("");setAddSku("");};
   const choosePane=(next:Pane)=>{setPane(next);select("");setSearch("");setNewName("");setParentId("");};
-  const matches=(label:string)=>label.toLocaleLowerCase("vi").includes(search.trim().toLocaleLowerCase("vi"));
+  const matches=(label:string,code:string)=>`${code} ${label}`.toLocaleLowerCase("vi").includes(search.trim().toLocaleLowerCase("vi"));
+  const exportCodes=()=>{
+    const records=[
+      ...categories.map(c=>["Danh mục",c.category_code,c.category_label,
+        categories.find(p=>p.id===c.parent_id)?.category_code||"",String(directCategoryCounts[c.id]||0)]),
+      ...families.map(f=>["Nhóm mẫu",f.family_code,f.family_label,"",String(familyCounts[f.id]||0)])
+    ];
+    const safe=(value:string)=>{
+      const text=/^[\s]*[=+@\-\t\r]/.test(value)?"'"+value:value;
+      return '"'+text.replaceAll('"','""')+'"';
+    };
+    const csv="\uFEFF"+[["Loại","Mã cố định","Tên","Mã danh mục cha","Số SKU"],...records]
+      .map(row=>row.map(safe).join(",")).join("\r\n")+"\r\n";
+    const url=URL.createObjectURL(new Blob([csv],{type:"text/csv;charset=utf-8"}));
+    const a=document.createElement("a");a.href=url;
+    a.download="Futurebook_MA_DANH_MUC_NHOM_MAU.csv";
+    document.body.appendChild(a);a.click();a.remove();
+    URL.revokeObjectURL(url);
+  };
   const requestMove=(sku:StructureSku,familyId:string|null)=>{
     if(!window.confirm((familyId?"Gắn":"Gỡ")+" mã "+sku.sku_cong_ty+
       (familyId?" vào nhóm "+(selectedFamily?.family_label||"đã chọn"):" khỏi nhóm hiện tại")+
@@ -66,31 +84,35 @@ export default function CatalogueStructureManager({
       <button type="button" role="tab" aria-selected={pane==="families"}
         className={pane==="families"?"active":""} onClick={()=>choosePane("families")}>Nhóm mẫu ({families.length})</button>
     </div>
-    <p className="catalogue-structure-help">Danh mục dùng để phân loại; nhóm mẫu dùng để gom SKU hiển thị chung. Mỗi SKU vẫn giữ nguyên mã công ty và ảnh riêng.</p>
+    <div className="catalogue-structure-helper-row">
+      <p className="catalogue-structure-help">Mã DM/NM được cấp tự động và không đổi khi sửa tên. SKU dùng mã này để cập nhật chính xác qua Excel.</p>
+      <button type="button" className="import-btn import-secondary" disabled={!categories.length&&!families.length}
+        onClick={exportCodes}>Xuất bảng mã CSV</button>
+    </div>
     {error&&<p className="import-error" role="alert">{error}</p>}
     <div className="catalogue-structure-grid">
       <section className="catalogue-structure-sidebar" aria-label={pane==="categories"?"Cây danh mục":"Danh sách nhóm mẫu"}>
         <label className="catalogue-structure-field">Tìm {pane==="categories"?"danh mục":"nhóm mẫu"}
-          <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Nhập tên để tìm…" type="search"/>
+          <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Nhập mã hoặc tên…" type="search"/>
         </label>
         <div className="catalogue-structure-tree">
-          {pane==="categories"?roots.filter(root=>matches(root.category_label)||
-            categories.some(c=>c.parent_id===root.id&&matches(c.category_label)))
+          {pane==="categories"?roots.filter(root=>matches(root.category_label,root.category_code)||
+            categories.some(c=>c.parent_id===root.id&&matches(c.category_label,c.category_code)))
             .map(root=>{
               const children=categories.filter(c=>c.parent_id===root.id);
               const total=(directCategoryCounts[root.id]||0)+children.reduce((n,c)=>n+(directCategoryCounts[c.id]||0),0);
               return <div className="catalogue-structure-tree-group" key={root.id}>
                 <button className={selectedId===root.id?"active":""} type="button" onClick={()=>select(root.id)}>
-                  <span>▸ {root.category_label}</span><small>{total} SKU</small>
+                  <span><b className="catalogue-structure-code">{root.category_code}</b> ▸ {root.category_label}</span><small>{total} SKU</small>
                 </button>
-                {children.filter(c=>!search||matches(root.category_label)||matches(c.category_label)).map(c=>
+                {children.filter(c=>!search||matches(root.category_label,root.category_code)||matches(c.category_label,c.category_code)).map(c=>
                   <button className={"child "+(selectedId===c.id?"active":"")} type="button" key={c.id} onClick={()=>select(c.id)}>
-                    <span>↳ {c.category_label}</span><small>{directCategoryCounts[c.id]||0} SKU</small>
+                    <span><b className="catalogue-structure-code">{c.category_code}</b> ↳ {c.category_label}</span><small>{directCategoryCounts[c.id]||0} SKU</small>
                   </button>)}
               </div>;
-            }):families.filter(f=>matches(f.family_label)).map(f=>
+            }):families.filter(f=>matches(f.family_label,f.family_code)).map(f=>
               <button className={selectedId===f.id?"active":""} type="button" key={f.id} onClick={()=>select(f.id)}>
-                <span>{f.family_label}</span><small>{familyCounts[f.id]||0} SKU</small>
+                <span><b className="catalogue-structure-code">{f.family_code}</b> {f.family_label}</span><small>{familyCounts[f.id]||0} SKU</small>
               </button>)}
           {!(pane==="categories"?categories.length:families.length)&&
             <p className="catalogue-structure-empty">Chưa có {pane==="categories"?"danh mục":"nhóm mẫu"} nào.</p>}
@@ -98,7 +120,7 @@ export default function CatalogueStructureManager({
       </section>
       <section className="catalogue-structure-detail">
         <div className="catalogue-structure-create">
-          <strong>Tạo {pane==="categories"?"danh mục":"nhóm mẫu"} mới</strong>
+          <strong>Tạo {pane==="categories"?"danh mục":"nhóm mẫu"} mới <small>(mã được cấp tự động)</small></strong>
           <div className="catalogue-structure-inputs">
             <label className="catalogue-structure-field">Tên
               <input value={newName} maxLength={160} onChange={e=>setNewName(e.target.value)}
@@ -125,6 +147,7 @@ export default function CatalogueStructureManager({
         {(pane==="categories"?selectedCategory:selectedFamily)?<>
           <div className="catalogue-structure-selected">
             <div><small>Đang xem {pane==="categories"?"danh mục":"nhóm mẫu"}</small>
+              <p className="catalogue-structure-code-line">Mã cố định: <strong>{pane==="categories"?selectedCategory?.category_code:selectedFamily?.family_code}</strong></p>
               <h3>{pane==="categories"?selectedCategory?.category_label:selectedFamily?.family_label}</h3>
               <span>{members.length} SKU {pane==="categories"&&subIds.length?"(gồm danh mục con)":""}</span>
             </div>

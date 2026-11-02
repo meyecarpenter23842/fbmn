@@ -39,6 +39,7 @@ export function safeDraft(row) {
     if(!validText(row[name],1200))throw Error("invalid_field");
   if(!(row.ten_san_pham?.trim()||row.ten_goc_xnt?.trim()))throw Error("missing_name");
   if(!validCategory(row.category_id))throw Error("invalid_category");
+  if(!validCategory(row.family_id))throw Error("invalid_family");
   const product_spec=safeProductSpec(row.product_spec);
   if(row.warnings!==undefined && (!Array.isArray(row.warnings) ||
     row.warnings.length>30 || row.warnings.some(x=>!validText(x,80))))
@@ -47,13 +48,13 @@ export function safeDraft(row) {
     sku_cong_ty:row.sku_cong_ty,ten_san_pham:row.ten_san_pham||null,
     ten_goc_xnt:row.ten_goc_xnt||null,barcode:row.barcode||null,
     paper_size:row.paper_size||null,pages:row.pages||null,ruling:row.ruling||null,
-    category_id:row.category_id??null,product_spec,
+    category_id:row.category_id??null,family_id:row.family_id??null,product_spec,
     warnings:row.warnings||[],
     review_status:(row.warnings||[]).some(x=>needsReview.has(x))?"needs_review":"draft"
   };
 }
 const rowsSql = "SELECT s.sku_cong_ty,s.ten_goc_xnt,s.ten_goc_bang_gia,s.ten_san_pham,s.barcode,s.paper_size,s.product_spec,"+
-  "s.review_status,s.revision,s.family_id,f.family_label,s.category_id,c.category_label, "+
+  "s.review_status,s.revision,s.family_id,f.family_label,f.family_code,s.category_id,c.category_label,c.category_code, "+
   "(SELECT count(*)::int FROM fbmn_catalog.sku_media m WHERE m.sku_cong_ty=s.sku_cong_ty) AS media_count, "+
   "photo.cover_asset_id,photo.cover_sha256 FROM fbmn_catalog.skus s "+
   "LEFT JOIN fbmn_catalog.families f ON f.id=s.family_id "+
@@ -97,9 +98,9 @@ export async function handleCatalogue({request,actor,db,r2}) {
       const sql=route==="visibility"?
         "SELECT sku_cong_ty,channel_code,state,revision FROM fbmn_catalog.publications ORDER BY sku_cong_ty,channel_code LIMIT 30000":
         route==="families"?
-        "SELECT id::text AS id,family_label,revision FROM fbmn_catalog.families ORDER BY family_label LIMIT 3000":
+        "SELECT id::text AS id,family_code,family_label,revision FROM fbmn_catalog.families ORDER BY family_code LIMIT 3000":
         route==="categories"?
-        "SELECT id::text AS id,parent_id::text AS parent_id,category_label FROM fbmn_catalog.categories ORDER BY category_label LIMIT 1000":
+        "SELECT id::text AS id,parent_id::text AS parent_id,category_code,category_label FROM fbmn_catalog.categories ORDER BY category_code LIMIT 1000":
         rowsSql;
       const result=await db(c=>c.query(sql));
       return reply(200,{data:{items:result.rows,database_queried:true}});
@@ -198,7 +199,7 @@ export async function handleCatalogue({request,actor,db,r2}) {
                !op.changes||typeof op.changes!=="object"||Array.isArray(op.changes))
               throw Error("invalid_sync");
             const keys=Object.keys(op.changes);
-            if(!keys.length || keys.some(k=>!["ten_san_pham","barcode","paper_size","product_spec","category_id"].includes(k)))
+            if(!keys.length || keys.some(k=>!["ten_san_pham","barcode","paper_size","product_spec","category_id","family_id"].includes(k)))
               throw Error("invalid_sync");
             // Name must always be populated. Barcode, paper size and category
             // may only be cleared via an explicit null, never silently by blank.
@@ -209,6 +210,8 @@ export async function handleCatalogue({request,actor,db,r2}) {
               if(typeof value!=="string"||!value.trim()||!validText(value,1200))
                 throw Error("invalid_sync");
             }
+            if("family_id" in op.changes&&!validCategory(op.changes.family_id))
+              throw Error("invalid_family");
             if("category_id" in op.changes&&!validCategory(op.changes.category_id))
               throw Error("invalid_category");
             const specs=("product_spec" in op.changes)?safeProductSpec(op.changes.product_spec):{};
@@ -227,11 +230,21 @@ export async function handleCatalogue({request,actor,db,r2}) {
           ...createRows.map(row=>row.category_id),
           ...updateRows.map(row=>row.changes.category_id)
         ].filter(Boolean))];
+        const familyIds=[...new Set([
+          ...createRows.map(row=>row.family_id),
+          ...updateRows.map(row=>row.changes.family_id)
+        ].filter(Boolean))];
         if(categoryIds.length){
           const found=await c.query(
             "SELECT id::text FROM fbmn_catalog.categories WHERE id::text=ANY($1::text[])",
             [categoryIds]);
           if(found.rowCount!==categoryIds.length)throw Error("invalid_category");
+        }
+        if(familyIds.length){
+          const found=await c.query(
+            "SELECT id::text FROM fbmn_catalog.families WHERE id::text=ANY($1::text[])",
+            [familyIds]);
+          if(found.rowCount!==familyIds.length)throw Error("invalid_family");
         }
         if(updateRows.length){
           const saved=await c.query(
@@ -240,6 +253,7 @@ export async function handleCatalogue({request,actor,db,r2}) {
             "barcode=CASE WHEN x.changes ? 'barcode' THEN x.changes->>'barcode' ELSE s.barcode END,"+
             "paper_size=CASE WHEN x.changes ? 'paper_size' THEN x.changes->>'paper_size' ELSE s.paper_size END,"+
             "category_id=CASE WHEN x.changes ? 'category_id' THEN (x.changes->>'category_id')::uuid ELSE s.category_id END,"+
+            "family_id=CASE WHEN x.changes ? 'family_id' THEN (x.changes->>'family_id')::uuid ELSE s.family_id END,"+
             "product_spec=s.product_spec || COALESCE(x.changes->'product_spec','{}'::jsonb),"+
             "revision=s.revision+1,updated_at=now() "+
             "FROM jsonb_to_recordset($1::jsonb) AS x(sku_cong_ty text,expected_revision integer,changes jsonb) "+
@@ -251,10 +265,10 @@ export async function handleCatalogue({request,actor,db,r2}) {
         if(createRows.length){
           const saved=await c.query(
             "INSERT INTO fbmn_catalog.skus "+
-            "(sku_cong_ty,ten_san_pham,barcode,paper_size,product_spec,category_id,review_status) "+
-            "SELECT x.sku_cong_ty,x.ten_san_pham,x.barcode,x.paper_size,x.product_spec,x.category_id,'draft' "+
+            "(sku_cong_ty,ten_san_pham,barcode,paper_size,product_spec,category_id,family_id,review_status) "+
+            "SELECT x.sku_cong_ty,x.ten_san_pham,x.barcode,x.paper_size,x.product_spec,x.category_id,x.family_id,'draft' "+
             "FROM jsonb_to_recordset($1::jsonb) AS x(sku_cong_ty text,ten_san_pham text,"+
-            "barcode text,paper_size text,product_spec jsonb,category_id uuid) RETURNING sku_cong_ty",
+            "barcode text,paper_size text,product_spec jsonb,category_id uuid,family_id uuid) RETURNING sku_cong_ty",
             [JSON.stringify(createRows)]);
           if(saved.rowCount!==createRows.length)throw Error("catalogue_conflict");
         }
@@ -375,7 +389,7 @@ export async function handleCatalogue({request,actor,db,r2}) {
         }
         const saved=await c.query(
           "INSERT INTO fbmn_catalog.categories(category_label,parent_id) VALUES($1,$2) "+
-          "RETURNING id::text AS id,parent_id::text AS parent_id,category_label",
+          "RETURNING id::text AS id,parent_id::text AS parent_id,category_code,category_label",
           [input.category_label.trim(),input.parent_id??null]);
         await audit(c,actor.subject,"category_create",{id:saved.rows[0].id});
         return saved.rows[0];
@@ -399,7 +413,7 @@ export async function handleCatalogue({request,actor,db,r2}) {
         if(duplicate.rowCount)throw Error("catalogue_conflict");
         const saved=await c.query(
           "UPDATE fbmn_catalog.families SET family_label=$1,revision=revision+1 "+
-          "WHERE id=$2 AND revision=$3 RETURNING id::text AS id,family_label,revision",
+          "WHERE id=$2 AND revision=$3 RETURNING id::text AS id,family_code,family_label,revision",
           [input.family_label.trim(),input.id,input.expected_revision]);
         if(saved.rowCount!==1)throw Error("catalogue_conflict");
         await audit(c,actor.subject,"family_rename",{id:input.id});
@@ -417,7 +431,7 @@ export async function handleCatalogue({request,actor,db,r2}) {
         if(duplicate.rowCount)throw Error("catalogue_conflict");
         const saved=await c.query(
           "INSERT INTO fbmn_catalog.families(family_label) VALUES ($1) "+
-          "RETURNING id::text AS id,family_label,revision",[input.family_label.trim()]);
+          "RETURNING id::text AS id,family_code,family_label,revision",[input.family_label.trim()]);
         await audit(c,actor.subject,"family_create",{id:saved.rows[0].id});
         return saved.rows[0];
       });

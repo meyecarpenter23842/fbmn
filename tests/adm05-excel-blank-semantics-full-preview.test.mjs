@@ -37,7 +37,10 @@ test("one dropdown: mapped empty optional fields clear, ignored fields remain un
     product_spec:{cover_type:null,packaging:null,units_per_pack:null},
     category_id:null
   });
-  assert.equal(p.items[0].field_states.length,11);
+  // Planner includes two new optional code states; legacy 11-field mapping is intact.
+  assert.equal(p.items[0].field_states.length,13);
+  assert.equal(p.items[0].field_states.find(x=>x.key==="category_code").action,"ignore");
+  assert.equal(p.items[0].field_states.find(x=>x.key==="family_code").action,"ignore");
   assert.equal(p.items[0].field_states.find(x=>x.key==="barcode").action,"clear");
   assert.equal(p.items[0].field_states.find(x=>x.key==="gsm").action,"same");
   assert.equal(p.items[0].field_states.find(x=>x.key==="category_label").action,"clear");

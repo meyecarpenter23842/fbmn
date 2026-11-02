@@ -64,3 +64,12 @@
  .catalogue-structure-help{padding:10px 12px}
 }
 @media(prefers-reduced-motion:reduce){.catalogue-structure *{scroll-behavior:auto!important}}
+
+/* G03 stable identifiers: visually distinct from labels; never editable. */
+.catalogue-structure-code{display:inline-block;font-size:11px;font-weight:800;color:#5045a9;background:#eeeaff;border-radius:5px;padding:3px 6px;white-space:nowrap;margin-right:3px}
+.catalogue-structure-code-line{margin:7px 0 0;font-size:12px;color:#69759a}
+.catalogue-structure-code-line strong{user-select:all;color:#403a9b;letter-spacing:.02em}
+
+.catalogue-structure-helper-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 17px;border-bottom:1px solid #e5e8f2;background:#fff;flex-wrap:wrap}
+.catalogue-structure-helper-row .catalogue-structure-help{padding:0;border:0;flex:1;min-width:220px}
+.catalogue-structure-helper-row button{min-height:35px;white-space:nowrap}

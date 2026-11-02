@@ -2,7 +2,8 @@ import ExcelJS from "exceljs";
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
 const HEADERS=["Mã công ty","Tên sản phẩm","Mã vạch","Khổ","Số trang","Dòng kẻ",
-  "Danh mục","Định lượng GSM","Loại bìa","Đơn vị tính","Quy cách đóng gói","Số đơn vị / đóng gói"];
+  "Danh mục","Định lượng GSM","Loại bìa","Đơn vị tính","Quy cách đóng gói","Số đơn vị / đóng gói",
+  "Mã danh mục","Mã nhóm mẫu"];
 export async function GET(){
   const workbook=new ExcelJS.Workbook();
   workbook.creator="Futurebook Miền Nam";
@@ -14,11 +15,13 @@ export async function GET(){
     cell.fill={type:"pattern",pattern:"solid",fgColor:{argb:"FF563CB2"}};
     cell.alignment={vertical:"middle",horizontal:"center"};
   });
-  for(const [n,width] of [20,37,24,19,17,24,38,19,22,21,23,26].entries())
+  for(const [n,width] of [20,37,24,19,17,24,38,19,22,21,23,26,20,20].entries())
     sheet.getColumn(n+1).width=width;
   sheet.getColumn(1).numFmt="@";
   sheet.getColumn(3).numFmt="@";
   sheet.getColumn(12).numFmt="@";
+  sheet.getColumn(13).numFmt="@";
+  sheet.getColumn(14).numFmt="@";
   sheet.views=[{state:"frozen",ySplit:1}];
   // No fake SKU rows. Mã công ty must remain literal text (e.g. 0114).
   const bytes=await workbook.xlsx.writeBuffer();

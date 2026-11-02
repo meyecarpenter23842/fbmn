@@ -98,7 +98,7 @@ test("category sync is owner-only, validates IDs in transaction, and never publi
   assert.equal(JSON.parse(patch.args[0])[0].sku_cong_ty,"0114");
   assert.ok(queries.some(q=>q.sql==="COMMIT"));
 });
-test("toolbar exposes one Export menu, visible bulk import tabs and 12 editable Excel columns",()=>{
+test("toolbar exposes one Export menu, visible bulk import tabs and 14 editable Excel columns",()=>{
   const manager=read("apps/admin/app/catalogue-manager.tsx");
   const importer=read("apps/admin/app/catalogue-import-preview.tsx");
   const exportRoute=read("apps/admin/app/api/catalogue/export/route.ts");
@@ -116,6 +116,8 @@ test("toolbar exposes one Export menu, visible bulk import tabs and 12 editable 
   assert.match(exportRoute,/pathFor\(row.category_id\)/);
   assert.match(template,/Số đơn vị \/ đóng gói/);
   assert.match(template,/getColumn\(12\).numFmt="@"/);
+  assert.match(template,/getColumn\(14\).numFmt="@"/);
+  assert.match(exportRoute,/Mã nhóm mẫu/);
   assert.doesNotMatch(exportRoute,/net_price|source_price_vnd|warehouse_quantity/);
   assert.equal(read("backend/catalogue/sheet-sync.mjs"),read("apps/admin/lib/sheet-sync.mjs"));
 });
