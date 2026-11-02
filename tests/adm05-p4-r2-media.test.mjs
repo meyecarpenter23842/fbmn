@@ -177,6 +177,45 @@ test("R2 object gets removed when SQL metadata transaction fails",async()=>{
   assert.equal(result.status,404);
   assert.deepEqual(operations.map(x=>x[0]),["put","delete"]);
 });
+test("owner gallery reads are scoped to the exact literal SKU and never expose R2 keys",async()=>{
+  const calls=[],objects=[];
+  const result=await handleCatalogue({
+    request:req("list?sku=0114"),actor:owner,db:database(calls),r2:bucket(objects)});
+  assert.equal(result.status,200);
+  assert.equal(result.headers.get("cache-control"),"private, no-store");
+  const {data}=await result.json();
+  assert.equal(data.items.length,1);
+  assert.equal(data.items[0].sku_cong_ty,"0114");
+  assert.equal(data.items[0].media_role,"cover");
+  assert.equal(Object.hasOwn(data.items[0],"r2_key"),false);
+  assert.equal(Object.hasOwn(data.items[0],"source_price_vnd"),false);
+  const select=calls.find(call=>call.sql.includes("FROM fbmn_catalog.sku_media l"));
+  assert.deepEqual(select.args,["0114"]);
+  assert.match(select.sql,/WHERE l.sku_cong_ty=\$1/);
+  assert.equal(objects.length,0);
+  for(const wrong of ["list?sku=114&sku=0114","list?sku=","list?sku=0114&extra=1"]){
+    const response=await handleCatalogue({request:req(wrong),actor:owner,db:database([]),r2:bucket([])});
+    assert.equal(response.status,400);
+  }
+});
+test("private reusable media library lists metadata without exposing R2 keys or publishing links",async()=>{
+  const statements=[],r2Calls=[];
+  const db=async fn=>fn({query:async(sql,args=[])=>{
+    statements.push({sql,args});
+    return {rowCount:1,rows:[{id:uuid,source_filename:"bia-chinh.webp",
+      mime_type:"image/webp",linked_skus:2}]};
+  }});
+  const response=await handleMedia({request:req("library"),actor:owner,db,r2:bucket(r2Calls)});
+  assert.equal(response.status,200);
+  const result=await response.json();
+  assert.deepEqual(result.data.items,[{id:uuid,source_filename:"bia-chinh.webp",
+    mime_type:"image/webp",linked_skus:2}]);
+  assert.equal(statements.length,1);
+  assert.equal(statements[0].args.length,0);
+  assert.equal(r2Calls.length,0);
+  assert.ok(!JSON.stringify(result).includes("private/catalogue/"));
+  assert.ok(!JSON.stringify(result).includes("NET"));
+});
 test("private media read only for authenticated linked assets, response is binary and no-store",async()=>{
   const actions=[],res=await handleCatalogue({
     request:req("file?id="+uuid),actor:owner,db:database([]),r2:bucket(actions)});
