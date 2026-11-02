@@ -12,6 +12,8 @@ type SKU={sku_cong_ty:string;ten_san_pham:string|null;ten_goc_xnt:string|null;te
   family_id:string|null;family_label:string|null;media_count?:number;
   product_spec?:Partial<Omit<SpecFields,"paper_size"|"barcode"|"category_id">>};
 type Family={id:string;family_label:string;revision?:number};
+type Visibility={sku_cong_ty:string;channel_code:"public_web"|"dealer_app"|"consumer_app";state:string;revision:number};
+const CHANNELS=[{code:"public_web",label:"Web"},{code:"dealer_app",label:"Đại lý"},{code:"consumer_app",label:"Tiêu dùng"}] as const;
 type Category={id:string;parent_id:string|null;category_label:string};
 type SpecFields={barcode:string;paper_size:string;category_id:string;pages:string;ruling:string;
   gsm:string;cover_type:string;packaging:string;unit:string;units_per_pack:string};
@@ -83,6 +85,7 @@ async function api<T>(route:string,method:"GET"|"POST"|"PATCH"="GET",body?:objec
 export default function CatalogueManager({onImport}:{onImport:()=>void}){
   const [items,setItems]=useState<SKU[]>([]);
   const [families,setFamilies]=useState<Family[]>([]);
+  const [visibility,setVisibility]=useState<Record<string,Visibility>>({});
   const [categories,setCategories]=useState<Category[]>([]);
   const [categoryFilter,setCategoryFilter]=useState("");
   const [showCategories,setShowCategories]=useState(false);
@@ -169,12 +172,14 @@ export default function CatalogueManager({onImport}:{onImport:()=>void}){
   const refresh=useCallback(async()=>{
     setActionMenu(null);setLoading(true);setError("");
     try{
-      const [catalogue,groups,taxonomy]=await Promise.all([
+      const [catalogue,groups,taxonomy,showing]=await Promise.all([
         api<{items:SKU[]}>("skus"),api<{items:Family[]}>("families"),
-        api<{items:Category[]}>("categories")]);
+        api<{items:Category[]}>("categories"),api<{items:Visibility[]}>("visibility")]);
       if(!Array.isArray(catalogue.items)||catalogue.items.length>20000 ||
         catalogue.items.some(x=>typeof x.sku_cong_ty!=="string"))throw new Error("Dữ liệu SKU không hợp lệ.");
       if(!Array.isArray(taxonomy.items))throw new Error("Danh mục không hợp lệ.");
+      if(!Array.isArray(showing.items))throw new Error("Trạng thái hiển thị không hợp lệ.");
+      setVisibility(Object.fromEntries(showing.items.map(x=>[x.sku_cong_ty+":"+x.channel_code,x])));
       setItems(catalogue.items);setFamilies(groups.items);setCategories(taxonomy.items);
     }catch(e){setError(e instanceof Error?e.message:"Không đọc được catalogue");}
     finally{setLoading(false);}
@@ -218,6 +223,18 @@ export default function CatalogueManager({onImport}:{onImport:()=>void}){
     }catch(e){setError(e instanceof Error?e.message:"Xuất danh mục thất bại.");}
     finally{setBusy(false);}
   };
+  const toggleVisibility=(row:SKU,channel:typeof CHANNELS[number])=>void run(async()=>{
+    const current=visibility[row.sku_cong_ty+":"+channel.code];
+    const show=current?.state!=="published";
+    if(!window.confirm((show?"BẬT":"TẮT")+" hiển thị mã "+row.sku_cong_ty+
+      " trên "+channel.label+"?"+(show?" Chỉ mã này được xuất bản, không tự bật toàn bộ danh mục.":"")))
+      return;
+    const saved=await api<Visibility>("visibility","POST",{
+      sku_cong_ty:row.sku_cong_ty,channel_code:channel.code,visible:show,
+      expected_revision:current?.revision??0,confirm:"CAP_NHAT_HIEN_THI"});
+    setVisibility(previous=>({...previous,[row.sku_cong_ty+":"+channel.code]:saved}));
+    setMessage((show?"Đã bật":"Đã ẩn")+" "+row.sku_cong_ty+" trên "+channel.label+".");
+  });
   const add=()=>void run(async()=>{
     if(!sku||sku!==sku.trim()||!name.trim())throw new Error("Cần mã công ty dạng text và tên sản phẩm.");
     const data=await api<{sku_cong_ty:string}>("skus","POST",{
@@ -351,7 +368,19 @@ export default function CatalogueManager({onImport}:{onImport:()=>void}){
         <td>{[row.paper_size,row.product_spec?.pages&&row.product_spec.pages+" trang",
           row.product_spec?.ruling,row.product_spec?.gsm&&row.product_spec.gsm+" GSM"].filter(Boolean).join(" · ")||"—"}</td>
         <td>{row.family_label||"Chưa nhóm"}</td>
-        <td><span className="catalogue-unconfigured" title="Hiển thị theo kênh sẽ được cấu hình ở P5">—</span></td>
+        <td><div className="catalogue-channel-actions" style={{display:"flex",flexWrap:"wrap",gap:4}}>
+          {CHANNELS.map(channel=>{
+            const on=visibility[row.sku_cong_ty+":"+channel.code]?.state==="published";
+            return <button type="button" key={channel.code}
+              className={"import-btn import-secondary"+(on?" catalogue-channel-on":"")}
+              aria-label={(on?"Tắt":"Bật")+" "+channel.label+" cho SKU "+row.sku_cong_ty}
+              aria-pressed={on} disabled={busy||loading}
+              style={{padding:"5px 8px",fontSize:11,borderColor:on?"#128763":undefined,
+                color:on?"#128763":undefined}}
+              title={(on?"Đang hiển thị":"Đang ẩn")+" · "+channel.label}
+              onClick={()=>toggleVisibility(row,channel)}>{channel.label} {on?"✓":"–"}</button>;
+          })}
+        </div></td>
         <td>
           <button type="button" className="catalogue-actions-trigger"
             aria-label={"Thao tác sản phẩm "+row.sku_cong_ty}

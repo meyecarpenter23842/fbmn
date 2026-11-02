@@ -42,9 +42,9 @@ test("unknown private fields are dropped from remote DTO", async () => {
   assert.equal(value.products.length,1);
   assert.doesNotMatch(JSON.stringify(value),/PRIVATE|23456|customer|net/);
 });
-test("database source only queries eight fixed public views, no private tables", async () => {
+test("database source only queries fixed public views, no private tables", async () => {
   const sqls = Object.values(PUBLIC_READ_QUERIES);
-  assert.equal(sqls.length,8);
+  assert.equal(sqls.length,11);
   for (const sql of sqls) {
     assert.match(sql,/FROM fbmn_public\.v_/);
     assert.doesNotMatch(sql,/futurebook\.|neon_auth\.|sku_prices|customers|password|net_price/i);

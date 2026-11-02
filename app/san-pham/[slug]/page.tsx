@@ -1,9 +1,10 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-import { CatalogShell, CatalogBreadcrumb, CatalogProductImage, EmptyState, formatRetail } from "@/components/catalog-ui-detail";
+import { CatalogShell, CatalogBreadcrumb, EmptyState, formatRetail } from "@/components/catalog-ui-detail";
 import { getPublicCatalog } from "@/lib/catalog/adapter";
 import { getProductBySlug } from "@/lib/catalog/query";
 import { getPublishedProductImageUrl } from "@/lib/catalog/product-image";
+import PublishedImageGallery from "@/components/published-image-gallery";
 
 export const dynamic = "force-dynamic";
 
@@ -26,8 +27,10 @@ export default async function ProductPage({ params }: Props) {
       message="Sản phẩm này chưa được xác minh hoặc chưa được xuất bản. Không có dữ liệu hay giá mẫu được hiển thị."/>
   </div></CatalogShell>;
   const category = catalog.categories.find(item => item.id === product.categoryId);
-  const media = product.media[0];
-  const image = media ? getPublishedProductImageUrl(media.r2Key, process.env.NEXT_PUBLIC_MEDIA_BASE_URL) : null;
+  const images=product.media.flatMap(media=>{
+    const src=getPublishedProductImageUrl(media.r2Key,process.env.NEXT_PUBLIC_MEDIA_BASE_URL);
+    return src?[{src,alt:media.alt}]:[];
+  });
   return <CatalogShell><div className="catalog-wrap">
     <CatalogBreadcrumb trail={[
       { label: "Sản phẩm", href: "/san-pham" },
@@ -35,9 +38,7 @@ export default async function ProductPage({ params }: Props) {
       { label: product.name },
     ]}/>
     <div className="catalog-detail">
-      <div className="catalog-detail__image">
-        <CatalogProductImage src={image} alt={media?.alt ?? product.name}/>
-      </div>
+      <PublishedImageGallery items={images}/>
       <div className="catalog-detail__info">
         <p className="catalog-overline">THÔNG TIN SẢN PHẨM ĐÃ XÁC MINH</p>
         <h1>{product.name}</h1>

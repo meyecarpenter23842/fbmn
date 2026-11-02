@@ -59,6 +59,23 @@ jobs:
       - name: Bundle Worker without deploying
         run: npx --no-install wrangler deploy --dry-run --outdir ../../.tmp-worker-bundle
         working-directory: backend/public-api
+      - name: Publish reviewed public bundle handoff (main only; no deploy)
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        shell: bash
+        run: |
+          set -euo pipefail
+          mapfile -t modules < <(find .tmp-worker-bundle -maxdepth 1 -type f \( -name '*.js' -o -name '*.mjs' \) -print)
+          test "${#modules[@]}" -eq 1
+          file="${modules[0]}"
+          bytes="$(wc -c < "$file")"
+          test "$bytes" -gt 0 && test "$bytes" -lt 1000000
+          sha256sum "$file"
+          echo "FBMN_PUBLIC_STAGING_BUILD_SHA=$GITHUB_SHA"
+          echo "FBMN_PUBLIC_STAGING_BUNDLE_BYTES=$bytes"
+          echo "FBMN_PUBLIC_STAGING_BUNDLE_START"
+          base64 -w0 "$file" | fold -w 3500 | sed 's/^/FBMN_PUBLIC_STAGING_B64:/'
+          echo
+          echo "FBMN_PUBLIC_STAGING_BUNDLE_END"
 
 
   admin-worker-build:

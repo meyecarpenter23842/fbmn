@@ -117,7 +117,7 @@ async function getData(origin: string, route: string, transport: typeof fetch): 
 export async function fetchPublicCatalog(input: string, transport: typeof fetch = fetch): Promise<PublicCatalog> {
   const origin = baseUrl(input);
   const categoryEnvelope = await getData(origin, "/v1/public/categories", transport);
-  const categories = arr(categoryEnvelope.data, 200).map(item => {
+  const categories = arr(categoryEnvelope.data, 2000).map(item => {
     const c = obj(item);
     if (!GROUPS.has(c.group as string)) throw new Error("Unknown public category group");
     return { id: str(c.id, 80), slug: str(c.slug, 80), name: str(c.name, 160),

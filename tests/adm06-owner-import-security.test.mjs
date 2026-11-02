@@ -23,7 +23,7 @@ test("Private Worker uses exact original company SKU key and draft-only publishi
   assert.match(source,/draft_import/);
   assert.match(source,/published:0/);
   assert.match(source,/BTRIM\(ten_goc_xnt\)/);
-  assert.doesNotMatch(source,/fbmn_catalog_private|INSERT INTO fbmn_public|INSERT INTO fbmn_catalog\.publications/);
+  // P5 publication is now allowed only in the separate Owner-only visibility route.\n  assert.doesNotMatch(source,/fbmn_catalog_private|INSERT INTO fbmn_public/);\n  assert.match(source,/actor.role!=="owner"\)return fail\("owner_required",403\)/);
 });
 
 test("JSON catalog relay bounds chunked body before forwarding Worker request",()=>{

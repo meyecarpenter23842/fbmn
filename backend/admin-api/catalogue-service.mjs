@@ -78,7 +78,7 @@ export async function handleCatalogue({request,actor,db,r2}) {
   if(url.pathname.startsWith("/v1/admin/catalogue/media/"))
     return handleMedia({request,actor,db,r2});
   const route=url.pathname.slice("/v1/admin/catalogue/".length);
-  if(!["snapshot","skus","families","categories","apply","sync","group"].includes(route))
+  if(!["snapshot","skus","families","categories","apply","sync","group","visibility"].includes(route))
     return fail("not_found",404);
   if(!roles.has(actor?.role))return fail("forbidden",403);
   if(url.search)return fail("invalid_query");
@@ -87,9 +87,11 @@ export async function handleCatalogue({request,actor,db,r2}) {
   if(["apply","sync","group"].includes(route) && actor.role!=="owner")
     return fail("owner_required",403);
   if(request.method==="GET"){
-    if(!["snapshot","skus","families","categories"].includes(route))return fail("method_not_allowed",405);
+    if(!["snapshot","skus","families","categories","visibility"].includes(route))return fail("method_not_allowed",405);
     try{
-      const sql=route==="families"?
+      const sql=route==="visibility"?
+        "SELECT sku_cong_ty,channel_code,state,revision FROM fbmn_catalog.publications ORDER BY sku_cong_ty,channel_code LIMIT 30000":
+        route==="families"?
         "SELECT id::text AS id,family_label,revision FROM fbmn_catalog.families ORDER BY family_label LIMIT 3000":
         route==="categories"?
         "SELECT id::text AS id,parent_id::text AS parent_id,category_label FROM fbmn_catalog.categories ORDER BY category_label LIMIT 1000":
@@ -101,6 +103,42 @@ export async function handleCatalogue({request,actor,db,r2}) {
   let input;
   try{input=await parsed(request);}catch{return fail("invalid_body");}
   try{
+    if(route==="visibility" && request.method==="POST"){
+      if(actor.role!=="owner")return fail("owner_required",403);
+      if(!validSku(input?.sku_cong_ty)||
+         !["public_web","dealer_app","consumer_app"].includes(input.channel_code)||
+         typeof input.visible!=="boolean"||
+         !Number.isSafeInteger(input.expected_revision)||input.expected_revision<0||
+         input.confirm!=="CAP_NHAT_HIEN_THI")
+        return fail("invalid_visibility");
+      const result=await transactional(db,async c=>{
+        const exists=await c.query(
+          "SELECT sku_cong_ty FROM fbmn_catalog.skus WHERE sku_cong_ty=$1 FOR UPDATE",
+          [input.sku_cong_ty]);
+        if(exists.rowCount!==1)throw Error("sku_not_found");
+        const saved=input.expected_revision===0?await c.query(
+          "INSERT INTO fbmn_catalog.publications "+
+          "(sku_cong_ty,channel_code,state,approved_by,approved_at,published_at,revision) "+
+          "VALUES($1,$2,CASE WHEN $3 THEN 'published' ELSE 'hidden' END,$4,now(),"+
+          "CASE WHEN $3 THEN now() ELSE NULL END,1) "+
+          "ON CONFLICT(sku_cong_ty,channel_code) DO NOTHING "+
+          "RETURNING sku_cong_ty,channel_code,state,revision",
+          [input.sku_cong_ty,input.channel_code,input.visible,actor.subject]):
+          await c.query(
+          "UPDATE fbmn_catalog.publications SET "+
+          "state=CASE WHEN $3 THEN 'published' ELSE 'hidden' END,"+
+          "approved_by=$5,approved_at=now(),"+
+          "published_at=CASE WHEN $3 THEN now() ELSE NULL END,revision=revision+1 "+
+          "WHERE sku_cong_ty=$1 AND channel_code=$2 AND revision=$4 "+
+          "RETURNING sku_cong_ty,channel_code,state,revision",
+          [input.sku_cong_ty,input.channel_code,input.visible,input.expected_revision,actor.subject]);
+        if(saved.rowCount!==1)throw Error("catalogue_conflict");
+        await audit(c,actor.subject,"channel_visibility",{
+          sku_cong_ty:input.sku_cong_ty,channel_code:input.channel_code,visible:input.visible});
+        return saved.rows[0];
+      });
+      return reply(200,{data:result});
+    }
     if(route==="apply" && request.method==="POST"){
       if(input?.confirm!=="NHAP_BAN_NHAP" || !Array.isArray(input?.rows) ||
         !input.rows.length || input.rows.length>1000 || input.expectedCreate!==input.rows.length)
@@ -329,6 +367,7 @@ export async function handleCatalogue({request,actor,db,r2}) {
     return fail("method_not_allowed",405);
   }catch(e){
     if(e?.message==="invalid_category")return fail("invalid_category");
+    if(e?.message==="sku_not_found")return fail("sku_not_found",404);
     if(e?.message==="invalid_product_spec")return fail("invalid_product_spec");
     const collision=e?.message==="catalogue_conflict"||e?.code==="23505";
     return fail(collision?"catalogue_conflict":"catalogue_db_unavailable",collision?409:503);

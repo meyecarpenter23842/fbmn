@@ -57,7 +57,7 @@ function copySpecifications(specs) {
  */
 export function projectPublicCatalog(raw) {
   guard(object(raw) && Array.isArray(raw.categories) && Array.isArray(raw.products));
-  guard(raw.categories.length <= 200 && raw.products.length <= 10000);
+  guard(raw.categories.length <= 2000 && raw.products.length <= 10000);
   const categories = raw.categories.map(c => {
     guard(object(c) && GROUPS.has(c.group) && Number.isSafeInteger(c.sortOrder));
     return {
