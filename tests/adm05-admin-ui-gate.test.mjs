@@ -15,12 +15,11 @@ test("Admin popup blocks the workspace until both Neon session and DB principal 
   assert.match(page,/className="first-login-hint" role="note"/);
   assert.doesNotMatch(page,/Lần đầu dùng Owner\? Tài khoản chưa có mật khẩu\. Hãy chọn/);
   assert.match(page,/fetch\("\/api\/auth\/token"/);
-  assert.match(page,/JWT_ENDPOINT_HTTP_/);
-  assert.match(page,/JWT_RESPONSE_MISSING/);
+  assert.doesNotMatch(page,/JWT_ENDPOINT_HTTP_|JWT_RESPONSE_MISSING/);
   assert.match(page,/headers:\{Authorization:"Bearer "\+jwt,Accept:"application\/json"\}/);
   assert.doesNotMatch(page,/authClient\.token\(\)/);
   assert.doesNotMatch(page,/try\{await authClient\.signOut\(\);\}/);
-  assert.match(page,/Phiên đăng nhập được giữ nguyên/);
+  assert.match(page,/Phiên đăng nhập chưa được chấp nhận/);
   assert.match(route,/invalid_bearer/);
   assert.match(route,/upstream_jwt_rejected/);
   assert.match(route,/server_token_missing/);
@@ -33,7 +32,7 @@ test("Admin popup blocks the workspace until both Neon session and DB principal 
   assert.match(page,/authClient\.signIn\.email\(/);
   assert.match(page,/Lần đầu dùng Owner/);
   assert.match(page,/if\(status===403\)\{/);
-    assert.match(page,/domain Admin trong Neon Auth/);
+    assert.doesNotMatch(page,/domain Admin trong Neon Auth/);
     assert.match(page,/else if\(status===401 \|\| status===422\)/);
     assert.match(page,/<span className="staging-pill">ADMIN<\/span>/);
     assert.doesNotMatch(page,/>STAGING<\/span>/);
@@ -59,4 +58,31 @@ test("Admin reference UI retains purple side navigation, responsive panels and m
   for(const item of ["Quản lý sản phẩm","Thêm sản phẩm mới","Upload & quản lý ảnh","Banner & Popup","Media","Thêm biến thể"])assert.ok(page.includes(item),item);
   for(const rule of [".sidebar",".auth-overlay",".gallery-grid",".editor-grid",".metric-grid","@media(max-width:780px)"])assert.ok(styles.includes(rule),rule);
   for(const rule of [".auth-modal",".auth-logo img",".first-login-hint span","background:#fff","@media(max-width:480px)"])assert.ok(authStyles.includes(rule),rule);
+});
+
+test("Polished Admin shell separates sidebar/main scroll and avoids dead navigation",()=>{
+  const read=(path)=>readFileSync(new URL("../"+path,import.meta.url),"utf8");
+  const refined=read("apps/admin/app/admin-refinement.css");
+  const layout=read("apps/admin/app/layout.tsx");
+  const manager=read("apps/admin/app/catalogue-manager.tsx");
+  const toast=read("apps/admin/app/admin-toast.tsx");
+  assert.match(layout,/import "\.\/admin-refinement\.css"/);
+  assert.match(refined,/\.sidebar \{ height:100dvh; min-height:0; overflow-y:auto/);
+  assert.match(refined,/\.workspace-main \{ flex:1; min-height:0; overflow-y:auto/);
+  assert.match(refined,/prefers-reduced-motion:reduce/);
+  assert.match(refined,/@media \(min-width: 781px\)/);
+  assert.match(refined,/@media \(max-width:780px\)/);
+  assert.match(refined,/catalogue-channel-pending/);
+  assert.match(page,/function Brand\(\)/);
+  assert.doesNotMatch(page,/<span className="brand-copy">/);
+  assert.match(page,/\{ key:"products",label:"Sản phẩm"/);
+  assert.doesNotMatch(page,/\{ key:"banners",label:"Banner & Popup"/);
+  assert.doesNotMatch(toast,/createPortal\(/);
+  assert.match(toast,/setTimeout\(onClose,duration\)/);
+  assert.match(toast,/aria-label="Đóng thông báo"/);
+  assert.match(manager,/pendingVisibility\.current\.has\(key\)/);
+  assert.match(manager,/epochAtStart===visibilityEpoch\.current&&pendingVisibility\.current\.size===0/);
+  assert.match(manager,/visibilityEpoch\.current\+\+/);
+  assert.match(manager,/setVisibility\(previous=>\{const next=/);
+  assert.match(manager,/pendingKeys\.includes/);
 });

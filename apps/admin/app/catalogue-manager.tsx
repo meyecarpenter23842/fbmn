@@ -3,6 +3,7 @@ import {useCallback,useEffect,useMemo,useRef,useState} from "react";
 import {createPortal} from "react-dom";
 import {positionCatalogueActions} from "@/lib/catalogue-action-position.mjs";
 import ProductModal from "./product-modal";
+import AdminToast from "./admin-toast";
 import CatalogueImportPreview from "./catalogue-import-preview";
 import CatalogueMediaManager from "./catalogue-media-manager";
 
@@ -77,9 +78,9 @@ async function api<T>(route:string,method:"GET"|"POST"|"PATCH"="GET",body?:objec
   if(!res.ok){
     if(res.status===409)throw new Error("SKU đã được thay đổi hoặc đã tồn tại. Hãy tải lại danh sách.");
     if(res.status===403)throw new Error("Tài khoản chưa được cấp quyền thao tác này.");
-    throw new Error("Catalogue API chưa sẵn sàng ("+(payload.error?.code||res.status)+").");
+    throw new Error("Không thực hiện được thao tác. Vui lòng thử lại.");
   }
-  if(!payload.data)throw new Error("API không trả về dữ liệu catalogue.");
+  if(!payload.data)throw new Error("Không nhận được thông tin. Vui lòng thử lại.");
   return payload.data;
 }
 export default function CatalogueManager({onImport}:{onImport:()=>void}){
@@ -95,6 +96,10 @@ export default function CatalogueManager({onImport}:{onImport:()=>void}){
   const [busy,setBusy]=useState(false);
   const [error,setError]=useState("");
   const [message,setMessage]=useState("");
+  const clearToast=useCallback(()=>setMessage(""),[]);
+  const pendingVisibility=useRef(new Set<string>());
+  const visibilityEpoch=useRef(0);
+  const [pendingKeys,setPendingKeys]=useState<string[]>([]);
   const [query,setQuery]=useState("");
   const [page,setPage]=useState(1);
   const [selected,setSelected]=useState<string[]>([]);
@@ -170,6 +175,7 @@ export default function CatalogueManager({onImport}:{onImport:()=>void}){
   },[actionMenu]);
 
   const refresh=useCallback(async()=>{
+    const epochAtStart=visibilityEpoch.current;
     setActionMenu(null);setLoading(true);setError("");
     try{
       const [catalogue,groups,taxonomy,showing]=await Promise.all([
@@ -179,7 +185,9 @@ export default function CatalogueManager({onImport}:{onImport:()=>void}){
         catalogue.items.some(x=>typeof x.sku_cong_ty!=="string"))throw new Error("Dữ liệu SKU không hợp lệ.");
       if(!Array.isArray(taxonomy.items))throw new Error("Danh mục không hợp lệ.");
       if(!Array.isArray(showing.items))throw new Error("Trạng thái hiển thị không hợp lệ.");
-      setVisibility(Object.fromEntries(showing.items.map(x=>[x.sku_cong_ty+":"+x.channel_code,x])));
+      // Ignore snapshots started before/during a visibility mutation.
+      if(epochAtStart===visibilityEpoch.current&&pendingVisibility.current.size===0)
+        setVisibility(Object.fromEntries(showing.items.map(x=>[x.sku_cong_ty+":"+x.channel_code,x])));
       setItems(catalogue.items);setFamilies(groups.items);setCategories(taxonomy.items);
     }catch(e){setError(e instanceof Error?e.message:"Không đọc được catalogue");}
     finally{setLoading(false);}
@@ -223,18 +231,35 @@ export default function CatalogueManager({onImport}:{onImport:()=>void}){
     }catch(e){setError(e instanceof Error?e.message:"Xuất danh mục thất bại.");}
     finally{setBusy(false);}
   };
-  const toggleVisibility=(row:SKU,channel:typeof CHANNELS[number])=>void run(async()=>{
-    const current=visibility[row.sku_cong_ty+":"+channel.code];
+  const toggleVisibility=(row:SKU,channel:typeof CHANNELS[number])=>void (async()=>{
+    const key=row.sku_cong_ty+":"+channel.code;
+    if(pendingVisibility.current.has(key))return;
+    const current=visibility[key];
     const show=current?.state!=="published";
     if(!window.confirm((show?"BẬT":"TẮT")+" hiển thị mã "+row.sku_cong_ty+
-      " trên "+channel.label+"?"+(show?" Chỉ mã này được xuất bản, không tự bật toàn bộ danh mục.":"")))
-      return;
-    const saved=await api<Visibility>("visibility","POST",{
-      sku_cong_ty:row.sku_cong_ty,channel_code:channel.code,visible:show,
-      expected_revision:current?.revision??0,confirm:"CAP_NHAT_HIEN_THI"});
-    setVisibility(previous=>({...previous,[row.sku_cong_ty+":"+channel.code]:saved}));
-    setMessage((show?"Đã bật":"Đã ẩn")+" "+row.sku_cong_ty+" trên "+channel.label+".");
-  });
+      " trên "+channel.label+"?"+(show?" Chỉ mã này được xuất bản.":"")))return;
+    pendingVisibility.current.add(key);
+    visibilityEpoch.current++;
+    setPendingKeys(previous=>[...previous,key]);setError("");
+    setVisibility(previous=>({...previous,[key]:{
+      sku_cong_ty:row.sku_cong_ty,channel_code:channel.code,
+      state:show?"published":"hidden",revision:current?.revision??0}}));
+    try{
+      const saved=await api<Visibility>("visibility","POST",{
+        sku_cong_ty:row.sku_cong_ty,channel_code:channel.code,visible:show,
+        expected_revision:current?.revision??0,confirm:"CAP_NHAT_HIEN_THI"});
+      setVisibility(previous=>({...previous,[key]:saved}));
+      setMessage((show?"Đã bật":"Đã ẩn")+" "+row.sku_cong_ty+" trên "+channel.label+".");
+    }catch(e){
+      setVisibility(previous=>{const next={...previous};
+        if(current)next[key]=current;else delete next[key];return next;});
+      setError(e instanceof Error?e.message:"Không đổi được trạng thái hiển thị.");
+    }finally{
+      pendingVisibility.current.delete(key);
+      visibilityEpoch.current++;
+      setPendingKeys(previous=>previous.filter(item=>item!==key));
+    }
+  })();
   const add=()=>void run(async()=>{
     if(!sku||sku!==sku.trim()||!name.trim())throw new Error("Cần mã công ty dạng text và tên sản phẩm.");
     const data=await api<{sku_cong_ty:string}>("skus","POST",{
@@ -275,7 +300,7 @@ export default function CatalogueManager({onImport}:{onImport:()=>void}){
       <p>Thêm, tìm và sửa sản phẩm. Mã công ty giữ nguyên, kể cả số 0 đầu.</p></div>
       <div className="action-row">
         <button type="button" className="import-btn import-secondary" onClick={()=>setShowCategories(true)}>Danh mục</button>
-        <button type="button" className="import-btn import-secondary" onClick={()=>void refresh()} disabled={busy||loading}>Làm mới</button>
+        <button type="button" className="import-btn import-secondary" onClick={()=>void refresh()} disabled={busy||loading||pendingKeys.length>0}>Làm mới</button>
         <div className="catalogue-export-anchor" ref={exportAnchor}>
           <button type="button" className="import-btn import-secondary catalogue-export-trigger"
             aria-haspopup="menu" aria-expanded={exportOpen} aria-controls="catalogue-export-format"
@@ -296,7 +321,7 @@ export default function CatalogueManager({onImport}:{onImport:()=>void}){
       <strong>{items.length} sản phẩm</strong><span>{families.length} nhóm mẫu</span>
     </div>
     {error&&!create&&!editing&&!showGroup&&<div className="import-error" role="alert">{error}</div>}
-    {message&&<div className="import-review-banner" role="status"><b>{message}</b></div>}
+    <AdminToast message={message} onClose={clearToast}/>
     {create&&<ProductModal title="Thêm sản phẩm Futurebook" onClose={()=>setCreate(false)} locked={busy}>
       {error&&<div className="import-error" role="alert">{error}</div>}
       <div className="catalogue-editor">
@@ -372,9 +397,10 @@ export default function CatalogueManager({onImport}:{onImport:()=>void}){
           {CHANNELS.map(channel=>{
             const on=visibility[row.sku_cong_ty+":"+channel.code]?.state==="published";
             return <button type="button" key={channel.code}
-              className={"import-btn import-secondary"+(on?" catalogue-channel-on":"")}
+              className={"import-btn import-secondary"+(on?" catalogue-channel-on":"")+(pendingKeys.includes(row.sku_cong_ty+":"+channel.code)?" catalogue-channel-pending":"")}
               aria-label={(on?"Tắt":"Bật")+" "+channel.label+" cho SKU "+row.sku_cong_ty}
-              aria-pressed={on} disabled={busy||loading}
+              aria-pressed={on} aria-busy={pendingKeys.includes(row.sku_cong_ty+":"+channel.code)}
+              disabled={busy||loading||pendingKeys.includes(row.sku_cong_ty+":"+channel.code)}
               style={{padding:"5px 8px",fontSize:11,borderColor:on?"#128763":undefined,
                 color:on?"#128763":undefined}}
               title={(on?"Đang hiển thị":"Đang ẩn")+" · "+channel.label}
@@ -422,7 +448,7 @@ export default function CatalogueManager({onImport}:{onImport:()=>void}){
           }}>Sửa sản phẩm</button>
         <button type="button" role="menuitem"
           onClick={()=>{setMediaSku(selectedActionRow.sku_cong_ty);setActionMenu(null)}}>
-          Quản lý ảnh R2</button>
+          Quản lý hình ảnh</button>
         <button type="button" role="menuitem"
           disabled={!["draft","needs_review"].includes(selectedActionRow.review_status)}
           onClick={()=>{
@@ -460,6 +486,6 @@ export default function CatalogueManager({onImport}:{onImport:()=>void}){
     {showImport&&<ProductModal title="Nhập / cập nhật sản phẩm bằng Excel" wide locked={importBusy} onClose={()=>{if(!importBusy){setShowImport(false);void refresh()}}}>
       <CatalogueImportPreview onBusyChange={handleImportBusy} onSaved={importSaved} />
     </ProductModal>}
-    <p className="import-footnote">Ảnh sản phẩm lưu riêng tư trên R2 và có thể gắn nhiều mẫu cho một SKU. Chưa tự đưa lên website; quyền hiển thị từng kênh thuộc P5. Không công khai giá NET hay tồn kho.</p>
+    <p className="import-footnote">Ảnh có thể bổ sung sau. Sản phẩm chỉ xuất hiện ở kênh đã bật hiển thị.</p>
   </section>;
 }

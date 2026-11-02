@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { ChangeEvent } from "react";
+import AdminToast from "./admin-toast";
 
 type RowStatus = "create" | "update" | "unchanged" | "conflict" | "error";
 type ProfileColumn={index:number;header:string;suggested:string;samples:string[]};
@@ -114,6 +115,7 @@ export default function CatalogueImportPreview({onBusyChange,onSaved}:{onBusyCha
   const [approving,setApproving]=useState(false);
   const [approved,setApproved]=useState(false);
   const [receipt,setReceipt]=useState("");
+  const closeReceipt=()=>setReceipt("");
   const [error,setError]=useState("");
   const [search,setSearch]=useState("");
   const [filter,setFilter]=useState("all");
@@ -247,12 +249,12 @@ export default function CatalogueImportPreview({onBusyChange,onSaved}:{onBusyCha
         if(response.status===401||response.status===403)throw new Error("Tài khoản chưa được cấp quyền xem trước import. Kiểm tra quyền Owner/Editor.");
         if(response.status===413)throw new Error("Tệp quá dung lượng cho phép.");
         if(response.status===422||response.status===400)throw new Error("Không phân tích được cấu trúc Excel hoặc cách ghép cột. Kiểm tra dòng tiêu đề và mã công ty dạng văn bản; file 1 sheet được phép đặt tên worksheet tùy ý.");
-        throw new Error("Admin staging chưa xử lý được XLSX (HTTP "+response.status+").");
+        throw new Error("Chưa đọc được file Excel. Vui lòng kiểm tra định dạng và thử lại.");
       }
       const data=await response.json() as Preview;
       if(data.database_queried!==true || data.applied!==false || !Array.isArray(data.items) ||
          data.counts?.total_rows!==data.items.length || data.items.length>20_000)
-        throw new Error("Báo cáo không đúng hợp đồng dry-run; đã từ chối hiển thị.");
+        throw new Error("Kết quả xem trước không hợp lệ. Vui lòng thử lại.");
       setPreview(data);setFieldPage(0);
     }catch(ex:unknown){setError(ex instanceof Error?ex.message:"Không đọc được file Excel.");}
     finally{setBusy(false);}
@@ -308,7 +310,7 @@ export default function CatalogueImportPreview({onBusyChange,onSaved}:{onBusyCha
         throw new Error("Không lưu được sản phẩm (HTTP "+response.status+").");
       }
       const data=await response.json() as {data?:{drafts_saved?:number;created?:number;updated?:number;published?:number}};
-      if(data.data?.published!==0)throw new Error("API trả về trạng thái xuất bản không hợp lệ.");
+      if(data.data?.published!==0)throw new Error("Không xác nhận được trạng thái lưu. Vui lòng kiểm tra lại.");
       if(oneSheet){
         if(data.data?.created!==create||data.data?.updated!==update)
           throw new Error("Kết quả cập nhật không khớp với bản xem trước.");
@@ -426,7 +428,7 @@ export default function CatalogueImportPreview({onBusyChange,onSaved}:{onBusyCha
       <small><b>Quy tắc duy nhất:</b> Chọn Bỏ qua = không cập nhật cột đó. Chọn một trường = lấy giá trị Excel làm giá trị mới; ô trống sẽ xóa dữ liệu cũ của trường tương ứng. Mã công ty cố định; tên sản phẩm là trường bắt buộc nên để trống sẽ báo lỗi. Nhấn Cột tiếp / Cột trước để xem hết các cột. Chỉ lưu sau khi xem trước.</small>
     </section>}
     {error&&<div className="import-error" role="alert">{error}</div>}
-    {receipt&&<div className="import-review-banner" role="status"><b>{receipt}</b></div>}
+    <AdminToast message={receipt} onClose={closeReceipt}/>
     {preview&&<section aria-label="Báo cáo xem trước">
       <div className="import-kpis import-kpis-simple">
         <div><small>SKU trong file</small><strong>{preview.counts.total_rows}</strong></div>

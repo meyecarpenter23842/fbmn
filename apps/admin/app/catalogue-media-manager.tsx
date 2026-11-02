@@ -1,5 +1,6 @@
 "use client";
 import {useCallback,useEffect,useRef,useState} from "react";
+import AdminToast from "./admin-toast";
 
 type Media={id:string;source_filename:string;mime_type:string;media_role:string;sort_order:number;sku_cong_ty:string;file_sha256:string};
 type R2Candidate={key:string;bytes:number|null;status:string;sku?:string;filename?:string};
@@ -20,8 +21,8 @@ async function mediaApi<T>(action:string,method:"GET"|"POST"|"PATCH"|"DELETE"="G
     ...(body?{body:JSON.stringify(body)}:{})
   });
   const payload=await response.json() as Result<T>;
-  if(!response.ok)throw Error("Không thao tác được ảnh ("+(payload.error?.code||response.status)+").");
-  if(!payload.data)throw Error("API không trả dữ liệu ảnh.");
+  if(!response.ok)throw Error("Không thực hiện được thao tác với ảnh. Vui lòng thử lại.");
+  if(!payload.data)throw Error("Chưa nhận được thông tin ảnh. Vui lòng thử lại.");
   return payload.data;
 }
 async function webpVariant(input:Blob,longest:number):Promise<Blob>{
@@ -77,6 +78,7 @@ export default function CatalogueMediaManager({sku,onChanged,onBusyChange}:{
   const [busy,setBusy]=useState(false);
   const [error,setError]=useState("");
   const [message,setMessage]=useState("");
+  const clearToast=useCallback(()=>setMessage(""),[]);
   const fileInput=useRef<HTMLInputElement>(null);
   const replaceFileInput=useRef<HTMLInputElement>(null);
   const replaceAssetRef=useRef<string|null>(null);
@@ -132,22 +134,21 @@ export default function CatalogueMediaManager({sku,onChanged,onBusyChange}:{
       if(!response.ok)throw Error("Ảnh "+file.name+": "+(result.error?.code||response.status));
       completed++;
     }
-    setMessage((replacing?"Đã thay":"Đã lưu")+" "+completed+
-      " ảnh WebP trên R2. Mỗi mẫu chỉ có 1 file, không lưu ảnh gốc/thumbnail.");
+    setMessage((replacing?"Đã thay":"Đã lưu")+" "+completed+" ảnh.");
   });
   const scanBucket=()=>void work(async()=>{
     const result=await mediaApi<{items:R2Candidate[];truncated:boolean;scanned:number}>("scan");
     setCandidates(result.items);
     setSelectedKeys([]);
     setScanTruncated(result.truncated);
-    setMessage("Đã quét "+result.scanned+" object trong private/catalogue. Chưa gắn ảnh nào.");
+    setMessage("Đã tìm thấy "+result.scanned+" ảnh trong kho. Chưa gắn ảnh nào.");
   });
   const adoptSelected=()=>void work(async()=>{
     if(!selectedKeys.length)return;
     const chosen=(candidates||[]).filter(x=>selectedKeys.includes(x.key)&&x.status==="matched");
     if(chosen.length!==selectedKeys.length||chosen.length>10)
       throw Error("Mỗi lần chỉ gắn tối đa 10 ảnh khớp chính xác.");
-    if(!window.confirm("Gắn "+chosen.length+" ảnh R2 vào các mã SKU đã nhận diện? Không tự xuất bản website."))
+    if(!window.confirm("Gắn "+chosen.length+" ảnh vào các mã sản phẩm đã nhận diện? Ảnh chưa tự hiển thị trên website."))
       return;
     const result=await mediaApi<{count:number;items:{sku:string;asset_id:string}[]}>("adopt","POST",
       {confirm:"GAN_ANH_R2",keys:chosen.map(x=>x.key)});
@@ -156,7 +157,7 @@ export default function CatalogueMediaManager({sku,onChanged,onBusyChange}:{
     const latest=await mediaApi<{items:R2Candidate[];truncated:boolean}>("scan");
     setCandidates(latest.items);
     setScanTruncated(latest.truncated);
-    setMessage("Đã gắn "+result.count+" ảnh WebP đúng SKU. Không tạo file phụ.");
+    setMessage("Đã gắn "+result.count+" ảnh đúng mã sản phẩm.");
   });
   const toggleCandidate=(key:string,checked:boolean)=>{
     setSelectedKeys(current=>checked?[...current.filter(x=>x!==key),key].slice(0,10):
@@ -164,14 +165,14 @@ export default function CatalogueMediaManager({sku,onChanged,onBusyChange}:{
   };
   const remove=(asset:Media)=>void work(async()=>{
     if(!window.confirm("Xóa ảnh '"+asset.source_filename+"' của SKU "+sku+
-      "? File WebP trên R2 sẽ bị xóa nếu không còn SKU khác dùng."))return;
+      "? Ảnh sẽ được xóa nếu không còn sản phẩm nào sử dụng."))return;
     const outcome=await mediaApi<{unlinked:boolean;file_deleted:boolean;pending:boolean}>("link","DELETE",{sku_cong_ty:sku,asset_id:asset.id});
-    setMessage(outcome.pending?"Đã gỡ ảnh. File R2 đang chờ dọn; dùng nút Dọn file dư để thử lại.":
-      "Đã xóa ảnh và file WebP không còn được sử dụng.");
+    setMessage(outcome.pending?"Đã gỡ ảnh. Có thể dọn ảnh không sử dụng sau.":
+      "Đã xóa ảnh không còn được sử dụng.");
   });
   const cleanOrphans=()=>void work(async()=>{
     const r=await mediaApi<{completed:number;remaining:number}>("cleanup","POST",{confirm:"DON_ANH_THUA"});
-    setMessage("Đã dọn "+r.completed+" file không còn dùng; "+r.remaining+" file chưa dọn được.");
+    setMessage("Đã dọn "+r.completed+" ảnh không còn dùng; "+r.remaining+" ảnh chưa dọn được.");
   });
   const reorder=(ids:string[],cover:string)=>void work(async()=>{
     await mediaApi("order","PATCH",{sku_cong_ty:sku,asset_ids:ids,cover_id:cover});
@@ -180,10 +181,9 @@ export default function CatalogueMediaManager({sku,onChanged,onBusyChange}:{
   const ordered=[...items].sort((a,b)=>a.sort_order-b.sort_order);
   const cover=ordered.find(item=>item.media_role==="cover")?.id||ordered[0]?.id;
   return <section className="catalogue-media-manager" aria-label={"Ảnh SKU "+sku}>
-    <p><strong>Mã công ty: {sku}.</strong> Mỗi mẫu là 1 file WebP riêng trên R2.
-      Khi chọn JPG/PNG, Admin tự chuyển sang WebP. Không lưu ảnh gốc hoặc thumbnail.</p>
+    <p><strong>Mã công ty: {sku}.</strong> Có thể tải nhiều ảnh, sắp xếp và chọn ảnh đại diện. Hỗ trợ JPG, PNG và WebP.</p>
     {error&&<div className="import-error" role="alert">{error}</div>}
-    {message&&<div className="import-review-banner" role="status">{message}</div>}
+    <AdminToast message={message} onClose={clearToast}/>
     <div className="catalogue-media-actions">
       <label className="import-btn import-primary catalogue-media-upload">
         + Chọn tối đa 5 ảnh
@@ -197,7 +197,7 @@ export default function CatalogueMediaManager({sku,onChanged,onBusyChange}:{
     </div>
     <div className="catalogue-media-actions">
       <button className="import-btn import-secondary" type="button" disabled={busy}
-        onClick={scanBucket}>Quét ảnh đã tải thủ công lên R2</button>
+        onClick={scanBucket}>Tìm ảnh có sẵn</button>
       <button className="import-btn import-secondary" type="button" disabled={busy}
         onClick={cleanOrphans}>Dọn file dư</button>
       {selectedKeys.length>0&&<button className="import-btn import-primary"
@@ -206,11 +206,10 @@ export default function CatalogueMediaManager({sku,onChanged,onBusyChange}:{
       </button>}
     </div>
     {candidates!==null&&<section className="catalogue-media-library"
-      aria-label="Đối chiếu ảnh trong R2">
-      <strong>Ảnh R2 chưa gắn: {candidates.length}</strong>
-      <p>Chỉ nhận file WebP đặt tên L536.webp, L536-02.webp...
-        Tải đè cùng tên trên R2 để thay mẫu đang có. Không lưu file PNG/JPG.</p>
-      {scanTruncated&&<p role="alert">Kho có hơn 1.000 object: lần quét này chưa bao quát toàn bộ.
+      aria-label="Đối chiếu ảnh trong kho">
+      <strong>Ảnh chưa gắn: {candidates.length}</strong>
+      <p>Ảnh có tên theo mã sản phẩm sẽ được đề xuất ghép. Vui lòng kiểm tra trước khi xác nhận.</p>
+      {scanTruncated&&<p role="alert">Kho có quá nhiều ảnh: kết quả tìm kiếm chưa bao quát toàn bộ.
         Không gắn dựa trên kết quả thiếu.</p>}
       <div className="catalogue-media-scan-list" style={{maxHeight:260,overflowY:"auto"}}>
         {candidates.slice(0,1000).map(item=><label key={item.key}
