@@ -10,15 +10,17 @@ export type StructureSku={sku_cong_ty:string;revision:number;category_id:string|
 type Pane="categories"|"families";
 export default function CatalogueStructureManager({
   initialPane,categories,families,items,busy,error,
-  selectedBulk,onCreateCategory,onRenameCategory,onCreateFamily,onRenameFamily,
+  selectedBulk,onCreateCategory,onRenameCategory,onChangeCategoryCode,onCreateFamily,onRenameFamily,onChangeFamilyCode,
   onChangeMember,onBulkAssign,onOpenSku
 }:{
   initialPane:Pane;categories:StructureCategory[];families:StructureFamily[];items:StructureSku[];
   busy:boolean;error:string;selectedBulk:string[];
-  onCreateCategory:(name:string,parentId:string|null)=>void;
+  onCreateCategory:(name:string,parentId:string|null,code:string)=>void;
   onRenameCategory:(category:StructureCategory,name:string)=>void;
-  onCreateFamily:(name:string)=>void;
+  onChangeCategoryCode:(category:StructureCategory,code:string)=>void;
+  onCreateFamily:(name:string,code:string)=>void;
   onRenameFamily:(family:StructureFamily,name:string)=>void;
+  onChangeFamilyCode:(family:StructureFamily,code:string)=>void;
   onChangeMember:(sku:StructureSku,familyId:string|null)=>void;
   onBulkAssign:(familyId:string)=>void;
   onOpenSku:(sku:StructureSku)=>void;
@@ -27,8 +29,10 @@ export default function CatalogueStructureManager({
   const [search,setSearch]=useState("");
   const [selectedId,setSelectedId]=useState("");
   const [newName,setNewName]=useState("");
+  const [newCode,setNewCode]=useState("");
   const [parentId,setParentId]=useState("");
   const [rename,setRename]=useState("");
+  const [editCode,setEditCode]=useState("");
   const [memberSearch,setMemberSearch]=useState("");
   const [addSku,setAddSku]=useState("");
   const roots=categories.filter(c=>!c.parent_id);
@@ -50,8 +54,12 @@ export default function CatalogueStructureManager({
   const available=items.filter(s=>["draft","needs_review"].includes(s.review_status)
     &&s.family_id!==selectedFamily?.id&&(s.sku_cong_ty.toLocaleLowerCase("vi").includes(addSku.toLocaleLowerCase("vi"))||
       (s.ten_san_pham||s.ten_goc_xnt||"").toLocaleLowerCase("vi").includes(addSku.toLocaleLowerCase("vi")))).slice(0,30);
-  const select=(id:string)=>{setSelectedId(id);setRename("");setMemberSearch("");setAddSku("");};
-  const choosePane=(next:Pane)=>{setPane(next);select("");setSearch("");setNewName("");setParentId("");};
+  const select=(id:string)=>{setSelectedId(id);setRename("");setEditCode("");setMemberSearch("");setAddSku("");};
+  const choosePane=(next:Pane)=>{setPane(next);select("");setSearch("");setNewName("");setNewCode("");setParentId("");};
+  const validCode=(code:string)=>/^[A-Z0-9][A-Z0-9_-]{1,31}$/.test(code);
+  const codeTaken=(code:string,currentId?:string)=>pane==="categories"?
+    categories.some(c=>c.id!==currentId&&c.category_code===code):
+    families.some(f=>f.id!==currentId&&f.family_code===code);
   const matches=(label:string,code:string)=>`${code} ${label}`.toLocaleLowerCase("vi").includes(search.trim().toLocaleLowerCase("vi"));
   const exportCodes=()=>{
     const records=[
@@ -85,7 +93,7 @@ export default function CatalogueStructureManager({
         className={pane==="families"?"active":""} onClick={()=>choosePane("families")}>Nhóm mẫu ({families.length})</button>
     </div>
     <div className="catalogue-structure-helper-row">
-      <p className="catalogue-structure-help">Mã DM/NM được cấp tự động và không đổi khi sửa tên. SKU dùng mã này để cập nhật chính xác qua Excel.</p>
+      <p className="catalogue-structure-help">Mã do anh tự đặt khi tạo (bắt buộc). Không tự sinh mã. Mã dùng để đối chiếu Excel; đổi mã cần cập nhật các file Excel cũ.</p>
       <button type="button" className="import-btn import-secondary" disabled={!categories.length&&!families.length}
         onClick={exportCodes}>Xuất bảng mã CSV</button>
     </div>
@@ -120,8 +128,15 @@ export default function CatalogueStructureManager({
       </section>
       <section className="catalogue-structure-detail">
         <div className="catalogue-structure-create">
-          <strong>Tạo {pane==="categories"?"danh mục":"nhóm mẫu"} mới <small>(mã được cấp tự động)</small></strong>
+          <strong>Tạo {pane==="categories"?"danh mục":"nhóm mẫu"} mới</strong>
           <div className="catalogue-structure-inputs">
+            <label className="catalogue-structure-field">Mã quản lý (bắt buộc)
+              <input value={newCode} maxLength={32}
+                onChange={e=>setNewCode(e.target.value.trim().toUpperCase())}
+                placeholder={pane==="categories"?"VD: DM-TAP-HS":"VD: NM-VO96-CARO"}
+                aria-invalid={!!newCode&&(!validCode(newCode)||codeTaken(newCode))}
+                spellCheck={false} autoComplete="off"/>
+            </label>
             <label className="catalogue-structure-field">Tên
               <input value={newName} maxLength={160} onChange={e=>setNewName(e.target.value)}
                 placeholder={pane==="categories"?"Tên danh mục":"Tên nhóm mẫu"}/>
@@ -133,24 +148,46 @@ export default function CatalogueStructureManager({
               </select>
             </label>}
             <button type="button" className="import-btn import-primary"
-              disabled={busy||!newName.trim()||
+              disabled={busy||!newName.trim()||!validCode(newCode)||codeTaken(newCode)||
                 (pane==="categories"
                   ?categories.some(c=>c.parent_id===(parentId||null)&&c.category_label.trim().toLocaleLowerCase("vi")===newName.trim().toLocaleLowerCase("vi"))
                   :families.some(f=>f.family_label.trim().toLocaleLowerCase("vi")===newName.trim().toLocaleLowerCase("vi")))}
               onClick={()=>{
-                if(pane==="categories")onCreateCategory(newName,parentId||null);
-                else onCreateFamily(newName);
-                setNewName("");
+                if(pane==="categories")onCreateCategory(newName,parentId||null,newCode);
+                else onCreateFamily(newName,newCode);
+                setNewName("");setNewCode("");
               }}>Tạo mới</button>
           </div>
+          <small className="catalogue-structure-code-hint">Chỉ dùng chữ A–Z, số 0–9, dấu gạch ngang (-) hoặc gạch dưới (_), dài 2–32 ký tự. Mã phải duy nhất.</small>
+          {!!newCode&&codeTaken(newCode)&&<small role="alert" className="catalogue-structure-code-error">Mã này đã được sử dụng.</small>}
         </div>
         {(pane==="categories"?selectedCategory:selectedFamily)?<>
           <div className="catalogue-structure-selected">
             <div><small>Đang xem {pane==="categories"?"danh mục":"nhóm mẫu"}</small>
-              <p className="catalogue-structure-code-line">Mã cố định: <strong>{pane==="categories"?selectedCategory?.category_code:selectedFamily?.family_code}</strong></p>
+              <p className="catalogue-structure-code-line">Mã quản lý: <strong>{pane==="categories"?selectedCategory?.category_code:selectedFamily?.family_code}</strong></p>
               <h3>{pane==="categories"?selectedCategory?.category_label:selectedFamily?.family_label}</h3>
               <span>{members.length} SKU {pane==="categories"&&subIds.length?"(gồm danh mục con)":""}</span>
             </div>
+          </div>
+          <div className="catalogue-structure-rename">
+            <label className="catalogue-structure-field">Đổi mã quản lý
+              <input value={editCode} maxLength={32}
+                onChange={e=>setEditCode(e.target.value.trim().toUpperCase())}
+                placeholder={pane==="categories"?selectedCategory?.category_code:selectedFamily?.family_code}
+                aria-invalid={!!editCode&&(!validCode(editCode)||codeTaken(editCode,selectedId))}
+                spellCheck={false} autoComplete="off"/>
+            </label>
+            <button type="button" className="import-btn import-secondary"
+              disabled={busy||!validCode(editCode)||codeTaken(editCode,selectedId)||
+                editCode===(pane==="categories"?selectedCategory?.category_code:selectedFamily?.family_code)}
+              onClick={()=>{
+                const previous=pane==="categories"?selectedCategory?.category_code:selectedFamily?.family_code;
+                if(!window.confirm("Đổi mã "+previous+" thành "+editCode+
+                  "? Liên kết SKU vẫn giữ nguyên, nhưng Excel đang dùng mã cũ sẽ cần sửa."))return;
+                if(pane==="categories"&&selectedCategory)onChangeCategoryCode(selectedCategory,editCode);
+                if(pane==="families"&&selectedFamily)onChangeFamilyCode(selectedFamily,editCode);
+                setEditCode("");
+              }}>Lưu mã</button>
           </div>
           <div className="catalogue-structure-rename">
             <label className="catalogue-structure-field">Đổi tên (không đổi liên kết)

@@ -14,7 +14,7 @@ function memoryDb(){
   const db=async fn=>fn({query:async(sql,args=[])=>{
     queries.push({sql,args});
     if(sql.includes("RETURNING id::text AS id,parent_id::text AS parent_id,category_code,category_label"))
-      return {rowCount:1,rows:[{id:uuid,parent_id:args[1],category_code:"DM-0001",category_label:args[0]}]};
+      return {rowCount:1,rows:[{id:uuid,parent_id:args[1],category_code:args[2],category_label:args[0]}]};
     if(sql.startsWith("SELECT id FROM fbmn_catalog.categories"))
       return {rowCount:1,rows:[{id:args[0]}]};
     if(sql.includes("RETURNING sku_cong_ty")&&sql.startsWith("INSERT"))
@@ -37,14 +37,14 @@ test("P2 specs allow missing source data and reject invented price or invalid un
 });
 test("P2 category creates parent/child only via authenticated Owner and preserves SKU",async()=>{
   const a=memoryDb();
-  const deny=await handleCatalogue({request:request("categories","POST",{category_label:"Tập học sinh"}),
+  const deny=await handleCatalogue({request:request("categories","POST",{category_label:"Tập học sinh",category_code:"DM-TAP-HS"}),
     actor:editor,db:a.db});
   assert.equal(deny.status,403);
-  const parent=await handleCatalogue({request:request("categories","POST",{category_label:"Tập học sinh"}),
+  const parent=await handleCatalogue({request:request("categories","POST",{category_label:"Tập học sinh",category_code:"DM-TAP-HS"}),
     actor:owner,db:a.db});
   assert.equal(parent.status,201);
   const child=await handleCatalogue({request:request("categories","POST",{
-    category_label:"Tập 4 ô ly",parent_id:uuid}),actor:owner,db:a.db});
+    category_label:"Tập 4 ô ly",category_code:"DM-TAP-4OLY",parent_id:uuid}),actor:owner,db:a.db});
   assert.equal(child.status,201);
   assert.ok(a.queries.some(x=>x.sql.includes("parent_id IS NULL")));
   assert.ok(a.queries.some(x=>x.args?.[1]==="category_create"));

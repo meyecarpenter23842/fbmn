@@ -73,3 +73,7 @@
 .catalogue-structure-helper-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 17px;border-bottom:1px solid #e5e8f2;background:#fff;flex-wrap:wrap}
 .catalogue-structure-helper-row .catalogue-structure-help{padding:0;border:0;flex:1;min-width:220px}
 .catalogue-structure-helper-row button{min-height:35px;white-space:nowrap}
+
+.catalogue-structure-code-hint{font-size:11px;color:#7580a0;line-height:1.5}
+.catalogue-structure-code-error{font-size:11px;color:#b42318;line-height:1.4}
+.catalogue-structure-field input[aria-invalid="true"]{border-color:#d84c55;outline-color:#d84c55}

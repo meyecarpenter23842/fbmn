@@ -133,7 +133,7 @@ test("G03: API & UI include immutable codes and validated code sync end to end",
  assert.match(syncRoute,/families_unavailable/);
  assert.match(mapping,/key:"category_code"/);
  assert.match(mapping,/key:"family_code"/);
- assert.match(manager,/Mã cố định/);
+ assert.match(manager,/Mã quản lý/);
  assert.match(migration,/ADD CONSTRAINT fbmn_category_code_unique UNIQUE\(category_code\)/);
  assert.match(migration,/ADD CONSTRAINT fbmn_family_code_unique UNIQUE\(family_code\)/);
  assert.match(migration,/GRANT USAGE ON SEQUENCE/);

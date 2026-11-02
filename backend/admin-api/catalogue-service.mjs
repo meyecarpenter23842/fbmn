@@ -11,6 +11,7 @@ const validSku = x => typeof x==="string" && x.length>0 && x.length<=80 &&
   x.trim()===x && !/[^\P{Cc}]/u.test(x);
 const validText = (x,max=500) => x===undefined || x===null ||
   (typeof x==="string" && x.length<=max && !Array.from(x).some(char=>char.charCodeAt(0)<32 && ![9,10,13].includes(char.charCodeAt(0))));
+const validTaxonomyCode = x => typeof x==="string" && /^[A-Z0-9][A-Z0-9_-]{1,31}$/.test(x);
 const uuid = x => typeof x==="string" && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(x);
 const SPEC_FIELDS = new Set(["pages","ruling","gsm","cover_type","unit","packaging","units_per_pack","short_description","long_description"]);
 export function safeProductSpec(spec) {
@@ -358,6 +359,23 @@ export async function handleCatalogue({request,actor,db,r2}) {
     }
     if(route==="categories" && request.method==="PATCH"){
       if(actor.role!=="owner")return fail("owner_required",403);
+      if(input && Object.hasOwn(input,"category_code")){
+        if(!uuid(input.id)||!validTaxonomyCode(input.category_code)||
+           !validTaxonomyCode(input.expected_code)||input.category_code===input.expected_code)
+          return fail("invalid_category_code");
+        const changed=await transactional(db,async c=>{
+          const saved=await c.query(
+            "UPDATE fbmn_catalog.categories SET category_code=$1 "+
+            "WHERE id=$2 AND category_code=$3 "+
+            "RETURNING id::text AS id,parent_id::text AS parent_id,category_code,category_label",
+            [input.category_code,input.id,input.expected_code]);
+          if(saved.rowCount!==1)throw Error("catalogue_conflict");
+          await audit(c,actor.subject,"category_code_change",{
+            id:input.id,old_code:input.expected_code,new_code:input.category_code});
+          return saved.rows[0];
+        });
+        return reply(200,{data:changed});
+      }
       if(!uuid(input?.id)||typeof input.expected_label!=="string"||
          !input.expected_label.trim()||typeof input.category_label!=="string"||
          !input.category_label.trim()||!validText(input.category_label,160)||
@@ -378,7 +396,8 @@ export async function handleCatalogue({request,actor,db,r2}) {
     if(route==="categories" && request.method==="POST"){
       if(actor.role!=="owner")return fail("owner_required",403);
       if(typeof input?.category_label!=="string"||!input.category_label.trim()||
-         !validText(input.category_label,160)||!validCategory(input.parent_id))
+         !validText(input.category_label,160)||!validCategory(input.parent_id)||
+         !validTaxonomyCode(input.category_code))
         return fail("invalid_category");
       const result=await transactional(db,async c=>{
         if(input.parent_id){
@@ -388,9 +407,9 @@ export async function handleCatalogue({request,actor,db,r2}) {
           if(!parent.rowCount)throw Error("invalid_category");
         }
         const saved=await c.query(
-          "INSERT INTO fbmn_catalog.categories(category_label,parent_id) VALUES($1,$2) "+
+          "INSERT INTO fbmn_catalog.categories(category_label,parent_id,category_code) VALUES($1,$2,$3) "+
           "RETURNING id::text AS id,parent_id::text AS parent_id,category_code,category_label",
-          [input.category_label.trim(),input.parent_id??null]);
+          [input.category_label.trim(),input.parent_id??null,input.category_code]);
         await audit(c,actor.subject,"category_create",{id:saved.rows[0].id});
         return saved.rows[0];
       });
@@ -399,6 +418,25 @@ export async function handleCatalogue({request,actor,db,r2}) {
 
     if(route==="families" && request.method==="PATCH"){
       if(actor.role!=="owner")return fail("owner_required",403);
+      if(input && Object.hasOwn(input,"family_code")){
+        if(!uuid(input.id)||!validTaxonomyCode(input.family_code)||
+           !validTaxonomyCode(input.expected_code)||
+           !Number.isSafeInteger(input.expected_revision)||input.expected_revision<1||
+           input.family_code===input.expected_code)
+          return fail("invalid_family_code");
+        const changed=await transactional(db,async c=>{
+          const saved=await c.query(
+            "UPDATE fbmn_catalog.families SET family_code=$1,revision=revision+1 "+
+            "WHERE id=$2 AND family_code=$3 AND revision=$4 "+
+            "RETURNING id::text AS id,family_code,family_label,revision",
+            [input.family_code,input.id,input.expected_code,input.expected_revision]);
+          if(saved.rowCount!==1)throw Error("catalogue_conflict");
+          await audit(c,actor.subject,"family_code_change",{
+            id:input.id,old_code:input.expected_code,new_code:input.family_code});
+          return saved.rows[0];
+        });
+        return reply(200,{data:changed});
+      }
       if(!uuid(input?.id)||!Number.isSafeInteger(input.expected_revision)||
          input.expected_revision<1||typeof input.family_label!=="string"||
          !input.family_label.trim()||!validText(input.family_label,160))
@@ -422,16 +460,19 @@ export async function handleCatalogue({request,actor,db,r2}) {
       return reply(200,{data:result});
     }
     if(route==="families" && request.method==="POST"){
+      if(actor.role!=="owner")return fail("owner_required",403);
       if(typeof input?.family_label!=="string" || !input.family_label.trim()||
-        !validText(input.family_label,160))return fail("invalid_family_label");
+        !validText(input.family_label,160)||!validTaxonomyCode(input.family_code))
+        return fail("invalid_family_label");
       const result=await transactional(db,async c=>{
         await c.query("SELECT pg_advisory_xact_lock(723204)");
         const duplicate=await c.query("SELECT id FROM fbmn_catalog.families "+
           "WHERE lower(btrim(family_label))=lower($1)",[input.family_label.trim()]);
         if(duplicate.rowCount)throw Error("catalogue_conflict");
         const saved=await c.query(
-          "INSERT INTO fbmn_catalog.families(family_label) VALUES ($1) "+
-          "RETURNING id::text AS id,family_code,family_label,revision",[input.family_label.trim()]);
+          "INSERT INTO fbmn_catalog.families(family_label,family_code) VALUES ($1,$2) "+
+          "RETURNING id::text AS id,family_code,family_label,revision",
+          [input.family_label.trim(),input.family_code]);
         await audit(c,actor.subject,"family_create",{id:saved.rows[0].id});
         return saved.rows[0];
       });

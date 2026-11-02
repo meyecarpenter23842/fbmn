@@ -317,17 +317,26 @@ export default function CatalogueManager({onImport}:{onImport:()=>void}){
     setEditorNotice("Đã lưu thay đổi, mô tả và quy cách. Có thể tiếp tục chỉnh sửa ảnh.");
     setMessage("Đã cập nhật mã "+editing.sku_cong_ty+".");
   });
-  const createCategory=(label:string,parentId:string|null)=>void run(async()=>{
-    await api<Category>("categories","POST",{category_label:label.trim(),parent_id:parentId});
-    setMessage("Đã tạo danh mục.");
+  const createCategory=(label:string,parentId:string|null,code:string)=>void run(async()=>{
+    await api<Category>("categories","POST",{category_label:label.trim(),parent_id:parentId,category_code:code});
+    setMessage("Đã tạo danh mục "+code+".");
+  });
+  const changeCategoryCode=(category:Category,code:string)=>void run(async()=>{
+    await api<Category>("categories","PATCH",{id:category.id,expected_code:category.category_code,category_code:code});
+    setMessage("Đã đổi mã danh mục sang "+code+". Hãy cập nhật các file Excel dùng mã cũ.");
   });
   const renameCategory=(category:Category,label:string)=>void run(async()=>{
     await api<Category>("categories","PATCH",{id:category.id,expected_label:category.category_label,category_label:label.trim()});
     setMessage("Đã đổi tên danh mục.");
   });
-  const createFamily=(label:string)=>void run(async()=>{
-    await api<Family>("families","POST",{family_label:label.trim()});
-    setMessage("Đã tạo nhóm mẫu.");
+  const createFamily=(label:string,code:string)=>void run(async()=>{
+    await api<Family>("families","POST",{family_label:label.trim(),family_code:code});
+    setMessage("Đã tạo nhóm mẫu "+code+".");
+  });
+  const changeFamilyCode=(family:Family,code:string)=>void run(async()=>{
+    await api<Family>("families","PATCH",{id:family.id,expected_code:family.family_code,
+      expected_revision:family.revision||1,family_code:code});
+    setMessage("Đã đổi mã nhóm mẫu sang "+code+". Hãy cập nhật các file Excel dùng mã cũ.");
   });
   const renameFamily=(family:Family,label:string)=>void run(async()=>{
     await api<Family>("families","PATCH",{id:family.id,expected_revision:family.revision||1,family_label:label.trim()});
@@ -394,7 +403,9 @@ export default function CatalogueManager({onImport}:{onImport:()=>void}){
       <CatalogueStructureManager initialPane={structurePane} categories={categories}
         families={families} items={items} busy={busy} error={error} selectedBulk={selected}
         onCreateCategory={createCategory} onRenameCategory={renameCategory}
+        onChangeCategoryCode={changeCategoryCode}
         onCreateFamily={createFamily} onRenameFamily={renameFamily}
+        onChangeFamilyCode={changeFamilyCode}
         onChangeMember={(row,familyId)=>{
           const current=items.find(item=>item.sku_cong_ty===row.sku_cong_ty);
           if(current)changeMembership(current,familyId);
