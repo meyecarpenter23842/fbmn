@@ -1,3 +1,4 @@
+import {handleMedia} from "./media-service.mjs";
 // ADM-06 private draft catalogue service. Exact company SKU text is immutable.
 // Never store NET, stock, private image source or publish from these endpoints.
 const roles = new Set(["owner","admin","editor"]);
@@ -52,7 +53,8 @@ export function safeDraft(row) {
   };
 }
 const rowsSql = "SELECT s.sku_cong_ty,s.ten_goc_xnt,s.ten_goc_bang_gia,s.ten_san_pham,s.barcode,s.paper_size,s.product_spec,"+
-  "s.review_status,s.revision,s.family_id,f.family_label,s.category_id,c.category_label FROM fbmn_catalog.skus s "+
+  "s.review_status,s.revision,s.family_id,f.family_label,s.category_id,c.category_label, "+
+  "(SELECT count(*)::int FROM fbmn_catalog.sku_media m WHERE m.sku_cong_ty=s.sku_cong_ty) AS media_count FROM fbmn_catalog.skus s "+
   "LEFT JOIN fbmn_catalog.families f ON f.id=s.family_id "+
   "LEFT JOIN fbmn_catalog.categories c ON c.id=s.category_id ORDER BY s.sku_cong_ty LIMIT 20000";
 async function transactional(db,work) {
@@ -71,8 +73,10 @@ async function parsed(request) {
   if(body.length>650000)throw Error("too_large");
   return JSON.parse(body);
 }
-export async function handleCatalogue({request,actor,db}) {
+export async function handleCatalogue({request,actor,db,r2}) {
   const url=new URL(request.url);
+  if(url.pathname.startsWith("/v1/admin/catalogue/media/"))
+    return handleMedia({request,actor,db,r2});
   const route=url.pathname.slice("/v1/admin/catalogue/".length);
   if(!["snapshot","skus","families","categories","apply","sync","group"].includes(route))
     return fail("not_found",404);

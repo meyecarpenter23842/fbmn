@@ -20,6 +20,7 @@
     "NEON_AUTH_ISSUER": "https://ep-old-moon-b5lq2yse.neonauth.c-7.us-east-2.aws.neon.tech",
     "NEON_AUTH_AUDIENCE": "https://ep-old-moon-b5lq2yse.neonauth.c-7.us-east-2.aws.neon.tech/neondb/auth"
   },
+  "r2_buckets": [{"binding":"ADMIN_MEDIA_R2","bucket_name":"fbmn"}],
   "hyperdrive": [
     {
       "binding": "ADMIN_HYPERDRIVE",

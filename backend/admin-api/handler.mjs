@@ -27,7 +27,7 @@ function reply(status, body, corsOrigin) {
   if (corsOrigin) headers.set("Access-Control-Allow-Origin", corsOrigin);
   return new Response(JSON.stringify(body), { status, headers });
 }
-export function createAdminApi({ verifyToken, loadActor, listChannels, recordAudit, catalogueDb, allowedOrigins = [] }) {
+export function createAdminApi({ verifyToken, loadActor, listChannels, recordAudit, catalogueDb, catalogueR2, allowedOrigins = [] }) {
   if (![verifyToken,loadActor,listChannels,recordAudit].every(f => typeof f === "function")) {
     throw new Error("ADM-01 dependencies required");
   }
@@ -77,7 +77,7 @@ export function createAdminApi({ verifyToken, loadActor, listChannels, recordAud
         return error(403, "forbidden", corsOrigin);
       }
       if (action === "catalogue.manage") {
-        const result = await handleCatalogue({ request, actor:{...actor,subject}, db:catalogueDb });
+        const result = await handleCatalogue({ request, actor:{...actor,subject}, db:catalogueDb, r2:catalogueR2 });
         // Worker and database both retain their own audit trail; never echo SQL errors.
         return result;
       }

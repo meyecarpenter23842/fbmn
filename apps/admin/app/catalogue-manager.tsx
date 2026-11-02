@@ -4,11 +4,13 @@ import {createPortal} from "react-dom";
 import {positionCatalogueActions} from "@/lib/catalogue-action-position.mjs";
 import ProductModal from "./product-modal";
 import CatalogueImportPreview from "./catalogue-import-preview";
+import CatalogueMediaManager from "./catalogue-media-manager";
 
 type SKU={sku_cong_ty:string;ten_san_pham:string|null;ten_goc_xnt:string|null;ten_goc_bang_gia?:string|null;
   barcode:string|null;paper_size:string|null;review_status:string;revision:number;
   category_id:string|null;category_label:string|null;
-  family_id:string|null;family_label:string|null;product_spec?:Partial<Omit<SpecFields,"paper_size"|"barcode"|"category_id">>};
+  family_id:string|null;family_label:string|null;media_count?:number;
+  product_spec?:Partial<Omit<SpecFields,"paper_size"|"barcode"|"category_id">>};
 type Family={id:string;family_label:string;revision?:number};
 type Category={id:string;parent_id:string|null;category_label:string};
 type SpecFields={barcode:string;paper_size:string;category_id:string;pages:string;ruling:string;
@@ -102,6 +104,8 @@ export default function CatalogueManager({onImport}:{onImport:()=>void}){
   const [exportOpen,setExportOpen]=useState(false);
   const exportAnchor=useRef<HTMLDivElement|null>(null);
   const [importBusy,setImportBusy]=useState(false);
+  const [mediaSku,setMediaSku]=useState<string|null>(null);
+  const [mediaBusy,setMediaBusy]=useState(false);
   const [showGroup,setShowGroup]=useState(false);
   const [groupMode,setGroupMode]=useState(false);
   const [sku,setSku]=useState("");
@@ -332,7 +336,15 @@ export default function CatalogueManager({onImport}:{onImport:()=>void}){
         {groupMode&&<td><input type="checkbox" aria-label={"Chọn SKU "+row.sku_cong_ty}
           disabled={!editable} checked={selected.includes(row.sku_cong_ty)}
           onChange={e=>setSelected(old=>e.target.checked?[...old,row.sku_cong_ty]:old.filter(x=>x!==row.sku_cong_ty))}/></td>}
-        <td className="catalogue-media-cell"><span className="catalogue-image-placeholder" role="img" aria-label="Ảnh sẽ bổ sung ở Media Manager">▧</span></td>
+        <td className="catalogue-media-cell">
+          <button type="button" className="catalogue-media-shortcut"
+            title={"Quản lý ảnh SKU "+row.sku_cong_ty}
+            aria-label={"Quản lý "+(row.media_count||0)+" ảnh SKU "+row.sku_cong_ty}
+            onClick={()=>{setMediaSku(row.sku_cong_ty);setActionMenu(null);}}>
+            <span className="catalogue-image-placeholder" aria-hidden="true">▧</span>
+            <span>{row.media_count?row.media_count+" ảnh":"Thêm ảnh"}</span>
+          </button>
+        </td>
         <td className="catalogue-sku-cell"><b>{row.sku_cong_ty}</b></td>
         <td className="catalogue-name-cell"><b>{row.ten_san_pham||row.ten_goc_xnt||row.ten_goc_bang_gia||"Chưa có tên"}</b></td>
         <td>{row.category_label||"Chưa phân loại"}</td>
@@ -380,6 +392,9 @@ export default function CatalogueManager({onImport}:{onImport:()=>void}){
             setSpec(specFromSku(selectedActionRow));
           }}>Sửa sản phẩm</button>
         <button type="button" role="menuitem"
+          onClick={()=>{setMediaSku(selectedActionRow.sku_cong_ty);setActionMenu(null)}}>
+          Quản lý ảnh R2</button>
+        <button type="button" role="menuitem"
           disabled={!["draft","needs_review"].includes(selectedActionRow.review_status)}
           onClick={()=>{
             setActionMenu(null);
@@ -408,9 +423,14 @@ export default function CatalogueManager({onImport}:{onImport:()=>void}){
       <label>Tạo nhóm mới<input value={newFamily} onChange={e=>setNewFamily(e.target.value)} placeholder="Tên nhóm sản phẩm"/></label>
       <button className="import-btn import-secondary" type="button" disabled={busy||!newFamily.trim()} onClick={addFamily}>Tạo nhóm</button>
       </div></ProductModal>}
+    {mediaSku&&<ProductModal title={"Quản lý ảnh · "+mediaSku} wide locked={mediaBusy}
+      onClose={()=>{if(!mediaBusy)setMediaSku(null)}}>
+      <CatalogueMediaManager sku={mediaSku} onBusyChange={setMediaBusy}
+        onChanged={()=>{void refresh()}}/>
+    </ProductModal>}
     {showImport&&<ProductModal title="Nhập / cập nhật sản phẩm bằng Excel" wide locked={importBusy} onClose={()=>{if(!importBusy){setShowImport(false);void refresh()}}}>
       <CatalogueImportPreview onBusyChange={handleImportBusy} onSaved={importSaved} />
     </ProductModal>}
-    <p className="import-footnote">Dữ liệu sản phẩm được lưu riêng, không tự đưa lên website. Tính năng hiển thị theo kênh và ảnh sản phẩm được bổ sung ở P4–P5; không công khai giá NET hay tồn kho.</p>
+    <p className="import-footnote">Ảnh sản phẩm lưu riêng tư trên R2 và có thể gắn nhiều mẫu cho một SKU. Chưa tự đưa lên website; quyền hiển thị từng kênh thuộc P5. Không công khai giá NET hay tồn kho.</p>
   </section>;
 }
