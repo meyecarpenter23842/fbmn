@@ -56,3 +56,23 @@ Phạm vi Issue #41, roadmap 4.0. Tiếp nối P1–P3; không mở thêm workfl
   `sku_media` để tìm đúng mã. Ảnh upload thủ công `L536.webp` được nhận ở bước quét.
 - Admin/API cần được deploy **thủ công** theo quy trình owner sau khi CI + Codex
   sạch; môi trường staging được dùng để nghiệm thu bằng ảnh thật trước P5.
+
+## P4 đơn giản hóa kho ảnh — 02/11/2026
+
+- **1 mẫu = 1 object WebP** tại `private/catalogue/<SKU>.webp` (mẫu đầu) hoặc
+  `private/catalogue/<SKU>-02.webp`, `-03.webp`... (mẫu tiếp). Không lưu
+  ảnh PNG/JPG gốc, WebP phụ hoặc thumbnail trong R2. Cloudflare Dashboard chỉ
+  nhìn thấy mã sản phẩm, không có folder UUID.
+- Admin nhận JPG/PNG/WebP, **client resize tối đa 1600px và nén WebP trước khi upload**.
+  Worker nhận **duy nhất image/webp**, kiểm RIFF/bytes/kích thước, chống trùng
+  và gắn asset ID vào SKU. Nút **Thay ảnh** ghi đè chính object tương ứng,
+  giữ nguyên asset ID và thứ tự/ảnh đại diện; app không tạo object mới.
+- Upload thủ công trực tiếp R2 phải là **WebP đúng tên**. Ghi đè
+  `private/catalogue/0110.webp` sẽ cập nhật hình đang liên kết ngay khi tải
+  lại Admin mà không tạo asset mới; file chưa liên kết được Quét R2 rồi chọn Gắn.
+  PNG/JPG thủ công được nhận diện nhưng không gắn (hiển thị **Cần đổi sang WebP**).
+- Xóa ảnh khỏi SKU xóa metadata không còn dùng và object WebP, nhưng
+  **không xóa file đang được SKU khác dùng**. Các hình đã di trú trong staging
+  và file thừa lịch sử chỉ dọn sau khi đối chiếu DB & R2, kiểm chứng hai ảnh
+  WebP đích đọc được và đúng asset IDs. Không áp dụng sang Website công khai.
+- Backend grant staging mới: `20261102_adm05_p4_single_webp_up.sql`.

@@ -10,6 +10,7 @@ const skuOk=value=>typeof value==="string"&&value.length>0&&value.length<=80&&
 const uuid=value=>typeof value==="string"&&
   /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(value);
 const MIME={"image/png":"png","image/jpeg":"jpg","image/webp":"webp"};
+const canonicalKey=(sku,index)=>"private/catalogue/"+encodeURIComponent(sku)+(index===1?"":"-"+String(index).padStart(2,"0"))+".webp";
 const MAX_BYTES=5*1024*1024,MAX_PER_SKU=20;
 function imageSize(bytes,mime,minEdge=32){
   const dv=new DataView(bytes.buffer,bytes.byteOffset,bytes.byteLength);
@@ -83,6 +84,75 @@ export {imageSize};
 const tx=(db,fn)=>db(async c=>{await c.query("BEGIN");try{
   const result=await fn(c);await c.query("COMMIT");return result;
 }catch(error){await c.query("ROLLBACK");throw error;}});
+// Transaction-scoped per-R2-key lock serializes distinct SKUs with colliding
+// canonical filenames. Cleanup occurs BEFORE ROLLBACK releases the key lock.
+// Hyperdrive connections must never retain session-level advisory locks.
+const txR2=(db,r2,fn)=>db(async c=>{
+  await c.query("BEGIN");
+  let newKey=null,commitAttempted=false;
+  const guard={
+    async lock(key){
+      await c.query("SELECT pg_advisory_xact_lock(hashtextextended($1::text,0))",[key]);
+    },
+    track(key){newKey=key;}
+  };
+  try{
+    const data=await fn(c,guard);
+    commitAttempted=true;
+    await c.query("COMMIT");
+    return data;
+  }catch(error){
+    // Only compensate an unquestionably uncommitted upload.
+    // A COMMIT with an uncertain outcome must NOT lose an R2 image.
+    if(newKey&&!commitAttempted&&typeof r2.delete==="function")
+      await r2.delete(newKey).catch(()=>{});
+    await c.query("ROLLBACK").catch(()=>{});
+    throw error;
+  }
+});
+// Keep cleanup jobs in SQL until R2 deletion and metadata cleanup both succeed.
+async function finishCleanup(db,r2,assetId){
+  const observed=await db(c=>c.query(
+    "SELECT j.r2_key FROM fbmn_catalog.media_cleanup_jobs j WHERE j.asset_id=$1",
+    [assetId]));
+  if(!observed.rowCount)return {file_deleted:false,pending:false};
+  const key=observed.rows[0].r2_key;
+  if(typeof r2.delete!=="function")return {file_deleted:false,pending:true};
+  // Use EXACT SAME transaction-scoped key lock as upload. Revalidate the queued
+  // cleanup after acquiring the lock to prevent stale second deletions of a
+  // new asset that reused the same canonical name.
+  return db(async c=>{
+    await c.query("BEGIN");
+    try{
+      const lockAsset=await c.query(
+        "SELECT id FROM fbmn_catalog.media_assets WHERE id=$1 FOR UPDATE",[assetId]);
+      if(!lockAsset.rowCount){await c.query("COMMIT");return {file_deleted:false,pending:false};}
+      await c.query("SELECT pg_advisory_xact_lock(hashtextextended($1::text,0))",[key]);
+      const job=await c.query(
+        "SELECT j.r2_key FROM fbmn_catalog.media_cleanup_jobs j "+
+        "WHERE j.asset_id=$1 AND j.r2_key=$2 AND "+
+        "NOT EXISTS(SELECT 1 FROM fbmn_catalog.sku_media l WHERE l.asset_id=j.asset_id)",[assetId,key]);
+      if(!job.rowCount){
+        await c.query("COMMIT");
+        return {file_deleted:false,pending:false};
+      }
+      await r2.delete(key);
+      const gone=await c.query(
+        "DELETE FROM fbmn_catalog.media_assets a WHERE a.id=$1 AND a.r2_key=$2 "+
+        "AND NOT EXISTS(SELECT 1 FROM fbmn_catalog.sku_media l WHERE l.asset_id=a.id) "+
+        "AND EXISTS(SELECT 1 FROM fbmn_catalog.media_cleanup_jobs j "+
+        "WHERE j.asset_id=a.id AND j.r2_key=$2) RETURNING a.id",[assetId,key]);
+      if(!gone.rowCount)throw Error("cleanup_conflict");
+      await c.query("COMMIT");
+      return {file_deleted:true,pending:false};
+    }catch{
+      // Staged unlink was committed earlier; any failed cleanup stays queued
+      // and retryable. Never resurrect a live SKU link pointing to deleted bytes.
+      await c.query("ROLLBACK").catch(()=>{});
+      return {file_deleted:false,pending:true};
+    }
+  });
+}
 const audit=(c,actor,operation,detail)=>c.query(
   "INSERT INTO fbmn_catalog.audit_events(actor_subject,sku_cong_ty,operation,after_json) VALUES($1,$2,$3,$4::jsonb)",
   [actor.subject,detail.sku_cong_ty,operation,JSON.stringify(detail)]);
@@ -96,7 +166,7 @@ const getJson=async request=>{
 export async function handleMedia({request,actor,db,r2}){
   if(!ROLES.has(actor?.role))return fail(403,"forbidden");
   const url=new URL(request.url),action=url.pathname.slice("/v1/admin/catalogue/media/".length);
-  if(!["list","library","upload","file","link","order","scan","adopt","variant"].includes(action))
+  if(!["list","library","upload","file","link","order","scan","adopt","cleanup"].includes(action))
     return fail(404,"not_found");
   if(!db)return fail(503,"media_db_unavailable");
   if(!r2||typeof r2.put!=="function"||typeof r2.get!=="function")
@@ -104,31 +174,6 @@ export async function handleMedia({request,actor,db,r2}){
   const owner=actor.role==="owner";
   if(url.search&&action!=="list"&&action!=="file")return fail(400,"invalid_query");
   try{
-    if(action==="variant"&&request.method==="POST"){
-      if(!owner)return fail(403,"owner_required");
-      const assetId=request.headers.get("x-fbmn-asset-id");
-      const variant=request.headers.get("x-fbmn-variant");
-      if(!uuid(assetId)||!["web","thumb"].includes(variant)||
-        request.headers.get("content-type")?.split(";")[0]!=="image/webp")
-        return fail(400,"invalid_variant_request");
-      if(Number(request.headers.get("content-length")||0)>MAX_BYTES||!request.body)
-        return fail(413,"media_too_large");
-      const bytes=new Uint8Array(await request.arrayBuffer());
-      const dimensions=bytes.length<=MAX_BYTES&&bytes.length>=32?
-        imageSize(bytes,"image/webp",1):null;
-      const longest=variant==="web"?1600:320;
-      if(!dimensions||Math.max(dimensions.width,dimensions.height)>longest)
-        return fail(422,"invalid_variant_image");
-      const ref=await db(c=>c.query(
-        "SELECT a.id FROM fbmn_catalog.media_assets a WHERE a.id=$1 AND a.r2_key IS NOT NULL "+ 
-        "AND EXISTS(SELECT 1 FROM fbmn_catalog.sku_media l WHERE l.asset_id=a.id)",[assetId]));
-      if(ref.rowCount!==1)return fail(404,"media_not_found");
-      const key="private/catalogue/renditions/"+assetId+"/"+variant+".webp";
-      // Idempotent derivative. Never replace the original object or DB link.
-      await r2.put(key,bytes,{httpMetadata:{contentType:"image/webp"}});
-      return json(201,{data:{id:assetId,variant,width:dimensions.width,
-        height:dimensions.height,optimized:true}});
-    }
     if(action==="scan"&&request.method==="GET"){
       if(!owner)return fail(403,"owner_required");
       const results=await findR2SkuCandidates({db,r2});
@@ -140,7 +185,7 @@ export async function handleMedia({request,actor,db,r2}){
       if(input?.confirm!=="GAN_ANH_R2"||!Array.isArray(input.keys)||
         input.keys.length<1||input.keys.length>10||new Set(input.keys).size!==input.keys.length||
         input.keys.some(key=>typeof key!=="string"||key.length>500||
-          !key.startsWith(INBOX_PREFIX)||!/\.(png|jpe?g|webp)$/i.test(key)))
+          !key.startsWith(INBOX_PREFIX)||!/\.webp$/i.test(key)))
         return fail(400,"invalid_adopt_request");
       // Re-check the exact company SKU at commit time, even after a preview.
       const known=await db(c=>c.query(
@@ -149,50 +194,47 @@ export async function handleMedia({request,actor,db,r2}){
       const resolved=input.keys.map(key=>({key,...detectSkuFromName(key,companySkus)}));
       if(resolved.some(item=>item.status!=="matched"))
         return fail(409,"sku_filename_conflict");
-      const imgs=[];
-      for(const entry of resolved){
-        const item=await r2.get(entry.key);
-        if(!item)return fail(404,"r2_image_not_found");
-        if(item.size>MAX_BYTES||item.size<32)return fail(413,"media_too_large");
-        const mime=/\.png$/i.test(entry.filename)?"image/png":
-          /\.webp$/i.test(entry.filename)?"image/webp":"image/jpeg";
-        const bytes=new Uint8Array(await item.arrayBuffer());
-        if(bytes.length>MAX_BYTES||!imageSize(bytes,mime))
-          return fail(422,"invalid_image_bytes");
-        const digest=new Uint8Array(await crypto.subtle.digest("SHA-256",bytes));
-        const hash=Array.from(digest,x=>x.toString(16).padStart(2,"0")).join("");
-        imgs.push({...entry,mime,hash});
-      }
       const output=await tx(db,async c=>{
-        // One atomic DB transaction; R2 originals are never overwritten/deleted.
+        // Lock SKU and canonical R2 key BEFORE reading object bytes. This
+        // serializes adoption with upload/rollback cleanup for the same key.
+        // Stable order prevents a multi-key adoption deadlock.
         const inserted=[];
-        for(const img of imgs){
+        for(const entry of [...resolved].sort((a,b)=>a.sku.localeCompare(b.sku)||a.key.localeCompare(b.key))){
           const sku=await c.query(
-            "SELECT sku_cong_ty FROM fbmn_catalog.skus WHERE sku_cong_ty=$1 FOR UPDATE",[img.sku]);
+            "SELECT sku_cong_ty FROM fbmn_catalog.skus WHERE sku_cong_ty=$1 FOR UPDATE",[entry.sku]);
           if(sku.rowCount!==1)throw Error("sku_not_found");
+          await c.query("SELECT pg_advisory_xact_lock(hashtextextended($1::text,0))",[entry.key]);
           const existing=await c.query(
-            "SELECT id FROM fbmn_catalog.media_assets WHERE r2_key=$1",[img.key]);
+            "SELECT id FROM fbmn_catalog.media_assets WHERE r2_key=$1",[entry.key]);
           if(existing.rowCount)throw Error("media_already_registered");
+          const item=await r2.get(entry.key);
+          if(!item)throw Error("r2_image_not_found");
+          if(item.size>MAX_BYTES||item.size<32)throw Error("media_too_large");
+          const bytes=new Uint8Array(await item.arrayBuffer());
+          if(bytes.length>MAX_BYTES||!imageSize(bytes,"image/webp",1))
+            throw Error("invalid_image_bytes");
+          const digest=new Uint8Array(await crypto.subtle.digest("SHA-256",bytes));
+          const hash=Array.from(digest,x=>x.toString(16).padStart(2,"0")).join("");
           const duplicate=await c.query(
-            "SELECT a.id FROM fbmn_catalog.media_assets a JOIN fbmn_catalog.sku_media l "+ 
+            "SELECT a.id FROM fbmn_catalog.media_assets a JOIN fbmn_catalog.sku_media l "+
             "ON l.asset_id=a.id WHERE l.sku_cong_ty=$1 AND a.file_sha256=$2 LIMIT 1",
-            [img.sku,img.hash]);
+            [entry.sku,hash]);
           if(duplicate.rowCount)throw Error("duplicate_sku_image");
           const linked=await c.query(
-            "SELECT count(*)::int AS amount,coalesce(max(sort_order),-1)::int AS last_position "+ 
-            "FROM fbmn_catalog.sku_media WHERE sku_cong_ty=$1",[img.sku]);
+            "SELECT count(*)::int AS amount,coalesce(max(sort_order),-1)::int AS last_position "+
+            "FROM fbmn_catalog.sku_media WHERE sku_cong_ty=$1",[entry.sku]);
           if(Number(linked.rows[0].amount)>=MAX_PER_SKU)throw Error("media_limit");
           const assetId=crypto.randomUUID();
           await c.query(
-            "INSERT INTO fbmn_catalog.media_assets(id,source_filename,r2_key,mime_type,file_sha256) "+ 
-            "VALUES($1,$2,$3,$4,$5)",[assetId,img.filename,img.key,img.mime,img.hash]);
+            "INSERT INTO fbmn_catalog.media_assets(id,source_filename,r2_key,mime_type,file_sha256) "+
+            "VALUES($1,$2,$3,$4,$5)",[assetId,entry.filename,entry.key,"image/webp",hash]);
           await c.query(
-            "INSERT INTO fbmn_catalog.sku_media(sku_cong_ty,asset_id,media_role,sort_order,match_method) "+ 
-            "VALUES($1,$2,$3,$4,'filename_exact')",[img.sku,assetId,
+            "INSERT INTO fbmn_catalog.sku_media(sku_cong_ty,asset_id,media_role,sort_order,match_method) "+
+            "VALUES($1,$2,$3,$4,'filename_exact')",[entry.sku,assetId,
             Number(linked.rows[0].amount)===0?"cover":"detail",Number(linked.rows[0].last_position)+1]);
           await audit(c,actor,"media_adopt_from_r2",
-            {sku_cong_ty:img.sku,asset_id:assetId,published:false});
-          inserted.push({sku:img.sku,asset_id:assetId});
+            {sku_cong_ty:entry.sku,asset_id:assetId,published:false});
+          inserted.push({sku:entry.sku,asset_id:assetId});
         }
         return inserted;
       });
@@ -214,93 +256,109 @@ export async function handleMedia({request,actor,db,r2}){
         "SELECT a.id::text AS id,a.source_filename,a.mime_type,"+
         "count(l.sku_cong_ty)::int AS linked_skus "+
         "FROM fbmn_catalog.media_assets a LEFT JOIN fbmn_catalog.sku_media l ON l.asset_id=a.id "+
-        "WHERE a.r2_key IS NOT NULL GROUP BY a.id ORDER BY a.created_at DESC LIMIT 1000"));
+        "WHERE a.r2_key IS NOT NULL AND NOT EXISTS(SELECT 1 FROM fbmn_catalog.media_cleanup_jobs j WHERE j.asset_id=a.id) "+
+        "GROUP BY a.id ORDER BY a.created_at DESC LIMIT 1000"));
       return json(200,{data:{items:rows.rows}});
     }
     if(action==="file"&&request.method==="GET"){
       const asset=url.searchParams.get("id");
-      const variant=url.searchParams.get("variant");
-      if(!uuid(asset)||url.searchParams.size>(variant?2:1)||
-        (variant&&!["thumb","web"].includes(variant))||
-        (variant&&url.searchParams.getAll("variant").length!==1)||
-        url.searchParams.getAll("id").length!==1)
+      if(!uuid(asset)||url.searchParams.size!==1||url.searchParams.getAll("id").length!==1)
         return fail(400,"invalid_asset_id");
       const row=await db(c=>c.query(
         "SELECT a.r2_key,a.mime_type FROM fbmn_catalog.media_assets a "+
         "WHERE a.id=$1 AND a.r2_key IS NOT NULL "+
         "AND EXISTS(SELECT 1 FROM fbmn_catalog.sku_media l WHERE l.asset_id=a.id)",[asset]));
       if(row.rowCount!==1)return fail(404,"media_not_found");
-      let object=variant?await r2.get("private/catalogue/renditions/"+asset+"/"+variant+".webp"):null;
-      const optimized=Boolean(object);
-      if(!object)object=await r2.get(row.rows[0].r2_key);
+      const object=await r2.get(row.rows[0].r2_key);
       if(!object)return fail(404,"media_not_found");
       return new Response(object.body,{status:200,headers:{
-        ...HEADERS,"Content-Type":optimized?"image/webp":row.rows[0].mime_type,
-        "Content-Disposition":"inline","Cross-Origin-Resource-Policy":"same-origin",
-        "X-Content-Type-Options":"nosniff"
+        ...HEADERS,"Content-Type":row.rows[0].mime_type,
+        "Content-Disposition":"inline","Cross-Origin-Resource-Policy":"same-origin"
       }});
     }
     if(action==="upload"&&request.method==="POST"){
       if(!owner)return fail(403,"owner_required");
       const sku=request.headers.get("x-fbmn-sku");
+      const replacing=request.headers.get("x-fbmn-asset-id");
       const mime=request.headers.get("content-type")?.split(";")[0]||"";
-      if(!skuOk(sku)||!Object.hasOwn(MIME,mime))return fail(400,"invalid_media_request");
-      const declared=Number(request.headers.get("content-length")||0);
-      if(declared>MAX_BYTES||!request.body)return fail(413,"media_too_large");
-      let filename;
-      try{filename=decodeURIComponent(request.headers.get("x-fbmn-file-name")||"");}
-      catch{return fail(400,"invalid_filename");}
-      if(!filename||filename.length>200||/[\\/\x00-\x1f]/.test(filename)||
-         !/\.(jpg|jpeg|png|webp)$/i.test(filename))return fail(400,"invalid_filename");
-      const suffix=filename.split(".").pop().toLowerCase();
-      if(!(mime==="image/jpeg"?["jpg","jpeg"].includes(suffix):suffix===MIME[mime]))
-        return fail(400,"mime_filename_mismatch");
+      if(!skuOk(sku)||mime!=="image/webp"||(replacing&&!uuid(replacing)))
+        return fail(400,"webp_only");
+      if(Number(request.headers.get("content-length")||0)>MAX_BYTES||!request.body)
+        return fail(413,"media_too_large");
       const bytes=new Uint8Array(await request.arrayBuffer());
-      if(bytes.byteLength<32||bytes.byteLength>MAX_BYTES)return fail(413,"media_too_large");
-      const dimensions=imageSize(bytes,mime);
-      if(!dimensions)return fail(422,"invalid_image_bytes");
-      // The SKU comes from authenticated Admin context, NEVER an inferred filename.
-      // Versioned UUID directory prevents overwriting even with concurrent uploads.
-      const positions=await db(c=>c.query(
-        "SELECT coalesce(max(sort_order),-1)::int AS last_position "+
-        "FROM fbmn_catalog.sku_media WHERE sku_cong_ty=$1",[sku]));
-      const measured=Number(positions.rows?.[0]?.last_position);
-      const position=Number.isSafeInteger(measured)&&measured>=-1?measured+1:0;
-      const canonical=sku+(position===0?"":"-"+String(position+1).padStart(2,"0"))+"."+MIME[mime];
-      const assetId=crypto.randomUUID();
-      const r2Key="private/catalogue/by-sku/"+encodeURIComponent(sku)+"/"+
-        assetId+"/"+encodeURIComponent(canonical);
-      const hex=Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256",bytes)),
+      if(bytes.length<32||bytes.length>MAX_BYTES)return fail(413,"media_too_large");
+      const dimensions=imageSize(bytes,"image/webp",1);
+      if(!dimensions||Math.max(dimensions.width,dimensions.height)>1600)
+        return fail(422,"invalid_webp_dimensions");
+      const hash=Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256",bytes)),
         b=>b.toString(16).padStart(2,"0")).join("");
-      await r2.put(r2Key,bytes,{httpMetadata:{contentType:mime},
-        customMetadata:{sha256:hex}});
-      try{
-        const row=await tx(db,async c=>{
-          const selected=await c.query(
-            "SELECT sku_cong_ty FROM fbmn_catalog.skus WHERE sku_cong_ty=$1 FOR UPDATE",[sku]);
-          if(!selected.rowCount)throw Error("sku_not_found");
+      const saved=await txR2(db,r2,async(c,guard)=>{
+        const selected=await c.query(
+          "SELECT sku_cong_ty FROM fbmn_catalog.skus WHERE sku_cong_ty=$1 FOR UPDATE",[sku]);
+        if(!selected.rowCount)throw Error("sku_not_found");
+        const current=await c.query(
+          "SELECT a.id::text AS id,a.r2_key,l.sort_order,l.media_role "+
+          "FROM fbmn_catalog.sku_media l JOIN fbmn_catalog.media_assets a "+
+          "ON a.id=l.asset_id WHERE l.sku_cong_ty=$1 ORDER BY l.sort_order",[sku]);
+        let entry=null,key="",assetId="",index=1;
+        if(replacing){
+          entry=current.rows.find(r=>r.id===replacing);
+          if(!entry||!entry.r2_key.startsWith("private/catalogue/")||
+             !entry.r2_key.endsWith(".webp"))throw Error("media_not_found");
+          // Serialize with a simultaneous library attach before the shared-link count.
+          const locked=await c.query(
+            "SELECT id FROM fbmn_catalog.media_assets WHERE id=$1 FOR UPDATE",[replacing]);
+          if(!locked.rowCount)throw Error("media_not_found");
+          const uses=await c.query(
+            "SELECT count(*)::int AS amount FROM fbmn_catalog.sku_media WHERE asset_id=$1",
+            [replacing]);
+          if(Number(uses.rows[0].amount)!==1)throw Error("shared_media_replace_forbidden");
+          key=entry.r2_key;assetId=replacing;
+        }else{
+          if(current.rowCount>=MAX_PER_SKU)throw Error("media_limit");
           const duplicate=await c.query(
             "SELECT a.id FROM fbmn_catalog.media_assets a JOIN fbmn_catalog.sku_media l "+
             "ON l.asset_id=a.id WHERE l.sku_cong_ty=$1 AND a.file_sha256=$2 LIMIT 1",
-            [sku,hex]);
+            [sku,hash]);
           if(duplicate.rowCount)throw Error("duplicate_sku_image");
-          const linked=await c.query(
-            "SELECT count(*)::int AS amount,coalesce(max(sort_order),-1)::int AS last_position "+
-            "FROM fbmn_catalog.sku_media WHERE sku_cong_ty=$1",[sku]);
-          if(Number(linked.rows[0].amount)>=MAX_PER_SKU)throw Error("media_limit");
+          const names=new Set(current.rows.map(r=>r.r2_key));
+          while(names.has(canonicalKey(sku,index))&&index<=MAX_PER_SKU)index++;
+          if(index>MAX_PER_SKU)throw Error("media_limit");
+          key=canonicalKey(sku,index);
+          assetId=crypto.randomUUID();
+        }
+        await guard.lock(key);
+        if(!replacing){
+          const claimed=await c.query(
+            "SELECT id FROM fbmn_catalog.media_assets WHERE r2_key=$1 LIMIT 1",[key]);
+          if(claimed.rowCount||(typeof r2.head==="function"&&await r2.head(key)))
+            throw Error("r2_file_exists_use_scan");
+        }
+        await r2.put(key,bytes,{httpMetadata:{contentType:"image/webp"},customMetadata:{sha256:hash}});
+        if(!replacing)guard.track(key);
+        if(replacing){
+          await c.query(
+            "UPDATE fbmn_catalog.media_assets SET mime_type='image/webp',"+
+            "source_filename=$2,file_sha256=$3 WHERE id=$1",
+            [assetId,key.slice(key.lastIndexOf("/")+1),hash]);
+        }else{
           await c.query(
             "INSERT INTO fbmn_catalog.media_assets(id,source_filename,r2_key,mime_type,file_sha256) "+
-            "VALUES($1,$2,$3,$4,$5)",[assetId,filename,r2Key,mime,hex]);
+            "VALUES($1,$2,$3,'image/webp',$4)",
+            [assetId,key.slice(key.lastIndexOf("/")+1),key,hash]);
+          const position=Math.max(-1,...current.rows.map(r=>Number(r.sort_order)))+1;
           await c.query(
             "INSERT INTO fbmn_catalog.sku_media(sku_cong_ty,asset_id,media_role,sort_order,match_method) "+
-            "VALUES($1,$2,$3,$4,'manual')",[sku,assetId,
-            Number(linked.rows[0].amount)===0?"cover":"detail",Number(linked.rows[0].last_position)+1]);
-          await audit(c,actor,"media_upload",{sku_cong_ty:sku,asset_id:assetId,published:false});
-          return {id:assetId,source_filename:filename,mime_type:mime,
-            media_role:Number(linked.rows[0].amount)===0?"cover":"detail",...dimensions};
-        });
-        return json(201,{data:row});
-      }catch(error){await r2.delete(r2Key).catch(()=>{});throw error;}
+            "VALUES($1,$2,$3,$4,'manual')",
+            [sku,assetId,current.rowCount===0?"cover":"detail",position]);
+        }
+        await audit(c,actor,replacing?"media_replace_webp":"media_upload_webp",
+          {sku_cong_ty:sku,asset_id:assetId,published:false});
+        return {id:assetId,source_filename:key.slice(key.lastIndexOf("/")+1),
+          mime_type:"image/webp",media_role:replacing?entry.media_role:(current.rowCount===0?"cover":"detail"),
+          replaced:Boolean(replacing),...dimensions};
+      });
+      return json(replacing?200:201,{data:saved});
     }
     if(action==="link"&&request.method==="POST"){
       if(!owner)return fail(403,"owner_required");
@@ -312,8 +370,14 @@ export async function handleMedia({request,actor,db,r2}){
           "SELECT sku_cong_ty FROM fbmn_catalog.skus WHERE sku_cong_ty=$1 FOR UPDATE",[data.sku_cong_ty]);
         if(!sku.rowCount)throw Error("sku_not_found");
         const asset=await c.query(
-          "SELECT id FROM fbmn_catalog.media_assets WHERE id=$1 AND r2_key IS NOT NULL",[data.asset_id]);
+          "SELECT id FROM fbmn_catalog.media_assets WHERE id=$1 AND r2_key IS NOT NULL FOR UPDATE",
+          [data.asset_id]);
         if(!asset.rowCount)throw Error("media_not_found");
+        // Use a fresh statement/snapshot AFTER obtaining the asset lock.
+        const cleanup=await c.query(
+          "SELECT asset_id FROM fbmn_catalog.media_cleanup_jobs WHERE asset_id=$1",
+          [data.asset_id]);
+        if(cleanup.rowCount)throw Error("media_cleanup_pending");
         const links=await c.query(
           "SELECT asset_id,sort_order FROM fbmn_catalog.sku_media WHERE sku_cong_ty=$1",[data.sku_cong_ty]);
         if(links.rowCount>=MAX_PER_SKU)throw Error("media_limit");
@@ -330,15 +394,33 @@ export async function handleMedia({request,actor,db,r2}){
       });
       return json(201,{data:linked});
     }
+    if(action==="cleanup"&&request.method==="POST"){
+      if(!owner)return fail(403,"owner_required");
+      const body=await getJson(request);
+      if(body?.confirm!=="DON_ANH_THUA")return fail(400,"invalid_body");
+      const pending=await db(c=>c.query(
+        "SELECT asset_id::text AS id FROM fbmn_catalog.media_cleanup_jobs "+
+        "ORDER BY created_at,asset_id LIMIT 50"));
+      let completed=0,remaining=0;
+      for(const item of pending.rows){
+        const cleaned=await finishCleanup(db,r2,item.id);
+        if(cleaned.file_deleted)completed++;
+        if(cleaned.pending)remaining++;
+      }
+      return json(200,{data:{completed,remaining}});
+    }
     if(action==="link"&&request.method==="DELETE"){
       if(!owner)return fail(403,"owner_required");
       const data=await getJson(request);
       if(!skuOk(data?.sku_cong_ty)||!uuid(data?.asset_id))
         return fail(400,"invalid_media_request");
-      const result=await tx(db,async c=>{
+      const detached=await tx(db,async c=>{
         const row=await c.query("SELECT sku_cong_ty FROM fbmn_catalog.skus "+
           "WHERE sku_cong_ty=$1 FOR UPDATE",[data.sku_cong_ty]);
         if(!row.rowCount)throw Error("sku_not_found");
+        const lockedAsset=await c.query(
+          "SELECT id FROM fbmn_catalog.media_assets WHERE id=$1 FOR UPDATE",[data.asset_id]);
+        if(!lockedAsset.rowCount)throw Error("media_not_found");
         const deleted=await c.query(
           "DELETE FROM fbmn_catalog.sku_media WHERE sku_cong_ty=$1 AND asset_id=$2 "+
           "RETURNING media_role",[data.sku_cong_ty,data.asset_id]);
@@ -349,11 +431,23 @@ export async function handleMedia({request,actor,db,r2}){
             "fbmn_catalog.sku_media WHERE sku_cong_ty=$1 ORDER BY sort_order,asset_id LIMIT 1)",
             [data.sku_cong_ty]);
         }
+        const unused=await c.query(
+          "SELECT a.r2_key FROM fbmn_catalog.media_assets a WHERE a.id=$1 "+
+          "AND NOT EXISTS(SELECT 1 FROM fbmn_catalog.sku_media l WHERE l.asset_id=a.id) "+
+          "FOR UPDATE",[data.asset_id]);
+        if(unused.rowCount){
+          await c.query(
+            "INSERT INTO fbmn_catalog.media_cleanup_jobs(asset_id,r2_key,sku_cong_ty) "+
+            "VALUES($1,$2,$3) ON CONFLICT(asset_id) DO NOTHING",
+            [data.asset_id,unused.rows[0].r2_key,data.sku_cong_ty]);
+        }
         await audit(c,actor,"media_unlink",
           {sku_cong_ty:data.sku_cong_ty,asset_id:data.asset_id,published:false});
-        return {unlinked:true}; // Keep R2 original: other SKUs may use it.
+        return {orphan:unused.rowCount===1};
       });
-      return json(200,{data:result});
+      const cleaned=detached.orphan?await finishCleanup(db,r2,data.asset_id):
+        {file_deleted:false,pending:false};
+      return json(200,{data:{unlinked:true,...cleaned}});
     }
     if(action==="order"&&request.method==="PATCH"){
       if(!owner)return fail(403,"owner_required");
@@ -390,9 +484,11 @@ export async function handleMedia({request,actor,db,r2}){
     }
     return fail(405,"method_not_allowed");
   }catch(error){
-    if(["sku_not_found","media_not_found"].includes(error?.message))return fail(404,error.message);
+    if(["sku_not_found","media_not_found","r2_image_not_found"].includes(error?.message))return fail(404,error.message);
     if(error?.message==="media_limit")return fail(409,"media_limit");
-    if(["media_conflict","media_already_linked","media_already_registered","duplicate_sku_image"].includes(error?.message))return fail(409,error.message);
+    if(error?.message==="media_too_large")return fail(413,"media_too_large");
+    if(error?.message==="invalid_image_bytes")return fail(422,"invalid_image_bytes");
+    if(["media_conflict","media_already_linked","media_already_registered","duplicate_sku_image","media_cleanup_pending","r2_file_exists_use_scan","shared_media_replace_forbidden","webp_only"].includes(error?.message))return fail(409,error.message);
     if(error?.message==="invalid_body")return fail(400,"invalid_body");
     return fail(503,"media_unavailable");
   }

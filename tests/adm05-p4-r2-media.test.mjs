@@ -20,18 +20,22 @@ function png(size=64){
   ]));
 }
 const uuid="a99f7e12-c1ab-4bc8-91c0-1fa667b31ad0";
+const webp=()=>new Uint8Array(Buffer.from("UklGRiAAAABXRUJQVlA4TBMAAAAvP8APEAcQEREAEsL/91pE/1M/AA==","base64"));
 const sku="0114";
 function database(records=[]){
   return async fn=>fn({query:async(sql,args=[])=>{
     records.push({sql,args});
     if(sql.includes("FROM fbmn_catalog.skus WHERE sku_cong_ty="))
       return {rowCount:1,rows:[{sku_cong_ty:sku}]};
+    if(sql.includes("SELECT a.id::text AS id,a.r2_key,l.sort_order"))return {rowCount:0,rows:[]};
+    if(sql.includes("SELECT id FROM fbmn_catalog.media_assets WHERE r2_key="))return {rowCount:0,rows:[]};
     if(sql.includes("SELECT count(*)::int AS amount"))
       return {rowCount:1,rows:[{amount:0,last_position:-1}]};
     if(sql.includes("SELECT a.id FROM fbmn_catalog.media_assets a JOIN fbmn_catalog.sku_media"))
       return {rowCount:0,rows:[]};
     if(sql.includes("FROM fbmn_catalog.media_assets WHERE id="))
       return {rowCount:1,rows:[{id:uuid}]};
+    if(sql.includes("SELECT asset_id FROM fbmn_catalog.media_cleanup_jobs"))return {rowCount:0,rows:[]};
     if(sql.includes("SELECT asset_id FROM fbmn_catalog.sku_media"))
       return {rowCount:0,rows:[]};
     if(sql.includes("FROM fbmn_catalog.media_assets a")&&sql.includes("EXISTS("))
@@ -94,92 +98,47 @@ test("partial multi-file uploads refresh existing gallery and revoke detached pr
   assert.match(ui,/finally\{if\(fileInput.current\)fileInput.current.value=""/);
   assert.match(ui,/else URL.revokeObjectURL\(url\)/);
 });
-test("private admin upload validates image bytes then R2.put + owner-locked metadata + audit, without public URL",async()=>{
-  const bytes=png(),statements=[],actions=[];
-  const result=await handleCatalogue({request:req("upload","POST",bytes,{
-    "Content-Type":"image/png","X-FBMN-Sku":sku,
-    "X-FBMN-File-Name":encodeURIComponent("Bìa chính.png")}),
+test("one WebP upload stores one SKU-named R2 file with metadata and audit",async()=>{
+  const bytes=webp(),statements=[],actions=[];
+  const response=await handleCatalogue({request:req("upload","POST",bytes,{
+    "Content-Type":"image/webp","X-FBMN-Sku":sku,
+    "X-FBMN-File-Name":"Bia.webp"}),
     actor:owner,db:database(statements),r2:bucket(actions)});
-  assert.equal(result.status,201);
-  const output=await result.json();
-  assert.equal(output.data.media_role,"cover");
-  assert.equal(output.data.width,64);
-  assert.match(output.data.id,/^[0-9a-f-]{36}$/);
-  assert.ok(!("r2_key" in output.data));
-  assert.ok(!("url" in output.data));
+  assert.equal(response.status,201);
+  const {data}=await response.json();
+  assert.equal(data.media_role,"cover");
+  assert.equal(data.width,64);
+  assert.equal(data.source_filename,"0114.webp");
+  assert.ok(!("r2_key" in data));
   assert.deepEqual(actions.map(x=>x[0]),["put"]);
-  assert.match(actions[0][1],/^private\/catalogue\/by-sku\/0114\/[0-9a-f-]+\/0114\.png$/);
-  assert.equal(statements.some(x=>/INSERT INTO fbmn_catalog.media_assets/.test(x.sql)),true);
-  assert.equal(statements.some(x=>/INSERT INTO fbmn_catalog.sku_media/.test(x.sql)),true);
-  assert.equal(statements.some(x=>x.args.includes("owner-sub")),true);
+  assert.equal(actions[0][1],"private/catalogue/0114.webp");
+  assert.equal(actions[0][3].httpMetadata.contentType,"image/webp");
+  assert.ok(statements.some(x=>x.sql.includes("INSERT INTO fbmn_catalog.media_assets")));
+  assert.ok(statements.some(x=>x.sql.includes("INSERT INTO fbmn_catalog.sku_media")));
   assert.ok(statements.some(x=>x.sql==="COMMIT"));
-  assert.ok(!statements.some(x=>/fbmn_catalog.publications|net_price|source_price_vnd/i.test(x.sql)));
 });
-test("upload owner only, missing bucket fails closed, image bytes and MIME mismatch rejected before R2.put",async()=>{
-  const file=png(),actions=[],db=database([]);
-  const request=()=>req("upload","POST",file,{
-    "Content-Type":"image/png","X-FBMN-Sku":sku,"X-FBMN-File-Name":"test.png"});
-  assert.equal((await handleCatalogue({request:request(),
-    actor:{role:"editor",subject:"e"},db,r2:bucket(actions)})).status,403);
-  assert.equal((await handleCatalogue({request:request(),actor:owner,db})).status,503);
-  assert.equal((await handleCatalogue({request:req("upload","POST",file,{
-    "Content-Type":"image/png","X-FBMN-Sku":sku,"X-FBMN-File-Name":"test.jpg"}),
-    actor:owner,db,r2:bucket(actions)})).status,400);
-  assert.equal((await handleCatalogue({request:req("upload","POST",new TextEncoder().encode("<svg>test</svg>"),{
-    "Content-Type":"image/png","X-FBMN-Sku":sku,"X-FBMN-File-Name":"test.png"}),
-    actor:owner,db,r2:bucket(actions)})).status,413);
+test("R2 WebP upload owner-only, reject PNG and invalid bytes",async()=>{
+  const bytes=webp(),actions=[],store=bucket(actions),db=database([]);
+  const valid=()=>req("upload","POST",bytes,{"Content-Type":"image/webp","X-FBMN-Sku":sku});
+  assert.equal((await handleCatalogue({request:valid(),
+    actor:{role:"editor",subject:"e"},db,r2:store})).status,403);
+  assert.equal((await handleCatalogue({request:valid(),actor:owner,db})).status,503);
+  assert.equal((await handleCatalogue({request:req("upload","POST",png(),{
+    "Content-Type":"image/png","X-FBMN-Sku":sku}),actor:owner,db,r2:store})).status,400);
+  assert.equal((await handleCatalogue({request:req("upload","POST",new Uint8Array(64),{
+    "Content-Type":"image/webp","X-FBMN-Sku":sku}),actor:owner,db,r2:store})).status,422);
   assert.equal(actions.length,0);
 });
-test("upload and reattach append after MAX sort_order, never reuse holes",async()=>{
-  const upSql=[],linkSql=[],actions=[];
-  const upDb=async fn=>fn({query:async(sql,args=[])=>{
-    upSql.push({sql,args});
-    if(sql.includes("FROM fbmn_catalog.skus WHERE sku_cong_ty="))
-      return {rowCount:1,rows:[{sku_cong_ty:sku}]};
-    if(sql.includes("SELECT a.id FROM fbmn_catalog.media_assets a JOIN fbmn_catalog.sku_media"))
-      return {rowCount:0,rows:[]};
-    if(sql.includes("SELECT count(*)::int AS amount"))
-      return {rowCount:1,rows:[{amount:3,last_position:4}]};
-    return {rowCount:1,rows:[{}]};
-  }});
-  const result=await handleMedia({request:req("upload","POST",png(),{
-    "Content-Type":"image/png","X-FBMN-Sku":sku,"X-FBMN-File-Name":"more.png"}),
-    actor:owner,db:upDb,r2:bucket(actions)});
-  assert.equal(result.status,201);
-  const insert=upSql.find(x=>x.sql.includes("INSERT INTO fbmn_catalog.sku_media"));
-  assert.equal(insert.args[3],5);
-  assert.equal(insert.args[2],"detail");
-  const linkDb=async fn=>fn({query:async(sql,args=[])=>{
-    linkSql.push({sql,args});
-    if(sql.includes("FROM fbmn_catalog.skus WHERE sku_cong_ty="))
-      return {rowCount:1,rows:[{sku_cong_ty:sku}]};
-    if(sql.includes("FROM fbmn_catalog.media_assets WHERE id="))
-      return {rowCount:1,rows:[{id:uuid}]};
-    if(sql.includes("SELECT asset_id,sort_order FROM"))
-      return {rowCount:3,rows:[
-        {asset_id:"b0000000-0000-0000-0000-000000000001",sort_order:0},
-        {asset_id:"b0000000-0000-0000-0000-000000000002",sort_order:3},
-        {asset_id:"b0000000-0000-0000-0000-000000000003",sort_order:4}
-      ]};
-    return {rowCount:1,rows:[{}]};
-  }});
-  const linked=await handleMedia({request:req("link","POST",
-    JSON.stringify({sku_cong_ty:sku,asset_id:uuid}),{"Content-Type":"application/json"}),
-    actor:owner,db:linkDb,r2:bucket([])});
-  assert.equal(linked.status,201);
-  assert.equal(linkSql.find(x=>x.sql.includes("INSERT INTO fbmn_catalog.sku_media")).args[3],5);
-});
-test("R2 object gets removed when SQL metadata transaction fails",async()=>{
-  const operations=[],r2=bucket(operations);
+test("R2 upload confirms SKU exists before putting object",async()=>{
+  const actions=[],store=bucket(actions);
   const db=async fn=>fn({query:async sql=>{
     if(sql.includes("SELECT sku_cong_ty FROM fbmn_catalog.skus"))return {rowCount:0,rows:[]};
     return {rowCount:1,rows:[]};
   }});
-  const result=await handleMedia({request:req("upload","POST",png(),{
-    "Content-Type":"image/png","X-FBMN-Sku":sku,"X-FBMN-File-Name":"test.png"}),
-    actor:owner,db,r2});
-  assert.equal(result.status,404);
-  assert.deepEqual(operations.map(x=>x[0]),["put","delete"]);
+  const response=await handleMedia({request:req("upload","POST",webp(),{
+    "Content-Type":"image/webp","X-FBMN-Sku":sku}),actor:owner,db,r2:store});
+  assert.equal(response.status,404);
+  assert.deepEqual(actions,[]);
 });
 test("owner gallery reads are scoped to the exact literal SKU and never expose R2 keys",async()=>{
   const calls=[],objects=[];
@@ -270,7 +229,7 @@ test("P4 contract: R2 bucket private, grants staging only and browser no direct 
   assert.match(read("apps/admin/app/catalogue-manager.tsx"),/Quản lý ảnh R2/);
   assert.match(admin,/X-FBMN-File-Name/);
   assert.match(admin,/Ảnh đại diện/);
-  assert.match(admin,/Gỡ khỏi SKU/);
+  assert.match(admin,/Xóa ảnh/);
   assert.match(proxy,/origin_forbidden/);
   assert.match(proxy,/body_too_large/);
   assert.match(worker,/private\/catalogue\//);

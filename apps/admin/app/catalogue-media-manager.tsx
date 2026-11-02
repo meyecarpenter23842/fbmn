@@ -1,8 +1,7 @@
 "use client";
 import {useCallback,useEffect,useRef,useState} from "react";
 
-type Media={id:string;source_filename:string;mime_type:string;media_role:string;sort_order:number;sku_cong_ty:string};
-type Library={id:string;source_filename:string;mime_type:string;linked_skus:number};
+type Media={id:string;source_filename:string;mime_type:string;media_role:string;sort_order:number;sku_cong_ty:string;file_sha256:string};
 type R2Candidate={key:string;bytes:number|null;status:string;sku?:string;filename?:string};
 type Result<T>={data?:T;error?:{code?:string}};
 async function token(){
@@ -43,31 +42,7 @@ async function webpVariant(input:Blob,longest:number):Promise<Blob>{
     return image;
   }finally{bitmap.close();}
 }
-async function uploadOptimized(input:Blob,assetId:string){
-  for(const [variant,size] of [["web",1600],["thumb",320]] as const){
-    const optimized=await webpVariant(input,size);
-    const key=await token();
-    const response=await fetch("/api/media/variant",{
-      method:"POST",credentials:"same-origin",cache:"no-store",
-      headers:{Authorization:"Bearer "+key,"Content-Type":"image/webp",
-        "X-FBMN-Asset-ID":assetId,"X-FBMN-Variant":variant},
-      body:optimized
-    });
-    if(!response.ok)throw Error("Không tối ưu được ảnh "+variant+" ("+response.status+").");
-  }
-}
-async function originalMedia(id:string):Promise<Blob>{
-  const key=await token();
-  const response=await fetch("/api/media/file?id="+encodeURIComponent(id),{
-    credentials:"same-origin",cache:"no-store",
-    headers:{Authorization:"Bearer "+key}});
-  if(!response.ok)throw Error("Không đọc được ảnh gốc.");
-  const blob=await response.blob();
-  if(!["image/png","image/jpeg","image/webp"].includes(blob.type)||blob.size>5*1024*1024)
-    throw Error("Định dạng hoặc dung lượng ảnh không hợp lệ.");
-  return blob;
-}
-function PrivateImage({id,alt}:{id:string;alt:string}){
+function PrivateImage({id,alt,signature}:{id:string;alt:string;signature:string}){
   const [src,setSrc]=useState<string|null>(null);
   useEffect(()=>{
     let active=true;
@@ -75,7 +50,7 @@ function PrivateImage({id,alt}:{id:string;alt:string}){
     (async()=>{
       try{
         const key=await token();
-        const response=await fetch("/api/media/file?id="+encodeURIComponent(id)+"&variant=thumb",{
+        const response=await fetch("/api/media/file?id="+encodeURIComponent(id),{
           headers:{Authorization:"Bearer "+key},credentials:"same-origin",cache:"no-store"});
         if(!response.ok)throw Error("not_found");
         const blob=await response.blob();
@@ -87,7 +62,7 @@ function PrivateImage({id,alt}:{id:string;alt:string}){
       }catch{/* Fail to a neutral placeholder, never infer another image. */}
     })();
     return()=>{active=false;if(objectUrl)URL.revokeObjectURL(objectUrl);};
-  },[id]);
+  },[id,signature]);
   return src?<img src={src} alt={alt} loading="lazy" className="catalogue-media-preview"/>:
     <span className="catalogue-media-placeholder" role="img" aria-label="Ảnh chưa tải được">▧</span>;
 }
@@ -95,8 +70,6 @@ export default function CatalogueMediaManager({sku,onChanged,onBusyChange}:{
   sku:string;onChanged:()=>void;onBusyChange?:(busy:boolean)=>void
 }){
   const [items,setItems]=useState<Media[]>([]);
-  const [library,setLibrary]=useState<Library[]>([]);
-  const [selectAsset,setSelectAsset]=useState("");
   const [candidates,setCandidates]=useState<R2Candidate[]|null>(null);
   const [selectedKeys,setSelectedKeys]=useState<string[]>([]);
   const [scanTruncated,setScanTruncated]=useState(false);
@@ -105,6 +78,8 @@ export default function CatalogueMediaManager({sku,onChanged,onBusyChange}:{
   const [error,setError]=useState("");
   const [message,setMessage]=useState("");
   const fileInput=useRef<HTMLInputElement>(null);
+  const replaceFileInput=useRef<HTMLInputElement>(null);
+  const replaceAssetRef=useRef<string|null>(null);
   const refresh=useCallback(async()=>{
     const result=await mediaApi<{items:Media[]}>("list?sku="+encodeURIComponent(sku));
     setItems(result.items);
@@ -131,37 +106,34 @@ export default function CatalogueMediaManager({sku,onChanged,onBusyChange}:{
       try{await refresh();onChanged();}catch{/* report the original error */}
       setError(e instanceof Error?e.message:"Lỗi cập nhật ảnh.");
     }
-    finally{if(fileInput.current)fileInput.current.value="";setBusy(false);}
+    finally{if(fileInput.current)fileInput.current.value="";if(replaceFileInput.current)replaceFileInput.current.value="";replaceAssetRef.current=null;setBusy(false);}
   }
-  const upload=(files:FileList|null)=>void work(async()=>{
+  const upload=(files:FileList|null,replacing:string|null=null)=>void work(async()=>{
     const list=Array.from(files||[]);
-    if(list.length===0)return;
-    if(list.length>5||items.length+list.length>20)
-      throw Error("Mỗi lần tối đa 5 ảnh, tối đa 20 ảnh cho một SKU.");
+    if(!list.length)return;
+    if((replacing&&list.length!==1)||list.length>5||
+       items.length+list.length-(replacing?1:0)>20)
+      throw Error("Tối đa 5 ảnh mỗi lần, 20 mẫu/SKU. Thay ảnh chỉ chọn 1 tệp.");
+    let completed=0;
     for(const file of list){
       if(!["image/png","image/jpeg","image/webp"].includes(file.type)||
-        file.size<32||file.size>5*1024*1024)throw Error("Chỉ nhận JPG/PNG/WebP tối đa 5 MB mỗi ảnh.");
-    }
-    let completed=0,optimizedCount=0;
-    for(const file of list){
+        file.size<32||file.size>5*1024*1024)
+        throw Error("Chỉ nhận JPG/PNG/WebP tối đa 5 MB.");
+      const optimized=await webpVariant(file,1600);
       const key=await token();
       const response=await fetch("/api/media/upload",{
         method:"POST",credentials:"same-origin",cache:"no-store",
-        headers:{Authorization:"Bearer "+key,"Content-Type":file.type,
-          "X-FBMN-Sku":sku,"X-FBMN-File-Name":encodeURIComponent(file.name)},
-        body:file
+        headers:{Authorization:"Bearer "+key,"Content-Type":"image/webp",
+          "X-FBMN-Sku":sku,"X-FBMN-File-Name":encodeURIComponent(file.name.replace(/\.[^.]+$/,"")+".webp"),
+          ...(replacing?{"X-FBMN-Asset-ID":replacing}:{})},
+        body:optimized
       });
-      const payload=await response.json() as Result<{id:string}>;
-      if(!response.ok)throw Error("Tệp "+file.name+": "+(payload.error?.code||response.status)+
-        ". "+(completed?completed+" tệp trước đã tải thành công.":""));
-      if(!payload.data?.id)throw Error("Không nhận được mã ảnh để tối ưu.");
+      const result=await response.json() as Result<{id:string}>;
+      if(!response.ok)throw Error("Ảnh "+file.name+": "+(result.error?.code||response.status));
       completed++;
-      try{await uploadOptimized(file,payload.data.id);optimizedCount++;}
-      catch{/* The original is already linked. Keep it and permit retry. */}
     }
-    setMessage("Đã gắn "+completed+" ảnh vào SKU "+sku+", tối ưu "+optimizedCount+
-      " ảnh WebP. Ảnh gốc giữ nguyên, chưa công khai.");
-    if(fileInput.current)fileInput.current.value="";
+    setMessage((replacing?"Đã thay":"Đã lưu")+" "+completed+
+      " ảnh WebP trên R2. Mỗi mẫu chỉ có 1 file, không lưu ảnh gốc/thumbnail.");
   });
   const scanBucket=()=>void work(async()=>{
     const result=await mediaApi<{items:R2Candidate[];truncated:boolean;scanned:number}>("scan");
@@ -179,41 +151,27 @@ export default function CatalogueMediaManager({sku,onChanged,onBusyChange}:{
       return;
     const result=await mediaApi<{count:number;items:{sku:string;asset_id:string}[]}>("adopt","POST",
       {confirm:"GAN_ANH_R2",keys:chosen.map(x=>x.key)});
-    let optimized=0;
-    for(const item of result.items){
-      try{await uploadOptimized(await originalMedia(item.asset_id),item.asset_id);optimized++;}
-      catch{/* Owner can retry optimized variants from the gallery. */}
-    }
     setSelectedKeys([]);
     // Re-scan to clear already registered keys; never show stale matches.
     const latest=await mediaApi<{items:R2Candidate[];truncated:boolean}>("scan");
     setCandidates(latest.items);
     setScanTruncated(latest.truncated);
-    setMessage("Đã gắn "+result.count+" ảnh đúng SKU, tối ưu "+optimized+" ảnh WebP. Chưa công khai.");
+    setMessage("Đã gắn "+result.count+" ảnh WebP đúng SKU. Không tạo file phụ.");
   });
   const toggleCandidate=(key:string,checked:boolean)=>{
     setSelectedKeys(current=>checked?[...current.filter(x=>x!==key),key].slice(0,10):
       current.filter(x=>x!==key));
   };
-  const optimizeExisting=(assetId:string)=>void work(async()=>{
-    await uploadOptimized(await originalMedia(assetId),assetId);
-    setMessage("Đã tạo WebP và thumbnail. Ảnh gốc không thay đổi.");
-  });
-  const loadLibrary=()=>void work(async()=>{
-    const result=await mediaApi<{items:Library[]}>("library");
-    setLibrary(result.items.filter(x=>!items.some(item=>item.id===x.id)));
-  });
-  const attach=()=>void work(async()=>{
-    if(!selectAsset)return;
-    await mediaApi("link","POST",{sku_cong_ty:sku,asset_id:selectAsset});
-    setMessage("Đã gắn thủ công ảnh từ thư viện vào SKU "+sku+".");
-    setSelectAsset("");setLibrary([]);
-  });
   const remove=(asset:Media)=>void work(async()=>{
-    if(!window.confirm("Gỡ ảnh '"+asset.source_filename+"' khỏi SKU "+sku+"?"+
-      " Ảnh gốc vẫn giữ trong kho riêng để tránh ảnh hưởng SKU khác."))return;
-    await mediaApi("link","DELETE",{sku_cong_ty:sku,asset_id:asset.id});
-    setMessage("Đã gỡ ảnh khỏi SKU; ảnh gốc không tự xóa khỏi R2.");
+    if(!window.confirm("Xóa ảnh '"+asset.source_filename+"' của SKU "+sku+
+      "? File WebP trên R2 sẽ bị xóa nếu không còn SKU khác dùng."))return;
+    const outcome=await mediaApi<{unlinked:boolean;file_deleted:boolean;pending:boolean}>("link","DELETE",{sku_cong_ty:sku,asset_id:asset.id});
+    setMessage(outcome.pending?"Đã gỡ ảnh. File R2 đang chờ dọn; dùng nút Dọn file dư để thử lại.":
+      "Đã xóa ảnh và file WebP không còn được sử dụng.");
+  });
+  const cleanOrphans=()=>void work(async()=>{
+    const r=await mediaApi<{completed:number;remaining:number}>("cleanup","POST",{confirm:"DON_ANH_THUA"});
+    setMessage("Đã dọn "+r.completed+" file không còn dùng; "+r.remaining+" file chưa dọn được.");
   });
   const reorder=(ids:string[],cover:string)=>void work(async()=>{
     await mediaApi("order","PATCH",{sku_cong_ty:sku,asset_ids:ids,cover_id:cover});
@@ -222,8 +180,8 @@ export default function CatalogueMediaManager({sku,onChanged,onBusyChange}:{
   const ordered=[...items].sort((a,b)=>a.sort_order-b.sort_order);
   const cover=ordered.find(item=>item.media_role==="cover")?.id||ordered[0]?.id;
   return <section className="catalogue-media-manager" aria-label={"Ảnh SKU "+sku}>
-    <p><strong>Mã công ty: {sku}.</strong> Ảnh lưu trên R2 riêng tư, gắn thủ công.
-      Thiếu ảnh vẫn được phép lưu sản phẩm. Không đăng ảnh công khai ở P4.</p>
+    <p><strong>Mã công ty: {sku}.</strong> Mỗi mẫu là 1 file WebP riêng trên R2.
+      Khi chọn JPG/PNG, Admin tự chuyển sang WebP. Không lưu ảnh gốc hoặc thumbnail.</p>
     {error&&<div className="import-error" role="alert">{error}</div>}
     {message&&<div className="import-review-banner" role="status">{message}</div>}
     <div className="catalogue-media-actions">
@@ -232,13 +190,16 @@ export default function CatalogueMediaManager({sku,onChanged,onBusyChange}:{
         <input ref={fileInput} type="file" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
           multiple disabled={busy} onChange={event=>upload(event.currentTarget.files)}/>
       </label>
-      <button className="import-btn import-secondary" type="button" disabled={busy}
-        onClick={loadLibrary}>Gắn từ thư viện R2</button>
+      <input ref={replaceFileInput} type="file" hidden
+        accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+        disabled={busy} onChange={event=>upload(event.currentTarget.files,replaceAssetRef.current)}/>
       <span>{ordered.length}/20 ảnh</span>
     </div>
     <div className="catalogue-media-actions">
       <button className="import-btn import-secondary" type="button" disabled={busy}
         onClick={scanBucket}>Quét ảnh đã tải thủ công lên R2</button>
+      <button className="import-btn import-secondary" type="button" disabled={busy}
+        onClick={cleanOrphans}>Dọn file dư</button>
       {selectedKeys.length>0&&<button className="import-btn import-primary"
         type="button" disabled={busy} onClick={adoptSelected}>
         Gắn {selectedKeys.length} ảnh đúng mã
@@ -247,8 +208,8 @@ export default function CatalogueMediaManager({sku,onChanged,onBusyChange}:{
     {candidates!==null&&<section className="catalogue-media-library"
       aria-label="Đối chiếu ảnh trong R2">
       <strong>Ảnh R2 chưa gắn: {candidates.length}</strong>
-      <p>Nhận đúng tên L536.webp hoặc L536-01.webp, L536-02.webp.
-        Chỉ những mã công ty khớp chính xác mới được chọn; không gắn tự động.</p>
+      <p>Chỉ nhận file WebP đặt tên L536.webp, L536-02.webp...
+        Tải đè cùng tên trên R2 để thay mẫu đang có. Không lưu file PNG/JPG.</p>
       {scanTruncated&&<p role="alert">Kho có hơn 1.000 object: lần quét này chưa bao quát toàn bộ.
         Không gắn dựa trên kết quả thiếu.</p>}
       <div className="catalogue-media-scan-list" style={{maxHeight:260,overflowY:"auto"}}>
@@ -261,30 +222,18 @@ export default function CatalogueMediaManager({sku,onChanged,onBusyChange}:{
           <span style={{overflowWrap:"anywhere"}}>
             {item.key.split("/").pop()} · {item.status==="matched"?
               "SKU "+item.sku:item.status==="ambiguous"?"Trùng cách hiểu mã":
-              item.status==="unmatched"?"Chưa có mã SKU khớp":"Không nhận diện"}
+              item.status==="unmatched"?"Chưa có mã SKU khớp":item.status==="needs_webp"?"Cần đổi sang WebP":"Không nhận diện"}
           </span>
         </label>)}
       </div>
     </section>}
-    {library.length>0&&<div className="catalogue-media-library">
-      <label>Chọn ảnh đã tải lên (không tự suy luận từ tên)
-        <select value={selectAsset} onChange={event=>setSelectAsset(event.target.value)}>
-          <option value="">Chọn ảnh trong thư viện</option>
-          {library.map(item=><option key={item.id} value={item.id}>
-            {item.source_filename} · dùng ở {item.linked_skus} SKU
-          </option>)}
-        </select>
-      </label>
-      <button className="import-btn import-primary" disabled={!selectAsset||busy}
-        onClick={attach}>Gắn ảnh được chọn</button>
-    </div>}
     {loading&&<p>Đang tải thư viện ảnh…</p>}
     {!loading&&ordered.length===0&&<div className="catalogue-media-empty">
       <span aria-hidden="true">▧</span><p>Chưa có ảnh cho mã {sku}. Có thể bổ sung bất cứ lúc nào.</p>
     </div>}
     <div className="catalogue-media-grid">
       {ordered.map((asset,index)=><article className="catalogue-media-card" key={asset.id}>
-        <PrivateImage id={asset.id} alt={"Ảnh "+asset.source_filename+" của "+sku}/>
+        <PrivateImage id={asset.id} signature={asset.file_sha256} alt={"Ảnh "+asset.source_filename+" của "+sku}/>
         <strong title={asset.source_filename}>{asset.source_filename}</strong>
         <label className="catalogue-cover-label">
           <input type="radio" name={"cover-"+sku} checked={asset.id===cover}
@@ -303,8 +252,10 @@ export default function CatalogueMediaManager({sku,onChanged,onBusyChange}:{
               const ids=ordered.map(x=>x.id);[ids[index+1],ids[index]]=[ids[index],ids[index+1]];
               reorder(ids,cover);
             }}>↓</button>
-          <button type="button" disabled={busy} onClick={()=>optimizeExisting(asset.id)}>Tối ưu WebP</button>
-          <button type="button" disabled={busy} onClick={()=>remove(asset)}>Gỡ khỏi SKU</button>
+          <button type="button" disabled={busy} onClick={()=>{
+            replaceAssetRef.current=asset.id;replaceFileInput.current?.click();
+          }}>Thay ảnh</button>
+          <button type="button" disabled={busy} onClick={()=>remove(asset)}>Xóa ảnh</button>
         </div>
       </article>)}
     </div>

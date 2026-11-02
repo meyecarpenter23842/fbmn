@@ -8,6 +8,7 @@ export function detectSkuFromName(key,companySkus){
   if(typeof key!=="string"||!key.startsWith(INBOX_PREFIX)||key.length>500)
     return {status:"invalid"};
   const filename=key.slice(key.lastIndexOf("/")+1);
+  if(key!==INBOX_PREFIX+filename)return {status:"nested_path"};
   if(!filename||!IMG.test(filename)||filename.includes("%")||filename.includes("\\"))
     return {status:"invalid"};
   const stem=filename.replace(IMG,"");
@@ -19,6 +20,11 @@ export function detectSkuFromName(key,companySkus){
     options.push(numbered[1]);
   if(options.length>1)return {status:"ambiguous"};
   if(options.length===0)return {status:"unmatched"};
+  if(!/\.webp$/i.test(filename))return {status:"needs_webp",sku:options[0],filename};
+  const position=numbered&&options[0]!==stem?Number(numbered[2]):1;
+  const canonical=INBOX_PREFIX+encodeURIComponent(options[0])+
+    (position===1?"":"-"+String(position).padStart(2,"0"))+".webp";
+  if(key!==canonical)return {status:"invalid_filename"};
   return {status:"matched",sku:options[0],filename};
 }
 export async function findR2SkuCandidates({db,r2}){
