@@ -57,7 +57,9 @@ async function relay(request:Request,params:Promise<{action:string}>,method:stri
     if(![200,201,400,401,403,404,405,409,429,503].includes(response.status))
       return fail(503,"catalogue_api_unavailable");
     const raw=await response.text();
-    if(raw.length>2800000||!response.headers.get("content-type")?.includes("application/json"))
+    // SKU list includes optional 600+6000 character descriptions. Keep the
+    // private response bounded while supporting the complete 613-SKU catalogue.
+    if(raw.length>16000000||!response.headers.get("content-type")?.includes("application/json"))
       return fail(503,"invalid_catalogue_response");
     return new Response(raw,{status:response.status,headers:{...HEADERS,"Content-Type":"application/json"}});
   }catch{return fail(503,"catalogue_api_unavailable");}

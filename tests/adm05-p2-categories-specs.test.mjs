@@ -83,8 +83,8 @@ test("P2 revision-locked update merges specs without clearing fields absent from
 });
 test("P2 UI keeps modal-only edits, category picker and optional fields",()=>{
   const src=read("apps/admin/app/catalogue-manager.tsx");
-  assert.match(src,/create&&<ProductModal/);
-  assert.match(src,/editing&&<ProductModal/);
+  assert.match(src,/\(create\|\|editing\)&&<ProductModal/);
+  assert.match(src,/<CatalogueProductWorkspace/);
   assert.match(src,/showCategories&&<ProductModal/);
   assert.match(src,/Danh mục cấp 1/);
   assert.match(src,/categoryFilter/);

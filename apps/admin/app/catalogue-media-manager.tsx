@@ -43,9 +43,27 @@ async function webpVariant(input:Blob,longest:number):Promise<Blob>{
     return image;
   }finally{bitmap.close();}
 }
-function PrivateImage({id,alt,signature}:{id:string;alt:string;signature:string}){
+export function PrivateImage({id,alt,signature}:{id:string;alt:string;signature:string}){
   const [src,setSrc]=useState<string|null>(null);
+  const [nearViewport,setNearViewport]=useState(false);
+  const placeholder=useRef<HTMLSpanElement|null>(null);
   useEffect(()=>{
+    const node=placeholder.current;
+    if(!node||typeof IntersectionObserver==="undefined"){
+      setNearViewport(true);
+      return;
+    }
+    const observer=new IntersectionObserver(entries=>{
+      if(entries.some(entry=>entry.isIntersecting)){
+        setNearViewport(true);
+        observer.disconnect();
+      }
+    },{rootMargin:"150px"});
+    observer.observe(node);
+    return()=>observer.disconnect();
+  },[id]);
+  useEffect(()=>{
+    if(!nearViewport)return;
     let active=true;
     let objectUrl:string|null=null;
     (async()=>{
@@ -63,9 +81,9 @@ function PrivateImage({id,alt,signature}:{id:string;alt:string;signature:string}
       }catch{/* Fail to a neutral placeholder, never infer another image. */}
     })();
     return()=>{active=false;if(objectUrl)URL.revokeObjectURL(objectUrl);};
-  },[id,signature]);
+  },[id,signature,nearViewport]);
   return src?<img src={src} alt={alt} loading="lazy" className="catalogue-media-preview"/>:
-    <span className="catalogue-media-placeholder" role="img" aria-label="Ảnh chưa tải được">▧</span>;
+    <span ref={placeholder} className="catalogue-media-placeholder" role="img" aria-label="Ảnh chưa tải được">▧</span>;
 }
 export default function CatalogueMediaManager({sku,onChanged,onBusyChange}:{
   sku:string;onChanged:()=>void;onBusyChange?:(busy:boolean)=>void

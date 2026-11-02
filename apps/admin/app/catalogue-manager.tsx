@@ -5,33 +5,39 @@ import {positionCatalogueActions} from "@/lib/catalogue-action-position.mjs";
 import ProductModal from "./product-modal";
 import AdminToast from "./admin-toast";
 import CatalogueImportPreview from "./catalogue-import-preview";
-import CatalogueMediaManager from "./catalogue-media-manager";
+import {PrivateImage} from "./catalogue-media-manager";
+import CatalogueProductWorkspace from "./catalogue-product-workspace";
 
 type SKU={sku_cong_ty:string;ten_san_pham:string|null;ten_goc_xnt:string|null;ten_goc_bang_gia?:string|null;
   barcode:string|null;paper_size:string|null;review_status:string;revision:number;
   category_id:string|null;category_label:string|null;
   family_id:string|null;family_label:string|null;media_count?:number;
+  cover_asset_id?:string|null;cover_sha256?:string|null;
   product_spec?:Partial<Omit<SpecFields,"paper_size"|"barcode"|"category_id">>};
 type Family={id:string;family_label:string;revision?:number};
 type Visibility={sku_cong_ty:string;channel_code:"public_web"|"dealer_app"|"consumer_app";state:string;revision:number};
 const CHANNELS=[{code:"public_web",label:"Web"},{code:"dealer_app",label:"Đại lý"},{code:"consumer_app",label:"Tiêu dùng"}] as const;
 type Category={id:string;parent_id:string|null;category_label:string};
 type SpecFields={barcode:string;paper_size:string;category_id:string;pages:string;ruling:string;
-  gsm:string;cover_type:string;packaging:string;unit:string;units_per_pack:string};
+  gsm:string;cover_type:string;packaging:string;unit:string;units_per_pack:string;
+  short_description:string;long_description:string};
 const blankSpec=():SpecFields=>({barcode:"",paper_size:"",category_id:"",pages:"",ruling:"",
-  gsm:"",cover_type:"",packaging:"",unit:"",units_per_pack:""});
+  gsm:"",cover_type:"",packaging:"",unit:"",units_per_pack:"",short_description:"",long_description:""});
 const specFromSku=(row:SKU):SpecFields=>({barcode:row.barcode??"",paper_size:row.paper_size??"",
   category_id:row.category_id??"",pages:row.product_spec?.pages??"",ruling:row.product_spec?.ruling??"",
   gsm:row.product_spec?.gsm??"",cover_type:row.product_spec?.cover_type??"",
   packaging:row.product_spec?.packaging??"",unit:row.product_spec?.unit??"",
-  units_per_pack:row.product_spec?.units_per_pack??""});
+  units_per_pack:row.product_spec?.units_per_pack??"",short_description:row.product_spec?.short_description??"",
+  long_description:row.product_spec?.long_description??""});
 function specPayload(spec:SpecFields){
   return {barcode:spec.barcode.trim()||null,paper_size:spec.paper_size.trim()||null,
     category_id:spec.category_id||null,product_spec:{
       pages:spec.pages.trim()||null,ruling:spec.ruling.trim()||null,
       gsm:spec.gsm.trim()||null,cover_type:spec.cover_type.trim()||null,
       packaging:spec.packaging.trim()||null,unit:spec.unit.trim()||null,
-      units_per_pack:spec.units_per_pack.trim()||null}};
+      units_per_pack:spec.units_per_pack.trim()||null,
+      short_description:spec.short_description.trim()||null,
+      long_description:spec.long_description.trim()||null}};
 }
 function CatalogueFields({spec,onChange,categories}:{spec:SpecFields;onChange:(value:SpecFields)=>void;categories:Category[]}){
   const set=(key:keyof SpecFields,value:string)=>onChange({...spec,[key]:value});
@@ -106,13 +112,13 @@ export default function CatalogueManager({onImport}:{onImport:()=>void}){
   const [groupId,setGroupId]=useState("");
   const [newFamily,setNewFamily]=useState("");
   const [editing,setEditing]=useState<SKU|null>(null);
+  const [editorNotice,setEditorNotice]=useState("");
   const [editName,setEditName]=useState("");
   const [create,setCreate]=useState(false);
   const [showImport,setShowImport]=useState(false);
   const [exportOpen,setExportOpen]=useState(false);
   const exportAnchor=useRef<HTMLDivElement|null>(null);
   const [importBusy,setImportBusy]=useState(false);
-  const [mediaSku,setMediaSku]=useState<string|null>(null);
   const [mediaBusy,setMediaBusy]=useState(false);
   const [showGroup,setShowGroup]=useState(false);
   const [groupMode,setGroupMode]=useState(false);
@@ -260,22 +266,60 @@ export default function CatalogueManager({onImport}:{onImport:()=>void}){
       setPendingKeys(previous=>previous.filter(item=>item!==key));
     }
   })();
+  const startEditor=(row:SKU|null)=>{
+    if(busy||mediaBusy)return;
+    // Selecting the current SKU must not discard any unsaved name/spec/description.
+    if(row&&editing?.sku_cong_ty===row.sku_cong_ty)return;
+    const originalName=editing?(editing.ten_san_pham||editing.ten_goc_xnt||editing.ten_goc_bang_gia||""):"";
+    const dirty=editing?
+      editName!==originalName||JSON.stringify(spec)!==JSON.stringify(specFromSku(editing)):
+      create&&(sku.trim()!==""||name.trim()!==""||JSON.stringify(spec)!==JSON.stringify(blankSpec()));
+    if(dirty&&(!row||row.sku_cong_ty!==editing?.sku_cong_ty)&&
+      !window.confirm("Thông tin chưa lưu sẽ bị bỏ qua. Tiếp tục?"))return;
+    setError("");setEditorNotice("");
+    if(row){
+      setEditing(row);setCreate(false);
+      setEditName(row.ten_san_pham||row.ten_goc_xnt||row.ten_goc_bang_gia||"");
+      setSpec(specFromSku(row));
+    }else{
+      setEditing(null);setCreate(true);setSku("");setName("");setSpec(blankSpec());
+    }
+  };
+  const closeEditor=()=>{
+    if(busy||mediaBusy)return;
+    const originalName=editing?(editing.ten_san_pham||editing.ten_goc_xnt||editing.ten_goc_bang_gia||""):"";
+    const dirty=editing?
+      editName!==originalName||JSON.stringify(spec)!==JSON.stringify(specFromSku(editing)):
+      sku.trim()!==""||name.trim()!==""||JSON.stringify(spec)!==JSON.stringify(blankSpec());
+    if(dirty&&!window.confirm("Đóng và bỏ những thay đổi chưa lưu?"))return;
+    setEditing(null);setCreate(false);setEditorNotice("");setError("");
+  };
   const add=()=>void run(async()=>{
-    if(!sku||sku!==sku.trim()||!name.trim())throw new Error("Cần mã công ty dạng text và tên sản phẩm.");
+    if(!sku||sku!==sku.trim()||!name.trim())throw new Error("Cần mã công ty dạng văn bản và tên sản phẩm.");
     const data=await api<{sku_cong_ty:string}>("skus","POST",{
-      sku_cong_ty:sku,ten_san_pham:name,...specPayload(spec)});
-    setMessage("Đã thêm SKU "+data.sku_cong_ty+". Chưa hiển thị công khai.");
-    setCreate(false);setSku("");setName("");setSpec(blankSpec());
+      sku_cong_ty:sku,ten_san_pham:name.trim(),...specPayload(spec)});
+    const latest=await api<{items:SKU[]}>("skus");
+    const saved=latest.items.find(row=>row.sku_cong_ty===data.sku_cong_ty);
+    if(!saved)throw new Error("Đã lưu sản phẩm nhưng chưa tải được thông tin mới. Hãy làm mới danh sách.");
+    setEditing(saved);setCreate(false);setEditName(name.trim());
+    setSpec(specFromSku(saved));
+    setEditorNotice("Đã lưu sản phẩm. Bây giờ có thể thêm ảnh ngay ở cột bên phải.");
+    setMessage("Đã thêm mã "+data.sku_cong_ty+". Chưa hiển thị công khai.");
+    setSku("");
   });
   const save=()=>void run(async()=>{
     if(!editing)return;
     if(!editName.trim()&&!editing.ten_goc_xnt?.trim()&&!editing.ten_goc_bang_gia?.trim())
       throw new Error("Sản phẩm cần có tên hợp lệ.");
-    await api("skus","PATCH",{sku_cong_ty:editing.sku_cong_ty,
-      expected_revision:editing.revision,ten_san_pham:editName,
-      review_status:editing.review_status,...specPayload(spec)});
-    setMessage("Đã cập nhật SKU "+editing.sku_cong_ty+". Mã công ty không thay đổi.");
-    setEditing(null);
+    const saved=await api<{revision:number}>("skus","PATCH",{
+      sku_cong_ty:editing.sku_cong_ty,expected_revision:editing.revision,
+      ten_san_pham:editName.trim(),review_status:editing.review_status,...specPayload(spec)});
+    setEditing(previous=>previous?{...previous,revision:saved.revision,
+      ten_san_pham:editName.trim(),barcode:spec.barcode||null,
+      paper_size:spec.paper_size||null,category_id:spec.category_id||null,
+      product_spec:{...spec}}:previous);
+    setEditorNotice("Đã lưu thay đổi, mô tả và quy cách. Có thể tiếp tục chỉnh sửa ảnh.");
+    setMessage("Đã cập nhật mã "+editing.sku_cong_ty+".");
   });
   const addCategory=()=>void run(async()=>{
     if(!categoryName.trim())throw new Error("Nhập tên danh mục.");
@@ -314,7 +358,7 @@ export default function CatalogueManager({onImport}:{onImport:()=>void}){
           </div>}
         </div>
         <button type="button" className="import-btn import-secondary" onClick={()=>{setExportOpen(false);setShowImport(true)}}>Nhập / Cập nhật Excel</button>
-        <button type="button" className="import-btn import-primary" onClick={()=>{setSpec(blankSpec());setCreate(true)}}>+ Thêm sản phẩm</button>
+        <button type="button" className="import-btn import-primary" onClick={()=>startEditor(null)}>+ Thêm sản phẩm</button>
       </div>
     </div>
     <div className="catalogue-overview" aria-label="Tổng quan danh mục">
@@ -322,26 +366,24 @@ export default function CatalogueManager({onImport}:{onImport:()=>void}){
     </div>
     {error&&!create&&!editing&&!showGroup&&<div className="import-error" role="alert">{error}</div>}
     <AdminToast message={message} onClose={clearToast}/>
-    {create&&<ProductModal title="Thêm sản phẩm Futurebook" onClose={()=>setCreate(false)} locked={busy}>
-      {error&&<div className="import-error" role="alert">{error}</div>}
-      <div className="catalogue-editor">
-      <h3>Thêm sản phẩm</h3>
-      <label>Mã SKU công ty (không tự sửa)<input value={sku} onChange={e=>setSku(e.target.value)} placeholder="Ví dụ 0114"/></label>
-      <label>Tên sản phẩm<input value={name} onChange={e=>setName(e.target.value)} /></label>
-      <CatalogueFields spec={spec} onChange={setSpec} categories={categories}/>
-      <div className="fb-product-modal-actions"><button type="button" className="import-btn import-secondary" onClick={()=>setCreate(false)} disabled={busy}>Hủy</button>
-      <button type="button" className="import-btn import-primary" disabled={busy} onClick={add}>Lưu sản phẩm</button></div>
-    </div></ProductModal>}
-    {editing&&<ProductModal title={"Sửa sản phẩm · "+editing.sku_cong_ty} onClose={()=>setEditing(null)} locked={busy}>
-      {error&&<div className="import-error" role="alert">{error}</div>}
-      <div className="catalogue-editor">
-      <h3>Sửa sản phẩm · {editing.sku_cong_ty}</h3>
-      <p><strong>Mã công ty được giữ nguyên.</strong> Chỉnh sửa thông tin và quy cách không tạo SKU khác.</p>
-      <label>Tên sản phẩm<input value={editName} onChange={e=>setEditName(e.target.value)}/></label>
-      <CatalogueFields spec={spec} onChange={setSpec} categories={categories}/>
-      <div className="fb-product-modal-actions"><button type="button" className="import-btn import-secondary" onClick={()=>setEditing(null)} disabled={busy}>Hủy</button>
-      <button type="button" className="import-btn import-primary" disabled={busy} onClick={save}>Lưu thay đổi</button></div>
-    </div></ProductModal>}
+    {(create||editing)&&<ProductModal title={editing?"Sửa sản phẩm · "+editing.sku_cong_ty:"Thêm sản phẩm"}
+      wide onClose={closeEditor} locked={busy||mediaBusy}>
+      <CatalogueProductWorkspace items={items} selectedSku={editing?.sku_cong_ty||null}
+        companySku={editing?.sku_cong_ty||sku} name={editing?editName:name}
+        shortDescription={spec.short_description} longDescription={spec.long_description}
+        fields={<fieldset className="catalogue-workspace-fieldset"
+          disabled={!!editing&&!["draft","needs_review"].includes(editing.review_status)}>
+          <CatalogueFields spec={spec} onChange={setSpec} categories={categories}/>
+        </fieldset>}
+        editingAllowed={!editing||["draft","needs_review"].includes(editing.review_status)}
+        loading={busy||mediaBusy} error={error} notice={editorNotice}
+        onSku={setSku} onName={editing?setEditName:setName}
+        onShortDescription={value=>setSpec(previous=>({...previous,short_description:value}))}
+        onLongDescription={value=>setSpec(previous=>({...previous,long_description:value}))}
+        onSave={editing?save:add} onClose={closeEditor} onNew={()=>startEditor(null)}
+        onSelect={code=>{const row=items.find(item=>item.sku_cong_ty===code);if(row)startEditor(row);}}
+        onMediaChanged={()=>void refresh()} onMediaBusy={setMediaBusy}/>
+    </ProductModal>}
     {showCategories&&<ProductModal title="Danh mục sản phẩm" onClose={()=>setShowCategories(false)} locked={busy}>
       {error&&<div className="import-error" role="alert">{error}</div>}
       <div className="catalogue-editor">
@@ -382,8 +424,8 @@ export default function CatalogueManager({onImport}:{onImport:()=>void}){
           <button type="button" className="catalogue-media-shortcut"
             title={"Quản lý ảnh SKU "+row.sku_cong_ty}
             aria-label={"Quản lý "+(row.media_count||0)+" ảnh SKU "+row.sku_cong_ty}
-            onClick={()=>{setMediaSku(row.sku_cong_ty);setActionMenu(null);}}>
-            <span className="catalogue-image-placeholder" aria-hidden="true">▧</span>
+            onClick={()=>{startEditor(row);setActionMenu(null);}}>
+            {row.cover_asset_id&&row.cover_sha256?<PrivateImage id={row.cover_asset_id} signature={row.cover_sha256} alt={"Ảnh sản phẩm "+row.sku_cong_ty}/>:<span className="catalogue-image-placeholder" aria-hidden="true">▧</span>}
             <span>{row.media_count?row.media_count+" ảnh":"Thêm ảnh"}</span>
           </button>
         </td>
@@ -447,7 +489,7 @@ export default function CatalogueManager({onImport}:{onImport:()=>void}){
             setSpec(specFromSku(selectedActionRow));
           }}>Sửa sản phẩm</button>
         <button type="button" role="menuitem"
-          onClick={()=>{setMediaSku(selectedActionRow.sku_cong_ty);setActionMenu(null)}}>
+          onClick={()=>{startEditor(selectedActionRow);setActionMenu(null)}}>
           Quản lý hình ảnh</button>
         <button type="button" role="menuitem"
           disabled={!["draft","needs_review"].includes(selectedActionRow.review_status)}
@@ -478,11 +520,6 @@ export default function CatalogueManager({onImport}:{onImport:()=>void}){
       <label>Tạo nhóm mới<input value={newFamily} onChange={e=>setNewFamily(e.target.value)} placeholder="Tên nhóm sản phẩm"/></label>
       <button className="import-btn import-secondary" type="button" disabled={busy||!newFamily.trim()} onClick={addFamily}>Tạo nhóm</button>
       </div></ProductModal>}
-    {mediaSku&&<ProductModal title={"Quản lý ảnh · "+mediaSku} wide locked={mediaBusy}
-      onClose={()=>{if(!mediaBusy)setMediaSku(null)}}>
-      <CatalogueMediaManager sku={mediaSku} onBusyChange={setMediaBusy}
-        onChanged={()=>{void refresh()}}/>
-    </ProductModal>}
     {showImport&&<ProductModal title="Nhập / cập nhật sản phẩm bằng Excel" wide locked={importBusy} onClose={()=>{if(!importBusy){setShowImport(false);void refresh()}}}>
       <CatalogueImportPreview onBusyChange={handleImportBusy} onSaved={importSaved} />
     </ProductModal>}

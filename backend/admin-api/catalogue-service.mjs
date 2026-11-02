@@ -12,13 +12,13 @@ const validSku = x => typeof x==="string" && x.length>0 && x.length<=80 &&
 const validText = (x,max=500) => x===undefined || x===null ||
   (typeof x==="string" && x.length<=max && !Array.from(x).some(char=>char.charCodeAt(0)<32 && ![9,10,13].includes(char.charCodeAt(0))));
 const uuid = x => typeof x==="string" && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(x);
-const SPEC_FIELDS = new Set(["pages","ruling","gsm","cover_type","unit","packaging","units_per_pack"]);
+const SPEC_FIELDS = new Set(["pages","ruling","gsm","cover_type","unit","packaging","units_per_pack","short_description","long_description"]);
 export function safeProductSpec(spec) {
   if(spec===undefined)return {};
   if(!spec || typeof spec!=="object" || Array.isArray(spec))throw Error("invalid_product_spec");
   const out={};
   for(const [key,value] of Object.entries(spec)){
-    if(!SPEC_FIELDS.has(key) || !(value===null || (typeof value==="string" && validText(value,["pages","ruling"].includes(key)?1200:160))))
+    if(!SPEC_FIELDS.has(key) || !(value===null || (typeof value==="string" && validText(value,key==="long_description"?6000:key==="short_description"?600:["pages","ruling"].includes(key)?1200:160))))
       throw Error("invalid_product_spec");
     if(value!==null && key==="gsm" && value!=="" && !/^\d{1,4}(?:\.\d{1,2})?$/.test(value))
       throw Error("invalid_product_spec");
@@ -54,9 +54,14 @@ export function safeDraft(row) {
 }
 const rowsSql = "SELECT s.sku_cong_ty,s.ten_goc_xnt,s.ten_goc_bang_gia,s.ten_san_pham,s.barcode,s.paper_size,s.product_spec,"+
   "s.review_status,s.revision,s.family_id,f.family_label,s.category_id,c.category_label, "+
-  "(SELECT count(*)::int FROM fbmn_catalog.sku_media m WHERE m.sku_cong_ty=s.sku_cong_ty) AS media_count FROM fbmn_catalog.skus s "+
+  "(SELECT count(*)::int FROM fbmn_catalog.sku_media m WHERE m.sku_cong_ty=s.sku_cong_ty) AS media_count, "+
+  "photo.cover_asset_id,photo.cover_sha256 FROM fbmn_catalog.skus s "+
   "LEFT JOIN fbmn_catalog.families f ON f.id=s.family_id "+
-  "LEFT JOIN fbmn_catalog.categories c ON c.id=s.category_id ORDER BY s.sku_cong_ty LIMIT 20000";
+  "LEFT JOIN fbmn_catalog.categories c ON c.id=s.category_id "+
+  "LEFT JOIN LATERAL (SELECT a.id::text AS cover_asset_id,a.file_sha256 AS cover_sha256 "+
+  "FROM fbmn_catalog.sku_media m JOIN fbmn_catalog.media_assets a ON a.id=m.asset_id "+
+  "WHERE m.sku_cong_ty=s.sku_cong_ty ORDER BY CASE WHEN m.media_role='cover' THEN 0 ELSE 1 END,m.sort_order,a.id LIMIT 1) photo ON TRUE "+
+  "ORDER BY s.sku_cong_ty LIMIT 20000";
 async function transactional(db,work) {
   return db(async c=>{await c.query("BEGIN");try{
     const data=await work(c);await c.query("COMMIT");return data;

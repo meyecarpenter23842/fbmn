@@ -108,3 +108,23 @@
   .side-link,.surface,.metric,.import-btn,.btn,.catalogue-actions-trigger,.catalogue-list-table tbody tr { transition:none!important; transform:none!important; }
   .catalogue-toast { animation:none; }
 }
+
+/* G02: true edge-to-edge working area and profile pinned to top-right. */
+.workspace-main{
+  width:100%;
+  max-width:none;
+  margin:0;
+  padding:24px clamp(16px,2vw,36px) 48px;
+}
+.workspace-main > :where(section,div),.catalogue-manager,.import-preview{
+  max-width:none;
+  width:100%;
+  margin-left:0;
+  margin-right:0;
+}
+.topbar{width:100%;min-width:0;}
+.top-actions{margin-left:auto;justify-content:flex-end;flex-shrink:0;}
+@media(max-width:780px){
+  .workspace-main{padding:16px 13px 32px;}
+  .top-actions{margin-left:auto;}
+}

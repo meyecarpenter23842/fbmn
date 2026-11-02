@@ -55,8 +55,8 @@ test("ADM-08 original multi-sheet reconciliation format remains supported",async
 test("ADM-08 product editing and importing are popups, not inline expanding forms",()=>{
   const manager=readFileSync(new URL("../apps/admin/app/catalogue-manager.tsx",import.meta.url),"utf8");
   const modal=readFileSync(new URL("../apps/admin/app/product-modal.tsx",import.meta.url),"utf8");
-  assert.match(manager,/create&&<ProductModal/);
-  assert.match(manager,/editing&&<ProductModal/);
+  assert.match(manager,/\(create\|\|editing\)&&<ProductModal/);
+  assert.match(manager,/<CatalogueProductWorkspace/);
   assert.match(manager,/showGroup&&<ProductModal/);
   assert.match(manager,/showImport&&<ProductModal/);
   assert.match(modal,/role="dialog" aria-modal="true"/);
