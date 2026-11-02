@@ -25,45 +25,71 @@ async function file(){
   sheet.addRow(["0114","Vở Song","","","96 trang","4 ô ly","","70","","quyển","",""]);
   return new Uint8Array(await wb.xlsx.writeBuffer());
 }
-test("blank mapped fields default to KEEP, while same values are distinguished from unmapped",async()=>{
+
+test("one dropdown: mapped empty optional fields clear, ignored fields remain untouched",async()=>{
+  const parsed=await readXlsxSkuRows(await file());
+  const mapped=["ten_san_pham","barcode","paper_size","pages","ruling",
+    "category_label","gsm","cover_type","unit","packaging","units_per_pack"];
+  const p=planSheetSync(parsed,[original()],categories,{mappedFields:mapped});
+  assert.equal(p.totals.update,1);
+  assert.deepEqual(p.operations[0].changes,{
+    barcode:null,paper_size:null,
+    product_spec:{cover_type:null,packaging:null,units_per_pack:null},
+    category_id:null
+  });
+  assert.equal(p.items[0].field_states.length,11);
+  assert.equal(p.items[0].field_states.find(x=>x.key==="barcode").action,"clear");
+  assert.equal(p.items[0].field_states.find(x=>x.key==="gsm").action,"same");
+  assert.equal(p.items[0].field_states.find(x=>x.key==="category_label").action,"clear");
+  const ignored=planSheetSync(parsed,[original()],categories,{mappedFields:["gsm"]});
+  assert.equal(ignored.totals.unchanged,1);
+  assert.equal(ignored.items[0].field_states.find(x=>x.key==="barcode").action,"ignore");
+  assert.deepEqual(ignored.operations,[]);
+});
+test("older cached UI explicit clearFields [] retains previous keep-on-blank semantics",async()=>{
   const parsed=await readXlsxSkuRows(await file());
   const p=planSheetSync(parsed,[original()],categories,{
-    mappedFields:["ten_san_pham","barcode","paper_size","pages","ruling",
-      "category_label","gsm","cover_type","unit","packaging","units_per_pack"],
+    mappedFields:["barcode","paper_size","cover_type","category_label"],
     clearFields:[]});
   assert.equal(p.totals.unchanged,1);
-  assert.equal(p.operations.length,0);
-  assert.equal(p.items[0].field_states.length,11);
   assert.equal(p.items[0].field_states.find(x=>x.key==="barcode").action,"keep");
-  assert.equal(p.items[0].field_states.find(x=>x.key==="gsm").action,"same");
-  const minimal=planSheetSync(parsed,[original()],categories,{mappedFields:["gsm"]});
-  assert.equal(minimal.items[0].field_states.find(x=>x.key==="barcode").action,"ignore");
-});
-test("explicit blank policy clears only chosen optional fields with old-to-null diffs",async()=>{
-  const parsed=await readXlsxSkuRows(await file());
-  const p=planSheetSync(parsed,[original()],categories,{
-    mappedFields:["barcode","paper_size","cover_type","packaging","category_label"],
+  const clear=planSheetSync(parsed,[original()],categories,{
+    mappedFields:["barcode","paper_size","cover_type","category_label"],
     clearFields:["barcode","cover_type","category_label"]});
-  assert.deepEqual(p.totals,{create:0,update:1,unchanged:0,conflict:0,error:0});
-  assert.deepEqual(p.operations[0].changes,{
-    barcode:null,product_spec:{cover_type:null},category_id:null
-  });
-  assert.equal(p.operations[0].expected_revision,4);
-  const states=p.items[0].field_states;
-  assert.equal(states.find(x=>x.key==="barcode").action,"clear");
-  assert.equal(states.find(x=>x.key==="cover_type").action,"clear");
-  assert.equal(states.find(x=>x.key==="category_label").action,"clear");
-  assert.equal(states.find(x=>x.key==="paper_size").action,"keep");
-  assert.equal(states.find(x=>x.key==="pages").action,"ignore");
-  assert.deepEqual(p.items[0].diffs.map(x=>x.action),["clear","clear","clear"]);
-  assert.doesNotMatch(JSON.stringify(p.operations),/0899988000|legacy_custom|net_price/);
+  assert.deepEqual(clear.operations[0].changes,
+    {barcode:null,product_spec:{cover_type:null},category_id:null});
+  assert.equal(clear.items[0].field_states.find(x=>x.key==="paper_size").action,"keep");
 });
-test("clear configuration is allowlisted, cannot target title or unmapped SKU field",async()=>{
+test("cached legacy client keeps blank name while updating another selected field",async()=>{
+  const wb=new ExcelJS.Workbook(),sheet=wb.addWorksheet("SAN PHAM");
+  sheet.addRow(["Mã công ty","Tên sản phẩm","Định lượng GSM"]);
+  sheet.addRow(["0114","","80"]);sheet.getColumn(1).numFmt="@";
+  const parsed=await readXlsxSkuRows(new Uint8Array(await wb.xlsx.writeBuffer()),{
+    columnMapping:["sku","title","gsm"]});
+  const plan=planSheetSync(parsed,[original()],categories,{
+    mappedFields:["ten_san_pham","gsm"],clearFields:[]});
+  assert.equal(plan.totals.update,1);
+  assert.deepEqual(plan.operations[0].changes,{product_spec:{gsm:"80"}});
+  assert.equal(plan.items[0].field_states.find(x=>x.key==="ten_san_pham").action,"keep");
+});
+test("clear overrides from legacy clients are allowlisted and cannot touch immutable fields",async()=>{
   const parsed=await readXlsxSkuRows(await file());
   for(const clearFields of [["ten_san_pham"],["sku_cong_ty"],["NET"],["barcode","barcode"]])
     assert.throws(()=>planSheetSync(parsed,[original()],categories,{clearFields}),/invalid_clear_fields/);
   assert.throws(()=>planSheetSync(parsed,[original()],categories,{
     clearFields:["barcode"],mappedFields:["gsm"]}),/invalid_clear_fields/);
+});
+test("blank mapped required product name is a blocking error, not a silent keep/delete",async()=>{
+  const wb=new ExcelJS.Workbook(),sheet=wb.addWorksheet("SAN PHAM");
+  sheet.addRow(["Mã công ty","Tên sản phẩm"]);sheet.addRow(["0114",""]);
+  sheet.getColumn(1).numFmt="@";
+  const parsed=await readXlsxSkuRows(new Uint8Array(await wb.xlsx.writeBuffer()),{
+    columnMapping:["sku","title"]});
+  const p=planSheetSync(parsed,[original()],categories,{mappedFields:["ten_san_pham"]});
+  assert.equal(p.totals.error,1);
+  assert.equal(p.items[0].reason,"missing_product_name");
+  assert.equal(p.items[0].field_states.find(x=>x.key==="ten_san_pham").action,"required");
+  assert.equal(p.operations.length,0);
 });
 test("Owner-only atomic Worker accepts explicit null optional fields and preserves revision guard",async()=>{
   const statements=[];
@@ -103,26 +129,31 @@ test("new SKU preview shows populated fields as incoming rather than unchanged",
   assert.equal(states.find(s=>s.key==="barcode").action,"empty");
   assert.equal(states.find(s=>s.key==="unit").action,"ignore");
   const ui=read("apps/admin/app/catalogue-import-preview.tsx");
-  assert.ok(ui.includes('field.key==="title"?"ten_san_pham":field.key'));
+  assert.ok(ui.includes('key==="title"?"ten_san_pham":key'));
   assert.ok(ui.includes('action==="create"?"Dữ liệu mới"'));
 });
-test("full 11-field preview, delete acknowledgement and identical preview/save fingerprint",()=>{
+
+test("one selection per column; no repeated source title or blank-policy selector",()=>{
+  const ui=read("apps/admin/app/catalogue-import-preview.tsx");
+  const css=read("apps/admin/app/import-preview.css");
+  assert.ok(ui.includes('<span title={col.header||undefined}>Cột {col.index}</span>'));
+  assert.equal(ui.split('<select aria-label={"Thuộc tính cột "').length-1,1);
+  assert.doesNotMatch(ui,/catalogue-blank-policy|changeBlankPolicy|clearApproved/);
+  assert.ok(!css.includes(".catalogue-blank-policy"));
+  assert.ok(ui.includes('mappedPreviewFields=mapping.slice(1)'));
+  assert.ok(ui.includes('ô trống sẽ xóa dữ liệu cũ'));
+});
+test("all fields preview, summary of clears and identical preview-to-save binding",()=>{
   const ui=read("apps/admin/app/catalogue-import-preview.tsx");
   const preview=read("apps/admin/app/api/catalogue/preview/route.ts");
   const sync=read("apps/admin/app/api/catalogue/sync/route.ts");
-  const worker=read("backend/admin-api/catalogue-service.mjs");
-  assert.match(ui,/Giữ dữ liệu cũ \(mặc định\)/);
-  assert.match(ui,/Xóa dữ liệu cũ khi trống/);
-  assert.match(ui,/mapping\[i\]==="title"/);
-  assert.match(ui,/clearCount===0\|\|clearApproved/);
-  assert.match(ui,/Nhóm \{Math\.min\(fieldPage\+1,fieldPages\)\}/);
-  assert.match(ui,/item\.field_states\?\.find/);
-  assert.match(ui,/Xóa giá trị/);
-  assert.equal((ui.match(/form\.append\("clearFields",JSON\.stringify\(clearOnBlank\)\)/g)||[]).length,2);
-  assert.match(preview,/\.update\(JSON\.stringify\(clearFields\)\)/);
-  assert.match(sync,/\.update\(JSON\.stringify\(clearFields\)\)/);
+  assert.ok(ui.includes('item.field_states?.find'));
+  assert.ok(ui.includes('clearCount>0'));
+  assert.ok(ui.includes('Xóa giá trị'));
+  assert.ok(!ui.includes('form.append("clearFields"'));
+  assert.ok(preview.includes('.update(JSON.stringify(clearFields??null))'));
+  assert.ok(sync.includes('.update(JSON.stringify(clearFields??null))'));
   assert.match(sync,/digest!==fingerprint/);
-  assert.match(worker,/value===null\)continue/);
   assert.doesNotMatch(preview,/net_price|source_price_vnd|warehouse_quantity/);
   assert.equal(read("backend/catalogue/sheet-sync.mjs"),read("apps/admin/lib/sheet-sync.mjs"));
 });

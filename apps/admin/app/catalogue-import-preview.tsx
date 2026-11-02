@@ -43,7 +43,7 @@ type Item = {
   changes: string[];
   diffs?: {field:string;from:string;to:string;action?:"clear"|"update"}[];
   field_states?:{key:string;field:string;from:string;to:string;action:
-    "ignore"|"keep"|"same"|"update"|"clear"|"create"|"empty"}[];
+    "ignore"|"keep"|"same"|"update"|"clear"|"create"|"empty"|"required"}[];
   source_name_xnt: string;
   proposed_name: string;
   specifications: { paper_size: string | null; pages: string | null; ruling: string | null };
@@ -104,8 +104,6 @@ export default function CatalogueImportPreview({onBusyChange,onSaved}:{onBusyCha
   const inspectionSeq=useRef(0);
   const [columns,setColumns]=useState<ProfileColumn[]>([]);
   const [mapping,setMapping]=useState<string[]>([]);
-  const [clearOnBlank,setClearOnBlank]=useState<string[]>([]);
-  const [clearApproved,setClearApproved]=useState(false);
   const [previewFull,setPreviewFull]=useState(true);
   const [fieldPage,setFieldPage]=useState(0);
   const [inspecting,setInspecting]=useState(false);
@@ -166,17 +164,10 @@ export default function CatalogueImportPreview({onBusyChange,onSaved}:{onBusyCha
       mapping.slice(1).filter(key=>key!=="ignore").length;
   function changeMapping(index:number,value:string){
     if(index===0||busy||approving)return;
-    setClearOnBlank([]);setClearApproved(false);setFieldPage(0);
+    setFieldPage(0);
     setMapping(old=>old.map((key,i)=>i===index?value:
       (value!=="ignore"&&key===value?"ignore":key)));
     setPreview(null);setReceipt("");setApproved(false);setExpanded(null);setError("");
-  }
-  function changeBlankPolicy(field:string,clear:boolean){
-    if(busy||approving)return;
-    setClearOnBlank(old=>clear?[...new Set([...old,field])]:
-      old.filter(key=>key!==field));
-    setClearApproved(false);setPreview(null);setReceipt("");setApproved(false);
-    setExpanded(null);setError("");
   }
   async function inspectFile(item:File,sequence:number){
     setInspecting(true);
@@ -218,7 +209,7 @@ export default function CatalogueImportPreview({onBusyChange,onSaved}:{onBusyCha
     inspectionSeq.current++;setInspecting(false);
     setColumns([]);setMapping([]);
     setMode(next);setFile(null);setPreview(null);setReceipt("");
-    setClearOnBlank([]);setClearApproved(false);setFieldPage(0);
+    setFieldPage(0);
     setError("");setPage(1);setExpanded(null);setApproved(false);
     setSearch("");setFilter("all");
     if(fileRef.current)fileRef.current.value="";
@@ -227,7 +218,7 @@ export default function CatalogueImportPreview({onBusyChange,onSaved}:{onBusyCha
     const item=event.target.files?.[0]||null;
     event.target.value="";
     inspectionSeq.current++;setColumns([]);setMapping([]);
-    setClearOnBlank([]);setClearApproved(false);setFieldPage(0);setInspecting(false);
+    setFieldPage(0);setInspecting(false);
     setPreview(null);setError("");setPage(1);setSearch("");setFilter("all");setExpanded(null);setApproved(false);setReceipt("");
     if(!item)return;
     if(!/\.xlsx$/i.test(item.name)||item.size===0||item.size>8_000_000){
@@ -247,10 +238,7 @@ export default function CatalogueImportPreview({onBusyChange,onSaved}:{onBusyCha
       if(jwt.length>12000||!/^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/.test(jwt))
         throw new Error("Không xác minh được token Admin.");
       const form=new FormData();form.append("file",file,file.name);
-      if(mappingReady){
-        form.append("mapping",JSON.stringify(mapping));
-        form.append("clearFields",JSON.stringify(clearOnBlank));
-      }
+      if(mappingReady)form.append("mapping",JSON.stringify(mapping));
       const response=await fetch("/api/catalogue/preview",{
         method:"POST",credentials:"same-origin",cache:"no-store",
         headers:{Authorization:"Bearer "+jwt,Accept:"application/json"},body:form,
@@ -265,7 +253,7 @@ export default function CatalogueImportPreview({onBusyChange,onSaved}:{onBusyCha
       if(data.database_queried!==true || data.applied!==false || !Array.isArray(data.items) ||
          data.counts?.total_rows!==data.items.length || data.items.length>20_000)
         throw new Error("Báo cáo không đúng hợp đồng dry-run; đã từ chối hiển thị.");
-      setPreview(data);setFieldPage(0);setClearApproved(false);
+      setPreview(data);setFieldPage(0);
     }catch(ex:unknown){setError(ex instanceof Error?ex.message:"Không đọc được file Excel.");}
     finally{setBusy(false);}
   }
@@ -273,7 +261,7 @@ export default function CatalogueImportPreview({onBusyChange,onSaved}:{onBusyCha
     if(!file||!preview||busy||approving)return;
     const oneSheet=preview.source_sheet==="SAN PHAM";
     const create=preview.totals.create,update=preview.totals.update;
-    const eligible=preview.database_queried===true && (clearCount===0||clearApproved) &&
+    const eligible=preview.database_queried===true &&
       (columns.length===0||mappingReady) &&
       (mode!=="update"||(oneSheet&&create===0)) &&
       preview.totals.error===0&&preview.totals.conflict===0 &&
@@ -299,10 +287,7 @@ export default function CatalogueImportPreview({onBusyChange,onSaved}:{onBusyCha
         throw new Error("Không xác minh được Owner.");
       const form=new FormData();
       form.append("file",file,file.name);
-      if(mappingReady){
-        form.append("mapping",JSON.stringify(mapping));
-        form.append("clearFields",JSON.stringify(clearOnBlank));
-      }
+      if(mappingReady)form.append("mapping",JSON.stringify(mapping));
       if(oneSheet){
         form.append("confirm","SYNC_SAN_PHAM");
         form.append("expectedCreate",String(create));
@@ -353,15 +338,17 @@ export default function CatalogueImportPreview({onBusyChange,onSaved}:{onBusyCha
   const oneSheet=preview?.source_sheet==="SAN PHAM";
   const clearCount=preview?.items.reduce((sum,item)=>
     sum+(item.field_states?.filter(state=>state.action==="clear").length||0),0)||0;
-  const mappedPreviewFields=COLUMN_FIELDS.filter(field=>field.key!=="ignore"&&
-    mapping.includes(field.key)).map(field=>({
-    key:field.key==="size"?"paper_size":field.key==="title"?"ten_san_pham":field.key,
-    label:field.label
-  }));
+  // Preview order follows selected Excel columns, not a separate hardcoded label order.
+  const mappedPreviewFields=mapping.slice(1).filter(key=>key!=="ignore").map(key=>{
+    const field=COLUMN_FIELDS.find(entry=>entry.key===key);
+    return {
+      key:key==="size"?"paper_size":key==="title"?"ten_san_pham":key,
+      label:field?.label||key
+    };
+  });
   const fieldPages=Math.max(1,Math.ceil(mappedPreviewFields.length/4));
   const shownPreviewFields=mappedPreviewFields.slice(fieldPage*4,fieldPage*4+4);
   const eligibleSave=!!preview&&!busy&&!approving&&!inspecting&&
-    (clearCount===0||clearApproved)&&
     (columns.length===0||mappingReady)&&preview.totals.error===0&&preview.totals.conflict===0&&
     (mode!=="update"||(oneSheet&&preview.totals.create===0))&&
     (oneSheet?(preview.totals.create+preview.totals.update>0&&!!preview.previewFingerprint):
@@ -423,23 +410,12 @@ export default function CatalogueImportPreview({onBusyChange,onSaved}:{onBusyCha
         role="region" aria-label="Bảng Excel có thể cuộn ngang" tabIndex={0}>
         <table className="catalogue-mapping-table"><thead><tr>
           {columns.map((col,i)=><th key={col.index}>
-            <span>Cột {col.index} · {col.header||"Không có tiêu đề"}</span>
+            <span title={col.header||undefined}>Cột {col.index}</span>
             {i===0?<strong className="catalogue-mapping-locked">Mã công ty · khóa đối chiếu</strong>:
               <select aria-label={"Thuộc tính cột "+col.index} value={mapping[i]||"ignore"}
                 disabled={busy||approving} onChange={e=>changeMapping(i,e.target.value)}>
                 {COLUMN_FIELDS.map(option=><option value={option.key} key={option.key}>{option.label}</option>)}
               </select>}
-            {i>0&&mapping[i]!=="ignore"&&
-              <label className="catalogue-blank-policy">
-                Ô Excel trống
-                <select aria-label={"Cách xử lý ô trống cột "+col.index}
-                  disabled={busy||approving||mapping[i]==="title"}
-                  value={clearOnBlank.includes(mapping[i])?"clear":"keep"}
-                  onChange={e=>changeBlankPolicy(mapping[i],e.target.value==="clear")}>
-                  <option value="keep">Giữ dữ liệu cũ (mặc định)</option>
-                  {mapping[i]!=="title"&&<option value="clear">Xóa dữ liệu cũ khi trống</option>}
-                </select>
-              </label>}
           </th>)}
         </tr></thead><tbody>
           {[0,1,2].map(n=><tr key={n}>{columns.map(col=>
@@ -447,7 +423,7 @@ export default function CatalogueImportPreview({onBusyChange,onSaved}:{onBusyCha
         </tbody></table>
       </div>
       {!mappingReady&&<small className="import-bad">Chọn ít nhất một thuộc tính ngoài mã công ty và không gán trùng trường.</small>}
-      <small><b>Quy tắc:</b> Bỏ qua cột = không xét; ô trống + Giữ dữ liệu cũ = giữ nguyên; ô trống + Xóa dữ liệu cũ = xóa trường đó trên các SKU có ô trống. Tên sản phẩm và mã công ty không được xóa. Nhấn Cột tiếp / Cột trước để xem toàn bộ cột, hoặc kéo thanh ngang bên dưới bảng. Ghép cột chỉ dùng cho lượt nhập hiện tại. Thay đổi lựa chọn sẽ hủy bản xem trước cũ; không sửa dữ liệu trước khi xác nhận.</small>
+      <small><b>Quy tắc duy nhất:</b> Chọn Bỏ qua = không cập nhật cột đó. Chọn một trường = lấy giá trị Excel làm giá trị mới; ô trống sẽ xóa dữ liệu cũ của trường tương ứng. Mã công ty cố định; tên sản phẩm là trường bắt buộc nên để trống sẽ báo lỗi. Nhấn Cột tiếp / Cột trước để xem hết các cột. Chỉ lưu sau khi xem trước.</small>
     </section>}
     {error&&<div className="import-error" role="alert">{error}</div>}
     {receipt&&<div className="import-review-banner" role="status"><b>{receipt}</b></div>}
@@ -465,12 +441,9 @@ export default function CatalogueImportPreview({onBusyChange,onSaved}:{onBusyCha
         <b>{preview.totals.create} SKU mới · {preview.totals.update} SKU có thay đổi · {preview.totals.unchanged} không đổi · {preview.totals.conflict} xung đột</b>
         <span>Mã đã tồn tại sẽ không bị tự động ghi đè.</span>
       </div>
-      {clearCount>0&&<div className="import-clear-confirm" role="alert">
-        <strong>Chuẩn bị xóa {clearCount} giá trị thuộc tính trên các SKU hiện có.</strong>
-        <label><input type="checkbox" checked={clearApproved}
-          onChange={event=>setClearApproved(event.target.checked)}/>
-          Tôi đã kiểm tra giá trị cũ → mới và xác nhận xóa các ô trống đã chọn.
-        </label>
+      {clearCount>0&&<div className="import-clear-confirm" role="status">
+        <strong>{clearCount} giá trị hiện có sẽ được xóa vì ô Excel trống ở những cột đã chọn.</strong>
+        <span>Kiểm tra kỹ bảng cũ → mới trước khi bấm xác nhận lưu.</span>
       </div>}
       <div className="import-information" aria-label="Xác nhận lưu sản phẩm">
         {!oneSheet&&<label style={{display:"flex",gap:10,alignItems:"center"}}>
@@ -525,7 +498,8 @@ export default function CatalogueImportPreview({onBusyChange,onSaved}:{onBusyCha
             {shownPreviewFields.map(field=>{
               const state=item.field_states?.find(entry=>entry.key===field.key);
               const action=state?.action||"ignore";
-              const label=action==="create"?"Dữ liệu mới":
+              const label=action==="required"?"Thiếu tên bắt buộc":
+                action==="create"?"Dữ liệu mới":
                 action==="empty"?"Để trống":
                 action==="clear"?"Xóa giá trị":
                 action==="update"?"Thay đổi":

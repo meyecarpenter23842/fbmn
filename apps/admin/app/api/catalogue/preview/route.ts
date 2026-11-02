@@ -109,7 +109,7 @@ export async function POST(request: Request) {
       columnMapping=decoded;
     }catch{return fail(400,"invalid_column_mapping");}
   }
-  let clearFields:string[]=[];
+  let clearFields:string[]|undefined;
   if(fields.has("clearFields")){
     const raw=fields.get("clearFields");
     if(typeof raw!=="string"||raw.length>500)return fail(400,"invalid_clear_fields");
@@ -124,7 +124,7 @@ export async function POST(request: Request) {
       clearFields=decoded;
     }catch{return fail(400,"invalid_clear_fields");}
   }
-  if(clearFields.length&&(!columnMapping||clearFields.some(key=>!columnMapping.includes(key))))
+  if(clearFields?.length&&(!columnMapping||clearFields.some(key=>!columnMapping.includes(key))))
     return fail(400,"invalid_clear_fields");
   if (!/\.xlsx$/i.test(file.name) || file.size === 0 || file.size > MAX_XLSX_BYTES)
     return fail(400, "invalid_xlsx_file");
@@ -162,11 +162,11 @@ export async function POST(request: Request) {
       if(!Array.isArray(categories)||categories.length>1000)return fail(503,"categories_unavailable");
       const mappedFields=columnMapping?.filter(key=>key!=="sku"&&key!=="ignore")
         .map(key=>key==="size"?"paper_size":key==="title"?"ten_san_pham":key);
-      const effectiveClear=clearFields.map(key=>key==="size"?"paper_size":key);
+      const effectiveClear=clearFields?.map(key=>key==="size"?"paper_size":key);
       const plan=planSheetSync(parsed,existing,categories,{mappedFields,clearFields:effectiveClear});
       const previewFingerprint=createHash("sha256")
         .update(bytes).update(JSON.stringify(columnMapping??null))
-        .update(JSON.stringify(clearFields))
+        .update(JSON.stringify(clearFields??null))
         .update(JSON.stringify(plan.operations)).digest("hex");
       return Response.json({
         ...result,totals:plan.totals,items:plan.items,

@@ -1,5 +1,6 @@
 // ADM-05 P3: pure one-sheet sync plan. No DB writes, no prices/stock/media.
-// Blank cells retain old values by default. Per-field explicit clear intent is validated and revision-guarded.
+// One selected mapping = overwrite with Excel value, including blank -> null for optional fields.
+// Unmapped fields never change. Legacy clients supplying clearFields keep their older semantics.
 const FIELDS=[
   ["ten_san_pham","ten_san_pham","Tên sản phẩm"],
   ["barcode","barcode","Mã vạch"],
@@ -21,16 +22,23 @@ export function planSheetSync(parsed,existing=[],categories=[],options={}){
   if(parsed?.source_sheet!=="SAN PHAM"||!Array.isArray(parsed.rows)||
      !Array.isArray(parsed.evidence)||parsed.evidence.length!==parsed.rows.length||
      !Array.isArray(existing)||!Array.isArray(categories))throw Error("invalid_sync_input");
-  const clearFields=options?.clearFields??[];
   const mappedFields=options?.mappedFields??null;
-  if(!Array.isArray(clearFields)||clearFields.length>11||
-     clearFields.some(key=>typeof key!=="string"||!CLEARABLE.has(key))||
-     new Set(clearFields).size!==clearFields.length||
-     (mappedFields!==null && (!Array.isArray(mappedFields)||
-       clearFields.some(key=>!mappedFields.includes(key)))))
+  const explicitClear=options?.clearFields;
+  if(mappedFields!==null&&(!Array.isArray(mappedFields)||
+     mappedFields.some(key=>typeof key!=="string")||
+     new Set(mappedFields).size!==mappedFields.length))
+    throw Error("invalid_mapping_fields");
+  // Old cached Admin clients still send clearFields (even []). Honor that
+  // explicit legacy policy until those clients refresh; the new one-dropdown
+  // UI omits the flag and derives clear intent entirely from mapped columns.
+  if(explicitClear!==undefined&&(!Array.isArray(explicitClear)||explicitClear.length>11||
+     explicitClear.some(key=>typeof key!=="string"||!CLEARABLE.has(key))||
+     new Set(explicitClear).size!==explicitClear.length||
+     (mappedFields!==null&&explicitClear.some(key=>!mappedFields.includes(key)))))
     throw Error("invalid_clear_fields");
-  const clearSet=new Set(clearFields);
   const mappedSet=mappedFields===null?null:new Set(mappedFields);
+  const clearSet=new Set(explicitClear===undefined?
+    (mappedFields||[]).filter(key=>CLEARABLE.has(key)):explicitClear);
   const categoryById=new Map(categories.map(c=>[c.id,c]));
   const categoryPaths=new Map();
   const pathOf=(c)=>{
@@ -97,6 +105,11 @@ export function planSheetSync(parsed,existing=[],categories=[],options={}){
               unit:requested.unit||null,packaging:requested.packaging||null,
               units_per_pack:requested.units_per_pack||null}});
         }
+      }else if(explicitClear===undefined&&mappedSet?.has("ten_san_pham")&&
+        !requested.ten_san_pham.trim()){
+        // Product name is mandatory in the DB. Never turn blank into an
+        // accidental keep or a null title; flag the exact row before saving.
+        fail("error","missing_product_name");
       }else if(old.sku_cong_ty!==sku){
         fail("conflict","sku_case_mismatch");
       }else{
@@ -164,7 +177,10 @@ export function planSheetSync(parsed,existing=[],categories=[],options={}){
       const changed=item.diffs.some(diff=>diff.field===label);
       item.field_states.push({key:field,field:label,from:before,to:
         ignored||(!next.trim()&&!clearing)?before:clearing?"":next,
-        action:ignored?"ignore":!oldRecord&&item.status==="create"?
+        action:ignored?"ignore":
+          field==="ten_san_pham"&&explicitClear===undefined&&oldRecord&&
+          mappedSet?.has(field)&&!next.trim()?
+          "required":!oldRecord&&item.status==="create"?
           (next.trim()?"create":"empty"):
           clearing?(changed?"clear":"same"):
           !next.trim()?"keep":changed?"update":"same"});

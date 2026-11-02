@@ -240,17 +240,10 @@
 }
 
 /* Explicit three-way Excel edit semantics with full-field audit, no implicit deletes. */
-.catalogue-blank-policy{display:grid;gap:5px;margin-top:9px;font-size:11px;
-  color:#5c577f;font-weight:750}
-.catalogue-mapping-table .catalogue-blank-policy select{font-weight:650;
-  font-size:11px;min-height:37px;height:auto;padding:7px 6px}
-.catalogue-blank-policy select:has(option[value="clear"]:checked){color:#ae293c;
-  border-color:#eaa7b0;background:#fff4f4}
-.import-clear-confirm{margin:15px 0;padding:14px 16px;border:1px solid #e9a6af;
-  border-radius:10px;background:#fff5f5;color:#9f2538;display:grid;gap:11px}
-.import-clear-confirm label{display:flex;gap:10px;align-items:flex-start;line-height:1.5;
-  font-weight:700;font-size:12px}
-.import-clear-confirm input{width:17px;height:17px;flex-shrink:0;accent-color:#a83248}
+.import-clear-confirm{margin:15px 0;padding:12px 16px;border:1px solid #e9a6af;
+  border-radius:10px;background:#fff5f5;color:#9f2538;display:grid;gap:5px;font-size:12px}
+.catalogue-mapping-table th select{margin:0}
+.catalogue-mapping-table th>span{margin-bottom:7px}
 .import-field-view-toggle{display:flex;justify-content:space-between;align-items:center;
   flex-wrap:wrap;gap:12px;margin:18px 0 10px;padding:11px 12px;
   border:1px solid #e2def4;border-radius:10px;background:#f6f4ff}
