@@ -1,6 +1,6 @@
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
-const ALLOWED=new Set(["list","library","file","upload","link","order"]);
+const ALLOWED=new Set(["list","library","file","upload","link","order","scan","adopt","variant"]);
 const HEADERS={"Cache-Control":"private, no-store","X-Content-Type-Options":"nosniff"};
 const fail=(status:number,code:string)=>Response.json({error:{code}},{status,headers:HEADERS});
 function baseUrl(){
@@ -15,9 +15,9 @@ type Context={params:Promise<{action:string}>};
 async function relay(req:Request,{params}:Context,method:string){
   const {action}=await params;
   if(!ALLOWED.has(action))return fail(404,"not_found");
-  const read=new Set(["list","library","file"]);
+  const read=new Set(["list","library","file","scan"]);
   if(method==="GET"&&!read.has(action))return fail(405,"method_not_allowed");
-  if(method==="POST"&&!["upload","link"].includes(action))return fail(405,"method_not_allowed");
+  if(method==="POST"&&!["upload","link","adopt","variant"].includes(action))return fail(405,"method_not_allowed");
   if(method==="PATCH"&&action!=="order")return fail(405,"method_not_allowed");
   if(method==="DELETE"&&action!=="link")return fail(405,"method_not_allowed");
   if(method!=="GET"&&(req.headers.get("origin")!==new URL(req.url).origin||
@@ -37,14 +37,19 @@ async function relay(req:Request,{params}:Context,method:string){
   }
   if(action==="file"){
     const asset=original.searchParams.get("id")||"";
-    if(original.searchParams.size!==1||!/^[a-f0-9-]{36}$/i.test(asset))return fail(400,"invalid_asset_id");
+    if(original.searchParams.getAll("id").length!==1||!/^[a-f0-9-]{36}$/i.test(asset))return fail(400,"invalid_asset_id");
     target.searchParams.set("id",asset);
+    const variant=original.searchParams.get("variant");
+    if((variant&&!["thumb","web"].includes(variant))||
+      original.searchParams.size!==(variant?2:1))
+      return fail(400,"invalid_variant");
+    if(variant)target.searchParams.set("variant",variant);
   }
-  const upload=action==="upload";
+  const upload=action==="upload",derivative=action==="variant";
   const mime=req.headers.get("content-type")?.split(";")[0]||"";
-  if(method!=="GET"&&(!(upload?["image/png","image/jpeg","image/webp"].includes(mime):
+  if(method!=="GET"&&(!((upload||derivative)?(derivative?mime==="image/webp":["image/png","image/jpeg","image/webp"].includes(mime)):
     mime==="application/json")))return fail(415,"invalid_content_type");
-  const limit=upload?5*1024*1024:8000;
+  const limit=upload||derivative?5*1024*1024:8000;
   const size=Number(req.headers.get("content-length")||0);
   if(size>limit)return fail(413,"body_too_large");
   let body:Blob|undefined;
@@ -52,6 +57,12 @@ async function relay(req:Request,{params}:Context,method:string){
     const bytes=await req.arrayBuffer();
     if(!bytes.byteLength||bytes.byteLength>limit)return fail(413,"body_too_large");
     body=new Blob([bytes],{type:mime});
+  }
+  if(derivative){
+    const assetId=req.headers.get("x-fbmn-asset-id")||"";
+    const variant=req.headers.get("x-fbmn-variant")||"";
+    if(!/^[0-9a-f-]{36}$/i.test(assetId)||!["web","thumb"].includes(variant))
+      return fail(400,"invalid_variant_headers");
   }
   if(upload){
     const sku=req.headers.get("x-fbmn-sku")||"";
@@ -64,7 +75,9 @@ async function relay(req:Request,{params}:Context,method:string){
       headers:{Authorization:bearer,Accept:action==="file"?"image/*":"application/json",
         ...(method==="GET"?{}:{"Content-Type":mime}),
         ...(upload?{"X-FBMN-Sku":req.headers.get("x-fbmn-sku")||"",
-          "X-FBMN-File-Name":req.headers.get("x-fbmn-file-name")||""}:{})},
+          "X-FBMN-File-Name":req.headers.get("x-fbmn-file-name")||""}:{}),
+        ...(derivative?{"X-FBMN-Asset-ID":req.headers.get("x-fbmn-asset-id")||"",
+          "X-FBMN-Variant":req.headers.get("x-fbmn-variant")||""}:{})},
       ...(body?{body}:{})
     });
     if(![200,201,400,401,403,404,405,409,413,415,422,429,503].includes(forwarded.status))

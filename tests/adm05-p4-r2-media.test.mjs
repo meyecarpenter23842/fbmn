@@ -28,6 +28,8 @@ function database(records=[]){
       return {rowCount:1,rows:[{sku_cong_ty:sku}]};
     if(sql.includes("SELECT count(*)::int AS amount"))
       return {rowCount:1,rows:[{amount:0,last_position:-1}]};
+    if(sql.includes("SELECT a.id FROM fbmn_catalog.media_assets a JOIN fbmn_catalog.sku_media"))
+      return {rowCount:0,rows:[]};
     if(sql.includes("FROM fbmn_catalog.media_assets WHERE id="))
       return {rowCount:1,rows:[{id:uuid}]};
     if(sql.includes("SELECT asset_id FROM fbmn_catalog.sku_media"))
@@ -106,7 +108,7 @@ test("private admin upload validates image bytes then R2.put + owner-locked meta
   assert.ok(!("r2_key" in output.data));
   assert.ok(!("url" in output.data));
   assert.deepEqual(actions.map(x=>x[0]),["put"]);
-  assert.match(actions[0][1],/^private\/catalogue\/[0-9a-f-]+\.png$/);
+  assert.match(actions[0][1],/^private\/catalogue\/by-sku\/0114\/[0-9a-f-]+\/0114\.png$/);
   assert.equal(statements.some(x=>/INSERT INTO fbmn_catalog.media_assets/.test(x.sql)),true);
   assert.equal(statements.some(x=>/INSERT INTO fbmn_catalog.sku_media/.test(x.sql)),true);
   assert.equal(statements.some(x=>x.args.includes("owner-sub")),true);
@@ -134,6 +136,8 @@ test("upload and reattach append after MAX sort_order, never reuse holes",async(
     upSql.push({sql,args});
     if(sql.includes("FROM fbmn_catalog.skus WHERE sku_cong_ty="))
       return {rowCount:1,rows:[{sku_cong_ty:sku}]};
+    if(sql.includes("SELECT a.id FROM fbmn_catalog.media_assets a JOIN fbmn_catalog.sku_media"))
+      return {rowCount:0,rows:[]};
     if(sql.includes("SELECT count(*)::int AS amount"))
       return {rowCount:1,rows:[{amount:3,last_position:4}]};
     return {rowCount:1,rows:[{}]};

@@ -3,6 +3,7 @@ import {useCallback,useEffect,useRef,useState} from "react";
 
 type Media={id:string;source_filename:string;mime_type:string;media_role:string;sort_order:number;sku_cong_ty:string};
 type Library={id:string;source_filename:string;mime_type:string;linked_skus:number};
+type R2Candidate={key:string;bytes:number|null;status:string;sku?:string;filename?:string};
 type Result<T>={data?:T;error?:{code?:string}};
 async function token(){
   const response=await fetch("/api/auth/token",{cache:"no-store",credentials:"same-origin"});
@@ -24,6 +25,48 @@ async function mediaApi<T>(action:string,method:"GET"|"POST"|"PATCH"|"DELETE"="G
   if(!payload.data)throw Error("API không trả dữ liệu ảnh.");
   return payload.data;
 }
+async function webpVariant(input:Blob,longest:number):Promise<Blob>{
+  const bitmap=await createImageBitmap(input);
+  try{
+    const ratio=Math.min(1,longest/Math.max(bitmap.width,bitmap.height));
+    const canvas=document.createElement("canvas");
+    canvas.width=Math.max(1,Math.round(bitmap.width*ratio));
+    canvas.height=Math.max(1,Math.round(bitmap.height*ratio));
+    const ctx=canvas.getContext("2d",{alpha:true});
+    if(!ctx)throw Error("Không tạo được ảnh tối ưu.");
+    ctx.drawImage(bitmap,0,0,canvas.width,canvas.height);
+    const image=await new Promise<Blob>((resolve,reject)=>
+      canvas.toBlob(blob=>blob?resolve(blob):reject(Error("WebP không được hỗ trợ.")),
+        "image/webp",0.82));
+    if(image.type!=="image/webp"||image.size>5*1024*1024)
+      throw Error("Trình duyệt không hỗ trợ xuất WebP hợp lệ.");
+    return image;
+  }finally{bitmap.close();}
+}
+async function uploadOptimized(input:Blob,assetId:string){
+  for(const [variant,size] of [["web",1600],["thumb",320]] as const){
+    const optimized=await webpVariant(input,size);
+    const key=await token();
+    const response=await fetch("/api/media/variant",{
+      method:"POST",credentials:"same-origin",cache:"no-store",
+      headers:{Authorization:"Bearer "+key,"Content-Type":"image/webp",
+        "X-FBMN-Asset-ID":assetId,"X-FBMN-Variant":variant},
+      body:optimized
+    });
+    if(!response.ok)throw Error("Không tối ưu được ảnh "+variant+" ("+response.status+").");
+  }
+}
+async function originalMedia(id:string):Promise<Blob>{
+  const key=await token();
+  const response=await fetch("/api/media/file?id="+encodeURIComponent(id),{
+    credentials:"same-origin",cache:"no-store",
+    headers:{Authorization:"Bearer "+key}});
+  if(!response.ok)throw Error("Không đọc được ảnh gốc.");
+  const blob=await response.blob();
+  if(!["image/png","image/jpeg","image/webp"].includes(blob.type)||blob.size>5*1024*1024)
+    throw Error("Định dạng hoặc dung lượng ảnh không hợp lệ.");
+  return blob;
+}
 function PrivateImage({id,alt}:{id:string;alt:string}){
   const [src,setSrc]=useState<string|null>(null);
   useEffect(()=>{
@@ -32,7 +75,7 @@ function PrivateImage({id,alt}:{id:string;alt:string}){
     (async()=>{
       try{
         const key=await token();
-        const response=await fetch("/api/media/file?id="+encodeURIComponent(id),{
+        const response=await fetch("/api/media/file?id="+encodeURIComponent(id)+"&variant=thumb",{
           headers:{Authorization:"Bearer "+key},credentials:"same-origin",cache:"no-store"});
         if(!response.ok)throw Error("not_found");
         const blob=await response.blob();
@@ -54,6 +97,9 @@ export default function CatalogueMediaManager({sku,onChanged,onBusyChange}:{
   const [items,setItems]=useState<Media[]>([]);
   const [library,setLibrary]=useState<Library[]>([]);
   const [selectAsset,setSelectAsset]=useState("");
+  const [candidates,setCandidates]=useState<R2Candidate[]|null>(null);
+  const [selectedKeys,setSelectedKeys]=useState<string[]>([]);
+  const [scanTruncated,setScanTruncated]=useState(false);
   const [loading,setLoading]=useState(true);
   const [busy,setBusy]=useState(false);
   const [error,setError]=useState("");
@@ -96,7 +142,7 @@ export default function CatalogueMediaManager({sku,onChanged,onBusyChange}:{
       if(!["image/png","image/jpeg","image/webp"].includes(file.type)||
         file.size<32||file.size>5*1024*1024)throw Error("Chỉ nhận JPG/PNG/WebP tối đa 5 MB mỗi ảnh.");
     }
-    let completed=0;
+    let completed=0,optimizedCount=0;
     for(const file of list){
       const key=await token();
       const response=await fetch("/api/media/upload",{
@@ -108,10 +154,50 @@ export default function CatalogueMediaManager({sku,onChanged,onBusyChange}:{
       const payload=await response.json() as Result<{id:string}>;
       if(!response.ok)throw Error("Tệp "+file.name+": "+(payload.error?.code||response.status)+
         ". "+(completed?completed+" tệp trước đã tải thành công.":""));
+      if(!payload.data?.id)throw Error("Không nhận được mã ảnh để tối ưu.");
       completed++;
+      try{await uploadOptimized(file,payload.data.id);optimizedCount++;}
+      catch{/* The original is already linked. Keep it and permit retry. */}
     }
-    setMessage("Đã gắn "+completed+" ảnh vào SKU "+sku+". Chưa công khai lên website.");
+    setMessage("Đã gắn "+completed+" ảnh vào SKU "+sku+", tối ưu "+optimizedCount+
+      " ảnh WebP. Ảnh gốc giữ nguyên, chưa công khai.");
     if(fileInput.current)fileInput.current.value="";
+  });
+  const scanBucket=()=>void work(async()=>{
+    const result=await mediaApi<{items:R2Candidate[];truncated:boolean;scanned:number}>("scan");
+    setCandidates(result.items);
+    setSelectedKeys([]);
+    setScanTruncated(result.truncated);
+    setMessage("Đã quét "+result.scanned+" object trong private/catalogue. Chưa gắn ảnh nào.");
+  });
+  const adoptSelected=()=>void work(async()=>{
+    if(!selectedKeys.length)return;
+    const chosen=(candidates||[]).filter(x=>selectedKeys.includes(x.key)&&x.status==="matched");
+    if(chosen.length!==selectedKeys.length||chosen.length>10)
+      throw Error("Mỗi lần chỉ gắn tối đa 10 ảnh khớp chính xác.");
+    if(!window.confirm("Gắn "+chosen.length+" ảnh R2 vào các mã SKU đã nhận diện? Không tự xuất bản website."))
+      return;
+    const result=await mediaApi<{count:number;items:{sku:string;asset_id:string}[]}>("adopt","POST",
+      {confirm:"GAN_ANH_R2",keys:chosen.map(x=>x.key)});
+    let optimized=0;
+    for(const item of result.items){
+      try{await uploadOptimized(await originalMedia(item.asset_id),item.asset_id);optimized++;}
+      catch{/* Owner can retry optimized variants from the gallery. */}
+    }
+    setSelectedKeys([]);
+    // Re-scan to clear already registered keys; never show stale matches.
+    const latest=await mediaApi<{items:R2Candidate[];truncated:boolean}>("scan");
+    setCandidates(latest.items);
+    setScanTruncated(latest.truncated);
+    setMessage("Đã gắn "+result.count+" ảnh đúng SKU, tối ưu "+optimized+" ảnh WebP. Chưa công khai.");
+  });
+  const toggleCandidate=(key:string,checked:boolean)=>{
+    setSelectedKeys(current=>checked?[...current.filter(x=>x!==key),key].slice(0,10):
+      current.filter(x=>x!==key));
+  };
+  const optimizeExisting=(assetId:string)=>void work(async()=>{
+    await uploadOptimized(await originalMedia(assetId),assetId);
+    setMessage("Đã tạo WebP và thumbnail. Ảnh gốc không thay đổi.");
   });
   const loadLibrary=()=>void work(async()=>{
     const result=await mediaApi<{items:Library[]}>("library");
@@ -150,6 +236,36 @@ export default function CatalogueMediaManager({sku,onChanged,onBusyChange}:{
         onClick={loadLibrary}>Gắn từ thư viện R2</button>
       <span>{ordered.length}/20 ảnh</span>
     </div>
+    <div className="catalogue-media-actions">
+      <button className="import-btn import-secondary" type="button" disabled={busy}
+        onClick={scanBucket}>Quét ảnh đã tải thủ công lên R2</button>
+      {selectedKeys.length>0&&<button className="import-btn import-primary"
+        type="button" disabled={busy} onClick={adoptSelected}>
+        Gắn {selectedKeys.length} ảnh đúng mã
+      </button>}
+    </div>
+    {candidates!==null&&<section className="catalogue-media-library"
+      aria-label="Đối chiếu ảnh trong R2">
+      <strong>Ảnh R2 chưa gắn: {candidates.length}</strong>
+      <p>Nhận đúng tên L536.webp hoặc L536-01.webp, L536-02.webp.
+        Chỉ những mã công ty khớp chính xác mới được chọn; không gắn tự động.</p>
+      {scanTruncated&&<p role="alert">Kho có hơn 1.000 object: lần quét này chưa bao quát toàn bộ.
+        Không gắn dựa trên kết quả thiếu.</p>}
+      <div className="catalogue-media-scan-list" style={{maxHeight:260,overflowY:"auto"}}>
+        {candidates.slice(0,1000).map(item=><label key={item.key}
+          style={{display:"flex",alignItems:"center",gap:8,padding:"5px 0"}}>
+          <input type="checkbox" disabled={busy||item.status!=="matched"||
+            (!selectedKeys.includes(item.key)&&selectedKeys.length>=10)}
+            checked={selectedKeys.includes(item.key)}
+            onChange={event=>toggleCandidate(item.key,event.target.checked)}/>
+          <span style={{overflowWrap:"anywhere"}}>
+            {item.key.split("/").pop()} · {item.status==="matched"?
+              "SKU "+item.sku:item.status==="ambiguous"?"Trùng cách hiểu mã":
+              item.status==="unmatched"?"Chưa có mã SKU khớp":"Không nhận diện"}
+          </span>
+        </label>)}
+      </div>
+    </section>}
     {library.length>0&&<div className="catalogue-media-library">
       <label>Chọn ảnh đã tải lên (không tự suy luận từ tên)
         <select value={selectAsset} onChange={event=>setSelectAsset(event.target.value)}>
@@ -187,6 +303,7 @@ export default function CatalogueMediaManager({sku,onChanged,onBusyChange}:{
               const ids=ordered.map(x=>x.id);[ids[index+1],ids[index]]=[ids[index],ids[index+1]];
               reorder(ids,cover);
             }}>↓</button>
+          <button type="button" disabled={busy} onClick={()=>optimizeExisting(asset.id)}>Tối ưu WebP</button>
           <button type="button" disabled={busy} onClick={()=>remove(asset)}>Gỡ khỏi SKU</button>
         </div>
       </article>)}
