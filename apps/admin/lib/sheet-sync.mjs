@@ -1,5 +1,5 @@
 // ADM-05 P3: pure one-sheet sync plan. No DB writes, no prices/stock/media.
-// Empty optional input cells mean "retain existing"; blank values never erase current data.
+// Blank cells retain old values by default. Per-field explicit clear intent is validated and revision-guarded.
 const FIELDS=[
   ["ten_san_pham","ten_san_pham","Tên sản phẩm"],
   ["barcode","barcode","Mã vạch"],
@@ -15,10 +15,22 @@ const FIELDS=[
 const skuKey=value=>value.toUpperCase();
 const clean=(value,max=1200)=>typeof value==="string"&&value.length<=max&&
   !/[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/.test(value);
-export function planSheetSync(parsed,existing=[],categories=[]){
+const CLEARABLE=new Set(["barcode","paper_size","pages","ruling","gsm",
+  "cover_type","unit","packaging","units_per_pack","category_label"]);
+export function planSheetSync(parsed,existing=[],categories=[],options={}){
   if(parsed?.source_sheet!=="SAN PHAM"||!Array.isArray(parsed.rows)||
      !Array.isArray(parsed.evidence)||parsed.evidence.length!==parsed.rows.length||
      !Array.isArray(existing)||!Array.isArray(categories))throw Error("invalid_sync_input");
+  const clearFields=options?.clearFields??[];
+  const mappedFields=options?.mappedFields??null;
+  if(!Array.isArray(clearFields)||clearFields.length>11||
+     clearFields.some(key=>typeof key!=="string"||!CLEARABLE.has(key))||
+     new Set(clearFields).size!==clearFields.length||
+     (mappedFields!==null && (!Array.isArray(mappedFields)||
+       clearFields.some(key=>!mappedFields.includes(key)))))
+    throw Error("invalid_clear_fields");
+  const clearSet=new Set(clearFields);
+  const mappedSet=mappedFields===null?null:new Set(mappedFields);
   const categoryById=new Map(categories.map(c=>[c.id,c]));
   const categoryPaths=new Map();
   const pathOf=(c)=>{
@@ -52,7 +64,7 @@ export function planSheetSync(parsed,existing=[],categories=[]){
     const item={row:row?.__row||i+2,sku_cong_ty:valid?sku:null,
       proposed_name:row?.ten_san_pham||"",source_name_xnt:"",
       specifications:evidence?.specifications||{},changes:[],diffs:[],
-      status:"error",reason:null,expected_revision:null};
+      status:"error",reason:null,expected_revision:null,field_states:[]};
     const fail=(status,reason)=>{item.status=status;item.reason=reason;};
     if(row?.__error||!valid)fail("error",row?.__error||"invalid_sku");
     else if(seen.has(skuKey(sku)))fail("error","duplicate_company_sku");
@@ -92,27 +104,29 @@ export function planSheetSync(parsed,existing=[],categories=[]){
         const changes={},spec={};
         for(const [field,source,label] of FIELDS){
           const next=requested[field]||"";
-          if(!next.trim())continue;
+          if(!next.trim()&&!clearSet.has(field))continue;
           const previous=source==="product_spec"?old.product_spec?.[field]:
             (field==="ten_san_pham"?(old.ten_san_pham||old.ten_goc_xnt||old.ten_goc_bang_gia):old[field]);
           const before=typeof previous==="string"?previous:"";
-          if(next!==before){
-            item.diffs.push({field:label,from:before,to:next});
+          const cleared=!next.trim()&&clearSet.has(field);
+          if((cleared&&before!=="")||(!cleared&&next!==before)){
+            item.diffs.push({field:label,from:before,to:cleared?"":next,action:cleared?"clear":"update"});
             item.changes.push(label);
-            if(source==="product_spec")spec[field]=next;
-            else changes[field]=next;
+            if(source==="product_spec")spec[field]=cleared?null:next;
+            else changes[field]=cleared?null:next;
           }
         }
         if(Object.keys(spec).length)changes.product_spec=spec;
-        if(requested.category_label){
-          const matches=resolveCategory(requested.category_label);
-          if(matches.length!==1)fail("conflict","category_not_found_or_ambiguous");
-          else if(matches[0]!==old.category_id){
+        if(requested.category_label||clearSet.has("category_label")){
+          const clearCategory=!requested.category_label&&clearSet.has("category_label");
+          const matches=clearCategory?[]:resolveCategory(requested.category_label);
+          if(!clearCategory&&matches.length!==1)fail("conflict","category_not_found_or_ambiguous");
+          else if((clearCategory?null:matches[0])!==(old.category_id||null)){
             item.diffs.push({field:"Danh mục",
               from:categoryById.has(old.category_id)?pathOf(categoryById.get(old.category_id)):"",
-              to:pathOf(categoryById.get(matches[0]))});
+              to:clearCategory?"":pathOf(categoryById.get(matches[0])),action:clearCategory?"clear":"update"});
             item.changes.push("Danh mục");
-            changes.category_id=matches[0];
+            changes.category_id=clearCategory?null:matches[0];
           }
         }
         if(item.status==="conflict"){} // Invalid category blocks the whole workbook.
@@ -124,6 +138,36 @@ export function planSheetSync(parsed,existing=[],categories=[]){
           operations.push({kind:"update",sku_cong_ty:sku,expected_revision:old.revision,changes});
         }
       }
+    }
+    // Full-field preview is inspectable for unchanged, blank/keep, changed, clear
+    // and deliberately unmapped columns; it is never a write instruction.
+    const oldRecord=valid?oldMap.get(skuKey(sku)):null;
+    const inputs={
+      ten_san_pham:row?.ten_san_pham||"",barcode:row?.barcode||"",
+      paper_size:row?.paper_size||"",
+      pages:evidence?.specifications?.pages||"",ruling:evidence?.specifications?.ruling||"",
+      gsm:evidence?.specifications?.gsm||"",cover_type:evidence?.specifications?.cover_type||"",
+      unit:evidence?.specifications?.unit||"",packaging:evidence?.specifications?.packaging||"",
+      units_per_pack:evidence?.specifications?.units_per_pack||"",
+      category_label:evidence?.specifications?.category_label||""
+    };
+    for(const [field,source,label] of [...FIELDS,["category_label","category","Danh mục"]]){
+      const next=inputs[field]||"";
+      const oldValue=oldRecord?(source==="product_spec"?oldRecord.product_spec?.[field]:
+        source==="category"?(categoryById.has(oldRecord.category_id)?
+          pathOf(categoryById.get(oldRecord.category_id)):""):
+        field==="ten_san_pham"?(oldRecord.ten_san_pham||oldRecord.ten_goc_xnt||oldRecord.ten_goc_bang_gia):
+        oldRecord[field]):"";
+      const before=oldValue==null?"":String(oldValue);
+      const ignored=mappedSet!==null&&!mappedSet.has(field);
+      const clearing=clearSet.has(field)&&!next.trim();
+      const changed=item.diffs.some(diff=>diff.field===label);
+      item.field_states.push({key:field,field:label,from:before,to:
+        ignored||(!next.trim()&&!clearing)?before:clearing?"":next,
+        action:ignored?"ignore":!oldRecord&&item.status==="create"?
+          (next.trim()?"create":"empty"):
+          clearing?(changed?"clear":"same"):
+          !next.trim()?"keep":changed?"update":"same"});
     }
     totals[item.status]++;
     items.push(item);

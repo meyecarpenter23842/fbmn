@@ -90,9 +90,11 @@ export async function POST(request: Request) {
     fields = await safeRequest.formData();
   } catch { return fail(400, "invalid_multipart"); }
   const parts = [...fields.entries()];
-  if(![1,2].includes(parts.length)||parts.some(([key])=>!["file","mapping"].includes(key))||
+  if(parts.length<1||parts.length>3||
+     parts.some(([key])=>!["file","mapping","clearFields"].includes(key))||
      parts.filter(([key])=>key==="file").length!==1 ||
-     (parts.length===2&&parts.filter(([key])=>key==="mapping").length!==1) ||
+     parts.filter(([key])=>key==="mapping").length>1||
+     parts.filter(([key])=>key==="clearFields").length>1||
      !(fields.get("file") instanceof File))
     return fail(400,"invalid_upload_fields");
   const file=fields.get("file") as File;
@@ -107,6 +109,23 @@ export async function POST(request: Request) {
       columnMapping=decoded;
     }catch{return fail(400,"invalid_column_mapping");}
   }
+  let clearFields:string[]=[];
+  if(fields.has("clearFields")){
+    const raw=fields.get("clearFields");
+    if(typeof raw!=="string"||raw.length>500)return fail(400,"invalid_clear_fields");
+    try{
+      const decoded:unknown=JSON.parse(raw);
+      const allowed=new Set(["barcode","size","pages","ruling","category_label",
+        "gsm","cover_type","unit","packaging","units_per_pack"]);
+      if(!Array.isArray(decoded)||decoded.length>10||
+         decoded.some(key=>typeof key!=="string"||!allowed.has(key))||
+         new Set(decoded).size!==decoded.length)
+        return fail(400,"invalid_clear_fields");
+      clearFields=decoded;
+    }catch{return fail(400,"invalid_clear_fields");}
+  }
+  if(clearFields.length&&(!columnMapping||clearFields.some(key=>!columnMapping.includes(key))))
+    return fail(400,"invalid_clear_fields");
   if (!/\.xlsx$/i.test(file.name) || file.size === 0 || file.size > MAX_XLSX_BYTES)
     return fail(400, "invalid_xlsx_file");
   const bytes = new Uint8Array(await file.arrayBuffer());
@@ -141,9 +160,13 @@ export async function POST(request: Request) {
       if(!categoryResponse.ok)return fail(503,"categories_unavailable");
       const categories=(await categoryResponse.json())?.data?.items;
       if(!Array.isArray(categories)||categories.length>1000)return fail(503,"categories_unavailable");
-      const plan=planSheetSync(parsed,existing,categories);
+      const mappedFields=columnMapping?.filter(key=>key!=="sku"&&key!=="ignore")
+        .map(key=>key==="size"?"paper_size":key==="title"?"ten_san_pham":key);
+      const effectiveClear=clearFields.map(key=>key==="size"?"paper_size":key);
+      const plan=planSheetSync(parsed,existing,categories,{mappedFields,clearFields:effectiveClear});
       const previewFingerprint=createHash("sha256")
         .update(bytes).update(JSON.stringify(columnMapping??null))
+        .update(JSON.stringify(clearFields))
         .update(JSON.stringify(plan.operations)).digest("hex");
       return Response.json({
         ...result,totals:plan.totals,items:plan.items,

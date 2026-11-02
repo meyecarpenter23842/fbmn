@@ -238,3 +238,48 @@
   .catalogue-mapping-nav-actions{display:grid;grid-template-columns:1fr 1fr;width:100%}
   .catalogue-mapping-nav-actions button{padding:7px 6px}
 }
+
+/* Explicit three-way Excel edit semantics with full-field audit, no implicit deletes. */
+.catalogue-blank-policy{display:grid;gap:5px;margin-top:9px;font-size:11px;
+  color:#5c577f;font-weight:750}
+.catalogue-mapping-table .catalogue-blank-policy select{font-weight:650;
+  font-size:11px;min-height:37px;height:auto;padding:7px 6px}
+.catalogue-blank-policy select:has(option[value="clear"]:checked){color:#ae293c;
+  border-color:#eaa7b0;background:#fff4f4}
+.import-clear-confirm{margin:15px 0;padding:14px 16px;border:1px solid #e9a6af;
+  border-radius:10px;background:#fff5f5;color:#9f2538;display:grid;gap:11px}
+.import-clear-confirm label{display:flex;gap:10px;align-items:flex-start;line-height:1.5;
+  font-weight:700;font-size:12px}
+.import-clear-confirm input{width:17px;height:17px;flex-shrink:0;accent-color:#a83248}
+.import-field-view-toggle{display:flex;justify-content:space-between;align-items:center;
+  flex-wrap:wrap;gap:12px;margin:18px 0 10px;padding:11px 12px;
+  border:1px solid #e2def4;border-radius:10px;background:#f6f4ff}
+.import-field-view-toggle>div{display:grid;gap:4px}
+.import-field-view-toggle strong{font-size:14px;color:#382c72}
+.import-field-view-toggle span{font-size:11px;color:#736e96}
+.import-full-fields{margin:9px 0 17px;border:1px solid #ddd9f1;border-radius:10px;
+  overflow:hidden}
+.import-field-nav{display:flex;align-items:center;justify-content:space-between;
+  gap:10px;flex-wrap:wrap;padding:9px 13px;background:#eeebfa;color:#4a3c98;
+  font-size:12px;font-weight:800}
+.import-field-nav>div{display:flex;gap:8px}
+.import-field-matrix{min-width:840px;width:100%;table-layout:fixed}
+.import-field-matrix th:first-child{width:108px}
+.import-field-matrix th:last-child{width:125px}
+.import-field-matrix td{vertical-align:top;line-height:1.45}
+.import-field-state{display:block;font-size:10px;font-weight:800;
+  text-transform:uppercase;letter-spacing:.02em;padding-bottom:4px}
+.import-field-values{display:flex;flex-wrap:wrap;gap:4px;align-items:center;
+  font-size:11px;overflow-wrap:anywhere;word-break:break-word}
+.import-field-values span{min-width:0}
+.import-field-update .import-field-state{color:#4e4295}
+.import-field-clear{background:#fff1f2}
+.import-field-clear .import-field-state{color:#b72b42}
+.import-field-keep .import-field-state{color:#65728a}
+.import-field-same .import-field-state{color:#36836d}
+.import-field-ignore .import-field-state{color:#868b9b}
+@media(max-width:700px){
+  .import-field-matrix{min-width:680px}
+  .import-field-nav>div{width:100%}
+  .import-field-nav button{flex:1}
+}

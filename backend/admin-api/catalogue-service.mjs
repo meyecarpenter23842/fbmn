@@ -153,12 +153,16 @@ export async function handleCatalogue({request,actor,db}) {
             const keys=Object.keys(op.changes);
             if(!keys.length || keys.some(k=>!["ten_san_pham","barcode","paper_size","product_spec","category_id"].includes(k)))
               throw Error("invalid_sync");
+            // Name must always be populated. Barcode, paper size and category
+            // may only be cleared via an explicit null, never silently by blank.
             for(const key of ["ten_san_pham","barcode","paper_size"]){
-              if(key in op.changes && (typeof op.changes[key]!=="string"||
-                 !op.changes[key].trim()||!validText(op.changes[key],1200)))
+              if(!(key in op.changes))continue;
+              const value=op.changes[key];
+              if(key!=="ten_san_pham"&&value===null)continue;
+              if(typeof value!=="string"||!value.trim()||!validText(value,1200))
                 throw Error("invalid_sync");
             }
-            if("category_id" in op.changes&&(!validCategory(op.changes.category_id)||!op.changes.category_id))
+            if("category_id" in op.changes&&!validCategory(op.changes.category_id))
               throw Error("invalid_category");
             const specs=("product_spec" in op.changes)?safeProductSpec(op.changes.product_spec):{};
             if("product_spec" in op.changes && !Object.keys(specs).length)
