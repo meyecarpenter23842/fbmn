@@ -18,7 +18,8 @@ test("Product management lists all SKUs with search, not business review filters
 test("All routine operations keep real popup forms with a compact row actions menu",()=>{
   assert.match(manager,/\(create\|\|editing\)&&<ProductModal/);
   assert.match(manager,/<CatalogueProductWorkspace/);
-  assert.match(manager,/showGroup&&<ProductModal/);
+  assert.match(manager,/structurePane&&<ProductModal/);
+  assert.match(manager,/<CatalogueStructureManager/);
   assert.match(manager,/showImport&&<ProductModal/);
   assert.match(manager,/catalogue-actions-trigger/);
   assert.match(manager,/catalogue-actions-popover/);

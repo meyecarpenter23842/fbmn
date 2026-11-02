@@ -1,0 +1,66 @@
+/* ADM-05 G03 — distinct taxonomy and variant family management */
+.fb-product-modal:has(.catalogue-structure){width:min(98vw,1420px);max-height:95dvh}
+.fb-product-modal-content:has(.catalogue-structure){padding:0;overflow:hidden;min-height:0}
+.catalogue-structure{display:flex;flex-direction:column;min-width:0;width:100%;min-height:0;height:min(82dvh,800px);max-height:calc(95dvh - 88px);overflow:hidden;background:#f7f8fc;color:#30385e}
+.catalogue-structure-tabs{display:flex;gap:4px;padding:13px 17px 0;background:#fff;border-bottom:1px solid #e4e8f2}
+.catalogue-structure-tabs button{padding:12px 18px;min-height:42px;border:1px solid transparent;border-radius:10px 10px 0 0;background:transparent;font-weight:750;font-size:13px;color:#64709b;cursor:pointer}
+.catalogue-structure-tabs button.active,.catalogue-structure-tabs button[aria-selected="true"]{background:#edf0ff;color:#4539a5;border-color:#cbd2f3;border-bottom-color:#edf0ff}
+.catalogue-structure-help{font-size:12px;line-height:1.5;color:#717b9d;margin:0;padding:12px 18px;border-bottom:1px solid #e5e8f2;background:#fff}
+.catalogue-structure-grid{display:grid;grid-template-columns:minmax(250px,28%) minmax(0,1fr);min-height:0;flex:1;overflow:hidden}
+.catalogue-structure-sidebar{display:flex;flex-direction:column;min-height:0;padding:17px 14px;border-right:1px solid #e3e7f3;background:#fff}
+.catalogue-structure-field{display:grid;gap:6px;min-width:0;font-size:12px;font-weight:700;color:#586188}
+.catalogue-structure-field input,.catalogue-structure-field select,.catalogue-structure-members-top input{width:100%;min-width:0;min-height:38px;border:1px solid #d6dced;border-radius:9px;background:#fff;padding:9px 11px;font-size:12px;color:#2c375f}
+.catalogue-structure-field :where(input,select):focus-visible,.catalogue-structure-members-top input:focus-visible{outline:3px solid #bdc0ff;outline-offset:1px}
+.catalogue-structure-tree{display:grid;align-content:start;gap:5px;overflow-y:auto;min-height:0;overscroll-behavior:contain;margin-top:13px;scrollbar-color:#acb2dc transparent}
+.catalogue-structure-tree-group{display:grid;gap:4px}
+.catalogue-structure-tree button{display:flex;width:100%;min-height:43px;align-items:center;justify-content:space-between;text-align:left;gap:8px;border:1px solid transparent;border-radius:9px;background:#fff;color:#3e4877;font-size:12px;padding:10px;cursor:pointer}
+.catalogue-structure-tree button.child{padding-left:24px;color:#68719a}
+.catalogue-structure-tree button:hover{background:#f2f3fe}
+.catalogue-structure-tree button.active{background:#ebeefe;border-color:#c5cdf4;color:#3934a6;font-weight:750}
+.catalogue-structure-tree button span{min-width:0;overflow-wrap:anywhere}
+.catalogue-structure-tree button small{white-space:nowrap;color:#7e87af;font-size:10px}
+.catalogue-structure-detail{overflow-y:auto;min-width:0;min-height:0;overscroll-behavior:contain;padding:18px;display:grid;align-content:start;gap:17px}
+.catalogue-structure-create,.catalogue-structure-selected,.catalogue-structure-rename,.catalogue-structure-assign,.catalogue-structure-members{border:1px solid #e0e5f3;border-radius:12px;background:#fff;padding:15px;display:grid;gap:12px}
+.catalogue-structure-create>strong,.catalogue-structure-assign>strong,.catalogue-structure-members-top>strong{color:#343a6b;font-size:13px}
+.catalogue-structure-inputs,.catalogue-structure-rename{display:flex;align-items:end;gap:11px;flex-wrap:wrap}
+.catalogue-structure-rename{display:flex}
+.catalogue-structure-inputs .catalogue-structure-field,.catalogue-structure-rename .catalogue-structure-field{flex:1 1 170px}
+.catalogue-structure-inputs button,.catalogue-structure-rename button{min-height:38px;white-space:nowrap}
+.catalogue-structure-selected{display:flex;align-items:center;justify-content:space-between;background:linear-gradient(135deg,#f3f1ff,#f3f8ff)}
+.catalogue-structure-selected small{font-size:11px;color:#65749d}
+.catalogue-structure-selected h3{margin:5px 0;font-size:17px;color:#35318e}
+.catalogue-structure-selected span{font-size:11px;color:#606f95}
+.catalogue-structure-assign{background:#fdfdff}
+.catalogue-structure-pick{max-height:170px;overflow-y:auto;border:1px solid #e3e6f3;border-radius:9px}
+.catalogue-structure-pick button{width:100%;border:0;border-bottom:1px solid #eef0f8;background:#fff;display:flex;align-items:center;gap:12px;text-align:left;padding:10px;cursor:pointer;color:#3b427b;font-size:12px}
+.catalogue-structure-pick button:hover{background:#f2f3ff}
+.catalogue-structure-pick button b{min-width:55px}
+.catalogue-structure-pick button span{flex:1;min-width:0}
+.catalogue-structure-pick button small{color:#5951ab;font-size:11px;font-weight:700}
+.catalogue-structure-bulk{display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap;border:1px solid #ddd6f4;background:#f4f0ff;padding:13px;border-radius:11px;color:#4d458f;font-size:12px;font-weight:700}
+.catalogue-structure-members-top{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.catalogue-structure-members-top input{max-width:280px}
+.catalogue-structure-member-list{display:grid;max-height:350px;overflow-y:auto}
+.catalogue-structure-member{display:flex;align-items:center;gap:10px;padding:11px 2px;border-bottom:1px solid #eef0f7;min-width:0}
+.catalogue-structure-member>div{flex:1;min-width:0;display:flex;gap:9px;align-items:flex-start}
+.catalogue-structure-member b{font-size:12px;color:#42419b;white-space:nowrap}
+.catalogue-structure-member span{font-size:12px;color:#48517c;line-height:1.5;overflow-wrap:anywhere}
+.catalogue-structure-member button{padding:6px 10px;min-height:33px;font-size:11px;white-space:nowrap}
+.catalogue-structure-empty{color:#838bab;font-size:12px;line-height:1.7;padding:18px 5px}
+.catalogue-structure-unselected{background:#fff;border:1px dashed #c6cbe0;border-radius:12px;padding:22px}
+@media(max-width:780px){
+ .catalogue-structure{height:min(87dvh,900px);max-height:calc(95dvh - 88px)}
+ .catalogue-structure-grid{grid-template-columns:minmax(170px,38%) minmax(0,1fr)}
+ .catalogue-structure-sidebar,.catalogue-structure-detail{padding:11px}
+ .catalogue-structure-member{flex-wrap:wrap}
+ .catalogue-structure-member>div{flex:1 0 100%}
+}
+@media(max-width:520px){
+ .catalogue-structure{height:88dvh;max-height:calc(95dvh - 88px)}
+ .catalogue-structure-grid{display:flex;flex-direction:column;overflow-y:auto}
+ .catalogue-structure-sidebar{flex:none;max-height:230px;border-right:0;border-bottom:1px solid #e3e7f3}
+ .catalogue-structure-tree{max-height:126px}
+ .catalogue-structure-detail{flex:none;overflow:visible}
+ .catalogue-structure-help{padding:10px 12px}
+}
+@media(prefers-reduced-motion:reduce){.catalogue-structure *{scroll-behavior:auto!important}}

@@ -85,8 +85,9 @@ test("P2 UI keeps modal-only edits, category picker and optional fields",()=>{
   const src=read("apps/admin/app/catalogue-manager.tsx");
   assert.match(src,/\(create\|\|editing\)&&<ProductModal/);
   assert.match(src,/<CatalogueProductWorkspace/);
-  assert.match(src,/showCategories&&<ProductModal/);
-  assert.match(src,/Danh mục cấp 1/);
+  assert.match(src,/structurePane&&<ProductModal/);
+  assert.match(src,/<CatalogueStructureManager/);
+  assert.match(read("apps/admin/app/catalogue-structure-manager.tsx"),/Cấp 1/);
   assert.match(src,/categoryFilter/);
   assert.match(src,/catalogue-spec-details/);
   assert.match(src,/specPayload\(spec\)/);

@@ -83,13 +83,13 @@ export async function handleCatalogue({request,actor,db,r2}) {
   if(url.pathname.startsWith("/v1/admin/catalogue/media/"))
     return handleMedia({request,actor,db,r2});
   const route=url.pathname.slice("/v1/admin/catalogue/".length);
-  if(!["snapshot","skus","families","categories","apply","sync","group","visibility"].includes(route))
+  if(!["snapshot","skus","families","categories","apply","sync","group","visibility","membership"].includes(route))
     return fail("not_found",404);
   if(!roles.has(actor?.role))return fail("forbidden",403);
   if(url.search)return fail("invalid_query");
   if(!db)return fail("catalogue_db_unavailable",503);
   if(!["GET","POST","PATCH"].includes(request.method))return fail("method_not_allowed",405);
-  if(["apply","sync","group"].includes(route) && actor.role!=="owner")
+  if(["apply","sync","group","membership"].includes(route) && actor.role!=="owner")
     return fail("owner_required",403);
   if(request.method==="GET"){
     if(!["snapshot","skus","families","categories","visibility"].includes(route))return fail("method_not_allowed",405);
@@ -315,6 +315,52 @@ export async function handleCatalogue({request,actor,db,r2}) {
       });
       return reply(200,{data:result});
     }
+
+    // Owner-only single-SKU membership update. Compare-and-swap prevents stale UI
+    // from overwriting another administrator's group choice.
+    if(route==="membership" && request.method==="POST"){
+      if(actor.role!=="owner")return fail("owner_required",403);
+      if(!validSku(input?.sku_cong_ty)||
+         !Number.isSafeInteger(input.expected_revision)||input.expected_revision<1||
+         !(input.family_id===null||uuid(input.family_id))||
+         input.confirm!=="CAP_NHAT_NHOM_MAU")return fail("invalid_membership");
+      const result=await transactional(db,async c=>{
+        if(input.family_id){
+          const family=await c.query("SELECT id FROM fbmn_catalog.families WHERE id=$1",[input.family_id]);
+          if(family.rowCount!==1)throw Error("catalogue_conflict");
+        }
+        const saved=await c.query(
+          "UPDATE fbmn_catalog.skus SET family_id=$1::uuid,revision=revision+1,updated_at=now() "+
+          "WHERE sku_cong_ty=$2 AND revision=$3 AND review_status IN ('draft','needs_review') "+
+          "AND family_id IS DISTINCT FROM $1::uuid "+
+          "RETURNING sku_cong_ty,revision,family_id::text AS family_id",
+          [input.family_id,input.sku_cong_ty,input.expected_revision]);
+        if(saved.rowCount!==1)throw Error("catalogue_conflict");
+        await audit(c,actor.subject,"family_membership_change",{
+          sku_cong_ty:input.sku_cong_ty,family_id:input.family_id});
+        return saved.rows[0];
+      });
+      return reply(200,{data:result});
+    }
+    if(route==="categories" && request.method==="PATCH"){
+      if(actor.role!=="owner")return fail("owner_required",403);
+      if(!uuid(input?.id)||typeof input.expected_label!=="string"||
+         !input.expected_label.trim()||typeof input.category_label!=="string"||
+         !input.category_label.trim()||!validText(input.category_label,160)||
+         input.category_label.trim()===input.expected_label.trim())
+        return fail("invalid_category");
+      const result=await transactional(db,async c=>{
+        const saved=await c.query(
+          "UPDATE fbmn_catalog.categories SET category_label=$1 "+
+          "WHERE id=$2 AND category_label=$3 RETURNING id::text AS id,"+
+          "parent_id::text AS parent_id,category_label",
+          [input.category_label.trim(),input.id,input.expected_label]);
+        if(saved.rowCount!==1)throw Error("catalogue_conflict");
+        await audit(c,actor.subject,"category_rename",{id:input.id});
+        return saved.rows[0];
+      });
+      return reply(200,{data:result});
+    }
     if(route==="categories" && request.method==="POST"){
       if(actor.role!=="owner")return fail("owner_required",403);
       if(typeof input?.category_label!=="string"||!input.category_label.trim()||
@@ -336,13 +382,42 @@ export async function handleCatalogue({request,actor,db,r2}) {
       });
       return reply(201,{data:result});
     }
+
+    if(route==="families" && request.method==="PATCH"){
+      if(actor.role!=="owner")return fail("owner_required",403);
+      if(!uuid(input?.id)||!Number.isSafeInteger(input.expected_revision)||
+         input.expected_revision<1||typeof input.family_label!=="string"||
+         !input.family_label.trim()||!validText(input.family_label,160))
+        return fail("invalid_family_label");
+      const result=await transactional(db,async c=>{
+        // A shared transactional advisory lock serializes case-insensitive
+        // duplicate checks across concurrent create and rename requests.
+        await c.query("SELECT pg_advisory_xact_lock(723204)");
+        const duplicate=await c.query("SELECT id FROM fbmn_catalog.families "+
+          "WHERE lower(btrim(family_label))=lower($1) AND id<>$2",
+          [input.family_label.trim(),input.id]);
+        if(duplicate.rowCount)throw Error("catalogue_conflict");
+        const saved=await c.query(
+          "UPDATE fbmn_catalog.families SET family_label=$1,revision=revision+1 "+
+          "WHERE id=$2 AND revision=$3 RETURNING id::text AS id,family_label,revision",
+          [input.family_label.trim(),input.id,input.expected_revision]);
+        if(saved.rowCount!==1)throw Error("catalogue_conflict");
+        await audit(c,actor.subject,"family_rename",{id:input.id});
+        return saved.rows[0];
+      });
+      return reply(200,{data:result});
+    }
     if(route==="families" && request.method==="POST"){
       if(typeof input?.family_label!=="string" || !input.family_label.trim()||
         !validText(input.family_label,160))return fail("invalid_family_label");
       const result=await transactional(db,async c=>{
+        await c.query("SELECT pg_advisory_xact_lock(723204)");
+        const duplicate=await c.query("SELECT id FROM fbmn_catalog.families "+
+          "WHERE lower(btrim(family_label))=lower($1)",[input.family_label.trim()]);
+        if(duplicate.rowCount)throw Error("catalogue_conflict");
         const saved=await c.query(
           "INSERT INTO fbmn_catalog.families(family_label) VALUES ($1) "+
-          "RETURNING id::text AS id,family_label",[input.family_label.trim()]);
+          "RETURNING id::text AS id,family_label,revision",[input.family_label.trim()]);
         await audit(c,actor.subject,"family_create",{id:saved.rows[0].id});
         return saved.rows[0];
       });

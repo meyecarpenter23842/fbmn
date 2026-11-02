@@ -57,7 +57,8 @@ test("ADM-08 product editing and importing are popups, not inline expanding form
   const modal=readFileSync(new URL("../apps/admin/app/product-modal.tsx",import.meta.url),"utf8");
   assert.match(manager,/\(create\|\|editing\)&&<ProductModal/);
   assert.match(manager,/<CatalogueProductWorkspace/);
-  assert.match(manager,/showGroup&&<ProductModal/);
+  assert.match(manager,/structurePane&&<ProductModal/);
+  assert.match(manager,/<CatalogueStructureManager/);
   assert.match(manager,/showImport&&<ProductModal/);
   assert.match(modal,/role="dialog" aria-modal="true"/);
   assert.match(modal,/createPortal/);

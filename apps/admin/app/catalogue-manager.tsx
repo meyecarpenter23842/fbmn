@@ -7,6 +7,7 @@ import AdminToast from "./admin-toast";
 import CatalogueImportPreview from "./catalogue-import-preview";
 import {PrivateImage} from "./catalogue-media-manager";
 import CatalogueProductWorkspace from "./catalogue-product-workspace";
+import CatalogueStructureManager from "./catalogue-structure-manager";
 
 type SKU={sku_cong_ty:string;ten_san_pham:string|null;ten_goc_xnt:string|null;ten_goc_bang_gia?:string|null;
   barcode:string|null;paper_size:string|null;review_status:string;revision:number;
@@ -95,9 +96,7 @@ export default function CatalogueManager({onImport}:{onImport:()=>void}){
   const [visibility,setVisibility]=useState<Record<string,Visibility>>({});
   const [categories,setCategories]=useState<Category[]>([]);
   const [categoryFilter,setCategoryFilter]=useState("");
-  const [showCategories,setShowCategories]=useState(false);
-  const [categoryName,setCategoryName]=useState("");
-  const [parentCategory,setParentCategory]=useState("");
+  const [structurePane,setStructurePane]=useState<"categories"|"families"|null>(null);
   const [loading,setLoading]=useState(true);
   const [busy,setBusy]=useState(false);
   const [error,setError]=useState("");
@@ -109,8 +108,6 @@ export default function CatalogueManager({onImport}:{onImport:()=>void}){
   const [query,setQuery]=useState("");
   const [page,setPage]=useState(1);
   const [selected,setSelected]=useState<string[]>([]);
-  const [groupId,setGroupId]=useState("");
-  const [newFamily,setNewFamily]=useState("");
   const [editing,setEditing]=useState<SKU|null>(null);
   const [editorNotice,setEditorNotice]=useState("");
   const [editName,setEditName]=useState("");
@@ -120,7 +117,6 @@ export default function CatalogueManager({onImport}:{onImport:()=>void}){
   const exportAnchor=useRef<HTMLDivElement|null>(null);
   const [importBusy,setImportBusy]=useState(false);
   const [mediaBusy,setMediaBusy]=useState(false);
-  const [showGroup,setShowGroup]=useState(false);
   const [groupMode,setGroupMode]=useState(false);
   const [sku,setSku]=useState("");
   const [name,setName]=useState("");
@@ -321,29 +317,38 @@ export default function CatalogueManager({onImport}:{onImport:()=>void}){
     setEditorNotice("Đã lưu thay đổi, mô tả và quy cách. Có thể tiếp tục chỉnh sửa ảnh.");
     setMessage("Đã cập nhật mã "+editing.sku_cong_ty+".");
   });
-  const addCategory=()=>void run(async()=>{
-    if(!categoryName.trim())throw new Error("Nhập tên danh mục.");
-    await api<Category>("categories","POST",{category_label:categoryName,parent_id:parentCategory||null});
-    setCategoryName("");setParentCategory("");setMessage("Đã tạo danh mục; có thể chọn trong popup sản phẩm.");
+  const createCategory=(label:string,parentId:string|null)=>void run(async()=>{
+    await api<Category>("categories","POST",{category_label:label.trim(),parent_id:parentId});
+    setMessage("Đã tạo danh mục.");
   });
-  const addFamily=()=>void run(async()=>{
-    if(!newFamily.trim())throw new Error("Nhập tên nhóm sản phẩm.");
-    const group=await api<Family>("families","POST",{family_label:newFamily});
-    setGroupId(group.id);setNewFamily("");
-    setMessage("Đã tạo nhóm. Chọn các mã SKU cùng mẫu/quy cách để gắn thủ công.");
+  const renameCategory=(category:Category,label:string)=>void run(async()=>{
+    await api<Category>("categories","PATCH",{id:category.id,expected_label:category.category_label,category_label:label.trim()});
+    setMessage("Đã đổi tên danh mục.");
   });
-  const assign=()=>void run(async()=>{
-    if(selected.length<2||!groupId)throw new Error("Chọn nhóm và ít nhất hai SKU.");
-    if(!window.confirm("Gắn "+selected.length+" SKU công ty vào cùng một nhóm? Không đổi mã SKU."))return;
-    await api("group","POST",{family_id:groupId,sku_cong_ty:selected});
-    setMessage("Đã gắn "+selected.length+" mã vào nhóm. Mã công ty được giữ nguyên.");
-    setSelected([]);setShowGroup(false);setGroupMode(false);
+  const createFamily=(label:string)=>void run(async()=>{
+    await api<Family>("families","POST",{family_label:label.trim()});
+    setMessage("Đã tạo nhóm mẫu.");
+  });
+  const renameFamily=(family:Family,label:string)=>void run(async()=>{
+    await api<Family>("families","PATCH",{id:family.id,expected_revision:family.revision||1,family_label:label.trim()});
+    setMessage("Đã đổi tên nhóm mẫu.");
+  });
+  const changeMembership=(row:SKU,familyId:string|null)=>void run(async()=>{
+    await api("membership","POST",{sku_cong_ty:row.sku_cong_ty,
+      expected_revision:row.revision,family_id:familyId,confirm:"CAP_NHAT_NHOM_MAU"});
+    setMessage((familyId?"Đã gắn":"Đã gỡ")+" SKU "+row.sku_cong_ty+" "+(familyId?"vào":"khỏi")+" nhóm mẫu.");
+  });
+  const bulkAssign=(familyId:string)=>void run(async()=>{
+    if(selected.length<2||selected.length>200)throw new Error("Chọn từ 2 đến 200 SKU.");
+    await api("group","POST",{family_id:familyId,sku_cong_ty:selected});
+    setSelected([]);setGroupMode(false);
+    setMessage("Đã gắn "+selected.length+" mã vào nhóm mẫu.");
   });
   return <section className="catalogue-manager">
     <div className="page-title"><div><h1>Quản lý sản phẩm</h1>
       <p>Thêm, tìm và sửa sản phẩm. Mã công ty giữ nguyên, kể cả số 0 đầu.</p></div>
       <div className="action-row">
-        <button type="button" className="import-btn import-secondary" onClick={()=>setShowCategories(true)}>Danh mục</button>
+        <button type="button" className="import-btn import-secondary" onClick={()=>setStructurePane("categories")}>Danh mục</button>
         <button type="button" className="import-btn import-secondary" onClick={()=>void refresh()} disabled={busy||loading||pendingKeys.length>0}>Làm mới</button>
         <div className="catalogue-export-anchor" ref={exportAnchor}>
           <button type="button" className="import-btn import-secondary catalogue-export-trigger"
@@ -364,7 +369,7 @@ export default function CatalogueManager({onImport}:{onImport:()=>void}){
     <div className="catalogue-overview" aria-label="Tổng quan danh mục">
       <strong>{items.length} sản phẩm</strong><span>{families.length} nhóm mẫu</span>
     </div>
-    {error&&!create&&!editing&&!showGroup&&<div className="import-error" role="alert">{error}</div>}
+    {error&&!create&&!editing&&!structurePane&&<div className="import-error" role="alert">{error}</div>}
     <AdminToast message={message} onClose={clearToast}/>
     {(create||editing)&&<ProductModal title={editing?"Sửa sản phẩm · "+editing.sku_cong_ty:"Thêm sản phẩm"}
       wide onClose={closeEditor} locked={busy||mediaBusy}>
@@ -384,20 +389,20 @@ export default function CatalogueManager({onImport}:{onImport:()=>void}){
         onSelect={code=>{const row=items.find(item=>item.sku_cong_ty===code);if(row)startEditor(row);}}
         onMediaChanged={()=>void refresh()} onMediaBusy={setMediaBusy}/>
     </ProductModal>}
-    {showCategories&&<ProductModal title="Danh mục sản phẩm" onClose={()=>setShowCategories(false)} locked={busy}>
-      {error&&<div className="import-error" role="alert">{error}</div>}
-      <div className="catalogue-editor">
-        <p>Danh mục cha/con phục vụ lọc và trình bày sản phẩm, không làm thay đổi SKU công ty.</p>
-        <label>Tên danh mục<input value={categoryName} onChange={e=>setCategoryName(e.target.value)}/></label>
-        <label>Danh mục cha<select value={parentCategory} onChange={e=>setParentCategory(e.target.value)}>
-          <option value="">Danh mục cấp 1</option>
-          {categories.filter(c=>!c.parent_id).map(c=><option key={c.id} value={c.id}>{c.category_label}</option>)}
-        </select></label>
-        <div className="fb-product-modal-actions"><button type="button" className="import-btn import-secondary"
-          disabled={busy} onClick={()=>setShowCategories(false)}>Đóng</button>
-          <button type="button" className="import-btn import-primary" disabled={busy||!categoryName.trim()}
-            onClick={addCategory}>Tạo danh mục</button></div>
-      </div>
+    {structurePane&&<ProductModal title="Danh mục & nhóm mẫu sản phẩm" wide
+      onClose={()=>setStructurePane(null)} locked={busy}>
+      <CatalogueStructureManager initialPane={structurePane} categories={categories}
+        families={families} items={items} busy={busy} error={error} selectedBulk={selected}
+        onCreateCategory={createCategory} onRenameCategory={renameCategory}
+        onCreateFamily={createFamily} onRenameFamily={renameFamily}
+        onChangeMember={(row,familyId)=>{
+          const current=items.find(item=>item.sku_cong_ty===row.sku_cong_ty);
+          if(current)changeMembership(current,familyId);
+        }} onBulkAssign={bulkAssign}
+        onOpenSku={row=>{
+          const current=items.find(item=>item.sku_cong_ty===row.sku_cong_ty);
+          if(current){setStructurePane(null);startEditor(current);}
+        }}/>
     </ProductModal>}
     <div className="import-controls catalogue-search-controls">
       <label className="import-search-label">Tìm mã công ty / tên / nhóm
@@ -408,7 +413,7 @@ export default function CatalogueManager({onImport}:{onImport:()=>void}){
         {categories.map(c=><option value={c.id} key={c.id}>{c.parent_id?"↳ ":""}{c.category_label}</option>)}
       </select></label>
       <button type="button" className="import-btn import-secondary" aria-pressed={groupMode}
-        onClick={()=>{setGroupMode(x=>!x);setSelected([]);setActionMenu(null)}}>{groupMode?"Thoát chọn nhóm":"Nhóm mẫu"}</button>
+        onClick={()=>{setActionMenu(null);setStructurePane("families")}}>Quản lý nhóm mẫu</button>
     </div>
     <div className="import-table-wrap"><table className="import-table catalogue-list-table"><thead><tr>
       {groupMode&&<th>Chọn</th>}<th>Ảnh</th><th>Mã công ty</th><th>Tên sản phẩm</th>
@@ -497,7 +502,7 @@ export default function CatalogueManager({onImport}:{onImport:()=>void}){
             setActionMenu(null);
             setSelected(old=>old.includes(selectedActionRow.sku_cong_ty)?old:[...old,selectedActionRow.sku_cong_ty]);
             setGroupMode(true);
-            setShowGroup(true);
+            setStructurePane("families");
           }}>Nhóm cùng dòng</button>
       </div>,document.body
     )}
@@ -507,19 +512,13 @@ export default function CatalogueManager({onImport}:{onImport:()=>void}){
     </div></div>
     {groupMode&&<div className="catalogue-group-trigger">
       <span><b>Nhóm mẫu</b> · Đã chọn {selected.length} SKU để ghép nhiều mẫu trong một thẻ.</span>
-      <button type="button" className="import-btn import-secondary" onClick={()=>setShowGroup(true)}>Quản lý nhóm mẫu</button>
+      <div className="catalogue-group-trigger-actions">
+        <button type="button" className="import-btn import-secondary"
+          onClick={()=>{setGroupMode(false);setSelected([]);setActionMenu(null);}}>Thoát chọn nhóm</button>
+        <button type="button" className="import-btn import-secondary"
+          onClick={()=>setStructurePane("families")}>Quản lý nhóm mẫu</button>
+      </div>
     </div>}
-    {showGroup&&<ProductModal title="Nhóm mẫu sản phẩm" onClose={()=>setShowGroup(false)} locked={busy}>
-      {error&&<div className="import-error" role="alert">{error}</div>}
-      <div className="catalogue-editor catalogue-variant-details">
-      <p>Chọn ít nhất 2 SKU trong danh sách để gắn cùng một nhóm hiển thị. Mã công ty không đổi.</p>
-      <label>Nhóm có sẵn<select value={groupId} onChange={e=>setGroupId(e.target.value)}>
-        <option value="">Chọn nhóm</option>{families.map(g=><option key={g.id} value={g.id}>{g.family_label}</option>)}
-      </select></label>
-      <button className="import-btn import-primary" type="button" disabled={busy||!groupId||selected.length<2} onClick={assign}>Gắn {selected.length} SKU vào nhóm</button>
-      <label>Tạo nhóm mới<input value={newFamily} onChange={e=>setNewFamily(e.target.value)} placeholder="Tên nhóm sản phẩm"/></label>
-      <button className="import-btn import-secondary" type="button" disabled={busy||!newFamily.trim()} onClick={addFamily}>Tạo nhóm</button>
-      </div></ProductModal>}
     {showImport&&<ProductModal title="Nhập / cập nhật sản phẩm bằng Excel" wide locked={importBusy} onClose={()=>{if(!importBusy){setShowImport(false);void refresh()}}}>
       <CatalogueImportPreview onBusyChange={handleImportBusy} onSaved={importSaved} />
     </ProductModal>}

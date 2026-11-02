@@ -1,6 +1,6 @@
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-const ALLOWED = new Set(["snapshot","skus","families","categories","group","visibility"]);
+const ALLOWED = new Set(["snapshot","skus","families","categories","group","visibility","membership"]);
 const HEADERS = {"Cache-Control":"private, no-store","X-Content-Type-Options":"nosniff"};
 const fail=(status:number,code:string)=>Response.json({error:{code}},{status,headers:HEADERS});
 function baseUrl(){
@@ -29,12 +29,12 @@ async function boundedJsonText(request:Request):Promise<string|null> {
 async function relay(request:Request,params:Promise<{action:string}>,method:string){
   const {action}=await params;
   if(!ALLOWED.has(action))return fail(404,"not_found");
-  if(method==="GET" && action==="group")return fail(405,"method_not_allowed");
+  if(method==="GET" && ["group","membership"].includes(action))return fail(405,"method_not_allowed");
   if(method!=="GET"){
     if(request.headers.get("origin")!==new URL(request.url).origin ||
       request.headers.get("sec-fetch-site")==="cross-site")return fail(403,"origin_forbidden");
-    if(method==="PATCH"&&action!=="skus")return fail(405,"method_not_allowed");
-    if(!["skus","families","categories","group","visibility"].includes(action))return fail(405,"method_not_allowed");
+    if(method==="PATCH"&&!["skus","categories","families"].includes(action))return fail(405,"method_not_allowed");
+    if(!["skus","families","categories","group","visibility","membership"].includes(action))return fail(405,"method_not_allowed");
     if(request.headers.get("content-type")?.split(";")[0]!=="application/json")
       return fail(415,"invalid_content_type");
     const length=Number(request.headers.get("content-length")||0);
