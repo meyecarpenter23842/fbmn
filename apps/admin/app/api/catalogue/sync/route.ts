@@ -49,8 +49,21 @@ export async function POST(request:Request){
       headers:{"content-type":request.headers.get("content-type")||""},body:new Uint8Array(bytes)});
     fields=await req.formData();
   }catch{return fail(400,"invalid_multipart");}
-  if([...fields.keys()].sort().join(",")!=="confirm,expectedCreate,expectedUpdate,file,fingerprint")
+  const keys=[...fields.keys()].sort().join(",");
+  if(!["confirm,expectedCreate,expectedUpdate,file,fingerprint",
+       "confirm,expectedCreate,expectedUpdate,file,fingerprint,mapping"].includes(keys))
     return fail(400,"invalid_form");
+  let columnMapping:string[]|undefined;
+  if(fields.has("mapping")){
+    const raw=fields.get("mapping");
+    if(typeof raw!=="string"||raw.length>600)return fail(400,"invalid_column_mapping");
+    try{
+      const decoded:unknown=JSON.parse(raw);
+      if(!Array.isArray(decoded)||decoded.length>40||decoded.some(x=>typeof x!=="string"))
+        return fail(400,"invalid_column_mapping");
+      columnMapping=decoded;
+    }catch{return fail(400,"invalid_column_mapping");}
+  }
   const file=fields.get("file"),confirm=fields.get("confirm"),fingerprint=fields.get("fingerprint");
   const expectedCreate=Number(fields.get("expectedCreate")),expectedUpdate=Number(fields.get("expectedUpdate"));
   if(!(file instanceof File)||file.size===0||file.size>8_000_000||!/\.xlsx$/i.test(file.name)||
@@ -72,7 +85,7 @@ export async function POST(request:Request){
       return fail(503,"catalogue_snapshot_invalid");
   }catch{return fail(503,"catalogue_snapshot_unavailable");}
   try{
-    const parsed=await readXlsxSkuRows(bytes);
+    const parsed=await readXlsxSkuRows(bytes,columnMapping?{columnMapping}:{});
     if(parsed.source_sheet!=="SAN PHAM")return fail(400,"one_sheet_only");
     const categoryResponse=await fetch(base+"/v1/admin/catalogue/categories",{
       method:"GET",cache:"no-store",redirect:"manual",
@@ -84,6 +97,7 @@ export async function POST(request:Request){
     if(!Array.isArray(categories)||categories.length>1000)return fail(503,"categories_unavailable");
     const plan=planSheetSync(parsed,existing,categories);
     const digest=createHash("sha256").update(bytes)
+      .update(JSON.stringify(columnMapping??null))
       .update(JSON.stringify(plan.operations)).digest("hex");
     if(digest!==fingerprint||plan.totals.conflict||plan.totals.error||
        plan.totals.create!==expectedCreate||plan.totals.update!==expectedUpdate||

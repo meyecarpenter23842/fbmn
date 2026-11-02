@@ -105,19 +105,83 @@ const SIMPLE_HEADERS = Object.freeze({
   category_label:"Danh mục",gsm:"Định lượng GSM",cover_type:"Loại bìa",unit:"Đơn vị tính",
   packaging:"Quy cách đóng gói",units_per_pack:"Số đơn vị / đóng gói",
 });
+// One-sheet mapping is opt-in; never infer a company SKU from arbitrary columns.
+export const COLUMN_MAPPING_KEYS=Object.freeze([
+  "sku","ignore","title","barcode","size","pages","ruling","category_label",
+  "gsm","cover_type","unit","packaging","units_per_pack"
+]);
+export function validateColumnMapping(mapping,columnCount){
+  if(!Array.isArray(mapping)||!Number.isInteger(columnCount)||columnCount<2||
+     columnCount>40||mapping.length!==columnCount||mapping[0]!=="sku")throw Error("invalid_column_mapping");
+  const keys=new Set();
+  for(let i=1;i<mapping.length;i++){
+    const key=mapping[i];
+    if(typeof key!=="string"||!COLUMN_MAPPING_KEYS.includes(key)||key==="sku")
+      throw Error("invalid_column_mapping");
+    if(key!=="ignore"){
+      if(keys.has(key))throw Error("duplicate_column_mapping");
+      keys.add(key);
+    }
+  }
+  if(keys.size===0)throw Error("missing_mapped_fields");
+  return mapping;
+}
+/** Read only column labels and tiny cell samples. No DB or file write. */
+export async function inspectXlsxColumns(bytes){
+  if(!(bytes instanceof Uint8Array)||bytes.byteLength===0||bytes.byteLength>MAX_FILE_BYTES)
+    throw Error("invalid_xlsx_size");
+  const book=new ExcelJS.Workbook();
+  await book.xlsx.load(await excelJsCompatibleBytes(bytes));
+  if(book.worksheets.length!==1||!book.getWorksheet(SIMPLE_SHEET))
+    throw Error("one_sheet_only");
+  const sheet=book.getWorksheet(SIMPLE_SHEET);
+  if(sheet.rowCount>MAX_SHEET_ROWS+1)throw Error("too_many_rows");
+  const count=sheet.getRow(1).cellCount;
+  if(count<2||count>40)throw Error("invalid_column_count");
+  const used=new Set();
+  const columns=Array.from({length:count},(_,index)=>{
+    const header=cellText(sheet.getRow(1).getCell(index+1)).slice(0,120);
+    let suggested=index===0?"sku":"ignore";
+    if(index>0){
+      for(const [key,label] of Object.entries(SIMPLE_HEADERS)){
+        if(key!=="sku"&&header.trim()===label&&!used.has(key)){
+          suggested=key;used.add(key);break;
+        }
+      }
+    }
+    const samples=[];
+    for(let n=2;n<=Math.min(sheet.rowCount,4);n++){
+      const v=sheet.getRow(n).getCell(index+1).value;
+      let text="";
+      try{text=isFormula(v)?"[Công thức]":cellText(sheet.getRow(n).getCell(index+1)).slice(0,95);}
+      catch{text="[Không hỗ trợ]";}
+      samples.push(text);
+    }
+    return {index:index+1,header,suggested,samples};
+  });
+  return {source_sheet:SIMPLE_SHEET,columns,total_rows:Math.max(0,sheet.rowCount-1)};
+}
 // Routine imports deliberately do not infer or store family/group membership.
 // Those relationships require explicit confirmation in the Admin.
-function readSingleSheet(sheet,sourceFile) {
+function readSingleSheet(sheet,sourceFile,columnMapping) {
   if (sheet.rowCount > MAX_SHEET_ROWS+1) throw new Error("too_many_rows");
   const headings = new Map();
-  sheet.getRow(1).eachCell({includeEmpty:false},(cell,index)=>{
-    const label=cellText(cell).trim();
-    if(headings.has(label))throw new Error("duplicate_header");
-    headings.set(label,index);
-  });
-  if(!headings.has(SIMPLE_HEADERS.sku))throw new Error("missing_column:"+SIMPLE_HEADERS.sku);
-  if(!Object.values(SIMPLE_HEADERS).some(header=>header!==SIMPLE_HEADERS.sku&&headings.has(header)))
-    throw new Error("missing_column:editable_product_field");
+  if(columnMapping!==undefined){
+    validateColumnMapping(columnMapping,sheet.getRow(1).cellCount);
+    for(let i=0;i<columnMapping.length;i++){
+      const key=columnMapping[i];
+      if(key!=="ignore")headings.set(SIMPLE_HEADERS[key],i+1);
+    }
+  }else{
+    sheet.getRow(1).eachCell({includeEmpty:false},(cell,index)=>{
+      const label=cellText(cell).trim();
+      if(headings.has(label))throw new Error("duplicate_header");
+      headings.set(label,index);
+    });
+    if(!headings.has(SIMPLE_HEADERS.sku))throw new Error("missing_column:"+SIMPLE_HEADERS.sku);
+    if(!Object.values(SIMPLE_HEADERS).some(header=>header!==SIMPLE_HEADERS.sku&&headings.has(header)))
+      throw new Error("missing_column:editable_product_field");
+  }
   const rows=[],evidence=[];
   for(let n=2;n<=sheet.rowCount;n++){
     const current=sheet.getRow(n);
@@ -174,8 +238,9 @@ export async function readXlsxSkuRows(bytes, options = {}) {
   if(!options.sheetName && workbook.worksheets.length===1 &&
      workbook.getWorksheet(SIMPLE_SHEET)){
     return readSingleSheet(workbook.getWorksheet(SIMPLE_SHEET),
-      options.sourceFile||"Futurebook_MAU_NHAP_SAN_PHAM_1_SHEET.xlsx");
+      options.sourceFile||"Futurebook_MAU_NHAP_SAN_PHAM_1_SHEET.xlsx",options.columnMapping);
   }
+  if(options.columnMapping!==undefined)throw Error("one_sheet_only");
   const sheetName = options.sheetName || MASTER_SHEET;
   const sheet = workbook.getWorksheet(sheetName);
   if (!sheet) throw new Error("missing_master_sheet");

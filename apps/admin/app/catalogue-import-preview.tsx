@@ -4,6 +4,22 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { ChangeEvent } from "react";
 
 type RowStatus = "create" | "update" | "unchanged" | "conflict" | "error";
+type ProfileColumn={index:number;header:string;suggested:string;samples:string[]};
+const COLUMN_FIELDS=[
+  {key:"ignore",label:"— Bỏ qua cột —"},
+  {key:"title",label:"Tên sản phẩm"},
+  {key:"barcode",label:"Mã vạch"},
+  {key:"size",label:"Khổ"},
+  {key:"pages",label:"Số trang"},
+  {key:"ruling",label:"Dòng kẻ"},
+  {key:"category_label",label:"Danh mục cha / con"},
+  {key:"gsm",label:"Định lượng GSM"},
+  {key:"cover_type",label:"Loại bìa"},
+  {key:"unit",label:"Đơn vị tính"},
+  {key:"packaging",label:"Quy cách đóng gói"},
+  {key:"units_per_pack",label:"Số đơn vị / đóng gói"}
+] as const;
+
 type Item = {
   row: number;
   sku_cong_ty: string | null;
@@ -64,6 +80,10 @@ function downloadCsv(items: Item[]) {
 }
 export default function CatalogueImportPreview({onBusyChange,onSaved}:{onBusyChange?:(value:boolean)=>void;onSaved?:()=>void}={}) {
   const fileRef=useRef<HTMLInputElement>(null);
+  const inspectionSeq=useRef(0);
+  const [columns,setColumns]=useState<ProfileColumn[]>([]);
+  const [mapping,setMapping]=useState<string[]>([]);
+  const [inspecting,setInspecting]=useState(false);
   const [file,setFile]=useState<File|null>(null);
   const [mode,setMode]=useState<"update"|"import">("update");
   const [preview,setPreview]=useState<Preview|null>(null);
@@ -76,9 +96,50 @@ export default function CatalogueImportPreview({onBusyChange,onSaved}:{onBusyCha
   const [filter,setFilter]=useState("all");
   const [page,setPage]=useState(1);
   const [expanded,setExpanded]=useState<number|null>(null);
-  useEffect(()=>{onBusyChange?.(busy||approving)},[busy,approving,onBusyChange]);
+  useEffect(()=>{onBusyChange?.(busy||approving||inspecting)},[busy,approving,inspecting,onBusyChange]);
+  const mappingReady=columns.length>=2&&mapping.length===columns.length&&mapping[0]==="sku"&&
+    mapping.slice(1).some(key=>key!=="ignore")&&
+    new Set(mapping.slice(1).filter(key=>key!=="ignore")).size===
+      mapping.slice(1).filter(key=>key!=="ignore").length;
+  function changeMapping(index:number,value:string){
+    if(index===0||busy||approving)return;
+    setMapping(old=>old.map((key,i)=>i===index?value:
+      (value!=="ignore"&&key===value?"ignore":key)));
+    setPreview(null);setReceipt("");setApproved(false);setExpanded(null);setError("");
+  }
+  async function inspectFile(item:File,sequence:number){
+    setInspecting(true);
+    try{
+      const session=await fetch("/api/auth/token",{credentials:"same-origin",cache:"no-store"});
+      if(!session.ok)throw Error("Phiên đăng nhập hết hạn.");
+      const auth=await session.json() as {token?:unknown};
+      const token=typeof auth.token==="string"?auth.token:"";
+      if(!/^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/.test(token))throw Error("Xác thực Admin không hợp lệ.");
+      const form=new FormData();form.append("file",item,item.name);
+      const response=await fetch("/api/catalogue/inspect",{
+        method:"POST",credentials:"same-origin",cache:"no-store",
+        headers:{Authorization:"Bearer "+token},body:form});
+      if(!response.ok)throw Error("Chỉ đọc ghép cột trên file 1 sheet SAN PHAM. Nếu đây là file đối chiếu 8 sheet cũ, hãy chuyển sang tab Nhập mới / đồng bộ.");
+      const result=await response.json() as {data?:{columns?:ProfileColumn[];total_rows?:number}};
+      const cols=result.data?.columns;
+      if(!Array.isArray(cols)||cols.length<2||cols.length>40||
+         cols.some((col,i)=>col.index!==i+1||typeof col.header!=="string"||
+           !Array.isArray(col.samples)||typeof col.suggested!=="string"))
+        throw Error("Không đọc được các cột Excel.");
+      if(inspectionSeq.current!==sequence)return;
+      setColumns(cols);
+      setMapping(cols.map((col,i)=>i===0?"sku":
+        COLUMN_FIELDS.some(f=>f.key===col.suggested)?col.suggested:"ignore"));
+    }catch(err){
+      if(inspectionSeq.current!==sequence)return;
+      setColumns([]);setMapping([]);
+      setError(err instanceof Error?err.message:"Không nhận diện được cột Excel.");
+    }finally{if(inspectionSeq.current===sequence)setInspecting(false);}
+  }
   function switchMode(next:"update"|"import"){
     if(busy||approving)return;
+    inspectionSeq.current++;setInspecting(false);
+    setColumns([]);setMapping([]);
     setMode(next);setFile(null);setPreview(null);setReceipt("");
     setError("");setPage(1);setExpanded(null);setApproved(false);
     setSearch("");setFilter("all");
@@ -87,15 +148,17 @@ export default function CatalogueImportPreview({onBusyChange,onSaved}:{onBusyCha
   function selectFile(event:ChangeEvent<HTMLInputElement>){
     const item=event.target.files?.[0]||null;
     event.target.value="";
+    inspectionSeq.current++;setColumns([]);setMapping([]);setInspecting(false);
     setPreview(null);setError("");setPage(1);setSearch("");setFilter("all");setExpanded(null);setApproved(false);setReceipt("");
     if(!item)return;
     if(!/\.xlsx$/i.test(item.name)||item.size===0||item.size>8_000_000){
       setFile(null);setError("Chỉ chọn file .xlsx tối đa 8 MB.");return;
     }
     setFile(item);
+    void inspectFile(item,inspectionSeq.current);
   }
   async function execute(){
-    if(!file||busy)return;
+    if(!file||busy||inspecting|| ((mode==="update"||columns.length>0)&&!mappingReady))return;
     setBusy(true);setError("");setPreview(null);
     try {
       const session=await fetch("/api/auth/token",{credentials:"same-origin",cache:"no-store",headers:{Accept:"application/json"}});
@@ -105,6 +168,7 @@ export default function CatalogueImportPreview({onBusyChange,onSaved}:{onBusyCha
       if(jwt.length>12000||!/^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/.test(jwt))
         throw new Error("Không xác minh được token Admin.");
       const form=new FormData();form.append("file",file,file.name);
+      if(mappingReady)form.append("mapping",JSON.stringify(mapping));
       const response=await fetch("/api/catalogue/preview",{
         method:"POST",credentials:"same-origin",cache:"no-store",
         headers:{Authorization:"Bearer "+jwt,Accept:"application/json"},body:form,
@@ -127,7 +191,8 @@ export default function CatalogueImportPreview({onBusyChange,onSaved}:{onBusyCha
     if(!file||!preview||busy||approving)return;
     const oneSheet=preview.source_sheet==="SAN PHAM";
     const create=preview.totals.create,update=preview.totals.update;
-    const eligible=preview.database_queried===true && (mode!=="update"||(oneSheet&&create===0)) &&
+    const eligible=preview.database_queried===true && (columns.length===0||mappingReady) &&
+      (mode!=="update"||(oneSheet&&create===0)) &&
       preview.totals.error===0&&preview.totals.conflict===0 &&
       (oneSheet?(create+update>0&&/^[0-9a-f]{64}$/.test(preview.previewFingerprint||"")):
         (approved&&create>0&&create===preview.counts.total_rows&&
@@ -151,6 +216,7 @@ export default function CatalogueImportPreview({onBusyChange,onSaved}:{onBusyCha
         throw new Error("Không xác minh được Owner.");
       const form=new FormData();
       form.append("file",file,file.name);
+      if(mappingReady)form.append("mapping",JSON.stringify(mapping));
       if(oneSheet){
         form.append("confirm","SYNC_SAN_PHAM");
         form.append("expectedCreate",String(create));
@@ -199,7 +265,8 @@ export default function CatalogueImportPreview({onBusyChange,onSaved}:{onBusyCha
   const paged=filtered.slice((page-1)*50,page*50);
   const pages=Math.max(1,Math.ceil(filtered.length/50));
   const oneSheet=preview?.source_sheet==="SAN PHAM";
-  const eligibleSave=!!preview&&!busy&&!approving&&preview.totals.error===0&&preview.totals.conflict===0&&
+  const eligibleSave=!!preview&&!busy&&!approving&&!inspecting&&
+    (columns.length===0||mappingReady)&&preview.totals.error===0&&preview.totals.conflict===0&&
     (mode!=="update"||(oneSheet&&preview.totals.create===0))&&
     (oneSheet?(preview.totals.create+preview.totals.update>0&&!!preview.previewFingerprint):
       (approved&&preview.totals.create>0&&preview.totals.create===preview.counts.total_rows&&
@@ -228,9 +295,34 @@ export default function CatalogueImportPreview({onBusyChange,onSaved}:{onBusyCha
       </div></div>
       <div className="import-upload-actions"><input ref={fileRef} type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" onChange={selectFile} className="import-file-hidden" aria-label="Chọn Excel" />
         <button type="button" className="import-btn import-secondary" onClick={()=>fileRef.current?.click()} disabled={busy}>Chọn Excel</button>
-        <button type="button" className="import-btn import-primary" onClick={()=>void execute()} disabled={!file||busy}>{busy?"Đang đối chiếu…":"Phân tích & xem trước"}</button>
+        <button type="button" className="import-btn import-primary" onClick={()=>void execute()} disabled={!file||busy||inspecting||((mode==="update"||columns.length>0)&&!mappingReady)}>{busy?"Đang đối chiếu…":"Bước 3 · Xem trước thay đổi"}</button>
       </div>
     </section>
+    {inspecting&&<p className="import-information" role="status">Đang đọc các cột và chuẩn bị bảng ghép trường…</p>}
+    {file&&columns.length>0&&<section className="catalogue-mapping-section" aria-label="Ghép cột Excel với thông tin sản phẩm">
+      <div className="catalogue-mapping-title">
+        <div><h3>Bước 2 · Ghép cột Excel với thuộc tính cần cập nhật</h3>
+          <p>Cột 1 cố định là mã công ty. Với các cột còn lại, chọn trường cần sửa hoặc Bỏ qua. Mỗi trường chỉ được dùng một lần.</p></div>
+        <span>{mapping.slice(1).filter(v=>v!=="ignore").length} trường được chọn</span>
+      </div>
+      <div className="catalogue-mapping-scroll">
+        <table className="catalogue-mapping-table"><thead><tr>
+          {columns.map((col,i)=><th key={col.index}>
+            <span>Cột {col.index} · {col.header||"Không có tiêu đề"}</span>
+            {i===0?<strong className="catalogue-mapping-locked">Mã công ty · khóa đối chiếu</strong>:
+              <select aria-label={"Thuộc tính cột "+col.index} value={mapping[i]||"ignore"}
+                disabled={busy||approving} onChange={e=>changeMapping(i,e.target.value)}>
+                {COLUMN_FIELDS.map(option=><option value={option.key} key={option.key}>{option.label}</option>)}
+              </select>}
+          </th>)}
+        </tr></thead><tbody>
+          {[0,1,2].map(n=><tr key={n}>{columns.map(col=>
+            <td key={col.index} title={col.samples[n]||""}>{col.samples[n]||"—"}</td>)}</tr>)}
+        </tbody></table>
+      </div>
+      {!mappingReady&&<small className="import-bad">Chọn ít nhất một thuộc tính ngoài mã công ty và không gán trùng trường.</small>}
+      <small>Ghép cột chỉ dùng cho lượt nhập hiện tại. Thay đổi lựa chọn sẽ hủy bản xem trước cũ; không sửa dữ liệu trước khi xác nhận.</small>
+    </section>}
     {error&&<div className="import-error" role="alert">{error}</div>}
     {receipt&&<div className="import-review-banner" role="status"><b>{receipt}</b></div>}
     {preview&&<section aria-label="Báo cáo xem trước">

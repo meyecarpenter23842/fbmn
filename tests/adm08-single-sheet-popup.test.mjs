@@ -79,6 +79,6 @@ test("ADM-08 import dialog cannot close while a draft write is in flight",()=>{
   assert.match(manager,/wide locked={importBusy}/);
   assert.match(manager,/onBusyChange={handleImportBusy}/);
   assert.match(manager,/onSaved={importSaved}/);
-  assert.match(importer,/onBusyChange\?\.\(busy\|\|approving\)/);
+  assert.match(importer,/onBusyChange\?\.\(busy\|\|approving\|\|inspecting\)/);
   assert.match(importer,/onSaved\?\.\(\)/);
 });

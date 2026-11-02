@@ -90,9 +90,23 @@ export async function POST(request: Request) {
     fields = await safeRequest.formData();
   } catch { return fail(400, "invalid_multipart"); }
   const parts = [...fields.entries()];
-  if (parts.length !== 1 || parts[0][0] !== "file" || !(parts[0][1] instanceof File))
-    return fail(400, "single_xlsx_file_required");
-  const file = parts[0][1] as File;
+  if(![1,2].includes(parts.length)||parts.some(([key])=>!["file","mapping"].includes(key))||
+     parts.filter(([key])=>key==="file").length!==1 ||
+     (parts.length===2&&parts.filter(([key])=>key==="mapping").length!==1) ||
+     !(fields.get("file") instanceof File))
+    return fail(400,"invalid_upload_fields");
+  const file=fields.get("file") as File;
+  let columnMapping:string[]|undefined;
+  if(fields.has("mapping")){
+    const raw=fields.get("mapping");
+    if(typeof raw!=="string"||raw.length>600)return fail(400,"invalid_column_mapping");
+    try{
+      const decoded:unknown=JSON.parse(raw);
+      if(!Array.isArray(decoded)||decoded.length>40||decoded.some(x=>typeof x!=="string"))
+        return fail(400,"invalid_column_mapping");
+      columnMapping=decoded;
+    }catch{return fail(400,"invalid_column_mapping");}
+  }
   if (!/\.xlsx$/i.test(file.name) || file.size === 0 || file.size > MAX_XLSX_BYTES)
     return fail(400, "invalid_xlsx_file");
   const bytes = new Uint8Array(await file.arrayBuffer());
@@ -114,9 +128,11 @@ export async function POST(request: Request) {
         existing.some((record: {sku_cong_ty?:unknown}) => typeof record?.sku_cong_ty !== "string"))
       return fail(503, "catalogue_snapshot_invalid");
     // No NET prices, warehouse quantities, original image filenames or raw file.
-    const result = await previewXlsxImport(bytes, existing);
+    const result = columnMapping
+      ? await previewXlsxImport(bytes,existing,{columnMapping})
+      : await previewXlsxImport(bytes, existing);
     if(result.source_sheet==="SAN PHAM"){
-      const parsed=await readXlsxSkuRows(bytes);
+      const parsed=await readXlsxSkuRows(bytes,columnMapping?{columnMapping}:{});
       const categoryResponse=await fetch(base+"/v1/admin/catalogue/categories",{
         method:"GET",cache:"no-store",redirect:"manual",
         headers:{Authorization:"Bearer "+match[1],Accept:"application/json"},
@@ -127,7 +143,8 @@ export async function POST(request: Request) {
       if(!Array.isArray(categories)||categories.length>1000)return fail(503,"categories_unavailable");
       const plan=planSheetSync(parsed,existing,categories);
       const previewFingerprint=createHash("sha256")
-        .update(bytes).update(JSON.stringify(plan.operations)).digest("hex");
+        .update(bytes).update(JSON.stringify(columnMapping??null))
+        .update(JSON.stringify(plan.operations)).digest("hex");
       return Response.json({
         ...result,totals:plan.totals,items:plan.items,
         previewFingerprint,source_sheet:"SAN PHAM",
