@@ -105,6 +105,72 @@ const SIMPLE_HEADERS = Object.freeze({
   category_label:"Danh mục",gsm:"Định lượng GSM",cover_type:"Loại bìa",unit:"Đơn vị tính",
   packaging:"Quy cách đóng gói",units_per_pack:"Số đơn vị / đóng gói",
 });
+// A routine 1-sheet workbook may have any worksheet name (Sheet1, Sản phẩm,
+// SAN_PHAM, etc.). Excel formatting can leave empty styled columns and title
+// rows above the actual header. Detect the actual header instead of rejecting it.
+const normalizeHeader=text=>String(text||"").normalize("NFKD").replace(/[\u0300-\u036f]/g,"")
+  .replaceAll("đ","d").replaceAll("Đ","D").toLowerCase()
+  .replace(/[_\s-]+/g," ").trim();
+const COMPANY_CODE_HEADERS=new Set([
+  "ma cong ty","sku cong ty","ma sp cong ty","ma san pham cong ty","ma hang cong ty",
+  "ma san pham","ma hang","ma sp","sku","product code","item code"
+]);
+function routineLayout(sheet,{allowUnrecognizedHeader=false}={}){
+  if(!sheet||sheet.rowCount>MAX_SHEET_ROWS+15)throw Error("too_many_rows");
+  // Look only at early rows: a common workbook has a title/banner above headings.
+  for(let n=1;n<=Math.min(sheet.rowCount,12);n++){
+    const row=sheet.getRow(n);
+    let first="";
+    try{first=cellText(row.getCell(1));}catch{continue;}
+    if(!COMPANY_CODE_HEADERS.has(normalizeHeader(first)))continue;
+    // Style-only cells can inflate ExcelJS row.cellCount to 16,384.
+    // Use the last nonempty heading, never the last formatted cell.
+    let last=0;
+    row.eachCell({includeEmpty:false},(cell,index)=>{
+      let value="";
+      try{value=cellText(cell);}catch{throw Error("invalid_column_heading");}
+      if(value.trim())last=Math.max(last,index);
+    });
+    if(last<2)throw Error("missing_editable_columns");
+    if(last>40)throw Error("too_many_columns");
+    return {sheet,headerRow:n,columnCount:last};
+  }
+  // Existing mapped-import callers can explicitly declare column 1 as SKU,
+  // even if the source header is unfamiliar. The unauthenticated guess is never
+  // made: the authenticated inspector still requires a recognizable SKU header.
+  if(allowUnrecognizedHeader){
+    const row=sheet.getRow(1);
+    let last=0;
+    row.eachCell({includeEmpty:false},(cell,index)=>{
+      let value="";
+      try{value=cellText(cell);}catch{throw Error("invalid_column_heading");}
+      if(value.trim())last=Math.max(last,index);
+    });
+    if(last<2)throw Error("missing_editable_columns");
+    if(last>40)throw Error("too_many_columns");
+    return {sheet,headerRow:1,columnCount:last};
+  }
+  throw Error("missing_company_sku_column");
+}
+function legacyReconciliationSheet(workbook){
+  if(workbook.worksheets.length!==1)return null;
+  const sheet=workbook.worksheets[0];
+  if(sheet.name===MASTER_SHEET)return sheet;
+  // A legacy 613-SKU reconciliation sheet has source/evidence fields, not
+  // editable catalogue columns. Never silently reinterpret it as routine update.
+  const headers=new Set();
+  sheet.getRow(1).eachCell({includeEmpty:false},cell=>{
+    try{headers.add(cellText(cell).trim());}catch{}
+  });
+  return [COL.sku,COL.xntName,COL.suggestedName,COL.origin].every(h=>headers.has(h))
+    ?sheet:null;
+}
+function routineWorkbookSheet(workbook,options={}){
+  // Do not guess which of multiple sheets may hold catalogue data: this avoids
+  // accidentally importing legacy reconciliation/hidden worksheets as an update.
+  if(workbook.worksheets.length!==1)throw Error("multiple_worksheets");
+  return routineLayout(workbook.worksheets[0],options);
+}
 // One-sheet mapping is opt-in; never infer a company SKU from arbitrary columns.
 export const COLUMN_MAPPING_KEYS=Object.freeze([
   "sku","ignore","title","barcode","size","pages","ruling","category_label",
@@ -132,25 +198,21 @@ export async function inspectXlsxColumns(bytes){
     throw Error("invalid_xlsx_size");
   const book=new ExcelJS.Workbook();
   await book.xlsx.load(await excelJsCompatibleBytes(bytes));
-  if(book.worksheets.length!==1||!book.getWorksheet(SIMPLE_SHEET))
-    throw Error("one_sheet_only");
-  const sheet=book.getWorksheet(SIMPLE_SHEET);
-  if(sheet.rowCount>MAX_SHEET_ROWS+1)throw Error("too_many_rows");
-  const count=sheet.getRow(1).cellCount;
-  if(count<2||count>40)throw Error("invalid_column_count");
+  if(legacyReconciliationSheet(book))throw Error("legacy_reconciliation_sheet");
+  const {sheet,headerRow,columnCount:count}=routineWorkbookSheet(book);
   const used=new Set();
   const columns=Array.from({length:count},(_,index)=>{
-    const header=cellText(sheet.getRow(1).getCell(index+1)).slice(0,120);
+    const header=cellText(sheet.getRow(headerRow).getCell(index+1)).slice(0,120);
     let suggested=index===0?"sku":"ignore";
     if(index>0){
       for(const [key,label] of Object.entries(SIMPLE_HEADERS)){
-        if(key!=="sku"&&header.trim()===label&&!used.has(key)){
+        if(key!=="sku"&&normalizeHeader(header)===normalizeHeader(label)&&!used.has(key)){
           suggested=key;used.add(key);break;
         }
       }
     }
     const samples=[];
-    for(let n=2;n<=Math.min(sheet.rowCount,4);n++){
+    for(let n=headerRow+1;n<=Math.min(sheet.rowCount,headerRow+3);n++){
       const v=sheet.getRow(n).getCell(index+1).value;
       let text="";
       try{text=isFormula(v)?"[Công thức]":cellText(sheet.getRow(n).getCell(index+1)).slice(0,95);}
@@ -159,22 +221,29 @@ export async function inspectXlsxColumns(bytes){
     }
     return {index:index+1,header,suggested,samples};
   });
-  return {source_sheet:SIMPLE_SHEET,columns,total_rows:Math.max(0,sheet.rowCount-1)};
+  return {source_sheet:SIMPLE_SHEET,worksheet_name:sheet.name,header_row:headerRow,
+    columns,total_rows:Math.max(0,sheet.rowCount-headerRow)};
 }
 // Routine imports deliberately do not infer or store family/group membership.
 // Those relationships require explicit confirmation in the Admin.
-function readSingleSheet(sheet,sourceFile,columnMapping) {
-  if (sheet.rowCount > MAX_SHEET_ROWS+1) throw new Error("too_many_rows");
+function readSingleSheet(sheet,sourceFile,columnMapping,layout) {
+  const {headerRow,columnCount}=layout||routineLayout(sheet);
+  if (sheet.rowCount-headerRow > MAX_SHEET_ROWS) throw new Error("too_many_rows");
   const headings = new Map();
   if(columnMapping!==undefined){
-    validateColumnMapping(columnMapping,sheet.getRow(1).cellCount);
+    validateColumnMapping(columnMapping,columnCount);
     for(let i=0;i<columnMapping.length;i++){
       const key=columnMapping[i];
       if(key!=="ignore")headings.set(SIMPLE_HEADERS[key],i+1);
     }
   }else{
-    sheet.getRow(1).eachCell({includeEmpty:false},(cell,index)=>{
-      const label=cellText(cell).trim();
+    sheet.getRow(headerRow).eachCell({includeEmpty:false},(cell,index)=>{
+      const raw=cellText(cell).trim();
+      // Canonicalize known, safe headers while ignoring unrelated Excel columns.
+      // Only explicit company-code aliases can represent the immutable SKU key.
+      const normalized=normalizeHeader(raw);
+      const label=COMPANY_CODE_HEADERS.has(normalized)?SIMPLE_HEADERS.sku:
+        Object.values(SIMPLE_HEADERS).find(value=>normalizeHeader(value)===normalized)||raw;
       if(headings.has(label))throw new Error("duplicate_header");
       headings.set(label,index);
     });
@@ -183,7 +252,7 @@ function readSingleSheet(sheet,sourceFile,columnMapping) {
       throw new Error("missing_column:editable_product_field");
   }
   const rows=[],evidence=[];
-  for(let n=2;n<=sheet.rowCount;n++){
+  for(let n=headerRow+1;n<=sheet.rowCount;n++){
     const current=sheet.getRow(n);
     if(!current.hasValues)continue;
     const cell=(name)=>headings.has(name)?current.getCell(headings.get(name)):{value:null};
@@ -219,7 +288,7 @@ function readSingleSheet(sheet,sourceFile,columnMapping) {
     rows.push(row);
     evidence.push({
       row:n,sku_cong_ty:sku,
-      provenance:{source_file:sourceFile,source_sheet:SIMPLE_SHEET,excel_row:n,
+      provenance:{source_file:sourceFile,source_sheet:sheet.name,excel_row:n,
         inventory_source:false,price_document_source:false},
       specifications:{paper_size:size||null,pages:pages||null,ruling:ruling||null,...optional},
       price_source_present:false,media_candidate_count:0,media_missing:true,
@@ -235,13 +304,15 @@ export async function readXlsxSkuRows(bytes, options = {}) {
     throw new Error("invalid_xlsx_size");
   const workbook = new ExcelJS.Workbook();
   await workbook.xlsx.load(await excelJsCompatibleBytes(bytes));
-  if(!options.sheetName && workbook.worksheets.length===1 &&
-     workbook.getWorksheet(SIMPLE_SHEET)){
-    return readSingleSheet(workbook.getWorksheet(SIMPLE_SHEET),
-      options.sourceFile||"Futurebook_MAU_NHAP_SAN_PHAM_1_SHEET.xlsx",options.columnMapping);
+  const legacy=!options.sheetName?legacyReconciliationSheet(workbook):null;
+  if(!options.sheetName && workbook.worksheets.length===1 && !legacy){
+    const layout=routineWorkbookSheet(workbook,{allowUnrecognizedHeader:options.columnMapping!==undefined});
+    return readSingleSheet(layout.sheet,
+      options.sourceFile||"Futurebook_MAU_NHAP_SAN_PHAM_1_SHEET.xlsx",
+      options.columnMapping,layout);
   }
-  if(options.columnMapping!==undefined)throw Error("one_sheet_only");
-  const sheetName = options.sheetName || MASTER_SHEET;
+  if(options.columnMapping!==undefined)throw Error(legacy?"legacy_reconciliation_sheet":"multiple_worksheets");
+  const sheetName = options.sheetName || legacy?.name || MASTER_SHEET;
   const sheet = workbook.getWorksheet(sheetName);
   if (!sheet) throw new Error("missing_master_sheet");
   if (sheet.rowCount > MAX_SHEET_ROWS + 1) throw new Error("too_many_rows");

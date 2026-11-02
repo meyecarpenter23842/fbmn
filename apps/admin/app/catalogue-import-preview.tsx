@@ -5,6 +5,21 @@ import type { ChangeEvent } from "react";
 
 type RowStatus = "create" | "update" | "unchanged" | "conflict" | "error";
 type ProfileColumn={index:number;header:string;suggested:string;samples:string[]};
+const XLSX_INSPECT_ERRORS:Record<string,string>={
+  legacy_reconciliation_sheet:"Đây là file đối chiếu 613 SKU có cột XNT / bảng giá, không phải mẫu cập nhật thông thường. Hãy chọn tab Nhập mới / đồng bộ để dùng đúng luồng nhập đối chiếu.",
+  multiple_worksheets:"File có nhiều worksheet. Chế độ Cập nhật hàng loạt chỉ nhận một worksheet; dùng tab Nhập mới / đồng bộ cho file đối chiếu nhiều sheet.",
+  missing_company_sku_column:"Không tìm thấy tiêu đề 'Mã công ty' hoặc 'SKU công ty' ở cột A trong 12 dòng đầu. Vui lòng giữ cột mã công ty dưới dạng văn bản để không mất số 0 đầu.",
+  missing_editable_columns:"File có mã công ty nhưng chưa có cột thông tin nào để cập nhật.",
+  too_many_columns:"File có hơn 40 cột tiêu đề thực tế. Hãy chia file thành các lượt cập nhật tối đa 40 cột.",
+  too_many_rows:"File có quá nhiều dòng; vui lòng chia file thành các đợt nhỏ hơn.",
+  invalid_column_heading:"Một tiêu đề cột chứa công thức/giá trị không được hỗ trợ. Hãy đổi tiêu đề thành văn bản.",
+  invalid_xlsx_size:"Dung lượng file Excel không hợp lệ.",
+  invalid_xlsx_workbook:"File không có cấu trúc .xlsx hợp lệ. Hãy lưu lại bằng Excel rồi thử.",
+  xlsx_too_many_parts:"File Excel có quá nhiều thành phần không cần thiết; hãy lưu lại một bản .xlsx đơn giản hơn.",
+  xlsx_xml_too_large:"File Excel chứa dữ liệu định dạng quá lớn, vui lòng lưu bản .xlsx gọn hơn.",
+  xlsx_decode_failed:"Không giải mã được nội dung XLSX này. Hãy mở trong Excel và dùng Save As → Excel Workbook (.xlsx) rồi thử lại."
+};
+
 const COLUMN_FIELDS=[
   {key:"ignore",label:"— Bỏ qua cột —"},
   {key:"title",label:"Tên sản phẩm"},
@@ -119,7 +134,13 @@ export default function CatalogueImportPreview({onBusyChange,onSaved}:{onBusyCha
       const response=await fetch("/api/catalogue/inspect",{
         method:"POST",credentials:"same-origin",cache:"no-store",
         headers:{Authorization:"Bearer "+token},body:form});
-      if(!response.ok)throw Error("Chỉ đọc ghép cột trên file 1 sheet SAN PHAM. Nếu đây là file đối chiếu 8 sheet cũ, hãy chuyển sang tab Nhập mới / đồng bộ.");
+      if(!response.ok){
+        const issue=await response.json().catch(()=>null) as {error?:{code?:string}}|null;
+        if(response.status===401||response.status===403)
+          throw Error("Phiên đăng nhập không đủ quyền xem file. Hãy đăng nhập lại bằng tài khoản được cấp quyền.");
+        const code=issue?.error?.code||"";
+        throw Error(XLSX_INSPECT_ERRORS[code]||("Không thể phân tích Excel (HTTP "+response.status+"). Vui lòng thử lại hoặc lưu lại file dưới dạng .xlsx."));
+      }
       const result=await response.json() as {data?:{columns?:ProfileColumn[];total_rows?:number}};
       const cols=result.data?.columns;
       if(!Array.isArray(cols)||cols.length<2||cols.length>40||
@@ -176,7 +197,7 @@ export default function CatalogueImportPreview({onBusyChange,onSaved}:{onBusyCha
       if(!response.ok){
         if(response.status===401||response.status===403)throw new Error("Tài khoản chưa được cấp quyền xem trước import. Kiểm tra quyền Owner/Editor.");
         if(response.status===413)throw new Error("Tệp quá dung lượng cho phép.");
-        if(response.status===422||response.status===400)throw new Error("File không đúng mẫu sản phẩm. Dùng mẫu Excel 1 sheet SAN PHAM hoặc file đối chiếu 613 SKU cũ. Mã công ty phải là văn bản, kể cả 0114.");
+        if(response.status===422||response.status===400)throw new Error("Không phân tích được cấu trúc Excel hoặc cách ghép cột. Kiểm tra dòng tiêu đề và mã công ty dạng văn bản; file 1 sheet được phép đặt tên worksheet tùy ý.");
         throw new Error("Admin staging chưa xử lý được XLSX (HTTP "+response.status+").");
       }
       const data=await response.json() as Preview;

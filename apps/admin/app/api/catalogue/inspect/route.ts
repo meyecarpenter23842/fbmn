@@ -66,8 +66,16 @@ export async function POST(request:Request){
   try{
     const info=await inspectXlsxColumns(bytes);
     return Response.json({data:info,applied:false},{headers:PRIVATE});
-  }catch{
-    // Uniform failure: no raw input or backend parsing details returned.
-    return fail(422,"one_sheet_columns_unavailable");
+  }catch(error:unknown){
+    // Only expose allowlisted, actionable validation codes. Never echo workbook
+    // values, proprietary sheet contents, library stacks or filenames.
+    const safeCodes=new Set([
+      "multiple_worksheets","legacy_reconciliation_sheet","missing_company_sku_column","missing_editable_columns",
+      "too_many_columns","too_many_rows","invalid_xlsx_size",
+      "invalid_xlsx_workbook","xlsx_too_many_parts","xlsx_xml_too_large",
+      "invalid_column_heading"
+    ]);
+    const reason=error instanceof Error?error.message:"";
+    return fail(422,safeCodes.has(reason)?reason:"xlsx_decode_failed");
   }
 }
