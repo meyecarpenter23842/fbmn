@@ -7,13 +7,13 @@ import {fileURLToPath} from "node:url";
 
 function requireThat(ok,message){if(!ok)throw new Error(message);}
 const hash=value=>typeof value==="string"&&/^[a-f0-9]{40}$/i.test(value);
-export async function authorizeAdminProduction(env,fetcher=fetch){
+export async function authorizeAdminProduction(env,fetcher=fetch,expectedCommand="/deploy admin production"){
   const {GH_TOKEN,GITHUB_REPOSITORY:repo,GITHUB_REPOSITORY_OWNER:owner,
     ISSUE_NUMBER:number,REQUESTED_BY:user,DEPLOY_COMMAND:command,GITHUB_OUTPUT:output}=env;
   requireThat(GH_TOKEN&&repo&&owner&&number&&output,"Missing authorization context");
   requireThat(repo===owner+"/fbmn","Wrong repository");
   requireThat(user?.toLowerCase()===owner.toLowerCase(),"Only repository owner may deploy");
-  requireThat(command==="/deploy admin production","Unsupported deployment command");
+  requireThat(command===expectedCommand,"Unsupported deployment command");
   requireThat(/^\d+$/.test(number),"Invalid pull request number");
   async function get(path){
     const response=await fetcher("https://api.github.com/"+path,{
