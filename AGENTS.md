@@ -1,5 +1,7 @@
 # Futurebook Miền Nam — bắt buộc đọc trước khi sửa repo
 
+**Repo này còn chứa kế hoạch Nhà sách Đại Việt, một storefront riêng dùng chung Admin. Trước BẤT KỲ việc Đại Việt nào, bắt buộc đọc apps/dai-viet/AGENTS.md và docs/dai-viet/00-master-plan.md + docs/dai-viet/README.md rồi toàn bộ tài liệu 01–07. Đây là bước READ-FIRST của mọi chat/AI/PR, không được bỏ qua. Đại Việt có theme ĐỎ riêng; contract kích thước/motion dùng chung nhưng KHÔNG áp màu tím Futurebook cho Đại Việt. Không tạo Admin thứ hai. Giữ nguyên UI Futurebook và Admin khi làm Đại Việt.**
+
 Đây là chỉ dẫn **áp dụng toàn repo**, cho mọi phiên AI/chat, Codex, developer và PR. Nội dung của một chat riêng lẻ **không** thay thế quy tắc này.
 
 ## Quy tắc UI bắt buộc
