@@ -27,6 +27,8 @@ function fakeDb({conflict=false}={}){
    }
    if(sql.startsWith("INSERT INTO fbmn_catalog_private.pricebook_entries"))
      return {rowCount:1,rows:[{id,revision:1,approval_state:"draft"}]};
+   if(sql.startsWith("SELECT amount_vnd::text AS amount_vnd,vat_included"))
+     return {rowCount:1,rows:[{amount_vnd:"0",vat_included:false}]};
    if(sql.startsWith("UPDATE fbmn_catalog_private.pricebook_entries"))
      return conflict?{rowCount:0,rows:[]}:{rowCount:1,rows:[{id,revision:2,approval_state:"draft"}]};
    return {rowCount:0,rows:[]};

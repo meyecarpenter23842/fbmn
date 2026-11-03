@@ -1,6 +1,7 @@
 // ADM-01. Every admin route requires a verified external identity and a DB grant.
 import { handleCatalogue } from "./catalogue-service.mjs";
 import { handlePricebook } from "./pricebook-service.mjs";
+import { handleBulkPricebook } from "./pricebook-bulk-service.mjs";
 // No cookie/JWT claims may supply roles or channel scopes.
 const ROUTES = new Map([
   ["/v1/admin/session", "session.read"],
@@ -80,6 +81,9 @@ export function createAdminApi({ verifyToken, loadActor, listChannels, recordAud
         return error(403, "forbidden", corsOrigin);
       }
       if (action === "pricing.private") {
+        if (url.pathname !== "/v1/admin/pricing/entries") {
+          return handleBulkPricebook({request,actor:{...actor,subject},db:catalogueDb});
+        }
         return handlePricebook({request,actor:{...actor,subject},db:catalogueDb});
       }
       if (action === "catalogue.manage") {

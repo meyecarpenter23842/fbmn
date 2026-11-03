@@ -89,13 +89,20 @@ export async function handlePricebook({request,actor,db}){
             input.vat_included,input.vat_rate_bps,input.source_document,input.effective_from,
             input.effective_until,actor.subject]);
         await c.query("INSERT INTO fbmn_catalog_private.pricebook_audit "+
-          "(entry_id,actor_subject,action,old_revision,new_revision) "+
-          "VALUES($1,$2,'create_draft',NULL,1)",[result.rows[0].id,actor.subject]);
+          "(entry_id,actor_subject,action,old_revision,new_revision,old_amount_vnd,"+
+          "new_amount_vnd,old_vat_included,new_vat_included,source_document) "+
+          "VALUES($1,$2,'create_draft',NULL,1,NULL,$3,NULL,$4,$5)",
+          [result.rows[0].id,actor.subject,input.amount_vnd,input.vat_included,input.source_document]);
         return result.rows[0];
       });
       return reply(201,saved);
     }
     const saved=await tx(db,async c=>{
+      const previous=await c.query(
+        "SELECT amount_vnd::text AS amount_vnd,vat_included FROM fbmn_catalog_private.pricebook_entries "+
+        "WHERE id=$1 AND revision=$2 AND approval_state='draft' FOR UPDATE",
+        [input.id,input.expected_revision]);
+      if(previous.rowCount!==1)throw new Error("pricebook_conflict");
       const result=await c.query(
         "UPDATE fbmn_catalog_private.pricebook_entries SET amount_vnd=$1,vat_included=$2,"+
         "vat_rate_bps=$3,source_document=$4,effective_until=$5,revision=revision+1,"+
@@ -107,9 +114,12 @@ export async function handlePricebook({request,actor,db}){
           input.effective_until,actor.subject,input.id,input.expected_revision]);
       if(result.rowCount!==1)throw new Error("pricebook_conflict");
       await c.query("INSERT INTO fbmn_catalog_private.pricebook_audit "+
-        "(entry_id,actor_subject,action,old_revision,new_revision) "+
-        "VALUES($1,$2,'update_draft',$3,$4)",
-        [input.id,actor.subject,input.expected_revision,result.rows[0].revision]);
+        "(entry_id,actor_subject,action,old_revision,new_revision,old_amount_vnd,"+
+        "new_amount_vnd,old_vat_included,new_vat_included,source_document) "+
+        "VALUES($1,$2,'update_draft',$3,$4,$5,$6,$7,$8,$9)",
+        [input.id,actor.subject,input.expected_revision,result.rows[0].revision,
+          previous.rows[0].amount_vnd,input.amount_vnd,previous.rows[0].vat_included,
+          input.vat_included,input.source_document]);
       return result.rows[0];
     });
     return reply(200,saved);

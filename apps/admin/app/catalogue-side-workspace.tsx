@@ -2,6 +2,7 @@
 import {useCallback,useEffect,useMemo,useState} from "react";
 import AdminToast from "./admin-toast";
 import CataloguePricebookPanel from "./catalogue-pricebook-panel";
+import CataloguePricebookBulk from "./catalogue-pricebook-bulk";
 import CatalogueMediaManager,{PrivateImage} from "./catalogue-media-manager";
 
 type CatalogSku={
@@ -27,6 +28,7 @@ export default function CatalogueSideWorkspace({mode,onBusyChange}:{mode:Workspa
   const [revision,setRevision]=useState(0);
   const [mediaBusy,setMediaBusy]=useState(false);
   const [priceBusy,setPriceBusy]=useState(false);
+  const [pricingOwner,setPricingOwner]=useState(false);
   const refresh=useCallback(()=>setRevision(v=>v+1),[]);
   const handlePriceBusy=useCallback((value:boolean)=>{
     setPriceBusy(value);onBusyChange?.(value);
@@ -44,6 +46,15 @@ export default function CatalogueSideWorkspace({mode,onBusyChange}:{mode:Workspa
       if(!auth.ok)throw new Error("Phiên đăng nhập đã hết hạn.");
       const credentials=await auth.json() as {token?:string};
       if(!credentials.token)throw new Error("Không xác thực được tài khoản.");
+      if(mode==="pricing"){
+        const actor=await fetch("/api/admin/session",{
+          cache:"no-store",credentials:"same-origin",signal:controller.signal,
+          headers:{Authorization:"Bearer "+credentials.token,Accept:"application/json"}
+        });
+        if(!actor.ok)throw new Error("Không kiểm tra được quyền xem giá.");
+        const identity=await actor.json() as Envelope<{role?:string}>;
+        if(!controller.signal.aborted)setPricingOwner(identity.data?.role==="owner");
+      }
       const response=await fetch("/api/catalogue/skus",{
         cache:"no-store",credentials:"same-origin",signal:controller.signal,
         headers:{Authorization:"Bearer "+credentials.token,Accept:"application/json"}
@@ -65,7 +76,7 @@ export default function CatalogueSideWorkspace({mode,onBusyChange}:{mode:Workspa
         setError(cause instanceof Error?cause.message:"Không tải được danh sách sản phẩm.");
     }).finally(()=>{if(!controller.signal.aborted)setLoading(false);});
     return()=>controller.abort();
-  },[revision]);
+  },[revision,mode]);
 
   const visible=useMemo(()=>{
     const q=search.trim().toLocaleLowerCase("vi");
@@ -95,6 +106,7 @@ export default function CatalogueSideWorkspace({mode,onBusyChange}:{mode:Workspa
       Giá nguồn, NET, bán lẻ và giá đại lý là dữ liệu riêng tư. Chỉ tài khoản được phân quyền
       mới được xem; chỉ Owner được sửa. Giá lưu là bản nháp, chưa áp dụng cho khách hàng.
     </p>}
+    {pricing&&pricingOwner&&<CataloguePricebookBulk/>}
     <div className="catalogue-side-layout">
       <aside className="catalogue-side-index" aria-label="Chọn mã công ty">
         <label htmlFor="catalogue-side-find">Tìm sản phẩm

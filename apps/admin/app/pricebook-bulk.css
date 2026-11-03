@@ -1,0 +1,50 @@
+.fb-price-bulk{margin:16px 0 20px;padding:16px 18px;border:1px solid #e4e7ef;border-radius:14px;background:#fff;box-shadow:0 4px 18px rgba(32,24,70,.045);font-size:14px;color:#20223b}
+.fb-price-bulk-heading,.fb-price-bulk-history-head{display:flex;align-items:center;justify-content:space-between;gap:16px}
+.fb-price-bulk-heading strong{display:block;font-size:16px}
+.fb-price-bulk-heading small,.fb-price-bulk small{display:block;color:#667085;font-size:12px;line-height:1.5}
+.fb-price-bulk-tools,.fb-price-bulk-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.fb-price-bulk .import-btn{min-height:36px;white-space:nowrap}
+.fb-price-bulk .import-btn:focus-visible,.fb-price-bulk input:focus-visible,.fb-price-bulk select:focus-visible{outline:2px solid #6d249e;outline-offset:2px}
+.fb-price-bulk-form{margin-top:16px;padding-top:16px;border-top:1px solid #e4e7ef}
+.fb-price-bulk-settings{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.fb-price-bulk label{display:flex;flex-direction:column;gap:6px;color:#34314d;font-weight:600;font-size:13px}
+.fb-price-bulk label input,.fb-price-bulk label select{width:100%;min-width:0;min-height:40px;border:1px solid #d7d9e4;border-radius:10px;background:#fff;color:#20223b;padding:8px 11px;font:inherit;font-weight:400}
+.fb-price-bulk-doc{grid-column:span 2}
+.fb-price-bulk-file{margin-top:14px}
+.fb-price-bulk-file input{padding:8px;background:#fafbfc}
+.fb-price-bulk-hint{margin-top:8px}
+.fb-price-bulk-map,.fb-price-bulk-preview,.fb-price-bulk-history{margin-top:18px;padding-top:16px;border-top:1px solid #e4e7ef}
+.fb-price-bulk-map>strong,.fb-price-bulk-preview>strong,.fb-price-bulk-history-head>strong{display:block;font-size:15px;margin-bottom:10px}
+.fb-price-bulk-scroll{max-width:100%;overflow-x:auto;border:1px solid #e4e7ef;border-radius:10px;background:#fff}
+.fb-price-bulk table{border-collapse:collapse;width:100%;font-size:13px;text-align:left;white-space:nowrap}
+.fb-price-bulk th,.fb-price-bulk td{padding:10px 12px;border-bottom:1px solid #eff0f5;vertical-align:middle}
+.fb-price-bulk th{background:#f7f8fc;color:#45445c;font-weight:600}
+.fb-price-bulk tr:last-child td{border-bottom:0}
+.fb-price-bulk tbody tr:hover{background:#f8f5fc}
+.fb-price-bulk th select{min-width:158px;width:100%;max-width:210px;border-radius:8px;border:1px solid #cdd0db;padding:7px;background:white;color:#20223b;font:inherit}
+.fb-price-bulk-actions{justify-content:flex-end;margin-top:14px}
+.fb-price-bulk-summary{display:flex;gap:10px;flex-wrap:wrap;margin:8px 0 12px}
+.fb-price-bulk-summary span{border:1px solid #e4e7ef;border-radius:9px;background:#f8f9fc;padding:8px 10px}
+.fb-price-bulk-status{font-weight:600;color:#667085}
+.fb-price-bulk-status--new,.fb-price-bulk-status--updated{color:#572080}
+.fb-price-bulk-status--invalid,.fb-price-bulk-status--conflict{color:#b42318}
+.fb-price-bulk-history{margin-top:14px}
+.fb-price-bulk-batch-list{margin:12px 0}
+.fb-price-bulk-batch-list p{padding:7px 0;margin:0;border-bottom:1px solid #eff0f5;color:#45445c}
+@media(max-width:860px){
+ .fb-price-bulk-settings{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .fb-price-bulk-heading{align-items:flex-start;flex-direction:column}
+ .fb-price-bulk-tools{width:100%}
+ .fb-price-bulk-doc{grid-column:span 2}
+}
+@media(max-width:520px){
+ .fb-price-bulk{padding:14px 12px}
+ .fb-price-bulk-settings{grid-template-columns:minmax(0,1fr)}
+ .fb-price-bulk-doc{grid-column:auto}
+ .fb-price-bulk-tools .import-btn{flex:1}
+ .fb-price-bulk-actions .import-btn{flex:1}
+}
+@media(prefers-reduced-motion:reduce){.fb-price-bulk *{scroll-behavior:auto!important;transition:none!important}}
+
+.fb-price-bulk .fb-price-bulk-keep-meta{display:flex;flex-direction:row;gap:9px;align-items:flex-start;line-height:1.6;margin:12px 0 4px;color:#45445c;font-weight:400}
+.fb-price-bulk .fb-price-bulk-keep-meta input[type="checkbox"]{width:17px;min-width:17px;height:17px;min-height:17px;margin:3px 0 0;padding:0;accent-color:#6d249e}

@@ -6,7 +6,7 @@ type PriceKind="source"|"net_internal"|"retail_public"|"dealer_contract";
 type PriceEntry={id:string;sku_cong_ty:string;price_kind:PriceKind;customer_id:string|null;
  amount_vnd:string;currency:"VND";vat_included:boolean;vat_rate_bps:number|null;
  source_document:string;effective_from:string;effective_until:string|null;
- approval_state:"draft";revision:number};
+ approval_state:"draft"|"approved";revision:number};
 type PriceList={entries:PriceEntry[];currency:string;empty:boolean};
 type Data<T>={data?:T;error?:{code?:string}};
 const KINDS:[PriceKind,string,string][]=[
@@ -15,6 +15,7 @@ const KINDS:[PriceKind,string,string][]=[
  ["retail_public","Giá bán lẻ","Giá dành cho người tiêu dùng, chưa công khai."],
  ["dealer_contract","Giá đại lý","Giá riêng cho tài khoản đại lý đã có."]
 ];
+const TODAY_VN=new Date(Date.now()+7*3600000).toISOString().slice(0,10);
 const validUuid=(value:string)=>/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(value);
 const formatVnd=(value:string)=>/^[0-9]+$/.test(value)?
   new Intl.NumberFormat("vi-VN",{maximumFractionDigits:0}).format(Number(value))+" ₫":"—";
@@ -140,6 +141,31 @@ export default function CataloguePricebookPanel({sku,onBusyChange}:{sku:string;o
   }catch(e){setError(e instanceof Error?e.message:"Không lưu được giá.");}
   finally{setSaving(false);}
  };
+ const approve=async(entry:PriceEntry)=>{
+  if(!owner||saving||entry.approval_state!=="draft")return;
+  if(!window.confirm("Duyệt giá này cho mục đích nội bộ? Sau ngày hiệu lực, giá vẫn không tự xuất bản lên Web/App."))return;
+  setSaving(true);setError("");setNotice("");
+  try{
+   const token=await bearer();
+   const response=await fetch("/api/pricing/bulk/approve",{
+    method:"POST",cache:"no-store",credentials:"same-origin",
+    headers:{Authorization:"Bearer "+token,"Content-Type":"application/json",Accept:"application/json"},
+    body:JSON.stringify({id:entry.id,expected_revision:entry.revision,confirm:"DUYET_GIA_NOI_BO"})
+   });
+   if(!response.ok)throw new Error(response.status===409?
+    "Giá đã đổi hoặc trùng thời gian hiệu lực. Hãy tải lại.":"Không duyệt được giá nội bộ.");
+   await refresh();startNew();
+   setNotice("Đã duyệt giá nội bộ. Không tự công khai trên Website hoặc App.");
+  }catch(e){setError(e instanceof Error?e.message:"Không duyệt được giá.");}
+  finally{setSaving(false);}
+ };
+ const effectiveStatus=(entry:PriceEntry)=>{
+  if(entry.approval_state==="draft")return "Nháp";
+  const today=TODAY_VN;
+  if(entry.effective_from>today)return "Đã duyệt · Chờ ngày hiệu lực";
+  if(entry.effective_until&&entry.effective_until<today)return "Đã hết hạn";
+  return "Đã duyệt · Đang hiệu lực nội bộ";
+ };
  // A transient load failure must not remove the retry button after the toast dismisses.
  if(!loading&&!authorized&&!loadFailed)return null;
  return <section className="catalogue-pricebook" aria-label="Giá sản phẩm nội bộ">
@@ -162,7 +188,7 @@ export default function CataloguePricebookPanel({sku,onBusyChange}:{sku:string;o
        onClick={()=>{setKind(code);startNew();}}>
        <strong>{label}</strong>
        <small>{description}</small>
-       <span>{entries.filter(e=>e.price_kind===code).length?entries.filter(e=>e.price_kind===code).length+" bản nháp":"Chưa có giá"}</span>
+       <span>{entries.filter(e=>e.price_kind===code).length?entries.filter(e=>e.price_kind===code).length+" bản giá":"Chưa có giá"}</span>
       </button>)}
     </div>
     <div className="catalogue-pricebook-content">
@@ -175,12 +201,16 @@ export default function CataloguePricebookPanel({sku,onBusyChange}:{sku:string;o
         {selected.map(entry=><div className="catalogue-pricebook-entry" key={entry.id}>
          <div><strong>{formatVnd(entry.amount_vnd)}</strong>
           <small>Áp dụng từ {entry.effective_from}{entry.effective_until?" đến "+entry.effective_until:""} ·
-           {entry.vat_included?" Đã gồm VAT":" Chưa gồm VAT"} · Nháp #{entry.revision}</small>
+           {entry.vat_included?" Đã gồm VAT":" Chưa gồm VAT"} · {effectiveStatus(entry)} · Revision #{entry.revision}</small>
           <small>Nguồn: {entry.source_document}</small>
           {entry.customer_id&&<small>Đại lý: {entry.customer_id}</small>}
          </div>
-         {owner&&<button type="button" className="import-btn import-secondary" onClick={()=>edit(entry)}
-           disabled={saving}>Sửa giá</button>}
+         {owner&&entry.approval_state==="draft"&&<div className="catalogue-pricebook-entry-actions">
+          <button type="button" className="import-btn import-secondary" onClick={()=>edit(entry)}
+           disabled={saving}>Sửa giá</button>
+          <button type="button" className="import-btn import-secondary" onClick={()=>void approve(entry)}
+           disabled={saving}>Duyệt nội bộ</button>
+         </div>}
         </div>)}
        </div>}
      {owner?<div className="catalogue-pricebook-form">
