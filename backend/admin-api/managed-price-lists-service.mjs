@@ -65,7 +65,9 @@ async function getLists(db){
   "l.channel_codes,l.scope_customer_type,l.scope_customer_id::text,l.priority,"+
   "l.valid_from::text,l.valid_until::text,l.approval_state,l.revision,l.created_at::text,"+
   "c.customer_code,c.display_name AS customer_name,"+
-  "(SELECT count(*)::int FROM "+S+".managed_price_list_prices p WHERE p.list_id=l.id) price_count "+
+  "(SELECT count(*)::int FROM "+S+".managed_price_list_prices p WHERE p.list_id=l.id) price_count, "+
+  "(SELECT count(*)::int FROM "+S+".managed_price_list_prices p WHERE p.list_id=l.id "+
+  "AND p.approval_state='draft') draft_count "+
   "FROM "+S+".managed_price_lists l LEFT JOIN futurebook.customers c ON c.id=l.scope_customer_id "+
   "ORDER BY l.created_at DESC,l.list_code LIMIT 1000"));
  return OK({items:result.rows});
@@ -107,13 +109,44 @@ async function updateList(db,input,actor,mode){
    const old=await c.query("SELECT * FROM "+S+".managed_price_lists WHERE id=$1 FOR UPDATE",[input.id]);
    if(old.rowCount!==1||old.rows[0].revision!==input.expected_revision)throw Error("revision_conflict");
    const previous=old.rows[0];
-   if(mode==="edit"&&previous.approval_state!=="draft")throw Error("approved_list_locked");
-   if(mode==="approve"){
-    if(previous.approval_state!=="draft")throw Error("approved_list_locked");
-    const approved=await c.query("SELECT 1 FROM "+S+".managed_price_list_prices "+
-     "WHERE list_id=$1 AND approval_state='approved' LIMIT 1",[input.id]);
-    if(!approved.rowCount)throw Error("approved_price_required");
+   // Owner can edit an applied list. Changing the audience/channel/customer of
+   // an applied list is restricted: moving private dealer prices to a consumer
+   // scope must first go through Stop -> edit -> Apply.
+   if(mode==="edit"&&previous.approval_state==="approved"&&(
+    previous.audience!==input.audience||
+    JSON.stringify(previous.channel_codes)!==JSON.stringify(input.channel_codes)||
+    (previous.scope_customer_type||null)!==(input.scope_customer_type||null)||
+    (previous.scope_customer_id||null)!==(input.scope_customer_id||null)))
+    throw Error("active_scope_locked");
+   if(mode==="apply"){
+    const all=await c.query("SELECT * FROM "+S+".managed_price_list_prices WHERE list_id=$1 FOR UPDATE",[input.id]);
+    if(!all.rowCount)throw Error("price_required");
+    // Fail closed if multiple price periods for one SKU overlap. Apply happens
+    // atomically for all staged rows; never publish to public/consumer APIs.
+    const overlap=await c.query("SELECT 1 FROM "+S+".managed_price_list_prices a "+
+     "JOIN "+S+".managed_price_list_prices b ON b.list_id=a.list_id "+
+     "AND b.sku_cong_ty=a.sku_cong_ty AND b.id>a.id "+
+     "AND daterange(a.valid_from,a.valid_until,'[]') && daterange(b.valid_from,b.valid_until,'[]') "+
+     "WHERE a.list_id=$1 LIMIT 1",[input.id]);
+    if(overlap.rowCount)throw Error("price_period_overlap");
+    const changed=await c.query("UPDATE "+S+".managed_price_list_prices SET "+
+     "approval_state='approved',approved_by=$2,approved_at=now(),revision=revision+1,"+
+     "updated_by=$2,updated_at=now() WHERE list_id=$1 AND approval_state='draft' RETURNING *",[
+      input.id,actor.subject]);
+    if(previous.approval_state==="approved"&&!changed.rowCount)throw Error("already_applied");
+    if(changed.rowCount){
+     const original=new Map(all.rows.map(row=>[String(row.id),row]));
+     const audit=changed.rows.map(row=>({
+      price_id:row.id,old_value:original.get(String(row.id)),new_value:row
+     }));
+     await c.query("INSERT INTO "+S+".managed_price_audit "+
+      "(actor_subject,action,list_id,price_id,old_value,new_value) "+
+      "SELECT $1,'price.apply',$2::uuid,row.price_id::uuid,row.old_value,row.new_value "+
+      "FROM jsonb_to_recordset($3::jsonb) AS row(price_id text,old_value jsonb,new_value jsonb)",[
+       actor.subject,input.id,JSON.stringify(audit)]);
+    }
    }
+   if(mode==="deactivate"&&previous.approval_state==="inactive")throw Error("already_inactive");
    if(mode==="edit"&&!await customerExists(c,input.scope_customer_id))throw Error("customer_not_found");
    let updated;
    if(mode==="edit"){
@@ -125,20 +158,21 @@ async function updateList(db,input,actor,mode){
       input.scope_customer_id||null,input.priority,input.valid_from,input.valid_until,actor.subject,input.id]);
     updated=query.rows[0];
    }else{
-    const next=mode==="approve"?"approved":"inactive";
+    const next=mode==="apply"?"approved":"inactive";
     updated=(await c.query("UPDATE "+S+".managed_price_lists SET "+
      "approval_state=$1,approved_by=$2,approved_at=$3,revision=revision+1,"+
      "updated_by=$4,updated_at=now() WHERE id=$5 RETURNING *",[
       next,next==="approved"?actor.subject:null,next==="approved"?new Date().toISOString():null,
       actor.subject,input.id])).rows[0];
    }
-   await log(c,actor,"list."+(mode==="edit"?"update":mode==="approve"?"approve":"deactivate"),
+   await log(c,actor,"list."+(mode==="edit"?"update":mode==="apply"?"apply":"deactivate"),
     input.id,null,previous,updated);
    return {id:input.id,revision:updated.revision,approval_state:updated.approval_state};
   });return OK(result);
- }catch(e){const c=e?.message;return ERR(c==="revision_conflict"||c==="approved_list_locked"||
-  c==="approved_price_required"||c==="customer_not_found"?409:503,
-  ["revision_conflict","approved_list_locked","approved_price_required","customer_not_found"].includes(c)?c:"price_list_write_failed");}
+  }catch(e){const c=e?.message;return ERR(["revision_conflict","active_scope_locked","price_required",
+  "price_period_overlap","already_applied","already_inactive","customer_not_found"].includes(c)?409:503,
+  ["revision_conflict","active_scope_locked","price_required","price_period_overlap",
+   "already_applied","already_inactive","customer_not_found"].includes(c)?c:"price_list_write_failed");}
 }
 async function getPrices(db,url){
  const id=url.searchParams.get("list_id");
@@ -167,71 +201,60 @@ async function getExportPrices(db,url){
 }
 const MONEY=v=>typeof v==="string"&&/^(0|[1-9][0-9]{0,12})$/.test(v)&&BigInt(v)<=1000000000000n;
 async function setPrice(db,input,actor){
- if(!UUID(input?.list_id)||!TEXT(input.sku_cong_ty,1,80)||!MONEY(input.amount_vnd)||
+ if(!UUID(input?.list_id)||!Number.isInteger(input.expected_list_revision)||
+  input.expected_list_revision<1||!TEXT(input.sku_cong_ty,1,80)||!MONEY(input.amount_vnd)||
   typeof input.vat_included!=="boolean"||!TEXT(input.source_document,1,300)||
   !DATE(input.valid_from)||input.valid_until!==null&&(!DATE(input.valid_until)||input.valid_until<input.valid_from))
   return ERR(400,"invalid_price");
  try{
   const value=await tx(db,async c=>{
    await c.query("SELECT pg_advisory_xact_lock(hashtext($1))",["managed-price:"+input.list_id+":"+input.sku_cong_ty]);
-   const list=await c.query("SELECT approval_state FROM "+S+".managed_price_lists WHERE id=$1 FOR UPDATE",[input.list_id]);
-   if(list.rowCount!==1||list.rows[0].approval_state!=="draft")throw Error("list_not_editable");
+   const list=await c.query("SELECT approval_state,revision FROM "+S+".managed_price_lists WHERE id=$1 FOR UPDATE",[input.list_id]);
+   if(list.rowCount!==1||list.rows[0].approval_state==="inactive")throw Error("list_not_editable");
+   if(list.rows[0].revision!==input.expected_list_revision)throw Error("revision_conflict");
    const sku=await c.query("SELECT sku_cong_ty FROM fbmn_catalog.skus WHERE sku_cong_ty=$1",[input.sku_cong_ty]);
    if(sku.rowCount!==1)throw Error("sku_not_found");
    const previous=await c.query("SELECT * FROM "+S+".managed_price_list_prices "+
     "WHERE list_id=$1 AND sku_cong_ty=$2 AND valid_from=$3::date FOR UPDATE",[
      input.list_id,input.sku_cong_ty,input.valid_from]);
    const old=previous.rows[0]||null;
-   if(old?.approval_state==="approved")throw Error("approved_price_locked");
+   if(list.rows[0].approval_state==="approved"){
+    const overlaps=await c.query("SELECT 1 FROM "+S+".managed_price_list_prices "+
+     "WHERE list_id=$1 AND sku_cong_ty=$2 AND approval_state='approved' "+
+     "AND id IS DISTINCT FROM $3::uuid "+
+     "AND daterange(valid_from,valid_until,'[]') && daterange($4::date,$5::date,'[]') LIMIT 1",[
+      input.list_id,input.sku_cong_ty,old?.id||null,input.valid_from,input.valid_until]);
+    if(overlaps.rowCount)throw Error("price_period_overlap");
+   }
    let updated;
    if(old){
     if(!Number.isInteger(input.expected_revision)||old.revision!==input.expected_revision)
      throw Error("revision_conflict");
     updated=(await c.query("UPDATE "+S+".managed_price_list_prices SET "+
       "amount_vnd=$1,vat_included=$2,source_document=$3,valid_until=$4::date,"+
+      "approval_state=$7,approved_by=$8,approved_at=$9,"+
       "revision=revision+1,updated_by=$5,updated_at=now() WHERE id=$6 RETURNING *",[
-       input.amount_vnd,input.vat_included,input.source_document,input.valid_until,actor.subject,old.id])).rows[0];
+       input.amount_vnd,input.vat_included,input.source_document,input.valid_until,actor.subject,old.id,
+       list.rows[0].approval_state==="approved"?"approved":old.approval_state,
+       list.rows[0].approval_state==="approved"?actor.subject:old.approved_by||null,
+       list.rows[0].approval_state==="approved"?new Date().toISOString():old.approved_at||null])).rows[0];
    }else{
     updated=(await c.query("INSERT INTO "+S+".managed_price_list_prices "+
-     "(list_id,sku_cong_ty,amount_vnd,vat_included,source_document,valid_from,valid_until,updated_by) "+
-     "VALUES($1,$2,$3,$4,$5,$6::date,$7::date,$8) RETURNING *",[
+     "(list_id,sku_cong_ty,amount_vnd,vat_included,source_document,valid_from,valid_until,"+
+     "updated_by,approval_state,approved_by,approved_at) "+
+     "VALUES($1,$2,$3,$4,$5,$6::date,$7::date,$8,$9,$10,$11) RETURNING *",[
       input.list_id,input.sku_cong_ty,input.amount_vnd,input.vat_included,input.source_document,
-      input.valid_from,input.valid_until,actor.subject])).rows[0];
+      input.valid_from,input.valid_until,actor.subject,
+      list.rows[0].approval_state==="approved"?"approved":"draft",
+      list.rows[0].approval_state==="approved"?actor.subject:null,
+      list.rows[0].approval_state==="approved"?new Date().toISOString():null])).rows[0];
    }
    await log(c,actor,old?"price.update":"price.create",input.list_id,updated.id,old,updated);
    return {id:updated.id,revision:updated.revision,approval_state:updated.approval_state};
   });return OK(value);
  }catch(e){const code=e?.message;return ERR([
-  "list_not_editable","sku_not_found","approved_price_locked","revision_conflict"].includes(code)?409:503,
-  ["list_not_editable","sku_not_found","approved_price_locked","revision_conflict"].includes(code)?code:"price_write_failed");}
-}
-async function approvePrice(db,input,actor){
- if(!UUID(input?.id)||!Number.isInteger(input.expected_revision))return ERR(400,"invalid_approval");
- try{
-  const value=await tx(db,async c=>{
-   // Lock the parent price list before the item, matching the manual
-   // update path so approval and deactivation cannot race.
-   const target=await c.query("SELECT list_id FROM "+S+".managed_price_list_prices WHERE id=$1",[input.id]);
-   if(target.rowCount!==1)throw Error("revision_conflict");
-   const list=await c.query("SELECT approval_state FROM "+S+".managed_price_lists WHERE id=$1 FOR UPDATE",
-    [target.rows[0].list_id]);
-   if(list.rowCount!==1||list.rows[0].approval_state!=="draft")throw Error("list_not_editable");
-   const old=await c.query("SELECT * FROM "+S+".managed_price_list_prices WHERE id=$1 FOR UPDATE",[input.id]);
-   const p=old.rows[0];
-   if(!p||p.revision!==input.expected_revision||p.approval_state!=="draft")throw Error("revision_conflict");
-   const conflicts=await c.query("SELECT 1 FROM "+S+".managed_price_list_prices "+
-    "WHERE id<>$1 AND list_id=$2 AND sku_cong_ty=$3 AND approval_state='approved' "+
-    "AND daterange(valid_from,valid_until,'[]') && daterange($4::date,$5::date,'[]') LIMIT 1",[
-     p.id,p.list_id,p.sku_cong_ty,p.valid_from,p.valid_until]);
-   if(conflicts.rowCount)throw Error("approved_period_overlap");
-   const updated=(await c.query("UPDATE "+S+".managed_price_list_prices SET "+
-    "approval_state='approved',approved_by=$1,approved_at=now(),revision=revision+1,"+
-    "updated_by=$1,updated_at=now() WHERE id=$2 RETURNING *",[actor.subject,p.id])).rows[0];
-   await log(c,actor,"price.approve",p.list_id,p.id,p,updated);
-   return {id:p.id,revision:updated.revision,approval_state:updated.approval_state};
-  });return OK(value);
- }catch(e){const code=e?.message;return ERR(["revision_conflict","approved_period_overlap","list_not_editable"].includes(code)?409:503,
-  ["revision_conflict","approved_period_overlap","list_not_editable"].includes(code)?code:"approval_failed");}
+  "list_not_editable","sku_not_found","price_period_overlap","revision_conflict"].includes(code)?409:503,
+  ["list_not_editable","sku_not_found","price_period_overlap","revision_conflict"].includes(code)?code:"price_write_failed");}
 }
 async function resolvePrice(db,input){
  if(!input||!TEXT(input.sku_cong_ty,1,80)||!CHANNELS.has(input.channel_code)||
@@ -305,10 +328,9 @@ export async function handleManagedPriceLists({request,actor,db}){
  const input=await body(request);if(!input)return ERR(400,"invalid_body");
  if(action==="create")return createList(db,input,actor);
  if(action==="update")return updateList(db,input,actor,"edit");
- if(action==="approve")return updateList(db,input,actor,"approve");
+ if(action==="apply")return updateList(db,input,actor,"apply");
  if(action==="deactivate")return updateList(db,input,actor,"deactivate");
  if(action==="price")return setPrice(db,input,actor);
- if(action==="price-approve")return approvePrice(db,input,actor);
  if(action==="resolve")return resolvePrice(db,input);
  if(action==="bulk-preview"||action==="bulk-apply")return handleManagedPriceImport({action,input,actor,db});
  return ERR(404,"not_found");

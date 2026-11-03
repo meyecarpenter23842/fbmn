@@ -158,3 +158,26 @@ test("reimporting an existing period preserves its SKU expiry, not the parent ex
  const audit=db.calls.find(x=>x.sql.startsWith("INSERT INTO fbmn_catalog_private.managed_price_audit"));
  assert.equal(JSON.parse(audit.args[2])[0].new_value.valid_until,"2027-06-30");
 });
+
+test("Excel previews and updates an already-applied SKU price in its exact period",async()=>{
+ const approved={id:"approved-id",sku_cong_ty:"0114",amount_vnd:"15000",
+  vat_included:false,revision:2,approval_state:"approved",
+  valid_from:"2027-01-01",valid_until:null};
+ const db=fakeDb({approval:"approved",existing:[approved]});
+ const request=input([{line:2,sku_cong_ty:"0114",amount_vnd:"19000"}]);
+ const preview=await invoke("bulk-preview",request,actor,db);
+ assert.equal(preview.status,200);
+ assert.equal(preview.payload.data.updated,1);
+ assert.equal(preview.payload.data.invalid,0);
+ const saved=await invoke("bulk-apply",{
+  ...request,preview_fingerprint:preview.payload.data.preview_fingerprint,
+  confirm:"XAC_NHAN_GIA_NHAP"
+ },actor,db);
+ assert.equal(saved.status,200);
+ assert.equal(saved.payload.data.approval_state,"approved");
+ const sql=db.calls.find(x=>x.sql.startsWith("INSERT INTO fbmn_catalog_private.managed_price_list_prices"));
+ assert.equal(sql.args[5],"approved");
+ assert.match(sql.sql,/ON CONFLICT/);
+ assert.match(sql.sql,/approved_by=EXCLUDED.approved_by/);
+ assert.ok(db.calls.some(x=>x.sql.includes("managed_price_audit")));
+});

@@ -14,8 +14,10 @@ test("user-defined list code and name replace fixed prices as default Admin work
  assert.match(list,/channel_codes/);
  assert.match(list,/scope_customer_id/);
  assert.match(list,/Áp dụng cho một khách hàng/);
- assert.match(list,/approval_state==="draft"/);
- assert.match(list,/Duyệt bảng giá/);
+ assert.match(list,/approval_state==="approved"/);
+ assert.match(list,/Áp dụng/);
+ assert.match(list,/>Áp dụng<\/button>/);
+ assert.doesNotMatch(list,/Duyệt bảng giá|Duyệt mức giá/);
  assert.match(list,/Kênh sử dụng bảng giá/);
  assert.doesNotMatch(list,/localStorage|sessionStorage|console\.log/);
 });
@@ -29,7 +31,8 @@ test("price list API authenticates Owner and scopes are not public",()=>{
  assert.match(backend,/actor\?\.role!=="owner"/);
  assert.match(backend,/scope_customer_type/);
  assert.match(backend,/valid_from/);
- assert.match(backend,/approved_price_required/);
+ assert.match(backend,/price_required/);
+ assert.match(backend,/if\(action==="apply"\)/);
  assert.match(backend,/source_document/);
 });
 test("shared button geometry is consistent and retains mobile hit target",()=>{

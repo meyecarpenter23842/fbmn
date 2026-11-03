@@ -23,8 +23,8 @@ function mock(initial=[]){
     list_code:args[0],list_name:args[1],revision:1,approval_state:"draft"}]};
   if(sql.startsWith("SELECT * FROM fbmn_catalog_private.managed_price_lists "))
    return {rowCount:initial.length,rows:initial};
-  if(sql.startsWith("SELECT approval_state FROM fbmn_catalog_private.managed_price_lists"))
-   return {rowCount:1,rows:[{approval_state:"draft"}]};
+  if(sql.startsWith("SELECT approval_state,revision FROM fbmn_catalog_private.managed_price_lists"))
+   return {rowCount:1,rows:[{approval_state:"draft",revision:1}]};
   if(sql.startsWith("SELECT sku_cong_ty FROM fbmn_catalog.skus"))
    return {rowCount:1,rows:[{sku_cong_ty:args[0]}]};
   if(sql.startsWith("SELECT * FROM fbmn_catalog_private.managed_price_list_prices "))
@@ -80,7 +80,7 @@ test("reject unassigned consumer list and mixed NET/dealer-to-public scope",asyn
 test("minimal SKU draft requires a real VND amount, explicit VAT and source",async()=>{
  const a=mock();
  const input={list_id:"10000000-0000-4000-8000-000000000001",
-  sku_cong_ty:"0114",amount_vnd:"12000",vat_included:false,source_document:"Company price source",
+  expected_list_revision:1,sku_cong_ty:"0114",amount_vnd:"12000",vat_included:false,source_document:"Company price source",
   valid_from:"2027-01-01",valid_until:null};
  for(const invalid of [
   {...input,amount_vnd:"-12000"}, {...input,vat_included:null},
@@ -185,4 +185,108 @@ test("mixed channel price list never accepts private customer scope",async()=>{
   assert.equal(answer.status,400,JSON.stringify(leak));
  }
  assert.equal(a.queries.length,0);
+});
+
+test("Owner applies all staged SKU prices in one audited transaction, with no SKU approval endpoint",async()=>{
+ const prices=[{id:"20000000-0000-4000-8000-000000000002",
+  list_id:"10000000-0000-4000-8000-000000000001",
+  sku_cong_ty:"0114",approval_state:"draft",revision:1,amount_vnd:12000}];
+ const list={...base,id:"10000000-0000-4000-8000-000000000001",
+  revision:1,approval_state:"draft",approved_by:null,approved_at:null};
+ const seen=[];
+ const db=async(fn)=>fn({query:async(sql,args=[])=>{
+  seen.push({sql,args});
+  if(sql.startsWith("SELECT * FROM fbmn_catalog_private.managed_price_lists WHERE id="))
+   return {rowCount:1,rows:[list]};
+  if(sql.startsWith("SELECT * FROM fbmn_catalog_private.managed_price_list_prices WHERE list_id="))
+   return {rowCount:prices.length,rows:prices};
+  if(sql.startsWith("SELECT 1 FROM fbmn_catalog_private.managed_price_list_prices a"))
+   return {rowCount:0,rows:[]};
+  if(sql.startsWith("UPDATE fbmn_catalog_private.managed_price_list_prices SET"))
+   return {rowCount:1,rows:prices.map(p=>({...p,approval_state:"approved",revision:2}))};
+  if(sql.startsWith("UPDATE fbmn_catalog_private.managed_price_lists SET"))
+   return {rowCount:1,rows:[{...list,approval_state:"approved",revision:2}]};
+  return {rowCount:0,rows:[]};
+ }});
+ const id=list.id;
+ const response=await handleManagedPriceLists({
+  request:request("/apply","POST",{id,expected_revision:1}),actor,db});
+ assert.equal(response.status,200);
+ assert.equal((await response.json()).data.approval_state,"approved");
+ assert.ok(seen.some(x=>x.sql.includes("managed_price_list_prices SET")));
+ assert.ok(seen.some(x=>x.sql.includes("price.apply")));
+ assert.ok(seen.some(x=>x.sql==="COMMIT"));
+ for(const action of ["approve","price-approve"]){
+  const revoked=await handleManagedPriceLists({request:request("/"+action,"POST",{id}),actor,db});
+  assert.equal(revoked.status,404);
+ }
+});
+test("Apply cannot activate empty price lists or change private channel scope silently",async()=>{
+ const list={...base,id:"10000000-0000-4000-8000-000000000001",revision:1,approval_state:"draft"};
+ const seen=[];
+ const db=async(fn)=>fn({query:async(sql,args=[])=>{
+  seen.push(sql);
+  if(sql.startsWith("SELECT * FROM fbmn_catalog_private.managed_price_lists WHERE id="))
+   return {rowCount:1,rows:[list]};
+  return {rowCount:0,rows:[]};
+ }});
+ const res=await handleManagedPriceLists({request:request("/apply","POST",{
+  id:list.id,expected_revision:1
+ }),actor,db});
+ assert.equal(res.status,409);
+ assert.equal((await res.json()).error.code,"price_required");
+ assert.ok(seen.includes("ROLLBACK"));
+ assert.ok(!seen.some(sql=>sql.includes("UPDATE fbmn_catalog_private.managed_price_lists")));
+ const activeDb=async(fn)=>fn({query:async(sql)=>{
+  if(sql.startsWith("SELECT * FROM fbmn_catalog_private.managed_price_lists WHERE id="))
+   return {rowCount:1,rows:[{...list,approval_state:"approved"}]};
+  return {rowCount:0,rows:[]};
+ }});
+ const edit=await handleManagedPriceLists({request:request("/update","POST",{
+  ...base,id:list.id,expected_revision:1,audience:"consumer",channel_codes:["public_web"],
+  scope_customer_type:null
+ }),actor,db:activeDb});
+ assert.equal(edit.status,409);
+ assert.equal((await edit.json()).error.code,"active_scope_locked");
+});
+test("Owner saving a price inside an applied list stays applied with audit, not publish",async()=>{
+ const seen=[],id="10000000-0000-4000-8000-000000000001";
+ const db=async(fn)=>fn({query:async(sql,args=[])=>{
+  seen.push({sql,args});
+  if(sql.startsWith("SELECT approval_state,revision FROM fbmn_catalog_private.managed_price_lists"))
+   return {rowCount:1,rows:[{approval_state:"approved",revision:1}]};
+  if(sql.startsWith("SELECT sku_cong_ty FROM fbmn_catalog.skus"))
+   return {rowCount:1,rows:[{sku_cong_ty:args[0]}]};
+  if(sql.startsWith("INSERT INTO fbmn_catalog_private.managed_price_list_prices "))
+   return {rowCount:1,rows:[{id:"20000000-0000-4000-8000-000000000002",
+    approval_state:args[8],revision:1}]};
+  return {rowCount:0,rows:[]};
+ }});
+ const answer=await handleManagedPriceLists({request:request("/price","POST",{
+  list_id:id,expected_list_revision:1,sku_cong_ty:"0114",amount_vnd:"22000",vat_included:false,
+  source_document:"Verified real source",valid_from:"2027-01-01",valid_until:null
+ }),actor,db});
+ assert.equal(answer.status,200);
+ assert.equal((await answer.json()).data.approval_state,"approved");
+ assert.ok(seen.some(x=>x.sql.includes("managed_price_audit")));
+ assert.ok(!seen.some(x=>x.sql.includes("public_web")||x.sql.includes("/public/")));
+});
+
+test("stale open price drawer cannot activate a new SKU after another tab applies the list",async()=>{
+ const seen=[];
+ const db=async(fn)=>fn({query:async(sql,args=[])=>{
+  seen.push({sql,args});
+  if(sql.startsWith("SELECT approval_state,revision FROM fbmn_catalog_private.managed_price_lists"))
+   return {rowCount:1,rows:[{approval_state:"approved",revision:2}]};
+  return {rowCount:0,rows:[]};
+ }});
+ const response=await handleManagedPriceLists({request:request("/price","POST",{
+  list_id:"10000000-0000-4000-8000-000000000001",expected_list_revision:1,
+  sku_cong_ty:"0114",amount_vnd:"24000",vat_included:true,
+  source_document:"Verified only",valid_from:"2027-01-01",valid_until:null
+ }),actor,db});
+ assert.equal(response.status,409);
+ assert.equal((await response.json()).error.code,"revision_conflict");
+ assert.ok(seen.some(x=>x.sql==="ROLLBACK"));
+ assert.ok(!seen.some(x=>x.sql.startsWith("INSERT INTO fbmn_catalog_private.managed_price_list_prices")));
 });

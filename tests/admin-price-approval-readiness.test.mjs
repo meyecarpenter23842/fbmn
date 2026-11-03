@@ -2,45 +2,57 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {readFileSync} from "node:fs";
 const read=p=>readFileSync(new URL("../"+p,import.meta.url),"utf8");
-const src=read("apps/admin/app/catalogue-managed-prices.tsx");
-const css=read("apps/admin/app/managed-price-lists.css");
+const ui=read("apps/admin/app/catalogue-managed-prices.tsx");
+const importer=read("apps/admin/app/catalogue-managed-price-import.tsx");
+const api=read("backend/admin-api/managed-price-lists-service.mjs");
+const bulk=read("backend/admin-api/managed-price-import-service.mjs");
+const route=read("apps/admin/app/api/pricing/managed/[[...path]]/route.ts");
+test("Owner workflow is Save → Apply, not per-SKU or list double approval",()=>{
+ assert.match(ui,/async function applyList\(item:List\)/);
+ assert.match(ui,/await query\("\/apply","POST"/);
+ assert.match(ui,/>Áp dụng<\/button>/);
+ assert.match(ui,/>Lưu giá<\/button>/);
+ for(const old of [/Duyệt bảng giá/,/Duyệt mức giá/,/approvePrice\(/,/async function approveList/,/query\("\/price-approve"/])
+  assert.doesNotMatch(ui,old);
+ assert.match(ui,/chosen\.draft_count>0/);
+ assert.match(ui,/chosen\.price_count===0/);
+});
+test("API saves drafts then applies all prices atomically and leaves publication separate",()=>{
+ assert.match(api,/mode==="apply"/);
+ assert.match(api,/approval_state='approved',approved_by=\$2/);
+ assert.match(api,/price\.apply/);
+ assert.match(api,/price_period_overlap/);
+ assert.match(api,/active_scope_locked/);
+ assert.match(api,/if\(action==="apply"\)/);
+ assert.doesNotMatch(api,/if\(action==="price-approve"\)/);
+ assert.doesNotMatch(api,/if\(action==="approve"\)/);
+ assert.match(route,/new Set\(\["create","update","apply","deactivate","price"/);
+ assert.doesNotMatch(route,/"price-approve"/);
+});
+test("Excel saves to user-selected live or draft list and keeps preview audit protection",()=>{
+ assert.match(importer,/selected\.approval_state==="inactive"/);
+ assert.match(importer,/Xác nhận lưu giá/);
+ assert.match(importer,/preview_fingerprint:preview\.preview_fingerprint/);
+ assert.match(bulk,/preview\.target\.approval_state==="approved"/);
+ assert.match(bulk,/approval_state=EXCLUDED.approval_state/);
+ assert.match(bulk,/test_file_preview_only/);
+});
+test("channel and customer must not be changed on active list without stopping",()=>{
+ assert.match(ui,/Muốn đổi kênh\/khách/);
+ assert.match(ui,/disabled=\{busy\|\|Boolean\(editingId&&chosen\?\.approval_state==="approved"\)\}/);
+ assert.match(api,/throw Error\("active_scope_locked"\)/);
+ assert.match(ui,/Ngừng áp dụng/);
+});
 
-test("draft price list shows actual approved SKU count and actionable next step",()=>{
- assert.match(src,/visiblePrices\.filter\(item=>item\.approval_state==="approved"\)\.length/);
- assert.match(src,/chosen\.price_count===0\|\|\(approvedSkuCount===0&&!priceListIsPartial\)/);
- assert.match(src,/visiblePrices\.length<chosen\.price_count/);
- assert.match(src,/fb-managed-approved-count/);
- assert.match(src,/fb-managed-approval-guide/);
- assert.match(src,/Chưa đủ điều kiện duyệt bảng giá/);
- for(const label of ["Xem giá","Thêm giá","Nhập từ Excel","duyệt từng mức giá SKU"])assert.ok(src.includes(label),label);
-});
-test("prevent futile approval while remaining fail-closed on the backend",()=>{
- assert.match(src,/disabled=\{busy\|\|approvalBlocked\} onClick=\{\(\)=>void approveList\(chosen\)\}/);
- assert.match(src,/if\(item\.price_count===0\|\|\(item\.id===chosenId&&approvedSkuCount===0&&!priceListIsPartial\)\)/);
- assert.match(src,/await query\("\/approve","POST",\{id:item\.id,expected_revision:item\.revision\}\)/);
- assert.match(src,/approved_price_required:"Bảng giá chưa có mức giá SKU được duyệt/);
- assert.doesNotMatch(src,/autoApprove|auto_approve/);
-});
-test("precondition status stays separate from operation toast and uses legible text",()=>{
- assert.match(css,/\.fb-managed-approved-count/);
- assert.match(css,/\.fb-managed-approval-guide/);
- assert.match(css,/font-size:13px/);
- assert.match(src,/role="note"/);
- assert.match(src,/<AdminToast message=\{toast\?\.message\|\|""\}/);
+test("manual price editing rejects stale list revision across browser tabs",()=>{
+ assert.match(ui,/setPriceListSnapshot\(\{id:chosen\.id,revision:chosen\.revision\}\)/);
+ assert.match(ui,/expected_list_revision:priceListSnapshot\.revision/);
+ assert.match(api,/input\.expected_list_revision/);
+ assert.match(api,/list\.rows\[0\]\.revision!==input\.expected_list_revision/);
 });
 
-test("truncated price lists never falsely lock approval (server remains authoritative)",()=>{
- assert.match(src,/const priceListIsPartial=/);
- assert.match(src,/visiblePrices\.length<chosen\.price_count/);
- assert.match(src,/approvedSkuCount===0&&!priceListIsPartial/);
- assert.match(src,/Đã tải /);
-});
-
-test("eligibility colors reuse the central Admin tokens without screen-level overrides",()=>{
- const globalCss=read("apps/admin/app/admin-controls.css");
- for(const token of ["--fb-ui-success-ink","--fb-ui-warning-ink","--fb-ui-warning-bg","--fb-ui-warning-border"]){
-  assert.ok(globalCss.includes(token+":"),token);
-  assert.ok(css.includes("var("+token+")"),token);
- }
- assert.doesNotMatch(css,/\.fb-managed-approved-count[^\n]*!important/);
+test("Excel confirmation uses freshly previewed list state, not cached tab data",()=>{
+ assert.match(importer,/target:\{list_code:string;list_name:string;\s*approval_state:"draft"\|"approved"\|"inactive"/);
+ assert.match(importer,/preview\.target\.approval_state==="approved"/);
+ assert.doesNotMatch(importer,/selected\?\.approval_state==="approved"\?"Bảng đang áp dụng/);
 });

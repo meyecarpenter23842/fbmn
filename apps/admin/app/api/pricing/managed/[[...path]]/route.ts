@@ -4,7 +4,7 @@ const PRIVATE={"Cache-Control":"private, no-store","X-Content-Type-Options":"nos
  "Content-Type":"application/json; charset=utf-8"};
 const fail=(status:number,code:string)=>Response.json({error:{code}},{status,headers:PRIVATE});
 const GET_ACTIONS=new Set(["","customers","prices","prices-export"]);
-const POST_ACTIONS=new Set(["create","update","approve","deactivate","price","price-approve","resolve","bulk-preview","bulk-apply"]);
+const POST_ACTIONS=new Set(["create","update","apply","deactivate","price","resolve","bulk-preview","bulk-apply"]);
 function workerUrl(){
  try{
   const u=new URL(process.env.FBMN_ADMIN_API_BASE_URL||"");

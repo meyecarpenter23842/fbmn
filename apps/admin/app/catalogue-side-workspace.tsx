@@ -161,7 +161,7 @@ export default function CatalogueSideWorkspace({mode,onBusyChange}:{mode:Workspa
          {managedLists.length===0&&<option value="">Chưa có bảng giá</option>}
          {managedLists.map(item=><option key={item.id} value={item.id}>
           {item.list_code} — {item.list_name}
-          {item.approval_state==="draft"?" (Nháp)":item.approval_state==="approved"?" (Đã duyệt)":" (Ngừng)"}
+          {item.approval_state==="draft"?" (Nháp)":item.approval_state==="approved"?" (Đang áp dụng)":" (Ngừng)"}
          </option>)}
         </select>
         <span className="fb-pricing-context-help">Bảng giá này dùng chung cho cả ba khu vực.</span>

@@ -9,7 +9,7 @@ type List={
  id:string;list_code:string;list_name:string;note:string;audience:Audience;
  channel_codes:string[];scope_customer_type:string|null;scope_customer_id:string|null;
  customer_code:string|null;customer_name:string|null;priority:number;valid_from:string;
- valid_until:string|null;revision:number;approval_state:State;price_count:number;
+ valid_until:string|null;revision:number;approval_state:State;price_count:number;draft_count:number;
 };
 type Item={
  id:string;list_id:string;sku_cong_ty:string;ten_san_pham:string|null;ten_goc_xnt:string|null;
@@ -54,11 +54,13 @@ const labels:Record<string,string>={
  invalid_price_list_update:"Bảng giá chưa hợp lệ hoặc thiếu phiên bản.",
  customer_not_found:"Khách đã chọn không còn hoạt động.",
  revision_conflict:"Dữ liệu đã thay đổi. Tải lại rồi kiểm tra.",
- approved_list_locked:"Bảng giá đã duyệt, không thể sửa nội dung đã xác nhận.",
- approved_price_required:"Bảng giá chưa có mức giá SKU được duyệt. Vào Giá sản phẩm → thêm hoặc nhập giá → duyệt từng mức giá SKU, rồi duyệt bảng.",
- list_not_editable:"Chỉ sửa mức giá khi bảng còn là bản nháp.",
+ active_scope_locked:"Muốn đổi kênh hoặc nhóm khách của bảng đang áp dụng, hãy Ngừng áp dụng trước.",
+ price_required:"Bảng giá còn trống. Hãy thêm hoặc nhập giá trước khi áp dụng.",
+ price_period_overlap:"Một SKU có nhiều kỳ giá bị chồng nhau. Hãy kiểm tra ngày hiệu lực.",
+ already_applied:"Bảng giá đã áp dụng và không còn giá chờ.",
+ already_inactive:"Bảng giá đã ngừng.",
+ list_not_editable:"Bảng giá đã ngừng. Hãy áp dụng lại trước khi sửa giá.",
  sku_not_found:"Mã công ty không tồn tại.",
- approved_price_locked:"Mức giá đã duyệt không được ghi đè.",
  approved_period_overlap:"Mức giá đã duyệt bị trùng kỳ hiệu lực.",
  price_write_failed:"Không lưu được giá. Kiểm tra quyền và dữ liệu.",
  price_list_write_failed:"Không lưu được bảng giá.",
@@ -102,6 +104,7 @@ export default function CatalogueManagedPriceLists({view,selectedListId,onSelect
  const [clientSearch,setClientSearch]=useState("");
  const [listForm,setListForm]=useState<ListForm>(INITIAL_LIST);
  const [priceForm,setPriceForm]=useState<PriceForm>(INITIAL_PRICE);
+ const [priceListSnapshot,setPriceListSnapshot]=useState<{id:string;revision:number}|null>(null);
  const [editingId,setEditingId]=useState<string|null>(null);
  const [showEditor,setShowEditor]=useState(false);
  const [busy,setBusy]=useState(false);
@@ -119,14 +122,7 @@ export default function CatalogueManagedPriceLists({view,selectedListId,onSelect
  useEffect(()=>{onBusyChange?.(busy);},[busy,onBusyChange]);
  const chosen=useMemo(()=>lists.find(x=>x.id===chosenId)||null,[lists,chosenId]);
  const visiblePrices=loadedPriceListId===chosenId?prices:[];
- // A list is approvable only after at least one verified SKU price is approved.
- // Until prices finish loading, leave server-side validation authoritative.
- const approvedSkuCount=loadedPriceListId===chosenId?
-  visiblePrices.filter(item=>item.approval_state==="approved").length:null;
- const priceListIsPartial=!!chosen&&loadedPriceListId===chosenId&&
-  visiblePrices.length<chosen.price_count;
- const approvalBlocked=!!chosen&&chosen.approval_state==="draft"&&
-  (chosen.price_count===0||(approvedSkuCount===0&&!priceListIsPartial));
+ const applyBlocked=!!chosen&&chosen.price_count===0;
  const refresh=useCallback(async(preferred?:string)=>{
   const data=await query<{items:List[]}>("");
   setLists(data.items);
@@ -202,7 +198,10 @@ export default function CatalogueManagedPriceLists({view,selectedListId,onSelect
   setClientSearch("");setShowPriceEditor(false);setShowEditor(true);
  }
  function editList(item:List){
-  if(item.approval_state!=="draft")return;
+  if(item.approval_state==="approved"){
+   // Applied channel/customer scope stays locked until Stop -> Edit -> Apply.
+   notify("Bảng đang áp dụng: chỉ sửa tên, ghi chú, ngày và ưu tiên. Muốn đổi kênh/khách thì Ngừng áp dụng trước.","info");
+  }
   setEditingId(item.id);
   setListForm({list_code:item.list_code,list_name:item.list_name,note:item.note,audience:item.audience,
    channel_codes:item.channel_codes,scope_customer_type:item.scope_customer_type||"",
@@ -262,46 +261,55 @@ export default function CatalogueManagedPriceLists({view,selectedListId,onSelect
    notify("Đã lưu bảng giá. Có thể nhập giá vào bảng này.","success");
   });
  }
- async function approveList(item:List){
-  if(item.price_count===0||(item.id===chosenId&&approvedSkuCount===0&&!priceListIsPartial)){
-   notify("Chưa thể duyệt bảng "+item.list_code+": chưa có giá SKU được duyệt. Vào Giá sản phẩm → thêm hoặc nhập giá → duyệt từng giá SKU.","info");
+ async function applyList(item:List){
+  if(item.price_count===0){
+   notify("Bảng giá còn trống. Vào Giá sản phẩm để thêm hoặc nhập giá trước khi áp dụng.","info");
    return;
   }
-  if(!window.confirm("Duyệt bảng giá "+item.list_code+"? Chỉ mở trạng thái nội bộ, không tự công khai Web/App."))return;
+  if(!window.confirm("Áp dụng bảng giá "+item.list_code+" trong hệ thống nội bộ? "+
+   "Tất cả giá đã lưu hợp lệ sẽ được áp dụng cùng lúc. "+
+   "Không tự công khai giá lên Website/App."))return;
   await work(async()=>{
-   await query("/approve","POST",{id:item.id,expected_revision:item.revision});
-   await refresh(item.id);notify("Đã duyệt cấu hình bảng giá. Kênh bán chưa tự công khai.","success");
+   await query("/apply","POST",{id:item.id,expected_revision:item.revision});
+   const p=await query<{items:Item[]}>("/prices?list_id="+encodeURIComponent(item.id));
+   if(chosenId===item.id){setPrices(p.items);setLoadedPriceListId(item.id);}
+   await refresh(item.id);
+   notify("Đã áp dụng bảng giá nội bộ. Giá chưa được công khai trên Website/App.","success");
   });
  }
  async function deactivateList(item:List){
-  if(!window.confirm("Ngừng bảng giá "+item.list_code+"? Không xóa giá và lịch sử."))return;
+  if(!window.confirm("Ngừng áp dụng bảng "+item.list_code+"? Giữ lại giá và lịch sử."))return;
   await work(async()=>{
    await query("/deactivate","POST",{id:item.id,expected_revision:item.revision});
-   await refresh(item.id);notify("Đã ngừng bảng giá.","success");
+   await refresh(item.id);notify("Đã ngừng áp dụng bảng giá.","success");
   });
  }
  function newPrice(){
-  if(!chosen||chosen.approval_state!=="draft")return;
+  if(!chosen||chosen.approval_state==="inactive")return;
   setPriceForm({...INITIAL_PRICE,valid_from:chosen.valid_from});
+  setPriceListSnapshot({id:chosen.id,revision:chosen.revision});
   setShowPriceEditor(true);
  }
  function editPrice(item:Item){
-  if(!chosen||item.list_id!==chosen.id||chosen.approval_state!=="draft"||item.approval_state!=="draft")return;
+  if(!chosen||item.list_id!==chosen.id||chosen.approval_state==="inactive")return;
+  setPriceListSnapshot({id:chosen.id,revision:chosen.revision});
   setPriceForm({sku_cong_ty:item.sku_cong_ty,amount_vnd:item.amount_vnd,
    vat_included:item.vat_included?"yes":"no",source_document:item.source_document,
    valid_from:item.valid_from,valid_until:item.valid_until||"",id:item.id,revision:item.revision});
   setShowPriceEditor(true);
  }
  async function savePrice(){
-  if(!chosen||!priceForm.sku_cong_ty.trim()||
+  if(!chosen||priceListSnapshot?.id!==chosen.id||!priceForm.sku_cong_ty.trim()||
    !/^(0|[1-9]\d{0,12})$/.test(priceForm.amount_vnd)||!priceForm.vat_included||
    !priceForm.source_document.trim()||!priceForm.valid_from){
    notify("Nhập mã SKU, giá nguyên VND, VAT và tên chứng từ đã xác minh.");return;
   }
-  if(!window.confirm("Lưu giá nháp cho mã "+priceForm.sku_cong_ty+" trong "+chosen.list_code+
-   "? Chưa áp dụng cho khách."))return;
+  if(!window.confirm("Lưu giá SKU "+priceForm.sku_cong_ty+" trong "+chosen.list_code+
+   (chosen.approval_state==="approved"?"? Giá sẽ cập nhật ngay trong bảng đang áp dụng (nội bộ).":
+   "? Giá được lưu nháp, chưa áp dụng.")))return;
   await work(async()=>{
-   await query("/price","POST",{list_id:chosen.id,sku_cong_ty:priceForm.sku_cong_ty.trim(),
+   await query("/price","POST",{list_id:chosen.id,expected_list_revision:priceListSnapshot.revision,
+    sku_cong_ty:priceForm.sku_cong_ty.trim(),
     amount_vnd:priceForm.amount_vnd,vat_included:priceForm.vat_included==="yes",
     source_document:priceForm.source_document.trim(),valid_from:priceForm.valid_from,
     valid_until:priceForm.valid_until||null,
@@ -309,18 +317,9 @@ export default function CatalogueManagedPriceLists({view,selectedListId,onSelect
    const p=await query<{items:Item[]}>("/prices?list_id="+encodeURIComponent(chosen.id));
    setPrices(p.items);setLoadedPriceListId(chosen.id);
    setShowPriceEditor(false);await refresh(chosen.id);
-   notify("Đã lưu giá nháp. Chưa duyệt, chưa công khai.","success");
-  });
- }
- async function approvePrice(item:Item){
-  if(!chosen||item.list_id!==chosen.id||loadedPriceListId!==chosen.id)return;
-  if(!window.confirm("Duyệt mức giá "+fmt(item.amount_vnd)+" cho SKU "+item.sku_cong_ty+
-   "? Cần xác minh nguồn và VAT trước khi duyệt."))return;
-  await work(async()=>{
-   await query("/price-approve","POST",{id:item.id,expected_revision:item.revision});
-   const p=await query<{items:Item[]}>("/prices?list_id="+encodeURIComponent(item.list_id));
-   if(chosenId===item.list_id){setPrices(p.items);setLoadedPriceListId(item.list_id);}
-   notify("Mức giá đã duyệt nội bộ.","success");
+   notify(chosen.approval_state==="approved"?
+    "Đã lưu giá đang áp dụng (nội bộ). Chưa công khai Website/App.":
+    "Đã lưu giá nháp. Chọn Áp dụng ở tab Bảng giá khi hoàn tất.","success");
   });
  }
  return <section className="fb-managed-prices" aria-label={view==="lists"?"Quản lý bảng giá":"Giá sản phẩm"}>
@@ -330,7 +329,7 @@ export default function CatalogueManagedPriceLists({view,selectedListId,onSelect
     <p>{view==="lists"?"Thiết lập bảng giá và nơi sử dụng.":
       "Tra cứu, thêm và cập nhật mức giá theo bảng giá đang chọn."}</p></div>
    {view==="lists"&&<button type="button" className="import-btn import-primary" disabled={busy} onClick={newList}>Tạo bảng giá</button>}
-   {view==="products"&&chosen?.approval_state==="draft"&&<div className="fb-managed-actions">
+   {view==="products"&&chosen&&chosen.approval_state!=="inactive"&&<div className="fb-managed-actions">
     <button type="button" className="import-btn import-secondary" disabled={busy}
      onClick={()=>onOpenImport?.(chosen.id)}>Nhập từ Excel</button>
     <button type="button" className="import-btn import-primary" disabled={busy}
@@ -348,7 +347,7 @@ export default function CatalogueManagedPriceLists({view,selectedListId,onSelect
      onClick={()=>{onSelectedListIdChange(item.id);setShowEditor(false);setShowPriceEditor(false);}}
      aria-current={chosenId===item.id?"true":undefined} disabled={busy}>
      <strong>{item.list_code}</strong><span>{item.list_name}</span>
-     <small>{item.approval_state==="approved"?"Đã duyệt":
+     <small>{item.approval_state==="approved"?"Đang áp dụng":
       item.approval_state==="inactive"?"Đã ngừng":"Bản nháp"} · {item.price_count} mức giá</small>
     </button>)}
    </div>}
@@ -362,31 +361,29 @@ export default function CatalogueManagedPriceLists({view,selectedListId,onSelect
        <small>{chosen.scope_customer_type?"Nhóm khách: "+(CATEGORIES.find(x=>x[0]===chosen.scope_customer_type)?.[1]||chosen.scope_customer_type):""}
         {chosen.scope_customer_id?"Khách: "+(chosen.customer_code||"")+" "+(chosen.customer_name||""):""}</small>
        <small>Hiệu lực {chosen.valid_from} {chosen.valid_until?"→ "+chosen.valid_until:""}</small>
-       {view==="lists"&&chosen.approval_state==="draft"&&<small
-        className={"fb-managed-approved-count"+(approvalBlocked?" fb-managed-approved-count--blocked":"")}>
-        {priceListIsPartial?"Đã tải "+visiblePrices.length+"/"+chosen.price_count+
-         " mức giá; "+(approvedSkuCount??0)+" giá SKU được duyệt trong phần đã tải":
-         approvedSkuCount===null&&chosen.price_count>0?"Đang kiểm tra trạng thái duyệt giá SKU…":
-         (approvedSkuCount??0)+" / "+chosen.price_count+" giá SKU đã duyệt"}
+       {view==="lists"&&<small className={"fb-managed-approved-count"+(applyBlocked?" fb-managed-approved-count--blocked":"")}>
+        {chosen.price_count} mức giá · {chosen.draft_count} chưa áp dụng
        </small>}
       </div>
       {view==="lists"&&<div className="fb-managed-actions">
-       {chosen.approval_state==="draft"&&<button type="button" className="import-btn import-secondary"
-        disabled={busy} onClick={()=>editList(chosen)}>Sửa bảng giá</button>}
-       {chosen.approval_state==="draft"&&<button type="button" className="import-btn import-secondary"
-        disabled={busy||approvalBlocked} onClick={()=>void approveList(chosen)}>Duyệt bảng giá</button>}
-       {chosen.approval_state!=="inactive"&&<button type="button" className="import-btn import-secondary"
-        disabled={busy} onClick={()=>void deactivateList(chosen)}>Ngừng sử dụng</button>}
+       <button type="button" className="import-btn import-secondary"
+        disabled={busy} onClick={()=>editList(chosen)}>Sửa bảng giá</button>
+       {(chosen.approval_state!=="approved"||chosen.draft_count>0)&&<button type="button"
+        className="import-btn import-primary" disabled={busy||applyBlocked}
+        onClick={()=>void applyList(chosen)}>Áp dụng</button>}
+       {chosen.approval_state==="approved"&&<button type="button" className="import-btn import-secondary"
+        disabled={busy} onClick={()=>void deactivateList(chosen)}>Ngừng áp dụng</button>}
        <button type="button" className="import-btn import-secondary" disabled={busy}
         onClick={()=>onOpenPrices?.(chosen.id)}>Xem giá</button>
       </div>}
      </div>
-     {view==="lists"&&approvalBlocked&&<p className="fb-managed-approval-guide" role="note">
-      <strong>Chưa đủ điều kiện duyệt bảng giá.</strong> Bấm <strong>Xem giá</strong> →
-      chọn <strong>Thêm giá</strong> hoặc <strong>Nhập từ Excel</strong> →
-      duyệt từng mức giá SKU đã xác minh. Sau đó quay lại duyệt bảng giá.
-     </p>}
-     <p className="fb-managed-warning">Giá và kênh chỉ được lưu trong hệ thống nội bộ. Việc duyệt không tự đưa NET hoặc bảng giá này ra Website/App.</p>
+     {view==="lists"&&applyBlocked&&chosen.approval_state!=="approved"&&
+      <p className="fb-managed-approval-guide" role="note">
+       Bảng giá chưa có giá sản phẩm. Chọn <strong>Xem giá</strong> → <strong>Thêm giá</strong>
+       hoặc <strong>Nhập từ Excel</strong> → <strong>Lưu</strong>, sau đó bấm <strong>Áp dụng</strong>.
+      </p>}
+     <p className="fb-managed-warning">Áp dụng chỉ kích hoạt bảng giá trong hệ thống nội bộ.
+      Chưa tự công khai giá NET hoặc giá theo kênh lên Website/App.</p>
      {view==="products"&&<details className="fb-managed-resolution">
       <summary>Kiểm tra giá theo kênh (nội bộ)</summary>
       <div className="fb-managed-fields">
@@ -416,7 +413,7 @@ export default function CatalogueManagedPriceLists({view,selectedListId,onSelect
       </p>}
      </details>}
      {view==="products"&&<div className="fb-managed-section-title">
-      <div><h3>Danh sách mức giá</h3><small>Chọn Sửa hoặc Duyệt trên từng SKU.</small></div>
+      <div><h3>Danh sách mức giá</h3><small>Chỉnh giá trực tiếp; áp dụng toàn bảng một lần.</small></div>
      </div>}
      {view==="products"&&(loadedPriceListId!==chosenId?<p className="fb-managed-empty">Đang tải giá của bảng đã chọn…</p>:
      visiblePrices.length===0?<p className="fb-managed-empty">Chưa có mức giá cho bảng này.</p>:
@@ -426,14 +423,11 @@ export default function CatalogueManagedPriceLists({view,selectedListId,onSelect
        <td><strong>{item.sku_cong_ty}</strong></td>
        <td>{item.ten_san_pham||item.ten_goc_xnt||"Chưa có tên"}</td>
        <td>{fmt(item.amount_vnd)}</td><td>{item.vat_included?"Đã gồm":"Chưa gồm"}</td>
-       <td>{item.approval_state==="approved"?"Đã duyệt":"Nháp"}</td>
+       <td>{item.approval_state==="approved"?"Đang áp dụng":"Chưa áp dụng"}</td>
        <td><div className="fb-managed-row-actions">
-        {chosen.approval_state==="draft"&&item.approval_state==="draft"&&<>
-         <button type="button" className="import-btn import-secondary" disabled={busy}
-          onClick={()=>editPrice(item)}>Sửa</button>
-         <button type="button" className="import-btn import-secondary" disabled={busy}
-          onClick={()=>void approvePrice(item)}>Duyệt</button>
-        </>}
+        {chosen.approval_state!=="inactive"&&<button type="button"
+         className="import-btn import-secondary" disabled={busy}
+         onClick={()=>editPrice(item)}>Sửa</button>}
        </div></td>
       </tr>)}</tbody></table></div>)}
     </>}
@@ -454,9 +448,11 @@ export default function CatalogueManagedPriceLists({view,selectedListId,onSelect
       <fieldset className="fb-managed-channel-set fb-managed-wide">
        <legend>Kênh sử dụng bảng giá</legend>
        <p>Chọn nhiều kênh. Không chọn kênh nào nếu chỉ dùng nội bộ.</p>
+       {editingId&&chosen?.approval_state==="approved"&&<small>Muốn đổi kênh/khách, hãy Ngừng áp dụng trước.</small>}
        {CHANNELS.map(([code,label])=><label key={code} className="fb-managed-channel-option">
         <input type="checkbox" checked={listForm.channel_codes.includes(code)}
-         disabled={busy} onChange={e=>toggleChannel(code,e.target.checked)}/>
+         disabled={busy||Boolean(editingId&&chosen?.approval_state==="approved")}
+         onChange={e=>toggleChannel(code,e.target.checked)}/>
          <span>{label}</span>
        </label>)}
        {listForm.audience==="mixed"&&<small className="fb-managed-wide fb-managed-channel-notice">
@@ -487,16 +483,17 @@ export default function CatalogueManagedPriceLists({view,selectedListId,onSelect
      </div>
      {listForm.audience==="dealer"&&<div className="fb-managed-fields">
       <label>Nhóm khách hàng
-       <select value={listForm.scope_customer_type} onChange={e=>clientType(e.target.value)}>
+       <select value={listForm.scope_customer_type} disabled={busy||Boolean(editingId&&chosen?.approval_state==="approved")}
+        onChange={e=>clientType(e.target.value)}>
         {CATEGORIES.map(([id,label])=><option value={id} key={id}>{label}</option>)}
        </select></label>
       <div className="fb-managed-customer">
        <label>Áp dụng cho một khách hàng
-        <input value={clientSearch} onChange={e=>{setClientSearch(e.target.value);
+        <input value={clientSearch} disabled={busy||Boolean(editingId&&chosen?.approval_state==="approved")}
+         onChange={e=>{setClientSearch(e.target.value);
          setListForm(v=>({...v,scope_customer_id:""}));}} placeholder="Nhập mã hoặc tên khách"/>
        </label>
-       <button type="button" className="import-btn import-secondary" disabled={busy}
-        onClick={()=>void findClients()}>Tìm khách</button>
+       <button type="button" className="import-btn import-secondary" onClick={()=>void findClients()} disabled={busy||Boolean(editingId&&chosen?.approval_state==="approved")}>Tìm khách</button>
        {clients.length>0&&<div className="fb-managed-customers">
         {clients.map(c=><button type="button" key={c.id} disabled={c.status!=="active"}
          className={listForm.scope_customer_id===c.id?"active":""}
@@ -515,7 +512,7 @@ export default function CatalogueManagedPriceLists({view,selectedListId,onSelect
      </div>
     </aside></div>}
     {showPriceEditor&&chosen&&!showEditor&&<div className="fb-managed-drawer-backdrop"><aside ref={drawerRef} className="fb-managed-drawer" role="dialog" aria-modal="true" aria-label="Giá sản phẩm">
-     <h3>{priceForm.id?"Sửa giá nháp":"Thêm giá vào "+chosen.list_code}</h3>
+     <h3>{priceForm.id?"Sửa giá":"Thêm giá vào "+chosen.list_code}</h3>
      <div className="fb-managed-fields">
       <label>Mã công ty
        <input value={priceForm.sku_cong_ty} disabled={!!priceForm.id||busy}
@@ -552,7 +549,7 @@ export default function CatalogueManagedPriceLists({view,selectedListId,onSelect
       <button type="button" className="import-btn import-secondary"
        onClick={()=>setShowPriceEditor(false)} disabled={busy}>Hủy</button>
       <button type="button" className="import-btn import-primary"
-       onClick={()=>void savePrice()} disabled={busy}>Lưu giá nháp</button>
+       onClick={()=>void savePrice()} disabled={busy}>Lưu giá</button>
      </div>
     </aside></div>} </section>;
 }

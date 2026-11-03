@@ -34,7 +34,7 @@ Header bảng dữ liệu: có độ tương phản đủ đọc, **tím nhạt 
 
 ## 3. UX nghiệp vụ và ngôn ngữ
 
-- Chức năng **một quy trình xuyên suốt**: tạo bảng giá → chọn bảng giá đó khi sửa SKU / nhập Excel → xem trước → lưu / duyệt theo quyền; **không hardcode loại giá ở một màn hình còn màn kia cho tạo mã tùy chọn**.
+- Chức năng **một quy trình xuyên suốt**: tạo bảng giá → chọn bảng giá đó khi sửa SKU / nhập Excel → xem trước → **Lưu** → **Áp dụng** một lần cho toàn bảng theo quyền Owner; **không hardcode loại giá ở một màn hình còn màn kia cho tạo mã tùy chọn**.
 - Chọn **một hoặc nhiều kênh** nếu nghiệp vụ cho phép (ví dụ **Website và App người tiêu dùng**); không biến checkbox đa lựa chọn thành dropdown đơn lựa chọn vì muốn UI gọn. Kênh áp dụng và đối tượng khách là hai khái niệm; quyền đọc/NET phải kiểm ở backend.
 - Label và tab là ngôn ngữ nghiệp vụ tự nhiên: `Bảng giá`, `Giá sản phẩm`, `Nhập / xuất Excel`, `Mã bảng giá`, `Tên bảng giá`, `Kênh áp dụng`. Tránh copy rập khuôn `tên do anh lựa chọn`, `bảng giá tự tạo` ở nơi chỉ cần `Bảng giá`, `Excel giá hiện có` và thuật ngữ code. Không xóa tab đã duyệt chỉ vì muốn gọn.
 - Khi Owner yêu cầu thay đổi UX, xác định *toàn bộ trang tác động*, API liên quan, import/export, role và test trước khi code. **Không chữa ngọn bằng ghi đè CSS; tìm nguồn quy chuẩn.**
@@ -50,3 +50,10 @@ Header bảng dữ liệu: có độ tương phản đủ đọc, **tím nhạt 
 ## 5. Phạm vi áp dụng cho code cũ
 
 Đây là **quy tắc triển khai mới và mọi phần UI được chạm tới**; code cũ chưa khớp được ghi nhận là nợ kỹ thuật, không mặc nhiên gọi là đã khắc phục chỉ vì thêm tài liệu. Khi sửa một component cũ, chuyển nó sang primitive chung cùng test tương ứng, không tạo thêm bản sao định nghĩa ở CSS cấp trang. Không đổi dữ liệu giá, phân quyền, API hay kiến trúc sản phẩm vì mục đích làm đẹp.
+
+### Quy tắc Owner giá (03/11/2026)
+
+- **Không duyệt từng SKU hay duyệt hai cấp.** Owner tạo/sửa/lưu bảng giá và mức giá; một nút **Áp dụng** kích hoạt nội bộ cùng lúc mọi giá hợp lệ đang lưu trong bảng.
+- Bảng đang áp dụng: Owner được sửa mức giá và nhập Excel trực tiếp; thay đổi giá được ghi nhận/audit và có hiệu lực nội bộ ngay khi lưu. **Không đồng nghĩa xuất bản ra Website/App**.
+- Muốn đổi phạm vi kênh hoặc khách của bảng đang áp dụng: **Ngừng áp dụng** trước rồi sửa và Áp dụng lại, để không vô tình chuyển giá riêng sang kênh công khai.
+- Mọi thao tác vẫn kiểm quyền Owner, nguồn giá/VAT, mã SKU giữ 0 đầu, kỳ giá không chồng lấn, revision, Excel preview và audit. Trạng thái “approved” cũ trong database mang nghĩa **Đang áp dụng nội bộ**; không tự bật API giá công khai.

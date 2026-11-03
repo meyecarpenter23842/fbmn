@@ -13,7 +13,8 @@ type Change={line:number;sku_cong_ty:string;ten_san_pham:string|null;amount_vnd:
  old_amount_vnd:string|null;vat_included:boolean|null;valid_until:string|null;
  status:"new"|"updated"|"unchanged"|"skipped"|"invalid";issue:string|null};
 type Preview={changes:Change[];created:number;updated:number;unchanged:number;skipped:number;
- invalid:number;preview_fingerprint:string;target:{list_code:string;list_name:string}};
+ invalid:number;preview_fingerprint:string;target:{list_code:string;list_name:string;
+ approval_state:"draft"|"approved"|"inactive"}};
 type Envelope<T>={data?:T;error?:{code?:string}};
 const money=(v:string|null)=>v===null?"—":new Intl.NumberFormat("vi-VN").format(Number(v))+" ₫";
 const channels:Record<string,string>={public_web:"Website",consumer_app:"App người tiêu dùng",dealer_app:"App đại lý"};
@@ -25,7 +26,7 @@ const issues:Record<string,string>={
  preview_stale:"Giá đã thay đổi. Xem trước lại trước khi lưu.",
  test_file_preview_only:"File thử nghiệm chỉ được xem trước, không thể lưu.",
  period_outside_price_list:"Ngày áp dụng nằm ngoài thời hạn của bảng giá.",
- list_not_editable:"Bảng giá đã duyệt hoặc ngừng áp dụng, không thể nhập thêm giá.",
+ list_not_editable:"Bảng giá đã ngừng áp dụng. Áp dụng lại trước khi nhập giá.",
  price_list_not_found:"Không tìm thấy bảng giá.",
  missing_price_sheet:"File thiếu sheet có cột Mã công ty và Giá mới.",
  invalid_price_sheet:"Không đọc được Excel. Anh thử tải mẫu từ hệ thống rồi nhập lại.",
@@ -117,7 +118,7 @@ export default function CatalogueManagedPriceImport({selectedListId,onBusyChange
   finally{setBusy(false);}
  };
  const payload=()=>{
-  if(!selected||selected.approval_state!=="draft")throw Error("Chọn bảng giá đang là bản nháp.");
+  if(!selected||selected.approval_state==="inactive")throw Error("Bảng giá đã ngừng. Vào Bảng giá để Áp dụng lại trước khi nhập giá.");
   if(!sheet||skuCol<0||priceCol<0||skuCol===priceCol)
    throw Error("Cần xác định đúng cột Mã công ty và Giá mới.");
   if(sheet.rows.some(r=>r.cells[skuCol]?.kind==="number"))
@@ -149,15 +150,19 @@ export default function CatalogueManagedPriceImport({selectedListId,onBusyChange
   if(/TEST|KHONG_AP_DUNG/i.test(fileName)){
    notify("File này dùng để kiểm thử, không thể ghi giá giả lập.");return;
   }
-  if(!window.confirm("Lưu "+(preview.created+preview.updated)+" mức giá NHÁP vào "+
-   preview.target.list_code+" (ngày "+(priceDate||selected?.valid_from)+")? Không công khai lên Website hay App."))return;
+  if(!window.confirm("Lưu "+(preview.created+preview.updated)+" mức giá vào "+
+   preview.target.list_code+" (ngày "+(priceDate||selected?.valid_from)+")? "+
+   (preview.target.approval_state==="approved"?"Bảng đang áp dụng: giá sẽ cập nhật ngay trong hệ thống nội bộ.":
+   "Bảng nháp: giá sẽ chờ bấm Áp dụng tại tab Bảng giá.")+
+   " Không tự công khai lên Website hoặc App."))return;
   setBusy(true);
   try{
    const result=await api<{applied:number;list_code:string}>("/bulk-apply","POST",{
     ...prepared,preview_fingerprint:preview.preview_fingerprint,confirm:"XAC_NHAN_GIA_NHAP"});
    invalidate();setSheet(null);setFileName("");
    onMutated?.();
-   notify("Đã lưu "+result.applied+" giá nháp vào "+result.list_code+".","success");
+   notify("Đã lưu "+result.applied+" giá vào "+result.list_code+"."+
+    (preview.target.approval_state==="approved"?" Đã cập nhật nội bộ.":" Chọn Áp dụng khi hoàn tất."),"success");
   }catch(e){invalidate();notify(e instanceof Error?e.message:"Không lưu được giá.");}
   finally{setBusy(false);}
  }
@@ -213,7 +218,7 @@ export default function CatalogueManagedPriceImport({selectedListId,onBusyChange
     </label>
     <label>Chọn file Excel hoặc CSV
      <input ref={fileInput} type="file" accept=".xlsx,.csv" disabled={busy||
-      selected?.approval_state!=="draft"} onChange={e=>{
+      selected?.approval_state==="inactive"} onChange={e=>{
        const file=e.target.files?.[0];e.target.value="";
        if(file)void selectFile(file);
       }}/>
@@ -223,7 +228,7 @@ export default function CatalogueManagedPriceImport({selectedListId,onBusyChange
     <strong>Phạm vi sử dụng:</strong> {selected.channel_codes.length?
      selected.channel_codes.map(code=>channels[code]||code).join(", "):
      "Chỉ quản lý nội bộ"} · {selected.approval_state==="draft"?"Bảng giá nháp":
-      selected.approval_state==="approved"?"Bảng giá đã duyệt":"Bảng giá ngừng áp dụng"}
+      selected.approval_state==="approved"?"Đang áp dụng nội bộ":"Bảng giá ngừng áp dụng"}
    </p>}
    <small className="fb-managed-import-note">
     File xuất và dữ liệu nhập chỉ thuộc kỳ giá bắt đầu từ ngày đã chọn phía trên.
@@ -243,9 +248,8 @@ export default function CatalogueManagedPriceImport({selectedListId,onBusyChange
    </div>
    {exportFormat==="csv"&&<small className="fb-managed-import-note">
     Khi mở CSV bằng Excel, cần đặt cột Mã công ty là Text để không mất số 0 đầu.</small>}
-   {selected?.approval_state!=="draft"&&
-    <p className="fb-managed-import-note">Bảng giá đã duyệt hoặc ngừng áp dụng không nhận giá mới.
-     Hãy tạo bảng giá nháp để cập nhật.</p>}
+   {selected?.approval_state==="inactive"&&
+    <p className="fb-managed-import-note">Bảng giá đã ngừng áp dụng. Vào tab Bảng giá để Áp dụng lại trước khi nhập giá.</p>}
    {sheet&&<>
     <div className="fb-managed-import-file">
      <strong>{fileName}</strong><span>{sheet.total_rows} dòng · {sheet.sheet_name||"CSV"}</span>
@@ -276,7 +280,7 @@ export default function CatalogueManagedPriceImport({selectedListId,onBusyChange
     </div>
     <div className="fb-managed-import-actions">
      <button type="button" className="import-btn import-primary" disabled={busy||
-      selected?.approval_state!=="draft"||skuCol<0||priceCol<0||skuCol===priceCol}
+      selected?.approval_state==="inactive"||skuCol<0||priceCol<0||skuCol===priceCol}
       onClick={()=>void doPreview()}>{busy?"Đang xử lý…":"Xem trước giá cũ → mới"}</button>
     </div>
    </>}
@@ -302,7 +306,7 @@ export default function CatalogueManagedPriceImport({selectedListId,onBusyChange
     <div className="fb-managed-import-actions">
      <button type="button" className="import-btn import-primary" disabled={busy||preview.invalid>0||
       preview.created+preview.updated===0||/TEST|KHONG_AP_DUNG/i.test(fileName)}
-      onClick={()=>void doApply()}>Xác nhận lưu giá nháp</button>
+      onClick={()=>void doApply()}>Xác nhận lưu giá</button>
     </div>
    </div>}
   </>}

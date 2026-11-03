@@ -39,7 +39,7 @@ async function inspect(c,input,lock){
   "FROM "+NS+".managed_price_lists WHERE id=$1"+(lock?" FOR UPDATE":""),[input.list_id]);
  if(list.rowCount!==1)return {error:"price_list_not_found"};
  const target=list.rows[0];
- if(target.approval_state!=="draft")return {error:"list_not_editable"};
+ if(target.approval_state==="inactive")return {error:"list_not_editable"};
  if(input.valid_from<target.valid_from||
   target.valid_until!==null&&(input.valid_from>target.valid_until||
    input.valid_until!==null&&input.valid_until!==undefined&&input.valid_until>target.valid_until))
@@ -76,6 +76,7 @@ async function inspect(c,input,lock){
   const until=before?.valid_from===input.valid_from?
    before.valid_until??null:input.valid_until??null;
   const overlaps=(approvedBySku.get(sku)||[]).some(p=>
+   (p.valid_from!==input.valid_from||target.approval_state!=="approved")&&
    p.valid_from<=(until??"9999-12-31")&&
    (p.valid_until===null||p.valid_until>=input.valid_from));
   let status="new",issue=null;
@@ -136,20 +137,24 @@ export async function handleManagedPriceImport({action,input,actor,db}){
     sku:r.sku_cong_ty,amount:r.amount_vnd,vat:r.vat_included,
     until_date:r.valid_until
    }));
+   const appliedState=preview.target.approval_state==="approved"?"approved":"draft";
    const saved=await c.query("INSERT INTO "+NS+".managed_price_list_prices "+
-    "(list_id,sku_cong_ty,amount_vnd,vat_included,source_document,valid_from,valid_until,updated_by) "+
+    "(list_id,sku_cong_ty,amount_vnd,vat_included,source_document,valid_from,valid_until,"+
+    "updated_by,approval_state,approved_by,approved_at) "+
     "SELECT $1::uuid,rec.sku,rec.amount::bigint,rec.vat::boolean,$3,$4::date,"+
-    "rec.until_date::date,$5 "+
+    "rec.until_date::date,$5,$6::text,CASE WHEN $6::text='approved' THEN $5 ELSE NULL END,"+
+    "CASE WHEN $6::text='approved' THEN now() ELSE NULL END "+
     "FROM jsonb_to_recordset($2::jsonb) AS rec(sku text,amount text,vat boolean,until_date text) "+
     "ON CONFLICT (list_id,sku_cong_ty,valid_from) DO UPDATE SET "+
     "amount_vnd=EXCLUDED.amount_vnd,vat_included=EXCLUDED.vat_included,"+
     "source_document=EXCLUDED.source_document,valid_until=EXCLUDED.valid_until,"+
-    "revision=managed_price_list_prices.revision+1,"+
+    "approval_state=EXCLUDED.approval_state,approved_by=EXCLUDED.approved_by,"+
+    "approved_at=EXCLUDED.approved_at,revision=managed_price_list_prices.revision+1,"+
     "updated_by=EXCLUDED.updated_by,updated_at=now() "+
-    "WHERE "+NS+".managed_price_list_prices.approval_state='draft' "+
+    "WHERE "+NS+".managed_price_list_prices.approval_state='draft' OR $6::text='approved' "+
     "RETURNING id::text,sku_cong_ty",[
      input.list_id,JSON.stringify(writeRows),input.source_document,input.valid_from,
-     actor.subject]);
+     actor.subject,appliedState]);
    if(saved.rowCount!==modified.length)throw Error("preview_stale");
    const ids=new Map(saved.rows.map(r=>[r.sku_cong_ty,r.id]));
    const audit=modified.map(r=>({
@@ -158,7 +163,7 @@ export async function handleManagedPriceImport({action,input,actor,db}){
      amount_vnd:r.old_amount_vnd,revision:r.old_revision},
     new_value:{sku_cong_ty:r.sku_cong_ty,amount_vnd:r.amount_vnd,
      vat_included:r.vat_included,source_document:input.source_document,
-     valid_from:input.valid_from,valid_until:r.valid_until}
+     valid_from:input.valid_from,valid_until:r.valid_until,approval_state:appliedState}
    }));
    await c.query("INSERT INTO "+NS+".managed_price_audit "+
     "(actor_subject,action,list_id,price_id,old_value,new_value) "+
@@ -168,7 +173,7 @@ export async function handleManagedPriceImport({action,input,actor,db}){
      actor.subject,input.list_id,JSON.stringify(audit)]);
    return {created:preview.created,updated:preview.updated,
     unchanged:preview.unchanged,skipped:preview.skipped,applied:modified.length,
-    list_code:preview.target.list_code};
+    list_code:preview.target.list_code,approval_state:appliedState};
   });
   return res(200,result);
  }catch(e){
