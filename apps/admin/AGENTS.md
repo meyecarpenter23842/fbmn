@@ -1,0 +1,23 @@
+# Agent instructions — Futurebook Admin (`apps/admin/**`)
+
+## Mandatory UI design contract
+Before editing any Admin frontend TSX/CSS, read **[`docs/admin-ui-design-system.md`](../../docs/admin-ui-design-system.md)**. It is the canonical **component-level** visual contract for Futurebook Admin; `docs/ui-system.md` applies to the public website instead.
+
+Owner's UI intent (03/11/2026):
+- **Keep existing layout, information architecture, routes, feature set and approved UX workflows** unless the request expressly changes them.
+- Keep **Futurebook purple as a deliberate accent**, not purple everywhere. Improve **card/button/input/dropdown/table/modal/icon craftsmanship and interaction states**, not by adding dashboard cards, banners or charts.
+- Prefer semantic tokens, consistent spacing, typography, understated borders/shadows and accessible focus. Avoid adding CSS overrides as patches or introducing a UI library without justification.
+- Do not infer implementation details from an AI-generated design mockup; no fake SKU, stats, images, prices, catalogue data or brand assets.
+
+## Functional guardrails
+- Never auto-allocate a category or variant-group code: the administrator provides memorable custom codes.
+- Excel column **Skip** means no change. A mapped column's blank source is intentionally distinct from Skip per Owner's latest UX decision. **Existing P3 documentation may conflict**; never silently change import backend behavior while polishing visuals. Raise/handle discrepancy in a separate testable logic change.
+- Preserve company SKU strings and leading zeros. Keep existing roles/auth, API, R2 behavior, permissions, confidential NET pricing and real product data unchanged unless the task specifically authorizes them.
+- Do not modify public website UI as a side effect of Admin polish.
+
+## Delivery
+- Check the affected TSX/CSS and existing component variants first.
+- Work in the current assigned feature branch; coordinate with concurrent PRs rather than editing their files unnecessarily. Avoid sweeping refactors when the task is narrowly scoped.
+- For frontend changes, provide actual before/after screenshots at desktop and mobile, test interaction states, keyboard behavior, reduced motion and long text.
+- Follow branch → PR → CI green → clean review → squash merge per project policy. **No automatic Vercel deployment**; Owner decides preview/production.
+- For this documentation PR alone, there are **no runtime UI changes** and screenshots are not applicable.
