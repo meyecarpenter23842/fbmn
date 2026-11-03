@@ -3,7 +3,7 @@
 ## Mandatory Futurebook-wide UI contract (Owner, 03/11/2026)
 
 **FIRST read `../../docs/futurebook-ui-contract.md` and root `../../AGENTS.md`.** These rules are binding for every Admin change and supersede any approximate values below:
-desktop button **36px**; input/select **40px**; mobile button **44px**; control text **13px**; radius **8–10px**; purple accents; **lavender-tinted data table headers**; **small top-right toast**; **create/edit via modal or drawer, never inline in a list**. Use shared `apps/admin/app/admin-controls.css`, not screen-scoped duplicate tab/button dimensions. CI test `tests/futurebook-ui-contract.test.mjs` must pass. Do not remove approved tabs, lose multi-channel selection, or disconnect dynamic price lists from their Excel flow as incidental simplifications.
+desktop button **36px**; input/select **40px**; mobile button **44px**; control text **13px**; radius **8–10px**; purple accents; **lavender-tinted data table headers**; **small top-right toast**; **create/edit via modal or drawer, never inline in a list**. **Required smooth motion:** button **180–200ms**, menu **180–220ms**, modal enter **280ms** / exit **220ms**, drawer **300ms**, reduced-motion support and real exit animation before unmount. **Required compact modal header:** **52px desktop / 56px mobile**, title **16px**, near-white/lavender with a restrained Futurebook purple accent. Preserve separately approved toast timing. Use shared `apps/admin/app/admin-controls.css`, not screen-scoped duplicate tab/button dimensions. CI test `tests/futurebook-ui-contract.test.mjs` must pass. Do not remove approved tabs, lose multi-channel selection, or disconnect dynamic price lists from their Excel flow as incidental simplifications.
 
 ## Mandatory UI design contract
 Before editing any Admin frontend TSX/CSS, read **[`docs/admin-ui-design-system.md`](../../docs/admin-ui-design-system.md)**. It is the canonical **component-level** visual contract for Futurebook Admin; `docs/ui-system.md` applies to the public website instead.
@@ -11,7 +11,7 @@ Before editing any Admin frontend TSX/CSS, read **[`docs/admin-ui-design-system.
 Owner's UI intent (03/11/2026):
 - **Keep existing layout, information architecture, routes, feature set and approved UX workflows** unless the request expressly changes them.
 - Keep **Futurebook purple as a deliberate accent**, not purple everywhere. Improve **card/button/input/dropdown/table/modal/icon craftsmanship and interaction states**, not by adding dashboard cards, banners or charts.
-- Prefer semantic tokens, consistent spacing, typography, understated borders/shadows and accessible focus. Avoid adding CSS overrides as patches or introducing a UI library without justification.
+- Prefer semantic tokens, consistent spacing, typography, understated borders/shadows and accessible focus. For every Admin UI PR, check modal/menu/button motion and header against the canonical contract, not screen-specific guessed values. Avoid adding CSS overrides as patches or introducing a UI library without justification.
 - Do not infer implementation details from an AI-generated design mockup; no fake SKU, stats, images, prices, catalogue data or brand assets.
 
 ## Functional guardrails

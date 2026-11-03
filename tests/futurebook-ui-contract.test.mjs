@@ -80,3 +80,18 @@ test("buttons and fields keep shared geometry without screen-level sizing copies
  assert.match(css,/input\[type="search"\]/);
  assert.doesNotMatch(css,/input\[type="checkbox"\]/);
 });
+
+test("mandatory smooth motion and compact purple popup header rules persist across AI sessions",()=>{
+ const admin=source("apps/admin/AGENTS.md");
+ const design=source("docs/admin-ui-design-system.md");
+ for(const s of [root,admin,policy,design]){
+  for(const ms of ["180–200ms","180–220ms","280ms","220ms","300ms"])assert.ok(s.includes(ms),ms);
+  for(const px of ["52px","56px","16px"])assert.ok(s.includes(px),px);
+  assert.match(s,/lavender/i);
+  assert.match(s,/tím|purple/i);
+ }
+ assert.match(policy,/prefers-reduced-motion/);
+ assert.match(policy,/exit animation/);
+ assert.match(policy,/chưa được sửa trong PR tài liệu này/);
+ assert.doesNotMatch(design,/Motion 120–180ms cho hover\/focus/);
+});

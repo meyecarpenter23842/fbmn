@@ -1,6 +1,6 @@
 # Futurebook Miền Nam — Admin UI Component Design System v1
 
-> **Quy chuẩn bắt buộc từ Owner (03/11/2026):** [Futurebook UI Contract](futurebook-ui-contract.md) là nguồn chuẩn cao nhất cho kích thước nút **36px desktop/44px mobile**, ô nhập **40px**, font **13px**, bo **8–10px**, header bảng dữ liệu **tím nhạt**, toast trên phải, form tạo/sửa modal/drawer. Các dải giá trị ước lượng ở v1 bên dưới chỉ là tham khảo lịch sử khi không mâu thuẫn. CSS runtime tập trung tại `apps/admin/app/admin-controls.css` và dùng chung cho mọi màn hình.
+> **Quy chuẩn bắt buộc từ Owner (03/11/2026):** [Futurebook UI Contract](futurebook-ui-contract.md) là nguồn chuẩn cao nhất cho kích thước nút **36px desktop/44px mobile**, ô nhập **40px**, font **13px**, bo **8–10px**, header bảng dữ liệu **tím nhạt**, toast trên phải, form tạo/sửa modal/drawer. **Motion Owner:** nút 180–200ms, menu 180–220ms, popup mở 280ms/đóng 220ms, drawer 300ms; **header popup:** 52px desktop/56px mobile, chữ 16px, nền lavender rất nhạt + điểm nhấn tím. Các dải giá trị ước lượng ở v1 bên dưới chỉ là tham khảo lịch sử khi không mâu thuẫn. CSS runtime tập trung tại `apps/admin/app/admin-controls.css` và dùng chung cho mọi màn hình.
 Ngày chốt quy tắc: 03/11/2026 · Phạm vi: `apps/admin/**` · Trạng thái: **quy tắc thiết kế mục tiêu; chưa phải xác nhận đã triển khai vào CSS**.
 
 ## 0. Quyết định của Owner
@@ -65,6 +65,8 @@ Sử dụng **semantic CSS custom properties** thay cho thêm các mã hex tùy 
 
 ### 2.5 Modal / Drawer / Confirmation
 - Overlay trung tính; modal trắng, border/shadow rõ vừa đủ, góc 14–16px. Header và footer có thứ bậc rõ; body cuộn độc lập nếu nội dung dài.
+- **Header popup chung:** **52px desktop / 56px mobile**, tiêu đề **16px**, weight **700**; canh tâm với nút X. Padding ngang 16px / 12px. Nền trắng pha lavender rất nhạt + **một điểm/đường nhấn tím Futurebook** và đường phân cách nhẹ. Tiêu đề dài được xuống dòng; không dùng lại padding 19px 22px / title 19px.
+- **Motion popup:** mở **280ms** fade + scale(.97→1), đóng **220ms** fade + scale nhẹ; exit trước khi unmount. **Drawer:** trượt từ phải **300ms**. Quy chuẩn tại shared CSS admin-controls.css + primitive product-modal.tsx, không tạo màn hình có header/timing riêng.
 - Esc, close, click outside phải tuân theo hành vi nghiệp vụ và bảo vệ thay đổi chưa lưu; không để modal tràn khỏi viewport. Tối đa khoảng 90–95dvh tùy màn.
 - Hành động hủy/phụ phía trái, hành động lưu/xác nhận phía phải nếu không xung đột luồng hiện hành; xóa có xác nhận riêng.
 - Không chuyển toàn bộ modal quản lý SKU thành drawer nếu chưa có yêu cầu Owner; đó là thay đổi UX, không phải polish.
@@ -80,7 +82,7 @@ Sử dụng **semantic CSS custom properties** thay cho thêm các mã hex tùy 
 ### 2.7 Icon / Status / Motion
 - Icon nét đồng bộ (16/18/20px, stroke khoảng 1.75–2), không phối tùy tiện nét đậm/mỏng/3D; dùng lại bộ SVG đang có nếu phù hợp thay vì tự bổ sung thư viện.
 - Success / warning / error có icon và text, không phụ thuộc màu sắc; không dùng tím thay mọi trạng thái.
-- Motion 120–180ms cho hover/focus, chuyển trạng thái nhỏ, tránh bounce, glow, scale lớn; tôn trọng `prefers-reduced-motion`.
+- **Motion chuẩn Owner thay thế chuẩn cũ 120–180ms:** nút hover/press/focus **180–200ms**; dropdown/menu ba chấm **180–220ms** fade + dịch 6px; modal mở **280ms** / đóng **220ms**; drawer **300ms**. Easing mở cubic-bezier(.22, 1, .36, 1), đóng cubic-bezier(.4, 0, 1, 1). Tránh bounce/glow/layout shift, tôn trọng prefers-reduced-motion. **Toast riêng 220/190ms, không bị ghi đè.**
 
 ## 3. Ứng dụng trong mã nguồn
 - Tập trung Admin: `apps/admin/app/admin.css`, `admin-refinement.css`, `catalogue-workspace.css`, `catalogue-structure.css`, `import-preview.css`, cùng TSX tương ứng.

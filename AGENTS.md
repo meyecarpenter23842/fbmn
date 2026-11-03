@@ -9,7 +9,7 @@ Trước khi tạo/sửa bất kỳ giao diện Futurebook nào, đọc:
 2. Với Admin `apps/admin/**`: đọc thêm [hướng dẫn Admin](apps/admin/AGENTS.md) và [thiết kế Admin](docs/admin-ui-design-system.md).
 3. Với Website `app/**`: đọc thêm [hướng dẫn Website](app/AGENTS.md) và [thiết kế Website](docs/web-component-design-system.md).
 
-**Không được tự suy diễn kích thước nút, màu, padding, vị trí toast hay thiết kế lại điều hướng.** Các con số bắt buộc: nút desktop **36px**, input/select **40px**, nút mobile **44px**, chữ điều khiển **13px**, bo góc điều khiển **8–10px**, nhấn **tím Futurebook**, toast **nhỏ góc trên phải**, form tạo/sửa **drawer hoặc popup**, header các bảng dữ liệu **tím nhạt**. Một nguồn token duy nhất và component dùng chung; không sao chép CSS hoặc tạo override riêng lẻ.
+**Không được tự suy diễn kích thước nút, màu, padding, vị trí toast, motion, header popup hay thiết kế lại điều hướng.** Các con số bắt buộc: nút desktop **36px**, input/select **40px**, nút mobile **44px**, chữ điều khiển **13px**, bo góc điều khiển **8–10px**, nhấn **tím Futurebook**, toast **nhỏ góc trên phải**, form tạo/sửa **drawer hoặc popup**, header các bảng dữ liệu **tím nhạt**. **Motion bắt buộc:** nút **180–200ms**, menu **180–220ms**, popup mở **280ms** / đóng **220ms**, drawer **300ms**. **Header popup bắt buộc:** **52px desktop / 56px mobile**, tiêu đề **16px**, nền lavender rất nhạt có điểm nhấn tím Futurebook; tránh padding header dày. Một nguồn token duy nhất và component dùng chung; không sao chép CSS hoặc tạo override riêng lẻ.
 
 Nếu yêu cầu nghiệp vụ thay đổi UX, làm trọn luồng liên quan, không sửa một trang khiến các trang khác mất kết nối hoặc mất tab. Không xóa/thêm tính năng hoặc đổi bố cục đã duyệt ngoài phạm vi được yêu cầu.
 
