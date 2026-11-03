@@ -7,6 +7,7 @@ import "./admin-refinement.css";
 import "./catalogue-workspace.css";
 import "./catalogue-structure.css";
 import "./admin-l01-navigation.css";
+import "./admin-controls.css";
 
 export const metadata: Metadata = {
   title: "Quản trị Futurebook Miền Nam",

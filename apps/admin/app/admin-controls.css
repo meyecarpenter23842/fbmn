@@ -1,0 +1,23 @@
+/* Shared Admin control geometry. One contract, not per-screen padding hacks. */
+:root{--fb-control-height-compact:36px;--fb-control-height-default:40px;
+ --fb-control-height-touch:44px;--fb-control-radius:9px;--fb-control-font-size:13px}
+.fb-admin :is(.btn,.import-btn,.catalogue-actions-trigger){
+ box-sizing:border-box;min-height:var(--fb-control-height-compact);
+ height:var(--fb-control-height-compact);padding:0 12px;
+ border-radius:var(--fb-control-radius);font-size:var(--fb-control-font-size);
+ line-height:1.35;display:inline-flex;align-items:center;justify-content:center;
+ gap:8px;vertical-align:middle;white-space:nowrap
+}
+.fb-admin :is(.btn,.import-btn,.catalogue-actions-trigger) svg{
+ width:16px;height:16px;flex:none
+}
+.fb-admin .fb-pricing-tabs button{box-sizing:border-box;min-height:40px;padding:0 14px;
+ display:inline-flex;align-items:center;justify-content:center;font-size:13px;line-height:1.35}
+.fb-admin :is(.btn,.import-btn,.catalogue-actions-trigger):focus-visible{
+ outline:2px solid #6d249e;outline-offset:2px
+}
+@media(max-width:780px){
+ .fb-admin :is(.btn,.import-btn,.catalogue-actions-trigger){height:var(--fb-control-height-touch);
+ min-height:var(--fb-control-height-touch)}
+ .fb-admin .fb-pricing-tabs button{min-height:44px}
+}

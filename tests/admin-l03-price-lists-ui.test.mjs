@@ -1,0 +1,43 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import {readFileSync} from "node:fs";
+const read=p=>readFileSync(new URL("../"+p,import.meta.url),"utf8");
+test("user-defined list code and name replace fixed prices as default Admin workflow",()=>{
+ const ui=read("apps/admin/app/catalogue-side-workspace.tsx");
+ const list=read("apps/admin/app/catalogue-managed-prices.tsx");
+ assert.match(ui,/useState<"lists"\|"sku"\|"excel">\("lists"\)/);
+ assert.match(ui,/>Bảng giá tự tạo<\/button>/);
+ assert.match(ui,/<CatalogueManagedPriceLists/);
+ assert.match(list,/Mã bảng giá \(tự đặt\)/);
+ assert.match(list,/Tên bảng giá/);
+ assert.match(list,/list_code/);
+ assert.match(list,/channel_codes/);
+ assert.match(list,/scope_customer_id/);
+ assert.match(list,/Tìm khách cụ thể theo tên\/mã/);
+ assert.match(list,/approval_state==="draft"/);
+ assert.match(list,/Duyệt bảng giá/);
+ assert.match(list,/Không có bảng giá mặc định/);
+ assert.doesNotMatch(list,/localStorage|sessionStorage|console\.log/);
+});
+test("price list API authenticates Owner and scopes are not public",()=>{
+ const client=read("apps/admin/app/api/pricing/managed/[[...path]]/route.ts");
+ const backend=read("backend/admin-api/managed-price-lists-service.mjs");
+ assert.match(client,/origin_forbidden/);
+ assert.match(client,/Bearer/);
+ assert.match(client,/private, no-store/);
+ assert.match(client,/POST_ACTIONS/);
+ assert.match(backend,/actor\?\.role!=="owner"/);
+ assert.match(backend,/scope_customer_type/);
+ assert.match(backend,/valid_from/);
+ assert.match(backend,/approved_price_required/);
+ assert.match(backend,/source_document/);
+});
+test("shared button geometry is consistent and retains mobile hit target",()=>{
+ const controls=read("apps/admin/app/admin-controls.css");
+ const layout=read("apps/admin/app/layout.tsx");
+ assert.match(controls,/--fb-control-height-compact:36px/);
+ assert.match(controls,/--fb-control-height-touch:44px/);
+ assert.match(controls,/\.fb-admin :is\(\.btn,\.import-btn,\.catalogue-actions-trigger\)/);
+ assert.match(controls,/align-items:center/);
+ assert.match(layout,/import "\.\/admin-controls\.css"/);
+});
