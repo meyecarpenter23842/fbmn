@@ -1,5 +1,5 @@
 "use client";
-import {useMemo,useState} from "react";
+import {useMemo,useRef,useState} from "react";
 
 export type StructureCategory={id:string;parent_id:string|null;category_code:string;category_label:string};
 export type StructureFamily={id:string;family_code:string;family_label:string;revision?:number};
@@ -31,6 +31,13 @@ export default function CatalogueStructureManager({
   const [newName,setNewName]=useState("");
   const [newCode,setNewCode]=useState("");
   const [parentId,setParentId]=useState("");
+  const createPanel=useRef<HTMLDivElement>(null);
+  const createNameInput=useRef<HTMLInputElement>(null);
+  const createChild=(id:string)=>{
+    setParentId(id);setNewName("");setNewCode("");
+    createPanel.current?.scrollIntoView({behavior:"smooth",block:"nearest"});
+    window.requestAnimationFrame(()=>createNameInput.current?.focus());
+  };
   const [rename,setRename]=useState("");
   const [editCode,setEditCode]=useState("");
   const [memberSearch,setMemberSearch]=useState("");
@@ -88,7 +95,7 @@ export default function CatalogueStructureManager({
   return <div className="catalogue-structure">
     <div className="catalogue-structure-tabs" role="tablist" aria-label="Quản lý cấu trúc sản phẩm">
       <button type="button" role="tab" aria-selected={pane==="categories"}
-        className={pane==="categories"?"active":""} onClick={()=>choosePane("categories")}>Danh mục ({categories.length})</button>
+        className={pane==="categories"?"active":""} onClick={()=>choosePane("categories")}>Ngành hàng & danh mục ({categories.length})</button>
       <button type="button" role="tab" aria-selected={pane==="families"}
         className={pane==="families"?"active":""} onClick={()=>choosePane("families")}>Nhóm mẫu ({families.length})</button>
     </div>
@@ -99,8 +106,8 @@ export default function CatalogueStructureManager({
     </div>
 
     <div className="catalogue-structure-grid">
-      <section className="catalogue-structure-sidebar" aria-label={pane==="categories"?"Cây danh mục":"Danh sách nhóm mẫu"}>
-        <label className="catalogue-structure-field">Tìm {pane==="categories"?"danh mục":"nhóm mẫu"}
+      <section className="catalogue-structure-sidebar" aria-label={pane==="categories"?"Ngành hàng và danh mục sản phẩm":"Danh sách nhóm mẫu"}>
+        <label className="catalogue-structure-field">Tìm {pane==="categories"?"ngành hàng / danh mục":"nhóm mẫu"}
           <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Nhập mã hoặc tên…" type="search"/>
         </label>
         <div className="catalogue-structure-tree">
@@ -123,12 +130,13 @@ export default function CatalogueStructureManager({
                 <span><b className="catalogue-structure-code">{f.family_code}</b> {f.family_label}</span><small>{familyCounts[f.id]||0} SKU</small>
               </button>)}
           {!(pane==="categories"?categories.length:families.length)&&
-            <p className="catalogue-structure-empty">Chưa có {pane==="categories"?"danh mục":"nhóm mẫu"} nào.</p>}
+            <p className="catalogue-structure-empty">Chưa có {pane==="categories"?"ngành hàng hoặc danh mục":"nhóm mẫu"} nào.</p>}
         </div>
       </section>
       <section className="catalogue-structure-detail">
-        <div className="catalogue-structure-create">
-          <strong>Tạo {pane==="categories"?"danh mục":"nhóm mẫu"} mới</strong>
+        <div className="catalogue-structure-create" ref={createPanel}>
+          <strong>Tạo {pane==="categories"?(parentId?"danh mục sản phẩm":"ngành hàng"):"nhóm mẫu"} mới</strong>
+          {pane==="categories"&&parentId&&<small role="status">Thuộc ngành hàng: {roots.find(c=>c.id===parentId)?.category_label||"Đang chọn"}. Nhập mã và tên danh mục.</small>}
           <div className="catalogue-structure-inputs">
             <label className="catalogue-structure-field">Mã quản lý (bắt buộc)
               <input value={newCode} maxLength={32}
@@ -138,12 +146,12 @@ export default function CatalogueStructureManager({
                 spellCheck={false} autoComplete="off"/>
             </label>
             <label className="catalogue-structure-field">Tên
-              <input value={newName} maxLength={160} onChange={e=>setNewName(e.target.value)}
-                placeholder={pane==="categories"?"Tên danh mục":"Tên nhóm mẫu"}/>
+              <input ref={createNameInput} value={newName} maxLength={160} onChange={e=>setNewName(e.target.value)}
+                placeholder={pane==="categories"?(parentId?"Tên danh mục sản phẩm":"Tên ngành hàng"):"Tên nhóm mẫu"}/>
             </label>
-            {pane==="categories"&&<label className="catalogue-structure-field">Danh mục cha
+            {pane==="categories"&&<label className="catalogue-structure-field">Thuộc ngành hàng
               <select value={parentId} onChange={e=>setParentId(e.target.value)}>
-                <option value="">Cấp 1</option>
+                <option value="">Không chọn — tạo ngành hàng</option>
                 {roots.map(c=><option value={c.id} key={c.id}>{c.category_label}</option>)}
               </select>
             </label>}
@@ -163,10 +171,10 @@ export default function CatalogueStructureManager({
         </div>
         {(pane==="categories"?selectedCategory:selectedFamily)?<>
           <div className="catalogue-structure-selected">
-            <div><small>Đang xem {pane==="categories"?"danh mục":"nhóm mẫu"}</small>
+            <div><small>Đang xem {pane==="categories"?(selectedCategory?.parent_id?"danh mục sản phẩm":"ngành hàng"):"nhóm mẫu"}</small>
               <p className="catalogue-structure-code-line">Mã quản lý: <strong>{pane==="categories"?selectedCategory?.category_code:selectedFamily?.family_code}</strong></p>
               <h3>{pane==="categories"?selectedCategory?.category_label:selectedFamily?.family_label}</h3>
-              <span>{members.length} SKU {pane==="categories"&&subIds.length?"(gồm danh mục con)":""}</span>
+              <span>{members.length} SKU {pane==="categories"&&subIds.length?"(gồm các danh mục sản phẩm)":""}</span>
             </div>
           </div>
           <div className="catalogue-structure-rename">
@@ -204,8 +212,8 @@ export default function CatalogueStructureManager({
               }}>Lưu tên</button>
           </div>
           {pane==="categories"&&selectedCategory&&!selectedCategory.parent_id&&
-            <button type="button" className="import-btn import-secondary" onClick={()=>setParentId(selectedCategory.id)}>
-              + Tạo danh mục con bên dưới
+            <button type="button" className="import-btn import-secondary" disabled={busy} onClick={()=>createChild(selectedCategory.id)}>
+              + Thêm danh mục sản phẩm
             </button>}
           {pane==="families"&&selectedFamily&&<>
             <div className="catalogue-structure-assign">
@@ -250,7 +258,7 @@ export default function CatalogueStructureManager({
             </div>
           </div>
         </>:<div className="catalogue-structure-empty catalogue-structure-unselected">
-          Chọn một {pane==="categories"?"danh mục trong cây bên trái":"nhóm mẫu trong danh sách"} để xem thành viên và quản lý thiết lập.
+          Chọn một {pane==="categories"?"ngành hàng hoặc danh mục bên trái":"nhóm mẫu trong danh sách"} để xem thành viên và quản lý thiết lập.
         </div>}
       </section>
     </div>

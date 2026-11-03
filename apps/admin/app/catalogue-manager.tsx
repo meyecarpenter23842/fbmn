@@ -47,7 +47,7 @@ function CatalogueFields({spec,onChange,categories}:{spec:SpecFields;onChange:(v
   return <>
     <label>Danh mục<select value={spec.category_id} onChange={e=>set("category_id",e.target.value)}>
       <option value="">Chưa phân loại</option>
-      {options.map(c=><option value={c.id} key={c.id}>{c.category_code} · {c.category_code} · {c.parent_id?"↳ ":""}{c.category_label}</option>)}
+      {options.map(c=><option value={c.id} key={c.id}>{c.category_code} · {c.parent_id?"↳ ":""}{c.category_label}</option>)}
     </select></label>
     <label>Khổ<input value={spec.paper_size} onChange={e=>set("paper_size",e.target.value)} placeholder="A4, A5, B5…"/></label>
     <label>Mã vạch<input value={spec.barcode} onChange={e=>set("barcode",e.target.value)} placeholder="Có thể trùng giữa SKU"/></label>
@@ -284,13 +284,15 @@ export default function CatalogueManager({onImport,onStructure,view="products",i
       setEditing(null);setCreate(true);setSku("");setName("");setSpec(blankSpec());
     }
   };
-  const closeEditor=()=>{
-    if(busy||mediaBusy)return;
+  const canCloseEditor=()=>{
+    if(busy||mediaBusy)return false;
     const originalName=editing?(editing.ten_san_pham||editing.ten_goc_xnt||editing.ten_goc_bang_gia||""):"";
     const dirty=editing?
       editName!==originalName||JSON.stringify(spec)!==JSON.stringify(specFromSku(editing)):
       sku.trim()!==""||name.trim()!==""||JSON.stringify(spec)!==JSON.stringify(blankSpec());
-    if(dirty&&!window.confirm("Đóng và bỏ những thay đổi chưa lưu?"))return;
+    return !dirty||window.confirm("Đóng và bỏ những thay đổi chưa lưu?");
+  };
+  const closeEditor=()=>{
     setEditing(null);setCreate(false);setEditorNotice("");setError("");
   };
   const add=()=>void run(async()=>{
@@ -357,7 +359,7 @@ export default function CatalogueManager({onImport,onStructure,view="products",i
     setMessage("Đã gắn "+selected.length+" mã vào nhóm mẫu.");
   });
   const editorDialog=<>{(create||editing)&&<ProductModal title={editing?"Sửa sản phẩm · "+editing.sku_cong_ty:"Thêm sản phẩm"}
-      wide onClose={closeEditor} locked={busy||mediaBusy}>
+      wide onClose={closeEditor} beforeClose={canCloseEditor} locked={busy||mediaBusy}>
       <AdminToast message={error||message} variant={error?"error":"success"} onClose={clearToast}/>
       <CatalogueProductWorkspace items={items} selectedSku={editing?.sku_cong_ty||null}
         companySku={editing?.sku_cong_ty||sku} name={editing?editName:name}
@@ -371,7 +373,7 @@ export default function CatalogueManager({onImport,onStructure,view="products",i
         onSku={setSku} onName={editing?setEditName:setName}
         onShortDescription={value=>setSpec(previous=>({...previous,short_description:value}))}
         onLongDescription={value=>setSpec(previous=>({...previous,long_description:value}))}
-        onSave={editing?save:add} onClose={closeEditor} onNew={()=>startEditor(null)}
+        onSave={editing?save:add} onNew={()=>startEditor(null)}
         onSelect={code=>{const row=items.find(item=>item.sku_cong_ty===code);if(row)startEditor(row);}}
         onMediaChanged={()=>void refresh()} onMediaBusy={setMediaBusy}/>
     </ProductModal>}</>;
@@ -522,18 +524,8 @@ export default function CatalogueManager({onImport,onStructure,view="products",i
           buttons[(index+(event.key==="ArrowDown"?1:buttons.length-1))%buttons.length].focus();
         }}>
         <button type="button" role="menuitem"
-          disabled={!["draft","needs_review"].includes(selectedActionRow.review_status)}
-          title="Sửa thông tin sản phẩm"
-          onClick={()=>{
-            setActionMenu(null);
-            setError("");
-            setEditing(selectedActionRow);
-            setEditName(selectedActionRow.ten_san_pham||selectedActionRow.ten_goc_xnt||selectedActionRow.ten_goc_bang_gia||"");
-            setSpec(specFromSku(selectedActionRow));
-          }}>Sửa sản phẩm</button>
-        <button type="button" role="menuitem"
-          onClick={()=>{startEditor(selectedActionRow);setActionMenu(null)}}>
-          Quản lý hình ảnh</button>
+          title="Sửa thông tin và quản lý hình ảnh sản phẩm"
+          onClick={()=>{startEditor(selectedActionRow);setActionMenu(null);}}>Sửa sản phẩm</button>
         <button type="button" role="menuitem"
           disabled={!["draft","needs_review"].includes(selectedActionRow.review_status)}
           onClick={()=>{

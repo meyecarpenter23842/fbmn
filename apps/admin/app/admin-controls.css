@@ -271,3 +271,98 @@
   .fb-toast-slot { transition:none; }
   .catalogue-toast,.catalogue-toast--exiting,.catalogue-toast-progress::before { animation:none; }
 }
+
+
+/* Owner: shared motion and compact lavender-purple popup header. */
+:root {
+  --fb-motion-button: 190ms;
+  --fb-motion-menu: 200ms;
+  --fb-motion-modal-enter: 280ms;
+  --fb-motion-modal-exit: 220ms;
+  --fb-motion-drawer: 300ms;
+  --fb-motion-ease-enter: cubic-bezier(.22,1,.36,1);
+  --fb-motion-ease-exit: cubic-bezier(.4,0,1,1);
+  --fb-modal-header-height: 52px;
+  --fb-modal-header-mobile-height: 56px;
+}
+.fb-admin :is(.btn,.import-btn,.catalogue-actions-trigger,.fb-ui-button) {
+  transition:background-color var(--fb-motion-button) var(--fb-motion-ease-enter),
+    border-color var(--fb-motion-button) var(--fb-motion-ease-enter),
+    color var(--fb-motion-button) var(--fb-motion-ease-enter),
+    box-shadow var(--fb-motion-button) var(--fb-motion-ease-enter),
+    transform var(--fb-motion-button) var(--fb-motion-ease-enter);
+}
+.fb-admin :is(.btn,.import-btn):not(:disabled):active {
+  transition-duration:var(--fb-motion-button);
+}
+.fb-product-modal-overlay {
+  animation:fb-modal-backdrop-enter 220ms var(--fb-motion-ease-enter) both;
+}
+.fb-product-modal-overlay .fb-product-modal {
+  animation:fb-modal-enter var(--fb-motion-modal-enter) var(--fb-motion-ease-enter) backwards;
+}
+.fb-product-modal-overlay.fb-modal-exiting {
+  pointer-events:none;
+  animation:fb-modal-backdrop-exit var(--fb-motion-modal-exit) var(--fb-motion-ease-exit) both;
+}
+.fb-product-modal-overlay.fb-modal-exiting .fb-product-modal {
+  animation:fb-modal-exit var(--fb-motion-modal-exit) var(--fb-motion-ease-exit) both;
+}
+.fb-product-modal-header {
+  position:relative;
+  box-sizing:border-box;
+  min-height:var(--fb-modal-header-height);
+  padding:6px 16px;
+  gap:12px;
+  background:linear-gradient(90deg,#fff 0%,var(--fb-ui-primary-subtle) 100%);
+  border-bottom:1px solid var(--fb-ui-table-header-border);
+}
+.fb-product-modal-header::before {
+  content:"";position:absolute;top:0;bottom:0;left:0;width:3px;
+  background:var(--fb-ui-primary);
+}
+.fb-product-modal-header h2 {
+  font-size:16px;
+  font-weight:700;
+  line-height:1.35;
+  color:var(--fb-ui-primary-strong);
+  overflow-wrap:anywhere;
+}
+.fb-product-modal-header .fb-product-modal-close {height:36px;width:36px;}
+.catalogue-actions-popover,.catalogue-export-dropdown {
+  animation:fb-menu-enter var(--fb-motion-menu) var(--fb-motion-ease-enter) both;
+  transform-origin:top right;
+}
+@keyframes fb-modal-enter {
+  from {opacity:0;transform:scale(.97);}
+  to {opacity:1;transform:scale(1);}
+}
+@keyframes fb-modal-exit {
+  from {opacity:1;transform:scale(1);}
+  to {opacity:0;transform:scale(.98);}
+}
+@keyframes fb-modal-backdrop-enter {
+  from {opacity:0;} to {opacity:1;}
+}
+@keyframes fb-modal-backdrop-exit {
+  from {opacity:1;} to {opacity:0;}
+}
+@keyframes fb-menu-enter {
+  from {opacity:0;transform:translateY(-6px);}
+  to {opacity:1;transform:translateY(0);}
+}
+@media (max-width:780px) {
+  .fb-product-modal-header {
+    min-height:var(--fb-modal-header-mobile-height);
+    padding:6px 12px;
+  }
+  .fb-product-modal-header .fb-product-modal-close {width:44px;height:44px;}
+}
+@media (prefers-reduced-motion: reduce) {
+  .fb-admin :is(.btn,.import-btn,.catalogue-actions-trigger,.fb-ui-button),
+  .catalogue-actions-popover,.catalogue-export-dropdown,
+  .fb-product-modal-overlay,.fb-product-modal-overlay .fb-product-modal {
+    animation:none!important;
+    transition:none!important;
+  }
+}

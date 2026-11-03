@@ -95,3 +95,30 @@ test("mandatory smooth motion and compact purple popup header rules persist acro
  assert.match(policy,/chưa được sửa trong PR tài liệu này/);
  assert.doesNotMatch(design,/Motion 120–180ms cho hover\/focus/);
 });
+
+test("runtime shared modal and categories meet the mandatory UI contract",()=>{
+ const modal=source("apps/admin/app/product-modal.tsx");
+ const taxonomy=source("apps/admin/app/catalogue-structure-manager.tsx");
+ const style=source("apps/admin/app/admin-controls.css");
+ assert.match(modal,/fb-modal-exiting/);
+ assert.match(modal,/window\.setTimeout\(\(\)=>onCloseRef\.current\(\),220\)/);
+ assert.match(modal,/requestCloseRef\.current\(\)/);
+ assert.match(modal,/beforeCloseRef\.current\?\.\(\)===false/);
+ assert.match(modal,/ModalCloseContext\.Provider value=\{requestClose\}/);
+ const workspace=source("apps/admin/app/catalogue-product-workspace.tsx");
+ assert.match(workspace,/useProductModalClose\(\)/);
+ assert.match(workspace,/onClick=\{requestClose\}>Đóng/);
+ for(const token of ["--fb-motion-button: 190ms","--fb-motion-menu: 200ms",
+  "--fb-motion-modal-enter: 280ms","--fb-motion-modal-exit: 220ms",
+  "--fb-motion-drawer: 300ms","--fb-modal-header-height: 52px",
+  "--fb-modal-header-mobile-height: 56px"]){
+  assert.ok(style.includes(token),token);
+ }
+ assert.match(style,/@keyframes fb-modal-enter/);
+ assert.match(style,/@keyframes fb-modal-exit/);
+ assert.match(style,/@media \(prefers-reduced-motion: reduce\)/);
+ assert.match(taxonomy,/createChild\(selectedCategory\.id\)/);
+ assert.match(taxonomy,/createNameInput\.current\?\.focus\(\)/);
+ assert.match(taxonomy,/Thuộc ngành hàng/);
+ assert.doesNotMatch(taxonomy,/Danh mục cha|Tạo danh mục con bên dưới/);
+});

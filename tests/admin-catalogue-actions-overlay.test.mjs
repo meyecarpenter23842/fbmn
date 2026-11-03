@@ -42,7 +42,8 @@ test("catalogue action trigger controls exactly one portal rather than unbounded
 test("action menu preserves edit and grouping actions, and cleans up listeners",()=>{
   const tsx=read("apps/admin/app/catalogue-manager.tsx");
   assert.match(tsx,/setActionMenu\(null\)/);
-  assert.match(tsx,/setEditing\(selectedActionRow\)/);
+  assert.match(tsx,/startEditor\(selectedActionRow\)/);
+  assert.doesNotMatch(tsx,/>Quản lý hình ảnh<\/button>/);
   assert.match(tsx,/setStructurePane\("families"\)/);
   assert.match(tsx,/removeEventListener\("pointerdown",closeOutside\)/);
   assert.match(tsx,/removeEventListener\("keydown",keydown\)/);

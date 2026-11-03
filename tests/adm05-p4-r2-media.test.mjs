@@ -226,7 +226,7 @@ test("P4 contract: R2 bucket private, grants staging only and browser no direct 
   assert.ok(!up.includes("GRANT UPDATE ON fbmn_catalog.sku_media"));
   assert.ok(!up.includes("reviewed_by) TO fbmn_admin_http_staging"));
   assert.ok(down.includes("REVOKE UPDATE (media_role,sort_order)"));
-  assert.match(read("apps/admin/app/catalogue-manager.tsx"),/Quản lý hình ảnh/);
+  assert.match(read("apps/admin/app/catalogue-manager.tsx"),/title="Sửa thông tin và quản lý hình ảnh sản phẩm"/);
   assert.match(admin,/X-FBMN-File-Name/);
   assert.match(admin,/Ảnh đại diện/);
   assert.match(admin,/Xóa ảnh/);

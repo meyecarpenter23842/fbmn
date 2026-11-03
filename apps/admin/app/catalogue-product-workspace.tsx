@@ -4,6 +4,7 @@ import {useMemo,useState} from "react";
 import type {ReactNode} from "react";
 import CatalogueMediaManager,{PrivateImage} from "./catalogue-media-manager";
 import CataloguePricebookPanel from "./catalogue-pricebook-panel";
+import {useProductModalClose} from "./product-modal";
 
 type WorkspaceItem={
   sku_cong_ty:string;
@@ -18,7 +19,7 @@ type WorkspaceItem={
 export default function CatalogueProductWorkspace({
   items,selectedSku,companySku,name,shortDescription,longDescription,fields,
   editingAllowed,loading,onSku,onName,onShortDescription,onLongDescription,
-  onSave,onClose,onNew,onSelect,onMediaChanged,onMediaBusy
+  onSave,onNew,onSelect,onMediaChanged,onMediaBusy
 }:{
   items:WorkspaceItem[];
   selectedSku:string|null;
@@ -36,12 +37,12 @@ export default function CatalogueProductWorkspace({
   onShortDescription:(value:string)=>void;
   onLongDescription:(value:string)=>void;
   onSave:()=>void;
-  onClose:()=>void;
   onNew:()=>void;
   onSelect:(sku:string)=>void;
   onMediaChanged:()=>void;
   onMediaBusy:(busy:boolean)=>void;
 }){
+  const requestClose=useProductModalClose();
   const [find,setFind]=useState("");
   const results=useMemo(()=>{
     const q=find.trim().toLocaleLowerCase("vi");
@@ -125,7 +126,7 @@ export default function CatalogueProductWorkspace({
         </p>}
       </div>
       <div className="catalogue-workspace-footer">
-        <button className="import-btn import-secondary" type="button" disabled={loading} onClick={onClose}>Đóng</button>
+        <button className="import-btn import-secondary" type="button" disabled={loading} onClick={requestClose}>Đóng</button>
         <button className="import-btn import-primary" type="button" disabled={loading||!editingAllowed||!companySku.trim()||!name.trim()}
           onClick={onSave}>{loading?"Đang lưu…":selectedSku?"Lưu thay đổi":"Lưu sản phẩm"}</button>
       </div>
