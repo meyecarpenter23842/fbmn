@@ -1,0 +1,2 @@
+# Futurebook Website — UI coding rules
+Read [`docs/ui-system.md`](../docs/ui-system.md) and [`docs/web-component-design-system.md`](../docs/web-component-design-system.md) before editing website UI under `app/**`. Keep existing Owner-approved desktop/mobile layout and purple identity with red promotional CTA. Improve **component craftsmanship**, not overall composition. Never invent product prices, images, or SKU values. Do not add mobile bottom dock or change business logic when doing visual polish. Test desktop/mobile and keyboard focus; PR → CI → review, no auto deploy.

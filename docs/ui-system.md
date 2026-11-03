@@ -48,6 +48,9 @@ Các SKU M483/M494/M885/M439, giá 19.500đ/28.500đ/14.500đ/32.500đ, hotline 
 | Container | --content-width: 1200px |
 
 
+## Chuẩn tinh chỉnh component Website (03/11/2026)
+Tài liệu chi tiết: [`docs/web-component-design-system.md`](web-component-design-system.md). Các thay đổi tinh chỉnh **không được đổi layout desktop/mobile đã duyệt**, không thêm bottom navigation. Giữ tím Futurebook làm nền tảng và **CTA đỏ ở đúng các vị trí website đã duyệt**, không phủ gradient vào mọi card.
+
 ## Nguồn ảnh danh mục và SKU (không cài chết)
 
 - Hiện tại: các thumbnail chỉ là minh họa CSS lấy từ lib/ui-preview.ts; chưa có ảnh thực. Đổi kích thước bìa CSS để không còn các card trống ở mobile.
