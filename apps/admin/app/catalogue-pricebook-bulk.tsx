@@ -9,7 +9,7 @@ type Field="ignore"|"sku_cong_ty"|"amount_vnd"|"price_kind"|"vat_included"|
 type Cell={text:string;kind:"text"|"number"|"blank"};
 type Sheet={sheet_name?:string;columns:{index:number;header:string;suggested:string}[];
  rows:{line:number;cells:Cell[]}[];total_rows:number};
-type Change={line:number;sku_cong_ty:string;price_kind:PriceKind;amount_vnd:string;
+type Change={line:number;sku_cong_ty:string;ten_san_pham:string|null;price_kind:PriceKind;amount_vnd:string;
  old_amount_vnd:string|null;status:"new"|"updated"|"unchanged"|"invalid"|"conflict";
  issue:string|null;effective_from:string};
 type Preview={changes:Change[];updated:number;created:number;unchanged:number;
@@ -65,8 +65,13 @@ const asBps=(str:string):number=>{
 };
 export default function CataloguePricebookBulk({onBusyChange}:{onBusyChange?:(busy:boolean)=>void}){
  const invalidation=useRef(0);
+ const fileInput=useRef<HTMLInputElement|null>(null);
  const [sheet,setSheet]=useState<Sheet|null>(null);
+ const [fileName,setFileName]=useState("");
+ const [previewOnlyFile,setPreviewOnlyFile]=useState(false);
  const [mapping,setMapping]=useState<Field[]>([]);
+ const [showMapping,setShowMapping]=useState(false);
+ const [mappingVerified,setMappingVerified]=useState(false);
  const [kind,setKind]=useState<PriceKind>("net_internal");
  const [source,setSource]=useState("");
  const [vat,setVat]=useState<""|"yes"|"no">("");
@@ -89,6 +94,7 @@ export default function CataloguePricebookBulk({onBusyChange}:{onBusyChange?:(bu
  const setMapped=(index:number,value:Field)=>{
   setMapping(before=>before.map((v,i)=>i===index?value:
    value!=="ignore"&&v===value?"ignore":v));
+  setMappingVerified(false);setShowMapping(true);
   invalidate();
  };
  const readFile=async(file:File)=>{
@@ -106,15 +112,32 @@ export default function CataloguePricebookBulk({onBusyChange}:{onBusyChange?:(bu
     too_many_rows:"File vượt giới hạn 1.000 dòng giá.",
     too_many_columns:"File vượt giới hạn 30 cột.",
     xlsx_too_large:"File Excel quá lớn để kiểm tra an toàn.",
-    formula_not_allowed:"File có ô công thức; hãy dán giá trị trước khi nhập."
+    formula_not_allowed:"File có công thức trong dữ liệu giá; hãy dán giá trị rồi nhập lại.",
+    unsupported_cell:"File có ô Excel dạng đặc biệt chưa hỗ trợ ở vùng dữ liệu.",
+    invalid_xlsx:"Cấu trúc XLSX không hợp lệ. Hãy lưu lại từ Excel rồi thử lại.",
+    invalid_csv:"Dữ liệu CSV có dấu nháy hoặc dấu phân cách bị lỗi.",
+    invalid_price_sheet:"Không nhận diện được cấu trúc dữ liệu giá trong file."
    };
    throw Error(resp.status===403?"Chỉ Owner được đọc file bảng giá.":
     details[payload.error?.code||""]||"Không đọc được file Excel/CSV. Kiểm tra định dạng và công thức.");
   }
   if(payload.data.total_rows>1000)throw Error("Tối đa 1.000 dòng trong một lô.");
   setSheet(payload.data);
+  setFileName(file.name);
+  // Source/test marker remains authoritative even when optional XLSX columns
+  // are intentionally ignored for price writes. Never turn test rows into prices.
+  const sourceIndex=payload.data.columns.findIndex(c=>c.suggested==="source_document");
+  const sheetTest=sourceIndex>=0&&payload.data.rows.some(r=>
+   /TEST_ONLY|KHONG_AP_DUNG/i.test(r.cells[sourceIndex]?.text||""));
+  setPreviewOnlyFile(sheetTest||/(?:^|[_ .-])TEST(?:[_ .-]|$)|KHONG_AP_DUNG/i.test(file.name));
+  setSource(file.name.slice(0,300));
+  const candidates=payload.data.columns.map(c=>c.suggested);
+  const count=(key:string)=>candidates.filter(v=>v===key).length;
+  const needsReview=count("sku_cong_ty")!==1||count("amount_vnd")!==1;
+  setShowMapping(needsReview);setMappingVerified(!needsReview);
   const used=new Set<string>();
   setMapping(payload.data.columns.map(c=>{
+   if(!["sku_cong_ty","amount_vnd"].includes(c.suggested))return "ignore";
    const v=c.suggested as Field;
    if(v==="ignore"||used.has(v))return "ignore";
    used.add(v);return v;
@@ -127,8 +150,7 @@ export default function CataloguePricebookBulk({onBusyChange}:{onBusyChange?:(bu
    mapping.filter(v=>v==="amount_vnd").length!==1)
    throw Error("Phải ánh xạ một cột Mã công ty và một cột Giá mới.");
   const has=(key:Field)=>mapping.includes(key);
-  if(!has("vat_included")&&!vat)throw Error("Chưa chọn trạng thái VAT.");
-  if(!has("source_document")&&!source.trim())throw Error("Chưa nhập tên chứng từ/nguồn giá.");
+  if(!has("source_document")&&!source.trim())throw Error("Chưa có tên file làm nguồn giá.");
   if(kind==="dealer_contract"&&!has("customer_id")&&!customer.trim())
    throw Error("Giá đại lý cần ID khách hàng đã tồn tại.");
   if(vatPercent!==""&&asBps(vatPercent)<0)throw Error("Thuế suất VAT chưa hợp lệ.");
@@ -172,6 +194,8 @@ export default function CataloguePricebookBulk({onBusyChange}:{onBusyChange?:(bu
   setBusy(true);invalidate();
   const generation=invalidation.current;
   try{
+   // One bounded private preview request resolves exactly the supplied SKUs;
+   // no full-catalogue export or untrusted spreadsheet name is consulted.
    const payload=buildPayload();
    const result=await jsonRequest<Preview>("/api/pricing/bulk/preview","POST",payload);
    // Mapping, file or metadata changed while the request was running:
@@ -185,6 +209,11 @@ export default function CataloguePricebookBulk({onBusyChange}:{onBusyChange?:(bu
  };
  const doApply=async()=>{
   if(!preview||!prepared||preview.invalid||!requestId)return;
+  // The supplied UAT workbooks use deliberately fake prices. Never publish
+  // those values as an actual draft from the test flow.
+  if(previewOnlyFile||/(?:^|[_ .-])TEST(?:[_ .-]|$)|KHONG_AP_DUNG/i.test(fileName)||/TEST_ONLY/i.test(String(prepared.source_document||""))){
+   notify("Đây là file giá thử nghiệm. Chỉ được xem trước, không lưu giá giả lập.");return;
+  }
   if(!window.confirm("Xác nhận lưu giá nháp cho "+(preview.created+preview.updated)+
    " mục thay đổi? File này không tự công khai giá."))return;
   setBusy(true);
@@ -193,9 +222,26 @@ export default function CataloguePricebookBulk({onBusyChange}:{onBusyChange?:(bu
     "/api/pricing/bulk/apply","POST",{...prepared,preview_fingerprint:preview.preview_fingerprint,
      request_id:requestId,confirm:"XAC_NHAN_GIA_NHAP"});
    notify("Đã lưu "+(result.created_count+result.updated_count)+" giá nháp. Không công khai NET.","success");
-   invalidate();setSheet(null);setMapping([]);
+   invalidate();setSheet(null);setMapping([]);setFileName("");setPreviewOnlyFile(false);
+   setShowMapping(false);setMappingVerified(false);
    if(showHistory)void loadHistory();
   }catch(e){notify(e instanceof Error?e.message:"Không lưu được giá.");}
+  finally{setBusy(false);}
+ };
+ const doTemplate=async()=>{
+  setBusy(true);
+  try{
+   const token=await bearer();
+   // Template is empty and does not depend on dealer/private price scope.
+   const response=await fetch("/api/pricing/export?kind=source&template=1",{
+    headers:{Authorization:"Bearer "+token},credentials:"same-origin",cache:"no-store"});
+   if(!response.ok)throw Error("Không tải được file mẫu XLSX.");
+   const url=URL.createObjectURL(await response.blob());
+   const link=document.createElement("a");
+   link.href=url;link.download="Futurebook_MAU_2_COT.xlsx";
+   document.body.append(link);link.click();link.remove();
+   window.setTimeout(()=>URL.revokeObjectURL(url),1000);
+  }catch(e){notify(e instanceof Error?e.message:"Không tải được file mẫu.");}
   finally{setBusy(false);}
  };
  const doExport=async()=>{
@@ -231,9 +277,11 @@ export default function CataloguePricebookBulk({onBusyChange}:{onBusyChange?:(bu
  return <section className="fb-price-bulk" aria-label="Excel giá hàng loạt">
   {toast&&<AdminToast message={toast.message} variant={toast.variant} onClose={()=>setToast(null)}/>}
   <div className="fb-price-bulk-heading">
-   <div><strong>Excel giá hàng loạt</strong>
-    <small>Xuất, ánh xạ cột, xem giá cũ → mới rồi xác nhận. Chỉ lưu nội bộ.</small></div>
+   <div><strong>Nhập / cập nhật giá bằng Excel</strong>
+    <small>File chỉ cần 2 cột: Mã công ty và Giá mới (VND). Tên sản phẩm tự tra cứu.</small></div>
    <div className="fb-price-bulk-tools">
+    <button type="button" className="import-btn import-secondary"
+     onClick={()=>void doTemplate()} disabled={busy}>Tải file mẫu</button>
     <button type="button" className="import-btn import-secondary"
      onClick={()=>void loadHistory()} disabled={busy}>Lịch sử</button>
     <button type="button" className="import-btn import-secondary"
@@ -241,61 +289,98 @@ export default function CataloguePricebookBulk({onBusyChange}:{onBusyChange?:(bu
    </div>
   </div>
   <div className="fb-price-bulk-form">
-   <div className="fb-price-bulk-settings">
-    <label>Loại giá
+   <div className="fb-price-bulk-simple">
+    <label>Loại giá cần cập nhật
      <select value={kind} onChange={e=>{setKind(e.target.value as PriceKind);invalidate();}}>
       {kindOptions.map(([id,label])=><option key={id} value={id}>{label}</option>)}
-     </select></label>
-    <label>VAT của giá trong file
-     <select value={vat} onChange={e=>{setVat(e.target.value as ""|"yes"|"no");invalidate();}}>
-      <option value="">Chưa chọn</option><option value="yes">Đã gồm VAT</option>
-      <option value="no">Chưa gồm VAT</option>
-     </select></label>
-    <label className="fb-price-bulk-doc">Nguồn giá / chứng từ
-     <input value={source} maxLength={300} onChange={e=>{setSource(e.target.value);invalidate();}}
-      placeholder="Tên bảng giá/chứng từ đã được xác minh"/></label>
-    <label>Ngày hiệu lực
-     <input type="date" value={from} onChange={e=>{setFrom(e.target.value);invalidate();}}/>
-     <small>Để trống: ngày lưu theo giờ Việt Nam</small></label>
-    <label>Ngày hết hạn
-     <input type="date" value={until} onChange={e=>{setUntil(e.target.value);invalidate();}}/></label>
-    <label>VAT (% nếu xác minh)
-     <input type="number" min="0" max="100" step="0.01" value={vatPercent}
-      onChange={e=>{setVatPercent(e.target.value);invalidate();}} placeholder="Để trống nếu chưa biết"/></label>
-    {kind==="dealer_contract"&&<label className="fb-price-bulk-doc">ID đại lý
-     <input value={customer} onChange={e=>{setCustomer(e.target.value);invalidate();}}
-      placeholder="UUID tài khoản đại lý đã được cấp"/></label>}
+     </select>
+    </label>
+    <div className="fb-price-bulk-picker">
+     <span>File giá Excel / CSV</span>
+     <div className="fb-price-bulk-picker-line">
+      <input ref={fileInput} type="file" accept=".xlsx,.csv" className="fb-price-bulk-hidden"
+       aria-label="Chọn file giá Excel" disabled={busy} onChange={e=>{
+        const file=e.target.files?.[0];if(!file)return;
+        e.currentTarget.value="";
+        setSheet(null);setMapping([]);setFileName("");setPreviewOnlyFile(false);
+        setShowMapping(false);setMappingVerified(false);invalidate();
+        setBusy(true);void readFile(file).catch(err=>notify(err instanceof Error?
+         err.message:"Không đọc được file giá.")).finally(()=>setBusy(false));
+       }}/>
+      <button type="button" className="import-btn import-primary" disabled={busy}
+       onClick={()=>fileInput.current?.click()}>Chọn file</button>
+      <span title={fileName} className="fb-price-bulk-filename">{fileName||"Chưa chọn file"}</span>
+     </div>
+    </div>
    </div>
-   <label className="fb-price-bulk-keep-meta"><input type="checkbox" checked={overwriteMeta}
-    onChange={e=>{setOverwriteMeta(e.target.checked);invalidate();}}/>
-    Áp dụng VAT, nguồn và ngày hết hạn chung cho cả giá nháp đã có (nếu không tích chọn, giữ nguyên giá trị cũ khi bỏ qua cột).</label>
-   <label className="fb-price-bulk-file">Chọn file giá XLSX hoặc CSV (tối đa 1.000 dòng)
-    <input type="file" accept=".xlsx,.csv" disabled={busy} onChange={e=>{
-     const file=e.target.files?.[0];if(!file)return;
-     e.currentTarget.value="";
-     setSheet(null);setMapping([]);invalidate();
-     setBusy(true);void readFile(file).catch(err=>notify(err instanceof Error?
-      err.message:"Không đọc được file.")).finally(()=>setBusy(false));
-    }}/></label>
-   <small className="fb-price-bulk-hint">Mã công ty phải là text trong Excel (0114 khác 114).
-    Ô giá trống = bỏ qua, không xóa giá cũ. Không suy NET từ giá nguồn.</small>
+   <small className="fb-price-bulk-hint">Giữ nguyên mã công ty (ví dụ 0114 khác 114). Ô giá trống = bỏ qua. Chỉ giá của SKU trong file mới được đối chiếu.</small>
+   <details className="fb-price-bulk-advanced">
+    <summary>Tùy chọn bổ sung <span>VAT, hiệu lực, nguồn chứng từ</span></summary>
+    <div className="fb-price-bulk-settings">
+     <label>VAT (chỉ cần chọn khi SKU chưa có dữ liệu VAT)
+      <select value={vat} onChange={e=>{setVat(e.target.value as ""|"yes"|"no");invalidate();}}>
+       <option value="">Giữ VAT hiện có / chưa xác minh</option>
+       <option value="yes">Đã gồm VAT</option>
+       <option value="no">Chưa gồm VAT</option>
+      </select>
+     </label>
+     <label>Ngày hiệu lực
+      <input type="date" value={from} onChange={e=>{setFrom(e.target.value);invalidate();}}/>
+      <small>Để trống: ngày thực hiện (giờ Việt Nam)</small>
+     </label>
+     <label>Nguồn / chứng từ (mặc định tên file)
+      <input value={source} maxLength={300} onChange={e=>{setSource(e.target.value);invalidate();}}
+       placeholder="Tự lấy từ tên file"/>
+     </label>
+     <label>Ngày hết hạn
+      <input type="date" value={until} onChange={e=>{setUntil(e.target.value);invalidate();}}/>
+     </label>
+     <label>Thuế suất VAT (% nếu xác minh)
+      <input type="number" min="0" max="100" step="0.01" value={vatPercent}
+       onChange={e=>{setVatPercent(e.target.value);invalidate();}} placeholder="Không tự suy đoán"/>
+     </label>
+     {kind==="dealer_contract"&&<label>ID đại lý
+      <input value={customer} onChange={e=>{setCustomer(e.target.value);invalidate();}}
+       placeholder="UUID tài khoản đại lý đã được cấp"/>
+     </label>}
+    </div>
+    <label className="fb-price-bulk-keep-meta"><input type="checkbox" checked={overwriteMeta}
+     onChange={e=>{setOverwriteMeta(e.target.checked);invalidate();}}/>
+      Ghi đè VAT, nguồn và hạn chung lên giá nháp cũ (mặc định giữ nguyên dữ liệu đã lưu).
+    </label>
+   </details>
    {sheet&&<div className="fb-price-bulk-map">
-    <strong>Ánh xạ cột · {sheet.total_rows} dòng{sheet.sheet_name?" · sheet "+sheet.sheet_name:""}</strong>
+    <div className="fb-price-bulk-file-ready">
+     <strong>{sheet.total_rows} dòng giá · {sheet.sheet_name||"CSV"}</strong>
+     <button type="button" className="import-btn import-secondary" disabled={busy}
+      onClick={()=>{setSheet(null);setFileName("");setPreviewOnlyFile(false);setShowMapping(false);setMappingVerified(false);invalidate();}}>Đổi file</button>
+     <button type="button" className="import-btn import-secondary" disabled={busy}
+      onClick={()=>{setShowMapping(true);setMappingVerified(false);invalidate();}}>Chỉnh cột</button>
+    </div>
+    {showMapping&&<>
+     <small>Chọn chính xác cột mã và cột giá mới. Nếu file có nhiều cột giá, chỉ cột được chọn mới được xử lý.</small>
+    <strong>Ánh xạ 2 cột cần thiết</strong>
     <div className="fb-price-bulk-scroll"><table><thead><tr>
      {sheet.columns.map((c,i)=><th key={i}><select aria-label={"Cột "+(i+1)+": "+c.header}
       value={mapping[i]||"ignore"} disabled={busy}
       onChange={e=>setMapped(i,e.target.value as Field)}>
-      {fields.map(([id,label])=><option key={id} value={id}>{label}</option>)}
+      {fields.filter(([id])=>["ignore","sku_cong_ty","amount_vnd"].includes(id))
+       .map(([id,label])=><option key={id} value={id}>{label}</option>)}
      </select></th>)}
     </tr></thead><tbody>{sheet.rows.slice(0,3).map(r=><tr key={r.line}>
      {r.cells.map((cell,i)=><td key={i}>{cell.text||"—"}</td>)}
     </tr>)}</tbody></table></div>
-    <small>Chọn trực tiếp trường cho mỗi cột bằng dropdown. “Bỏ qua” không thay đổi trường đó.</small>
+    <small>Các cột khác sẽ bỏ qua, không sửa tên sản phẩm.</small>
     <div className="fb-price-bulk-actions">
-     <button type="button" className="import-btn import-secondary" disabled={busy}
-      onClick={()=>{setSheet(null);invalidate();}}>Bỏ file</button>
-     <button type="button" className="import-btn import-primary" disabled={busy}
-      onClick={()=>void doPreview()}>{busy?"Đang kiểm tra…":"Xem trước giá cũ / mới"}</button>
+     <button type="button" className="import-btn import-secondary" disabled={busy||
+      !mapping.includes("sku_cong_ty")||!mapping.includes("amount_vnd")}
+      onClick={()=>{setMappingVerified(true);setShowMapping(false);invalidate();}}>Dùng 2 cột đã chọn</button>
+    </div>
+    </>}
+    <div className="fb-price-bulk-actions">
+     <button type="button" className="import-btn import-primary"
+      disabled={busy||!mappingVerified||!mapping.includes("sku_cong_ty")||!mapping.includes("amount_vnd")}
+      onClick={()=>void doPreview()}>{busy?"Đang kiểm tra…":"Xem trước giá cũ → mới"}</button>
     </div>
    </div>}
    {preview&&<div className="fb-price-bulk-preview">
@@ -307,7 +392,7 @@ export default function CataloguePricebookBulk({onBusyChange}:{onBusyChange?:(bu
      <span>Lỗi/xung đột: <b>{preview.invalid}</b></span>
     </div>
     <div className="fb-price-bulk-scroll"><table><thead><tr>
-     <th>Dòng</th><th>Mã công ty</th><th>Loại giá</th><th>Giá cũ</th>
+     <th>Dòng</th><th>Mã công ty</th><th>Tên sản phẩm (tự tra)</th><th>Giá cũ</th>
      <th>Giá mới</th><th>Chênh lệch</th><th>Trạng thái / lỗi</th>
     </tr></thead><tbody>
      {preview.changes.slice(0,100).map((r,i)=>{
@@ -315,17 +400,28 @@ export default function CataloguePricebookBulk({onBusyChange}:{onBusyChange?:(bu
        String(BigInt(r.amount_vnd)-BigInt(r.old_amount_vnd)):null;
       return <tr key={i}>
        <td>{r.line}</td><td><strong>{r.sku_cong_ty}</strong></td>
-       <td>{kindOptions.find(o=>o[0]===r.price_kind)?.[1]||r.price_kind}</td>
+       <td className="fb-price-bulk-product-name">{r.ten_san_pham||"Không tìm thấy mã"}</td>
        <td>{money(r.old_amount_vnd)}</td><td>{r.status==="unchanged"&&r.issue==="empty_skip"?"Bỏ qua":money(r.amount_vnd)}</td>
        <td>{delta===null?"—":(BigInt(delta)>BigInt(0)?"+":"")+money(delta)}</td>
        <td><span className={"fb-price-bulk-status fb-price-bulk-status--"+r.status}>
-        {r.issue||({new:"Mới",updated:"Cập nhật",unchanged:"Không đổi",
+        {(r.issue?({
+          sku_not_found:"Mã SKU không tồn tại",invalid_company_sku:"Mã công ty sai định dạng",
+          vat_required:"Chưa xác minh VAT",invalid_price:"Giá không hợp lệ",
+          duplicate_row:"Trùng mã trong file",empty_skip:"Giá trống: bỏ qua",
+          approved_price_locked:"Giá đã duyệt: không được ghi đè",
+          approved_period_overlap:"Trùng kỳ giá đã duyệt",
+          invalid_vat_rate:"Thuế suất VAT không hợp lệ",
+          source_document_required:"Thiếu nguồn giá"
+         } as Record<string,string>)[r.issue]||r.issue:null)||({new:"Mới",updated:"Cập nhật",unchanged:"Không đổi",
           invalid:"Lỗi",conflict:"Xung đột"}[r.status])}
        </span></td></tr>;
      })}
     </tbody></table></div>
     {preview.changes.length>100&&<small>Hiển thị 100/{preview.changes.length} dòng đầu;
      các dòng còn lại đã được kiểm tra trong tổng kết.</small>}
+    {preview.changes.some(r=>r.issue==="vat_required")&&<p className="fb-price-bulk-vat-warning">
+     Có mã chưa có dữ liệu VAT. Mở mục Tùy chọn bổ sung và chọn trạng thái VAT đã xác minh, sau đó xem trước lại. Không tự đoán VAT.
+    </p>}
     <div className="fb-price-bulk-actions">
      <button type="button" className="import-btn import-secondary" onClick={()=>invalidate()} disabled={busy}>
       Sửa file / xem lại</button>

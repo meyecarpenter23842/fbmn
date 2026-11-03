@@ -67,7 +67,8 @@ function normalize(input){
   else if(!KINDS.has(item.price_kind))fault="invalid_price_kind";
   else if(item.price_kind==="dealer_contract"?!UUID(item.customer_id):item.customer_id!==null)
    fault="invalid_customer_scope";
-  else if(typeof item.vat_included!=="boolean")fault="vat_required";
+  else if(item.vat_included!==null&&item.vat_included!==undefined&&
+    typeof item.vat_included!=="boolean")fault="vat_required";
   else if(item.vat_rate_bps!==null&&(!Number.isInteger(item.vat_rate_bps)||
    item.vat_rate_bps<0||item.vat_rate_bps>10000))fault="invalid_vat_rate";
   else if(!VALID_SOURCE(item.source_document))fault="source_document_required";
@@ -81,9 +82,10 @@ function normalize(input){
 function key(x){return [x.sku_cong_ty,x.price_kind,x.customer_id||"",x.effective_from].join("\x1f");}
 async function snapshot(c,rows){
  const skus=[...new Set(rows.filter(r=>SKU(r.sku_cong_ty)).map(r=>r.sku_cong_ty))];
- if(skus.length===0)return {found:new Set(),entries:[]};
+ if(skus.length===0)return {found:new Set(),names:new Map(),entries:[]};
  const [s,p]=await Promise.all([
-  c.query("SELECT sku_cong_ty FROM fbmn_catalog.skus WHERE sku_cong_ty=ANY($1::text[])",[skus]),
+  c.query("SELECT sku_cong_ty,ten_san_pham,ten_goc_xnt,ten_goc_bang_gia "+
+    "FROM fbmn_catalog.skus WHERE sku_cong_ty=ANY($1::text[])",[skus]),
   c.query("SELECT id::text AS id,sku_cong_ty,price_kind,customer_id::text AS customer_id,"+
    "amount_vnd::text AS amount_vnd,vat_included,vat_rate_bps,source_document,"+
    "effective_from::text AS effective_from,effective_until::text AS effective_until,"+
@@ -91,7 +93,9 @@ async function snapshot(c,rows){
    "WHERE sku_cong_ty=ANY($1::text[]) ORDER BY sku_cong_ty,price_kind,customer_id,effective_from,id",[skus])
  ]);
  if(p.rows.length>15000)throw Error("too_many_versions");
- return {found:new Set(s.rows.map(r=>r.sku_cong_ty)),entries:p.rows};
+ return {found:new Set(s.rows.map(r=>r.sku_cong_ty)),names:new Map(s.rows.map(r=>[
+   r.sku_cong_ty,r.ten_san_pham||r.ten_goc_xnt||r.ten_goc_bang_gia||null
+  ])),entries:p.rows};
 }
 function plan(rows,state){
  const used=new Set();const changes=[];let bad=0;
@@ -107,6 +111,14 @@ function plan(rows,state){
   if(exact)for(const field of r.preserve_existing_fields){resolved[field]=exact[field];}
   const old=exact||scope.filter(e=>e.effective_from<=r.effective_from)
    .sort((a,b)=>b.effective_from.localeCompare(a.effective_from))[0]||null;
+  // A two-column file does not assert VAT. Carry it only from an actual price
+  // in the identical SKU/type/customer scope, never assume yes/no for new SKUs.
+  if((resolved.vat_included===null||resolved.vat_included===undefined)&&old){
+   resolved.vat_included=old.vat_included;
+   if(resolved.vat_rate_bps===null||resolved.vat_rate_bps===undefined)
+    resolved.vat_rate_bps=old.vat_rate_bps;
+  }
+  if(!issue&&typeof resolved.vat_included!=="boolean")issue="vat_required";
   if(!issue&&exact?.approval_state==="approved")issue="approved_price_locked";
   if(!issue&&scope.some(e=>e.approval_state==="approved"&&e.id!==exact?.id&&
     e.effective_from<=(resolved.effective_until||"9999-12-31")&&
@@ -118,7 +130,8 @@ function plan(rows,state){
   const status=issue==="empty_skip"?"unchanged":issue?"invalid":same?"unchanged":
    exact?"updated":"new";
   if(status==="invalid")bad++;
-  changes.push({...resolved,status,issue:issue||null,old_amount_vnd:old?.amount_vnd??null,
+  changes.push({...resolved,status,issue:issue||null,
+   ten_san_pham:state.names?.get(r.sku_cong_ty)||null,old_amount_vnd:old?.amount_vnd??null,
    entry_id:exact?.id??null,expected_revision:exact?.revision??null,
    previous_revision:old?.revision??null});
  }

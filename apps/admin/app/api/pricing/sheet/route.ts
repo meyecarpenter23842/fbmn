@@ -62,7 +62,8 @@ export async function POST(request:Request){
  }catch(cause){
   const code=cause instanceof Error?cause.message:"";
   const visible=new Set(["multiple_price_sheets","missing_price_sheet","missing_columns",
-    "too_many_rows","too_many_columns","xlsx_too_large","formula_not_allowed"]);
+    "too_many_rows","too_many_columns","xlsx_too_large","formula_not_allowed",
+    "unsupported_cell","invalid_xlsx","invalid_csv","cell_too_long"]);
   return fail(422,visible.has(code)?code:"invalid_price_sheet");
 }
 }

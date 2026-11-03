@@ -7,8 +7,10 @@ const FIELD_LIST=["sku_cong_ty","amount_vnd","price_kind","vat_included","vat_ra
 const normalize=(s:string)=>s.normalize("NFKD").replace(/[\u0300-\u036f]/g,"").replaceAll("đ","d")
  .toLowerCase().replace(/[_\s-]+/g," ").trim();
 const labels:Record<string,string[]>={
- sku_cong_ty:["ma cong ty","ma sp cong ty","ma san pham","sku","sku cong ty"],
- amount_vnd:["gia moi (vnd)","gia moi","gia","don gia","amount vnd"],
+ sku_cong_ty:["ma cong ty","ma sp cong ty","ma san pham","sku","sku cong ty",
+  "ma","ma sp","ma hang","ma sku","ma so san pham"],
+ amount_vnd:["gia moi (vnd)","gia moi","gia","don gia","amount vnd",
+  "gia ban","gia ban (vnd)","don gia (vnd)","gia vnd","gia moi vnd"],
  price_kind:["loai gia","price kind"],vat_included:["vat da gom?","vat da gom","da gom vat"],
  vat_rate_bps:["thue suat vat (%)","vat (%)"],
  source_document:["nguon gia","tai lieu nguon","source document"],
@@ -112,6 +114,8 @@ export async function readPriceXlsx(bytes:Uint8Array){
  // formatting must never invalidate a valid price-data worksheet.
  const headerText=(value:unknown)=>{
   if(typeof value==="string")return value;
+  if(value&&typeof value==="object"&&"text" in value&&
+   typeof (value as {text?:unknown}).text==="string")return (value as {text:string}).text;
   if(value&&typeof value==="object"&&"richText" in value){
    const rich=(value as {richText?:{text:string}[]}).richText;
    return Array.isArray(rich)?rich.map(item=>item.text||"").join(""):"";

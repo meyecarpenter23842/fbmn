@@ -15,8 +15,10 @@ function fixture(initial=[]){
  const queries=[];let records=initial,committed=[];
  const db=async callback=>callback({query:async(sql,args=[])=>{
   queries.push({sql,args});
-  if(sql.startsWith("SELECT sku_cong_ty FROM fbmn_catalog.skus"))
-   return {rows:args[0].filter(x=>/^\d{4}$/.test(x)).map(sku_cong_ty=>({sku_cong_ty})),rowCount:args[0].length};
+  if(sql.startsWith("SELECT sku_cong_ty,ten_san_pham,ten_goc_xnt"))
+   return {rows:args[0].filter(x=>/^\d{4}$/.test(x)).map(sku_cong_ty=>({
+    sku_cong_ty,ten_san_pham:"Sản phẩm "+sku_cong_ty,ten_goc_xnt:null,ten_goc_bang_gia:null
+   })),rowCount:args[0].length};
   if(sql.includes("FROM fbmn_catalog_private.pricebook_entries ")&&sql.includes("ORDER BY sku_cong_ty"))
    return {rows:records,rowCount:records.length};
   if(sql.startsWith("SELECT payload_sha256"))
@@ -94,6 +96,39 @@ test("confirmed create saves draft, audit and batch atomically",async()=>{
  assert.ok(a.queries.some(q=>q.sql.startsWith("INSERT INTO fbmn_catalog_private.pricebook_audit")));
  assert.ok(a.queries.some(q=>q.sql.startsWith("INSERT INTO fbmn_catalog_private.pricebook_import_batches")));
 });
+test("two-column price preview resolves master name and inherits recorded VAT",async()=>{
+ const a=fixture([old()]);
+ const payload={...base,vat_included:null,source_document:"bang-gia.xlsx",
+  rows:[row("0114","13000")]};
+ const response=await handleBulkPricebook({request:request("bulk/preview","POST",payload),
+  actor:owner,db:a.db});
+ assert.equal(response.status,200);
+ const result=(await response.json()).data;
+ assert.equal(result.invalid,0);
+ assert.equal(result.updated,1);
+ assert.equal(result.changes[0].ten_san_pham,"Sản phẩm 0114");
+ assert.equal(result.changes[0].vat_included,false);
+ assert.equal(result.changes[0].source_document,"bang-gia.xlsx");
+ assert.ok(!a.queries.some(q=>/^(INSERT|UPDATE|BEGIN)/.test(q.sql)));
+});
+
+test("new price with unverified VAT stays in invalid preview and cannot be applied",async()=>{
+ const a=fixture();
+ const payload={...base,vat_included:null,rows:[row("0114","13000")]};
+ const preview=await handleBulkPricebook({request:request("bulk/preview","POST",payload),
+  actor:owner,db:a.db});
+ assert.equal(preview.status,200);
+ const data=(await preview.json()).data;
+ assert.equal(data.invalid,1);
+ assert.equal(data.changes[0].issue,"vat_required");
+ assert.equal(data.changes[0].ten_san_pham,"Sản phẩm 0114");
+ const apply=await handleBulkPricebook({request:request("bulk/apply","POST",{
+  ...payload,preview_fingerprint:data.preview_fingerprint,confirm:"XAC_NHAN_GIA_NHAP",
+  request_id:"00000000-0000-0000-0000-000000000024"}),actor:owner,db:a.db});
+ assert.equal(apply.status,409);
+ assert.ok(!a.queries.some(q=>q.sql.startsWith("INSERT INTO fbmn_catalog_private.pricebook_entries")));
+});
+
 test("dealer export requires explicit customer scope, unknown kind denied",async()=>{
  const a=fixture();
  for(const path of ["bulk?kind=dealer_contract","bulk?kind=banana&customer_id=00000000-0000-0000-0000-000000000011"]){

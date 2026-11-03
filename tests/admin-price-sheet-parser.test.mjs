@@ -12,6 +12,42 @@ function prices(book,name="IMPORT_10_SKU"){
 }
 async function encoded(book){return new Uint8Array(await book.xlsx.writeBuffer());}
 
+test("minimal two-column price XLSX resolves SKU and price without extra columns",async()=>{
+ const book=new ExcelJS.Workbook();
+ const sheet=book.addWorksheet("GIÁ MỚI");
+ sheet.addRow(["Mã công ty","Giá mới (VND)"]);
+ sheet.addRow(["0114",22500]);
+ sheet.getColumn(1).numFmt="@";
+ const data=await readPriceXlsx(await encoded(book));
+ assert.equal(data.columns.length,2);
+ assert.deepEqual(data.columns.map(x=>x.suggested),["sku_cong_ty","amount_vnd"]);
+ assert.equal(data.rows[0].cells[0].text,"0114");
+ assert.equal(data.rows[0].cells[0].kind,"text");
+ assert.equal(data.rows[0].cells[1].text,"22500");
+});
+
+test("two-column SKU/Giá bán sheet with an instruction tab auto-maps as NPP does",async()=>{
+ const book=new ExcelJS.Workbook();
+ const sheet=book.addWorksheet("NHAP_GIA");
+ sheet.addRow(["SKU","Giá bán"]);
+ sheet.addRow(["0007",15800]);
+ book.addWorksheet("HUONG_DAN").addRow(["Không nhập dữ liệu ở đây"]);
+ const data=await readPriceXlsx(await encoded(book));
+ assert.equal(data.sheet_name,"NHAP_GIA");
+ assert.deepEqual(data.columns.map(x=>x.suggested),["sku_cong_ty","amount_vnd"]);
+ assert.equal(data.rows[0].cells[0].text,"0007");
+});
+
+test("numeric Excel SKU cells stay marked numeric rather than being zero-padded",async()=>{
+ const book=new ExcelJS.Workbook();
+ const sheet=book.addWorksheet("NHAP_GIA");
+ sheet.addRow(["Mã","Giá mới"]);
+ sheet.addRow([114,13000]);
+ const data=await readPriceXlsx(await encoded(book));
+ assert.equal(data.rows[0].cells[0].kind,"number");
+ assert.equal(data.rows[0].cells[0].text,"114");
+});
+
 test("XLSX with data and instructions selects one price sheet without losing leading zeros",async()=>{
  const book=new ExcelJS.Workbook();
  prices(book);

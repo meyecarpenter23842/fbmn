@@ -59,3 +59,28 @@
 
 .fb-price-bulk .fb-price-bulk-keep-meta{display:flex;flex-direction:row;gap:9px;align-items:flex-start;line-height:1.6;margin:12px 0 4px;color:#45445c;font-weight:400}
 .fb-price-bulk .fb-price-bulk-keep-meta input[type="checkbox"]{width:17px;min-width:17px;height:17px;min-height:17px;margin:3px 0 0;padding:0;accent-color:#6d249e}
+
+
+/* NPP-like simple two-column price adjustment: details stay hidden by default. */
+.fb-price-bulk-simple{display:grid;grid-template-columns:minmax(220px,1fr) minmax(280px,2fr);gap:16px;align-items:end}
+.fb-price-bulk-picker{display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:600;color:#34314d}
+.fb-price-bulk-picker-line{display:flex;align-items:center;gap:12px;min-height:40px;min-width:0}
+.fb-price-bulk-picker-line .import-btn{flex:none}
+.fb-price-bulk-filename{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;font-size:13px;font-weight:400;color:#60647a}
+.fb-price-bulk-hidden{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;border:0!important;opacity:0!important;overflow:hidden!important;clip-path:inset(50%);pointer-events:none}
+.fb-price-bulk-advanced{margin-top:14px;border-top:1px solid #ecebf3;padding-top:12px}
+.fb-price-bulk-advanced summary{cursor:pointer;color:#532184;font-size:13px;font-weight:650;line-height:1.5;list-style:revert}
+.fb-price-bulk-advanced summary span{font-weight:400;color:#667085;margin-left:8px}
+.fb-price-bulk-advanced[open] summary{margin-bottom:14px}
+.fb-price-bulk-file-ready{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}
+.fb-price-bulk-file-ready strong{margin:0}
+.fb-price-bulk-map{margin-top:14px;padding-top:12px}
+.fb-price-bulk-product-name{white-space:normal;min-width:240px;max-width:360px;line-height:1.45}
+.fb-price-bulk-vat-warning{color:#92400e;font-size:13px;margin:12px 0;line-height:1.6}
+.fb-price-bulk-simple .import-btn{font-weight:650}
+@media(max-width:700px){
+ .fb-price-bulk-simple{grid-template-columns:1fr;gap:12px}
+ .fb-price-bulk-picker-line{flex-wrap:wrap}
+ .fb-price-bulk-filename{max-width:100%}
+ .fb-price-bulk-advanced summary span{display:block;margin-left:14px}
+}

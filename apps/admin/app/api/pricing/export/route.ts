@@ -15,8 +15,10 @@ function baseUrl(){
 const safe=(value:unknown)=>typeof value==="string"?value:"";
 export async function GET(request:Request){
  const url=new URL(request.url);
- if([...url.searchParams.keys()].some(k=>!["kind","customer_id"].includes(k)))return fail(400,"invalid_query");
+ if([...url.searchParams.keys()].some(k=>!["kind","customer_id","template"].includes(k)))return fail(400,"invalid_query");
  const kind=url.searchParams.get("kind"),customer=url.searchParams.get("customer_id");
+ const template=url.searchParams.get("template");
+ if(template!==null&&template!=="1")return fail(400,"invalid_query");
  if(!kind||!KINDS.has(kind)||(kind==="dealer_contract"?
   !/^[a-f0-9-]{36}$/i.test(customer||""):customer!==null))
   return fail(400,"invalid_price_scope");
@@ -26,7 +28,10 @@ export async function GET(request:Request){
  const base=baseUrl();if(!base)return fail(503,"admin_api_unavailable");
  let items:Record<string,unknown>[];
  try{
-  const remote=await fetch(base+"/v1/admin/pricing/bulk"+url.search,{
+  // template is a local XLSX presentation option, never a Worker query field.
+  const remoteQuery=new URLSearchParams({kind});
+  if(customer)remoteQuery.set("customer_id",customer);
+  const remote=await fetch(base+"/v1/admin/pricing/bulk?"+remoteQuery.toString(),{
    headers:{Authorization:auth,Accept:"application/json"},cache:"no-store",
    redirect:"manual",signal:AbortSignal.timeout(14000)
   });
@@ -43,28 +48,23 @@ export async function GET(request:Request){
  const book=new ExcelJS.Workbook();
  book.creator="Futurebook Miền Nam";
  const sheet=book.addWorksheet("GIA NOI BO");
- sheet.addRow(["Mã công ty","Tên sản phẩm","Giá mới (VND)",
-  "VAT đã gồm?","Thuế suất VAT (%)","Nguồn giá","Từ ngày","Đến ngày"]);
- sheet.getColumn(1).numFmt="@";
- const widths=[19,47,20,18,22,38,17,17];
- widths.forEach((width,i)=>{sheet.getColumn(i+1).width=width;});
- for(const item of items){
+ sheet.addRow(["Mã công ty","Giá mới (VND)"]);
+ sheet.getColumn(1).width=24;sheet.getColumn(1).numFmt="@";
+ sheet.getColumn(2).width=24;
+ sheet.getColumn(2).numFmt="#,##0";
+ if(!template)for(const item of items){
   const code=String(item.sku_cong_ty);
-  const name=safe(item.ten_san_pham||item.ten_goc_xnt||item.ten_goc_bang_gia);
   const price=item.amount_vnd===null||item.amount_vnd===undefined?"":Number(item.amount_vnd);
-  const vat=item.vat_included===null||item.vat_included===undefined?"":item.vat_included?"Có":"Không";
-  const vatRate=typeof item.vat_rate_bps==="number"?item.vat_rate_bps/100:"";
-  const r=sheet.addRow([safe(code),name,price,vat,vatRate,
-   safe(item.source_document),item.effective_from||"",item.effective_until||""]);
-  r.getCell(1).numFmt="@";
-  r.getCell(3).numFmt="#,##0";
+  const row=sheet.addRow([safe(code),price]);
+  row.getCell(1).numFmt="@";
+  row.getCell(2).numFmt="#,##0";
  }
  sheet.getRow(1).font={bold:true,color:{argb:"FFFFFFFF"}};
  sheet.getRow(1).fill={type:"pattern",pattern:"solid",fgColor:{argb:"FF61258D"}};
  sheet.views=[{state:"frozen",ySplit:1}];
- sheet.autoFilter={from:"A1",to:"H1"};
+ sheet.autoFilter={from:"A1",to:"B1"};
  const bytes=await book.xlsx.writeBuffer();
  return new Response(new Uint8Array(bytes),{headers:{...PRIVATE,
   "Content-Type":"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-  "Content-Disposition":'attachment; filename="Futurebook_GIA_NOI_BO_'+kind+'.xlsx"'}});
+  "Content-Disposition":'attachment; filename="'+(template?"Futurebook_MAU_2_COT":"Futurebook_GIA_NOI_BO_"+kind)+'.xlsx"'}});
 }
