@@ -1,5 +1,5 @@
 "use client";
-import {useCallback,useRef,useState} from "react";
+import {useCallback,useEffect,useRef,useState} from "react";
 import AdminToast from "./admin-toast";
 import "./pricebook-bulk.css";
 
@@ -7,7 +7,7 @@ type PriceKind="source"|"net_internal"|"retail_public"|"dealer_contract";
 type Field="ignore"|"sku_cong_ty"|"amount_vnd"|"price_kind"|"vat_included"|
  "vat_rate_bps"|"source_document"|"effective_from"|"effective_until"|"customer_id";
 type Cell={text:string;kind:"text"|"number"|"blank"};
-type Sheet={columns:{index:number;header:string;suggested:string}[];
+type Sheet={sheet_name?:string;columns:{index:number;header:string;suggested:string}[];
  rows:{line:number;cells:Cell[]}[];total_rows:number};
 type Change={line:number;sku_cong_ty:string;price_kind:PriceKind;amount_vnd:string;
  old_amount_vnd:string|null;status:"new"|"updated"|"unchanged"|"invalid"|"conflict";
@@ -63,9 +63,8 @@ const asBps=(str:string):number=>{
  const n=Number(str);return Number.isFinite(n)&&n>=0&&n<=100&&Math.round(n*100)===n*100?
   Math.round(n*100):-1;
 };
-export default function CataloguePricebookBulk(){
+export default function CataloguePricebookBulk({onBusyChange}:{onBusyChange?:(busy:boolean)=>void}){
  const invalidation=useRef(0);
- const [opened,setOpened]=useState(false);
  const [sheet,setSheet]=useState<Sheet|null>(null);
  const [mapping,setMapping]=useState<Field[]>([]);
  const [kind,setKind]=useState<PriceKind>("net_internal");
@@ -77,6 +76,7 @@ export default function CataloguePricebookBulk(){
  const [customer,setCustomer]=useState("");
  const [overwriteMeta,setOverwriteMeta]=useState(false);
  const [busy,setBusy]=useState(false);
+ useEffect(()=>{onBusyChange?.(busy);},[busy,onBusyChange]);
  const [preview,setPreview]=useState<Preview|null>(null);
  const [prepared,setPrepared]=useState<Record<string,unknown>|null>(null);
  const [requestId,setRequestId]=useState("");
@@ -98,8 +98,19 @@ export default function CataloguePricebookBulk(){
   const resp=await fetch("/api/pricing/sheet",{method:"POST",body:data,
    credentials:"same-origin",headers:{Authorization:"Bearer "+token},cache:"no-store"});
   const payload=await resp.json() as Envelope<Sheet>;
-  if(!resp.ok||!payload.data)throw Error(
-   resp.status===403?"Chỉ Owner được đọc file bảng giá.":"Không đọc được file Excel/CSV. Kiểm tra định dạng và công thức.");
+  if(!resp.ok||!payload.data){
+   const details:Record<string,string>={
+    multiple_price_sheets:"File có nhiều sheet chứa SKU và giá. Hãy giữ đúng một sheet dữ liệu giá.",
+    missing_price_sheet:"Không tìm thấy sheet có cả cột Mã công ty và Giá mới.",
+    missing_columns:"Không xác định được hàng tiêu đề của file.",
+    too_many_rows:"File vượt giới hạn 1.000 dòng giá.",
+    too_many_columns:"File vượt giới hạn 30 cột.",
+    xlsx_too_large:"File Excel quá lớn để kiểm tra an toàn.",
+    formula_not_allowed:"File có ô công thức; hãy dán giá trị trước khi nhập."
+   };
+   throw Error(resp.status===403?"Chỉ Owner được đọc file bảng giá.":
+    details[payload.error?.code||""]||"Không đọc được file Excel/CSV. Kiểm tra định dạng và công thức.");
+  }
   if(payload.data.total_rows>1000)throw Error("Tối đa 1.000 dòng trong một lô.");
   setSheet(payload.data);
   const used=new Set<string>();
@@ -227,13 +238,9 @@ export default function CataloguePricebookBulk(){
      onClick={()=>void loadHistory()} disabled={busy}>Lịch sử</button>
     <button type="button" className="import-btn import-secondary"
      onClick={()=>void doExport()} disabled={busy}>Xuất XLSX</button>
-    <button type="button" className="import-btn import-primary"
-     onClick={()=>setOpened(v=>!v)} disabled={busy} aria-expanded={opened}>
-     {opened?"Thu gọn":"Nhập giá Excel"}
-    </button>
    </div>
   </div>
-  {opened&&<div className="fb-price-bulk-form">
+  <div className="fb-price-bulk-form">
    <div className="fb-price-bulk-settings">
     <label>Loại giá
      <select value={kind} onChange={e=>{setKind(e.target.value as PriceKind);invalidate();}}>
@@ -262,16 +269,18 @@ export default function CataloguePricebookBulk(){
    <label className="fb-price-bulk-keep-meta"><input type="checkbox" checked={overwriteMeta}
     onChange={e=>{setOverwriteMeta(e.target.checked);invalidate();}}/>
     Áp dụng VAT, nguồn và ngày hết hạn chung cho cả giá nháp đã có (nếu không tích chọn, giữ nguyên giá trị cũ khi bỏ qua cột).</label>
-   <label className="fb-price-bulk-file">File XLSX hoặc CSV (tối đa 1.000 dòng)
+   <label className="fb-price-bulk-file">Chọn file giá XLSX hoặc CSV (tối đa 1.000 dòng)
     <input type="file" accept=".xlsx,.csv" disabled={busy} onChange={e=>{
      const file=e.target.files?.[0];if(!file)return;
+     e.currentTarget.value="";
+     setSheet(null);setMapping([]);invalidate();
      setBusy(true);void readFile(file).catch(err=>notify(err instanceof Error?
       err.message:"Không đọc được file.")).finally(()=>setBusy(false));
     }}/></label>
    <small className="fb-price-bulk-hint">Mã công ty phải là text trong Excel (0114 khác 114).
     Ô giá trống = bỏ qua, không xóa giá cũ. Không suy NET từ giá nguồn.</small>
    {sheet&&<div className="fb-price-bulk-map">
-    <strong>Ánh xạ cột · {sheet.total_rows} dòng</strong>
+    <strong>Ánh xạ cột · {sheet.total_rows} dòng{sheet.sheet_name?" · sheet "+sheet.sheet_name:""}</strong>
     <div className="fb-price-bulk-scroll"><table><thead><tr>
      {sheet.columns.map((c,i)=><th key={i}><select aria-label={"Cột "+(i+1)+": "+c.header}
       value={mapping[i]||"ignore"} disabled={busy}
@@ -325,7 +334,7 @@ export default function CataloguePricebookBulk(){
       onClick={()=>void doApply()}>{busy?"Đang lưu…":"Xác nhận lưu giá nháp"}</button>
     </div>
    </div>}
-  </div>}
+  </div>
   {showHistory&&history&&<div className="fb-price-bulk-history">
    <div className="fb-price-bulk-history-head"><strong>Lịch sử thay đổi giá</strong>
     <button className="import-btn import-secondary" type="button"

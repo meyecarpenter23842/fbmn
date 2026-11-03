@@ -29,9 +29,14 @@ export default function CatalogueSideWorkspace({mode,onBusyChange}:{mode:Workspa
   const [mediaBusy,setMediaBusy]=useState(false);
   const [priceBusy,setPriceBusy]=useState(false);
   const [pricingOwner,setPricingOwner]=useState(false);
+  const [pricingView,setPricingView]=useState<"sku"|"excel">("sku");
+  const [bulkBusy,setBulkBusy]=useState(false);
   const refresh=useCallback(()=>setRevision(v=>v+1),[]);
   const handlePriceBusy=useCallback((value:boolean)=>{
     setPriceBusy(value);onBusyChange?.(value);
+  },[onBusyChange]);
+  const handleBulkBusy=useCallback((value:boolean)=>{
+    setBulkBusy(value);onBusyChange?.(value);
   },[onBusyChange]);
   const handleMediaBusy=useCallback((value:boolean)=>{
     setMediaBusy(value);onBusyChange?.(value);
@@ -106,7 +111,20 @@ export default function CatalogueSideWorkspace({mode,onBusyChange}:{mode:Workspa
       Giá nguồn, NET, bán lẻ và giá đại lý là dữ liệu riêng tư. Chỉ tài khoản được phân quyền
       mới được xem; chỉ Owner được sửa. Giá lưu là bản nháp, chưa áp dụng cho khách hàng.
     </p>}
-    {pricing&&pricingOwner&&<CataloguePricebookBulk/>}
+    {pricing&&pricingOwner&&<nav className="fb-pricing-tabs" aria-label="Chọn khu vực quản lý giá">
+      <button type="button" className={pricingView==="sku"?"active":""}
+        aria-current={pricingView==="sku"?"page":undefined}
+        disabled={bulkBusy||priceBusy}
+        onClick={()=>setPricingView("sku")}>Tra cứu & sửa giá từng SKU</button>
+      <button type="button" className={pricingView==="excel"?"active":""}
+        aria-current={pricingView==="excel"?"page":undefined}
+        disabled={bulkBusy||priceBusy}
+        onClick={()=>setPricingView("excel")}>Nhập / xuất giá Excel</button>
+    </nav>}
+    {pricing&&pricingOwner&&pricingView==="excel"?
+      <div className="fb-pricing-tab-content" aria-label="Nhập xuất giá Excel">
+        <CataloguePricebookBulk onBusyChange={handleBulkBusy}/>
+      </div>:
     <div className="catalogue-side-layout">
       <aside className="catalogue-side-index" aria-label="Chọn mã công ty">
         <label htmlFor="catalogue-side-find">Tìm sản phẩm
@@ -159,6 +177,6 @@ export default function CatalogueSideWorkspace({mode,onBusyChange}:{mode:Workspa
             {loading?"Đang tải danh mục…":"Chọn một sản phẩm ở danh sách bên trái."}
           </div>}
       </div>
-    </div>
+    </div>}
   </section>;
 }
