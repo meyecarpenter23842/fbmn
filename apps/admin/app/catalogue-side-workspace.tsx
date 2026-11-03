@@ -2,7 +2,7 @@
 import {useCallback,useEffect,useMemo,useState} from "react";
 import AdminToast from "./admin-toast";
 import CataloguePricebookPanel from "./catalogue-pricebook-panel";
-import CataloguePricebookBulk from "./catalogue-pricebook-bulk";
+import CatalogueManagedPriceImport from "./catalogue-managed-price-import";
 import CatalogueManagedPriceLists from "./catalogue-managed-prices";
 import CatalogueMediaManager,{PrivateImage} from "./catalogue-media-manager";
 
@@ -30,7 +30,8 @@ export default function CatalogueSideWorkspace({mode,onBusyChange}:{mode:Workspa
   const [mediaBusy,setMediaBusy]=useState(false);
   const [priceBusy,setPriceBusy]=useState(false);
   const [pricingOwner,setPricingOwner]=useState(false);
-  const [pricingView,setPricingView]=useState<"lists"|"sku"|"excel">("lists");
+  const [pricingView,setPricingView]=useState<"lists"|"import">("lists");
+  const [chosenManagedListId,setChosenManagedListId]=useState("");
   const [bulkBusy,setBulkBusy]=useState(false);
   const refresh=useCallback(()=>setRevision(v=>v+1),[]);
   const handlePriceBusy=useCallback((value:boolean)=>{
@@ -100,7 +101,7 @@ export default function CatalogueSideWorkspace({mode,onBusyChange}:{mode:Workspa
       <div>
         <h1>{pricing?"Giá & bảng giá":"Thư viện hình ảnh"}</h1>
         <p>{pricing?
-          "Tự tạo mã và tên bảng giá, chọn kênh và khách áp dụng. Giá chỉ được sử dụng sau khi duyệt.":
+          "Tạo bảng giá, chọn nơi áp dụng và quản lý giá theo mã sản phẩm.":
           "Chọn mã công ty để quản lý ảnh thật và ảnh đại diện."}</p>
       </div>
       <div className="action-row">
@@ -109,29 +110,26 @@ export default function CatalogueSideWorkspace({mode,onBusyChange}:{mode:Workspa
       </div>
     </div>
     {pricing&&<p className="catalogue-side-privacy">
-      Giá nguồn, NET, bán lẻ và giá đại lý là dữ liệu riêng tư. Chỉ tài khoản được phân quyền
-      mới được xem; chỉ Owner được sửa. Giá lưu là bản nháp, chưa áp dụng cho khách hàng.
+      Bảng giá được quản lý riêng trong Admin. Chỉ Owner được tạo và sửa giá.
+      Việc chọn Website hoặc App không tự công khai giá cho khách hàng.
     </p>}
-    {pricing&&pricingOwner&&<nav className="fb-pricing-tabs" aria-label="Chọn khu vực quản lý giá">
+    {pricing&&pricingOwner&&<nav className="fb-pricing-tabs" aria-label="Quản lý bảng giá">
       <button type="button" className={pricingView==="lists"?"active":""}
-        aria-current={pricingView==="lists"?"page":undefined} disabled={bulkBusy||priceBusy}
-        onClick={()=>setPricingView("lists")}>Bảng giá tự tạo</button>
-      <button type="button" className={pricingView==="sku"?"active":""}
-        aria-current={pricingView==="sku"?"page":undefined}
-        disabled={bulkBusy||priceBusy}
-        onClick={()=>setPricingView("sku")}>Giá theo SKU hiện có</button>
-      <button type="button" className={pricingView==="excel"?"active":""}
-        aria-current={pricingView==="excel"?"page":undefined}
-        disabled={bulkBusy||priceBusy}
-        onClick={()=>setPricingView("excel")}>Excel giá hiện có</button>
+       aria-current={pricingView==="lists"?"page":undefined} disabled={bulkBusy||priceBusy}
+       onClick={()=>setPricingView("lists")}>Bảng giá</button>
+      <button type="button" className={pricingView==="import"?"active":""}
+       aria-current={pricingView==="import"?"page":undefined} disabled={bulkBusy||priceBusy}
+       onClick={()=>setPricingView("import")}>Nhập / cập nhật giá</button>
     </nav>}
-    {pricing&&pricingOwner&&pricingView==="lists"?
-      <div className="fb-pricing-tab-content" aria-label="Danh sách bảng giá tự tạo">
-        <CatalogueManagedPriceLists onBusyChange={handleBulkBusy}/>
+    {pricing&&pricingOwner?
+      pricingView==="lists"?
+      <div className="fb-pricing-tab-content" aria-label="Quản lý bảng giá">
+        <CatalogueManagedPriceLists onBusyChange={handleBulkBusy}
+         onOpenImport={id=>{setChosenManagedListId(id);setPricingView("import");}}/>
       </div>:
-    pricing&&pricingOwner&&pricingView==="excel"?
-      <div className="fb-pricing-tab-content" aria-label="Nhập xuất giá Excel">
-        <CataloguePricebookBulk onBusyChange={handleBulkBusy}/>
+      <div className="fb-pricing-tab-content" aria-label="Nhập và cập nhật giá">
+        <CatalogueManagedPriceImport initialListId={chosenManagedListId}
+         onBusyChange={handleBulkBusy} onGoLists={()=>setPricingView("lists")}/>
       </div>:
     <div className="catalogue-side-layout">
       <aside className="catalogue-side-index" aria-label="Chọn mã công ty">

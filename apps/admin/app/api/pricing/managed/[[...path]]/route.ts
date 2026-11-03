@@ -3,8 +3,8 @@ export const dynamic="force-dynamic";
 const PRIVATE={"Cache-Control":"private, no-store","X-Content-Type-Options":"nosniff",
  "Content-Type":"application/json; charset=utf-8"};
 const fail=(status:number,code:string)=>Response.json({error:{code}},{status,headers:PRIVATE});
-const GET_ACTIONS=new Set(["","customers","prices"]);
-const POST_ACTIONS=new Set(["create","update","approve","deactivate","price","price-approve","resolve"]);
+const GET_ACTIONS=new Set(["","customers","prices","prices-export"]);
+const POST_ACTIONS=new Set(["create","update","approve","deactivate","price","price-approve","resolve","bulk-preview","bulk-apply"]);
 function workerUrl(){
  try{
   const u=new URL(process.env.FBMN_ADMIN_API_BASE_URL||"");
@@ -27,13 +27,13 @@ async function proxy(request:Request,params:Promise<{path?:string[]}>,method:"GE
  const token=request.headers.get("authorization")||"";
  if(!/^Bearer [A-Za-z0-9._~+/-]+=*$/.test(token)||token.length>12010)
   return fail(401,"unauthenticated");
- if(Number(request.headers.get("content-length")||0)>100000)return fail(413,"too_large");
+ if(Number(request.headers.get("content-length")||0)>480000)return fail(413,"too_large");
  const base=workerUrl();
  if(!base)return fail(503,"admin_api_unavailable");
  let body:string|undefined;
  if(method==="POST"){
   body=await request.text();
-  if(body.length>100000)return fail(413,"too_large");
+  if(body.length>480000)return fail(413,"too_large");
  }
  try{
   const remote=await fetch(base+"/v1/admin/pricing/managed"+(action?"/"+action:"")+
@@ -46,7 +46,7 @@ async function proxy(request:Request,params:Promise<{path?:string[]}>,method:"GE
   if(![200,400,401,403,404,405,409,413,503].includes(remote.status))
    return fail(503,"price_lists_unavailable");
   const raw=await remote.text();
-  if(raw.length>1500000||!remote.headers.get("content-type")?.includes("application/json"))
+  if(raw.length>2500000||!remote.headers.get("content-type")?.includes("application/json"))
    return fail(503,"invalid_response");
   return new Response(raw,{status:remote.status,headers:PRIVATE});
  }catch{return fail(503,"price_lists_unavailable");}

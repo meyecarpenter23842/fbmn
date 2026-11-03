@@ -1,3 +1,4 @@
+import {handleManagedPriceImport} from "./managed-price-import-service.mjs";
 // L03: Owner-managed, private price lists. No public or consumer API routes.
 const S="fbmn_catalog_private";
 const UUID=v=>typeof v==="string"&&/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v);
@@ -18,7 +19,7 @@ const today=()=>{
 };
 async function body(request){
  if(request.headers.get("content-type")?.split(";")[0]!=="application/json")return null;
- const text=await request.text();if(text.length>100000)return null;
+ const text=await request.text();if(text.length>480000)return null;
  try{const value=JSON.parse(text);return value&&typeof value==="object"&&!Array.isArray(value)?value:null;}
  catch{return null;}
 }
@@ -145,6 +146,21 @@ async function getPrices(db,url){
   "p.valid_from::text,p.valid_until::text,p.approval_state,p.revision "+
   "FROM "+S+".managed_price_list_prices p JOIN fbmn_catalog.skus s ON s.sku_cong_ty=p.sku_cong_ty "+
   "WHERE p.list_id=$1 ORDER BY p.sku_cong_ty,p.valid_from DESC LIMIT 2000",[id]));
+ return OK({items:result.rows});
+}
+// Separate, bounded latest-price export. The regular detail view intentionally
+// limits history to 2,000 rows and must not be used to silently truncate exports.
+async function getExportPrices(db,url){
+ const id=url.searchParams.get("list_id"),period=url.searchParams.get("period");
+ if([...url.searchParams.keys()].some(k=>!["list_id","period"].includes(k))||
+  !UUID(id)||!DATE(period))return ERR(400,"invalid_query");
+ // The two-column file cannot encode a different effective date for each SKU.
+ // Export exactly the selected period, never a mixture of historical periods.
+ const result=await db(c=>c.query("SELECT p.sku_cong_ty,p.amount_vnd::text,p.valid_from::text "+
+  "FROM "+S+".managed_price_list_prices p "+
+  "WHERE p.list_id=$1 AND p.valid_from=$2::date "+
+  "ORDER BY p.sku_cong_ty LIMIT 10001",[id,period]));
+ if(result.rows.length>10000)return ERR(409,"export_too_large");
  return OK({items:result.rows});
 }
 const MONEY=v=>typeof v==="string"&&/^(0|[1-9][0-9]{0,12})$/.test(v)&&BigInt(v)<=1000000000000n;
@@ -279,6 +295,7 @@ export async function handleManagedPriceLists({request,actor,db}){
    if(action===""&&u.search==="")return await getLists(db);
    if(action==="customers")return await getCustomers(db,u);
    if(action==="prices")return await getPrices(db,u);
+   if(action==="prices-export")return await getExportPrices(db,u);
    return ERR(404,"not_found");
   }catch{return ERR(503,"pricing_unavailable");}
  }
@@ -291,5 +308,6 @@ export async function handleManagedPriceLists({request,actor,db}){
  if(action==="price")return setPrice(db,input,actor);
  if(action==="price-approve")return approvePrice(db,input,actor);
  if(action==="resolve")return resolvePrice(db,input);
+ if(action==="bulk-preview"||action==="bulk-apply")return handleManagedPriceImport({action,input,actor,db});
  return ERR(404,"not_found");
 }

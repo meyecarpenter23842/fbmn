@@ -31,7 +31,7 @@ const CHANNELS:[string,string][]=[
  ["public_web","Website"],["dealer_app","App đại lý"],["consumer_app","App người tiêu dùng"]
 ];
 const CATEGORIES:[string,string][]=[
- ["","Tất cả nhóm khách"],["distributor","Nhà phân phối"],["dealer","Đại lý"],
+ ["","Tất cả khách B2B"],["distributor","Nhà phân phối"],["dealer","Đại lý"],
  ["bookstore","Nhà sách"],["school","Trường học"],["enterprise","Doanh nghiệp"],
  ["factory","Nhà máy"],["other","Khác"]
 ];
@@ -87,8 +87,8 @@ async function query<T>(path:string,method:"GET"|"POST"="GET",data?:unknown):Pro
  }
  return payload.data;
 }
-export default function CatalogueManagedPriceLists({onBusyChange}:{
- onBusyChange?:(busy:boolean)=>void;
+export default function CatalogueManagedPriceLists({onBusyChange,onOpenImport}:{
+ onBusyChange?:(busy:boolean)=>void;onOpenImport?:(listId:string)=>void;
 }){
  const [lists,setLists]=useState<List[]>([]);
  const [chosenId,setChosenId]=useState("");
@@ -169,13 +169,23 @@ export default function CatalogueManagedPriceLists({onBusyChange}:{
   setClientSearch(item.customer_code?item.customer_code+" — "+(item.customer_name||""):"");
   setShowEditor(true);
  }
- function changeAudience(audience:Audience){
-  setListForm(v=>({...v,audience,channel_codes:[],scope_customer_type:"",scope_customer_id:""}));
-  setClientSearch("");
- }
- function toggleChannel(code:string,checked:boolean){
-  setListForm(v=>({...v,channel_codes:checked?[...v.channel_codes,code]:
-   v.channel_codes.filter(x=>x!==code)}));
+ const placement=useMemo(()=>{
+  if(listForm.audience==="internal")return "admin";
+  if(listForm.audience==="dealer")return "dealer_app";
+  if(listForm.channel_codes.includes("public_web")&&listForm.channel_codes.includes("consumer_app"))
+   return "web_consumer";
+  if(listForm.channel_codes.includes("public_web"))return "public_web";
+  return "consumer_app";
+ },[listForm.audience,listForm.channel_codes]);
+ function changePlacement(value:string){
+  const isDealer=value==="dealer_app";
+  const internal=value==="admin";
+  const selected=value==="web_consumer"?["public_web","consumer_app"]:
+   internal?[]:[value];
+  setListForm(v=>({...v,audience:internal?"internal":isDealer?"dealer":"consumer",
+   channel_codes:selected,scope_customer_type:isDealer?v.scope_customer_type:"",
+   scope_customer_id:isDealer?v.scope_customer_id:""}));
+  if(!isDealer)setClientSearch("");
  }
  function clientType(value:string){
   setListForm(v=>({...v,scope_customer_type:value,scope_customer_id:""}));
@@ -201,15 +211,17 @@ export default function CatalogueManagedPriceLists({onBusyChange}:{
    const data={...listForm,list_code:code,list_name:name,priority:Number(listForm.priority),
     note:listForm.note.trim(),scope_customer_type:listForm.scope_customer_type||null,
     scope_customer_id:listForm.scope_customer_id||null,valid_until:listForm.valid_until||null};
+   let preferred=editingId||"";
    if(editingId){
     const row=lists.find(x=>x.id===editingId);
     if(!row)throw Error("Bảng giá không tồn tại.");
     await query("/update","POST",{...data,id:editingId,expected_revision:row.revision});
    }else{
-    await query("/create","POST",data);
+    const created=await query<{id:string}>("/create","POST",data);
+    preferred=created.id;
    }
-   setShowEditor(false);await refresh(editingId||undefined);
-   notify("Đã lưu bảng giá nội bộ. Chưa tự áp dụng ra Website/App.","success");
+   setShowEditor(false);await refresh(preferred);
+   notify("Đã lưu bảng giá. Có thể nhập giá vào bảng này.","success");
   });
  }
  async function approveList(item:List){
@@ -269,17 +281,17 @@ export default function CatalogueManagedPriceLists({onBusyChange}:{
    notify("Mức giá đã duyệt nội bộ.","success");
   });
  }
- return <section className="fb-managed-prices" aria-label="Bảng giá tự tạo">
+ return <section className="fb-managed-prices" aria-label="Quản lý bảng giá">
   <AdminToast message={toast?.message||""} variant={toast?.variant||"info"} onClose={()=>setToast(null)}/>
   <div className="fb-managed-head">
-   <div><h2>Bảng giá tự tạo</h2><p>Tự đặt mã, tên và kênh áp dụng. Không có bảng giá mặc định.</p></div>
+   <div><h2>Danh sách bảng giá</h2><p>Quản lý bảng giá theo đúng nơi sử dụng.</p></div>
    <button type="button" className="import-btn import-primary" disabled={busy} onClick={newList}>+ Tạo bảng giá</button>
   </div>
   <div className="fb-managed-layout">
    <div className="fb-managed-list" aria-label="Danh sách bảng giá">
     {loading&&<p className="fb-managed-empty">Đang tải bảng giá…</p>}
     {!loading&&!lists.length&&<p className="fb-managed-empty">
-     Chưa có bảng giá kinh doanh. Chọn <strong>Tạo bảng giá</strong> và tự nhập mã, tên.
+     Chưa có bảng giá. Chọn <strong>Tạo bảng giá</strong> để bắt đầu.
     </p>}
     {lists.map(item=><button type="button" key={item.id}
      className={"fb-managed-list-item"+(chosenId===item.id?" active":"")}
@@ -303,11 +315,11 @@ export default function CatalogueManagedPriceLists({onBusyChange}:{
       </div>
       <div className="fb-managed-actions">
        {chosen.approval_state==="draft"&&<button type="button" className="import-btn import-secondary"
-        disabled={busy} onClick={()=>editList(chosen)}>Sửa cấu hình</button>}
+        disabled={busy} onClick={()=>editList(chosen)}>Sửa bảng giá</button>}
        {chosen.approval_state==="draft"&&<button type="button" className="import-btn import-secondary"
         disabled={busy} onClick={()=>void approveList(chosen)}>Duyệt bảng giá</button>}
        {chosen.approval_state!=="inactive"&&<button type="button" className="import-btn import-secondary"
-        disabled={busy} onClick={()=>void deactivateList(chosen)}>Ngừng áp dụng</button>}
+        disabled={busy} onClick={()=>void deactivateList(chosen)}>Ngừng sử dụng</button>}
       </div>
      </div>
      <p className="fb-managed-warning">Giá và kênh chỉ được lưu trong hệ thống nội bộ. Việc duyệt không tự đưa NET hoặc bảng giá này ra Website/App.</p>
@@ -340,9 +352,13 @@ export default function CatalogueManagedPriceLists({onBusyChange}:{
       </p>}
      </details>
      <div className="fb-managed-section-title">
-      <div><h3>Mức giá theo SKU</h3><small>Giá VND độc lập, không tự tính từ NET/chiết khấu.</small></div>
-      {chosen.approval_state==="draft"&&<button type="button" className="import-btn import-primary"
-       disabled={busy} onClick={newPrice}>+ Thêm giá SKU</button>}
+      <div><h3>Giá sản phẩm</h3><small>Giá được lưu theo bảng giá đang chọn.</small></div>
+      {chosen.approval_state==="draft"&&<div className="fb-managed-actions">
+       <button type="button" className="import-btn import-primary" disabled={busy}
+        onClick={()=>onOpenImport?.(chosen.id)}>Nhập giá từ Excel / CSV</button>
+       <button type="button" className="import-btn import-secondary" disabled={busy}
+        onClick={newPrice}>Thêm giá thủ công</button>
+      </div>}
      </div>
      {loadedPriceListId!==chosenId?<p className="fb-managed-empty">Đang tải giá của bảng đã chọn…</p>:
      visiblePrices.length===0?<p className="fb-managed-empty">Chưa có mức giá cho bảng này.</p>:
@@ -364,26 +380,29 @@ export default function CatalogueManagedPriceLists({onBusyChange}:{
       </tr>)}</tbody></table></div>}
     </>}
     {showEditor&&<div className="fb-managed-editor" aria-label="Thiết lập bảng giá">
-     <h3>{editingId?"Chỉnh sửa bảng giá":"Tạo bảng giá mới"}</h3>
+     <h3>{editingId?"Sửa bảng giá":"Tạo bảng giá"}</h3>
      <div className="fb-managed-fields">
-      <label>Mã bảng giá (tự đặt)
+      <label>Mã bảng giá
        <input value={listForm.list_code} disabled={!!editingId||busy} maxLength={40}
-        placeholder="VD: DL_MIEN_TAY" onChange={e=>setListForm(v=>({...v,list_code:e.target.value.toUpperCase()}))}/>
+        placeholder="Ví dụ: BG_DAILY_MIENTAY" onChange={e=>setListForm(v=>({...v,list_code:e.target.value.toUpperCase()}))}/>
       </label>
       <label>Tên bảng giá
        <input value={listForm.list_name} maxLength={120}
-        placeholder="Tên do anh lựa chọn" onChange={e=>setListForm(v=>({...v,list_name:e.target.value}))}/>
+        placeholder="Ví dụ: Bảng giá đại lý miền Tây" onChange={e=>setListForm(v=>({...v,list_name:e.target.value}))}/>
       </label>
-      <label>Phạm vi bảo mật
-       <select value={listForm.audience} onChange={e=>changeAudience(e.target.value as Audience)}>
-        <option value="internal">Nội bộ — không gán kênh</option>
-        <option value="consumer">Người tiêu dùng</option>
-        <option value="dealer">Đại lý / khách B2B</option>
+      <label className="fb-managed-wide">Nơi sử dụng bảng giá
+       <select value={placement} onChange={e=>changePlacement(e.target.value)}>
+        <option value="admin">Chỉ trong Admin (nội bộ)</option>
+        <option value="public_web">Website Futurebook</option>
+        <option value="consumer_app">App người tiêu dùng</option>
+        <option value="web_consumer">Website và App người tiêu dùng</option>
+        <option value="dealer_app">App đại lý / B2B</option>
        </select>
-      </label>
-      <label>Mức ưu tiên (khi trùng điều kiện)
-       <input type="number" min="0" max="10000" value={listForm.priority}
-        onChange={e=>setListForm(v=>({...v,priority:e.target.value}))}/>
+       <small className="fb-managed-placement-help">
+        {placement==="admin"?"Không gán bảng giá cho Website hoặc App.":
+         placement==="dealer_app"?"Chọn nhóm khách hoặc khách cụ thể ở phía dưới.":
+         "Gán bảng giá cho kênh đã chọn. Không tự đăng giá khi kênh chưa kết nối."}
+       </small>
       </label>
       <label>Hiệu lực từ ngày
        <input type="date" value={listForm.valid_from}
@@ -393,25 +412,27 @@ export default function CatalogueManagedPriceLists({onBusyChange}:{
        <input type="date" value={listForm.valid_until}
         onChange={e=>setListForm(v=>({...v,valid_until:e.target.value}))}/>
       </label>
-      <label className="fb-managed-wide">Ghi chú
+      <details className="fb-managed-extra fb-managed-wide">
+       <summary>Thiết lập bổ sung</summary>
+       <div className="fb-managed-fields">
+        <label>Ưu tiên khi nhiều bảng cùng áp dụng
+         <input type="number" min="0" max="10000" value={listForm.priority}
+          onChange={e=>setListForm(v=>({...v,priority:e.target.value}))}/>
+        </label>
+              <label className="fb-managed-wide">Ghi chú
        <input value={listForm.note} maxLength={500}
         onChange={e=>setListForm(v=>({...v,note:e.target.value}))}/>
       </label>
+       </div>
+      </details>
      </div>
-     {listForm.audience!=="internal"&&<fieldset className="fb-managed-channel-set">
-      <legend>Chọn kênh áp dụng</legend>
-      {CHANNELS.filter(([code])=>listForm.audience==="dealer"?code==="dealer_app":
-       code!=="dealer_app").map(([code,label])=><label key={code}>
-       <input type="checkbox" checked={listForm.channel_codes.includes(code)}
-        onChange={e=>toggleChannel(code,e.target.checked)}/>{label}</label>)}
-     </fieldset>}
      {listForm.audience==="dealer"&&<div className="fb-managed-fields">
       <label>Nhóm khách hàng
        <select value={listForm.scope_customer_type} onChange={e=>clientType(e.target.value)}>
         {CATEGORIES.map(([id,label])=><option value={id} key={id}>{label}</option>)}
        </select></label>
       <div className="fb-managed-customer">
-       <label>Tìm khách cụ thể theo tên/mã
+       <label>Áp dụng cho một khách hàng
         <input value={clientSearch} onChange={e=>{setClientSearch(e.target.value);
          setListForm(v=>({...v,scope_customer_id:""}));}} placeholder="Nhập mã hoặc tên khách"/>
        </label>
@@ -425,7 +446,7 @@ export default function CatalogueManagedPriceLists({onBusyChange}:{
          {c.customer_code} — {c.display_name}</button>)}
        </div>}
       </div>
-      <small className="fb-managed-wide">Chọn nhóm khách hoặc một khách cụ thể, không cần nhập UUID.</small>
+      <small className="fb-managed-wide">Có thể chọn toàn bộ khách B2B, một nhóm khách hoặc một khách cụ thể.</small>
      </div>}
      <div className="fb-managed-footer">
       <button type="button" className="import-btn import-secondary" disabled={busy}
