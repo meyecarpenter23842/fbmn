@@ -1,5 +1,6 @@
 // ADM-01. Every admin route requires a verified external identity and a DB grant.
 import { handleCatalogue } from "./catalogue-service.mjs";
+import { handlePricebook } from "./pricebook-service.mjs";
 // No cookie/JWT claims may supply roles or channel scopes.
 const ROUTES = new Map([
   ["/v1/admin/session", "session.read"],
@@ -14,6 +15,7 @@ const PERMITTED = Object.freeze({
   "publish.check": new Set(["publisher", "admin", "owner"]),
   "pricing.check": new Set(["pricing", "admin", "owner"]),
   "catalogue.manage": new Set(["owner", "admin", "editor"]),
+  "pricing.private": new Set(["owner","admin","pricing"]),
 });
 const error = (status, code, corsOrigin) =>
   reply(status, { error: { code, message: "Yêu cầu không thể xử lý." } }, corsOrigin);
@@ -42,7 +44,8 @@ export function createAdminApi({ verifyToken, loadActor, listChannels, recordAud
       const corsOrigin = origin && origins.has(origin) ? origin : null;
       if (origin && !corsOrigin) return error(403, "origin_forbidden", null);
       const url = new URL(request.url);
-      const action = url.pathname.startsWith("/v1/admin/catalogue/") ? "catalogue.manage" : ROUTES.get(url.pathname);
+      const action = url.pathname.startsWith("/v1/admin/catalogue/") ? "catalogue.manage" :
+        url.pathname.startsWith("/v1/admin/pricing/") ? "pricing.private" : ROUTES.get(url.pathname);
       if (!action) return error(404, "not_found", corsOrigin);
       if (request.method === "OPTIONS") {
         if (!corsOrigin) return error(403, "origin_forbidden", null);
@@ -75,6 +78,9 @@ export function createAdminApi({ verifyToken, loadActor, listChannels, recordAud
         try { await recordAudit({ subject, action, outcome: "denied" }); }
         catch { return error(503, "service_unavailable", corsOrigin); }
         return error(403, "forbidden", corsOrigin);
+      }
+      if (action === "pricing.private") {
+        return handlePricebook({request,actor:{...actor,subject},db:catalogueDb});
       }
       if (action === "catalogue.manage") {
         const result = await handleCatalogue({ request, actor:{...actor,subject}, db:catalogueDb, r2:catalogueR2 });
