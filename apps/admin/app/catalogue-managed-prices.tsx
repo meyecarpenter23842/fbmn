@@ -1,5 +1,5 @@
 "use client";
-import {useCallback,useEffect,useMemo,useState} from "react";
+import {useCallback,useEffect,useMemo,useRef,useState} from "react";
 import AdminToast from "./admin-toast";
 import "./managed-price-lists.css";
 
@@ -18,6 +18,9 @@ type Item={
 };
 type Customer={id:string;customer_code:string;display_name:string;customer_type:string;status:string};
 type Envelope<T>={data?:T;error?:{code?:string}};
+type PriceResolution={status:"resolved"|"no_price"|"customer_not_found"|"ambiguous_price"|"too_many_matches";
+ matched_list_code?:string;matched_list_name?:string;amount_vnd?:string;vat_included?:boolean;
+ conflicting_list_codes?:string[]};
 type ListForm={
  list_code:string;list_name:string;note:string;audience:Audience;channel_codes:string[];
  scope_customer_type:string;scope_customer_id:string;priority:string;valid_from:string;valid_until:string;
@@ -101,6 +104,10 @@ export default function CatalogueManagedPriceLists({onBusyChange}:{
  const [loading,setLoading]=useState(true);
  const [showPriceEditor,setShowPriceEditor]=useState(false);
  const [toast,setToast]=useState<{message:string;variant:"success"|"error"|"info"}|null>(null);
+ const [scopeForm,setScopeForm]=useState({sku_cong_ty:"",channel_code:"public_web",customer_code:"",
+  price_at:""});
+ const [scopeResult,setScopeResult]=useState<PriceResolution|null>(null);
+ const scopeGeneration=useRef(0);
  const notify=useCallback((message:string,variant:"success"|"error"|"info"="error")=>
   setToast({message,variant}),[]);
  useEffect(()=>{onBusyChange?.(busy);},[busy,onBusyChange]);
@@ -127,6 +134,22 @@ export default function CatalogueManagedPriceLists({onBusyChange}:{
    .catch(e=>{if(!cancelled)notify(e instanceof Error?e.message:"Không tải được giá SKU.");});
   return()=>{cancelled=true};
  },[chosenId,notify]);
+ async function inspectChannel(){
+  if(!scopeForm.sku_cong_ty.trim()||
+   scopeForm.channel_code==="dealer_app"&&!scopeForm.customer_code.trim()){
+   notify("Nhập mã SKU; với App đại lý phải nhập mã khách hàng.");return;
+  }
+  const generation=++scopeGeneration.current;
+  await work(async()=>{
+   setScopeResult(null);
+   const result=await query<PriceResolution>("/resolve","POST",{
+    sku_cong_ty:scopeForm.sku_cong_ty.trim(),channel_code:scopeForm.channel_code,
+    customer_code:scopeForm.channel_code==="dealer_app"?scopeForm.customer_code.trim():null,
+    price_at:scopeForm.price_at||null
+   });
+   if(scopeGeneration.current===generation)setScopeResult(result);
+  });
+ }
  async function work(fn:()=>Promise<void>){
   setBusy(true);
   try{await fn();}catch(e){notify(e instanceof Error?e.message:"Thao tác thất bại.");}
@@ -288,6 +311,34 @@ export default function CatalogueManagedPriceLists({onBusyChange}:{
       </div>
      </div>
      <p className="fb-managed-warning">Giá và kênh chỉ được lưu trong hệ thống nội bộ. Việc duyệt không tự đưa NET hoặc bảng giá này ra Website/App.</p>
+     <details className="fb-managed-resolution">
+      <summary>Kiểm tra giá theo kênh (nội bộ)</summary>
+      <div className="fb-managed-fields">
+       <label>Mã SKU<input value={scopeForm.sku_cong_ty} placeholder="0114"
+        onChange={e=>{scopeGeneration.current+=1;setScopeResult(null);setScopeForm(v=>({...v,sku_cong_ty:e.target.value}));}}/></label>
+       <label>Kênh<select value={scopeForm.channel_code}
+        onChange={e=>{scopeGeneration.current+=1;setScopeResult(null);setScopeForm(v=>({...v,channel_code:e.target.value,customer_code:""}));}}>
+        {CHANNELS.map(([code,name])=><option key={code} value={code}>{name}</option>)}</select></label>
+       {scopeForm.channel_code==="dealer_app"&&<label>Mã khách hàng
+        <input value={scopeForm.customer_code}
+         onChange={e=>{scopeGeneration.current+=1;setScopeResult(null);setScopeForm(v=>({...v,customer_code:e.target.value}));}}/>
+       </label>}
+       <label>Ngày hiệu lực<input type="date" value={scopeForm.price_at}
+        onChange={e=>{scopeGeneration.current+=1;setScopeResult(null);setScopeForm(v=>({...v,price_at:e.target.value}));}}/></label>
+      </div>
+      <button className="import-btn import-secondary" type="button" disabled={busy}
+       onClick={()=>void inspectChannel()}>Xem giá đã duyệt</button>
+      {scopeResult&&<p className="fb-managed-result" role="status">
+       {scopeResult.status==="resolved"?
+        scopeResult.matched_list_code+" · "+fmt(scopeResult.amount_vnd||null)+" · "+
+         (scopeResult.vat_included===true?"Đã gồm VAT":scopeResult.vat_included===false?"Chưa gồm VAT":"VAT chưa xác minh"):
+        scopeResult.status==="no_price"?"Chưa có giá đã duyệt phù hợp.":
+        scopeResult.status==="customer_not_found"?"Mã khách không tồn tại hoặc chưa hoạt động.":
+        scopeResult.status==="ambiguous_price"?"Nhiều bảng cùng ưu tiên: "+
+         (scopeResult.conflicting_list_codes||[]).join(", "):
+        "Quá nhiều bảng giá trùng điều kiện."}
+      </p>}
+     </details>
      <div className="fb-managed-section-title">
       <div><h3>Mức giá theo SKU</h3><small>Giá VND độc lập, không tự tính từ NET/chiết khấu.</small></div>
       {chosen.approval_state==="draft"&&<button type="button" className="import-btn import-primary"

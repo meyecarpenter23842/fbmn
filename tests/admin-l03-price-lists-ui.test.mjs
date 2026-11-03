@@ -41,3 +41,19 @@ test("shared button geometry is consistent and retains mobile hit target",()=>{
  assert.match(controls,/align-items:center/);
  assert.match(layout,/import "\.\/admin-controls\.css"/);
 });
+
+test("channel preview never reappears after Owner changes SKU/channel/customer/date",()=>{
+ const source=read("apps/admin/app/catalogue-managed-prices.tsx");
+ assert.match(source,/const scopeGeneration=useRef\(0\)/);
+ assert.match(source,/const generation=\+\+scopeGeneration\.current/);
+ assert.match(source,/if\(scopeGeneration\.current===generation\)setScopeResult\(result\)/);
+ assert.equal((source.match(/scopeGeneration\.current\+=1;setScopeResult\(null\)/g)||[]).length,4);
+});
+
+test("channel preview displays VAT inclusive/exclusive status and rejects stale results",()=>{
+ const source=read("apps/admin/app/catalogue-managed-prices.tsx");
+ assert.match(source,/scopeResult\.vat_included===true\?"Đã gồm VAT"/);
+ assert.match(source,/scopeResult\.vat_included===false\?"Chưa gồm VAT"/);
+ assert.match(source,/scopeGeneration\.current===generation\)setScopeResult\(result\)/);
+ assert.match(source,/scopeResult\.matched_list_code/);
+});

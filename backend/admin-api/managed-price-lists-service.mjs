@@ -10,7 +10,12 @@ const CHANNELS=new Set(["public_web","consumer_app","dealer_app"]);
 const CUSTOMER_TYPES=new Set(["distributor","dealer","bookstore","school","enterprise","factory","other"]);
 const ERR=(status,code)=>Response.json({error:{code}},{status,headers:{"Cache-Control":"private, no-store"}});
 const OK=data=>Response.json({data},{headers:{"Cache-Control":"private, no-store"}});
-const today=()=>new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Ho_Chi_Minh",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());
+const today=()=>{
+ const parts=new Intl.DateTimeFormat("en-US",{timeZone:"Asia/Ho_Chi_Minh",
+  year:"numeric",month:"2-digit",day:"2-digit"}).formatToParts(new Date());
+ const get=key=>parts.find(part=>part.type===key)?.value;
+ return get("year")+"-"+get("month")+"-"+get("day");
+};
 async function body(request){
  if(request.headers.get("content-type")?.split(";")[0]!=="application/json")return null;
  const text=await request.text();if(text.length>100000)return null;
@@ -210,6 +215,60 @@ async function approvePrice(db,input,actor){
  }catch(e){const code=e?.message;return ERR(["revision_conflict","approved_period_overlap","list_not_editable"].includes(code)?409:503,
   ["revision_conflict","approved_period_overlap","list_not_editable"].includes(code)?code:"approval_failed");}
 }
+async function resolvePrice(db,input){
+ if(!input||!TEXT(input.sku_cong_ty,1,80)||!CHANNELS.has(input.channel_code)||
+  input.price_at!==undefined&&input.price_at!==null&&!DATE(input.price_at))
+  return ERR(400,"invalid_resolution");
+ const dealer=input.channel_code==="dealer_app";
+ if(dealer?!TEXT(input.customer_code,1,80):Boolean(input.customer_code))
+  return ERR(400,"customer_required_for_dealer");
+ try{
+  const result=await db(async c=>{
+   let customer=null;
+   if(dealer){
+    const found=await c.query("SELECT id::text,customer_code,customer_type "+
+      "FROM futurebook.customers WHERE customer_code=$1 AND status='active'",[input.customer_code]);
+    if(found.rowCount!==1)return {status:"customer_not_found"};
+    customer=found.rows[0];
+   }
+   const at=input.price_at||today();
+   const rows=await c.query(
+    "SELECT l.id::text AS list_id,l.list_code,l.list_name,l.audience,l.priority,"+
+    "l.scope_customer_id::text AS scope_customer_id,l.scope_customer_type,"+
+    "p.id::text AS price_id,p.amount_vnd::text AS amount_vnd,p.vat_included,"+
+    "p.source_document,p.valid_from::text AS valid_from,"+
+    "CASE WHEN l.scope_customer_id IS NOT NULL THEN 3 "+
+    "WHEN l.scope_customer_type IS NOT NULL THEN 2 ELSE 1 END AS specificity "+
+    "FROM "+S+".managed_price_lists l JOIN "+S+".managed_price_list_prices p ON p.list_id=l.id "+
+    "WHERE l.approval_state='approved' AND p.approval_state='approved' "+
+    "AND p.sku_cong_ty=$1 AND $2::text=ANY(l.channel_codes) "+
+    "AND l.valid_from<=$3::date AND (l.valid_until IS NULL OR l.valid_until>=$3::date) "+
+    "AND p.valid_from<=$3::date AND (p.valid_until IS NULL OR p.valid_until>=$3::date) "+
+    "AND ((l.audience='consumer' AND $2::text IN ('public_web','consumer_app') "+
+    "AND l.scope_customer_id IS NULL AND l.scope_customer_type IS NULL) "+
+    "OR (l.audience='dealer' AND $2::text='dealer_app' "+
+    "AND (l.scope_customer_id IS NULL OR l.scope_customer_id=$4::uuid) "+
+    "AND (l.scope_customer_type IS NULL OR l.scope_customer_type=$5::text))) "+
+    "ORDER BY specificity DESC,l.priority DESC,p.valid_from DESC,l.list_code "+
+    "LIMIT 51",[input.sku_cong_ty,input.channel_code,at,customer?.id||null,
+     customer?.customer_type||null]);
+   if(rows.rows.length>50)return {status:"too_many_matches"};
+   if(!rows.rows.length)return {status:"no_price",sku_cong_ty:input.sku_cong_ty};
+   const first=rows.rows[0],next=rows.rows[1];
+   if(next&&Number(first.specificity)===Number(next.specificity)&&
+    first.priority===next.priority&&first.valid_from===next.valid_from){
+    return {status:"ambiguous_price",sku_cong_ty:input.sku_cong_ty,
+     conflicting_list_codes:[first.list_code,next.list_code]};
+   }
+   return {status:"resolved",sku_cong_ty:input.sku_cong_ty,channel_code:input.channel_code,
+    customer_code:customer?.customer_code||null,at,matched_list_id:first.list_id,
+    matched_list_code:first.list_code,matched_list_name:first.list_name,
+    amount_vnd:first.amount_vnd,vat_included:first.vat_included,
+    source_document:first.source_document,precedence:first.specificity,priority:first.priority};
+  });
+  return OK(result);
+ }catch{return ERR(503,"price_resolution_unavailable");}
+}
 export async function handleManagedPriceLists({request,actor,db}){
  if(actor?.role!=="owner")return ERR(403,"owner_required");
  const u=new URL(request.url),prefix="/v1/admin/pricing/managed";
@@ -231,5 +290,6 @@ export async function handleManagedPriceLists({request,actor,db}){
  if(action==="deactivate")return updateList(db,input,actor,"deactivate");
  if(action==="price")return setPrice(db,input,actor);
  if(action==="price-approve")return approvePrice(db,input,actor);
+ if(action==="resolve")return resolvePrice(db,input);
  return ERR(404,"not_found");
 }

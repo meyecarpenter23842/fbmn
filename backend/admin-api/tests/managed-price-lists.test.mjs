@@ -110,3 +110,48 @@ test("production read paths remain isolated; immutable code and value audit reta
  assert.match(schema,/managed_price_audit/);
  assert.match(schema,/GRANT SELECT,INSERT/);
 });
+
+test("Owner-only channel preview matches approved customer/channel price",async()=>{
+ const seen=[];
+ const listed={list_id:"10000000-0000-4000-8000-000000000001",list_code:"DL_MIEN_TAY",
+  list_name:"Giá đại lý miền Tây",priority:300,specificity:3,amount_vnd:"25000",
+  vat_included:true,source_document:"Approved source",valid_from:"2027-01-01"};
+ const db=async(fn)=>fn({query:async(sql,args=[])=>{
+  seen.push({sql,args});
+  if(sql.startsWith("SELECT id::text,customer_code,customer_type"))
+   return {rowCount:1,rows:[{id:"10000000-0000-4000-8000-000000000003",
+    customer_code:"DL-A",customer_type:"dealer"}]};
+  if(sql.startsWith("SELECT l.id::text AS list_id"))return {rowCount:1,rows:[listed]};
+  return {rowCount:0,rows:[]};
+ }});
+ const res=await handleManagedPriceLists({request:request("/resolve","POST",{
+  sku_cong_ty:"0114",channel_code:"dealer_app",customer_code:"DL-A",
+  price_at:"2027-06-01"
+ }),actor,db});
+ assert.equal(res.status,200);
+ const out=(await res.json()).data;
+ assert.equal(out.status,"resolved");
+ assert.equal(out.matched_list_code,"DL_MIEN_TAY");
+ assert.equal(out.amount_vnd,"25000");
+ const select=seen.find(x=>x.sql.includes("FROM fbmn_catalog_private.managed_price_lists"));
+ assert.match(select.sql,/l.approval_state='approved'/);
+ assert.match(select.sql,/p.approval_state='approved'/);
+ assert.match(select.sql,/l.scope_customer_id=\$4::uuid/);
+ assert.deepEqual(select.args.slice(0,4),["0114","dealer_app","2027-06-01",
+  "10000000-0000-4000-8000-000000000003"]);
+});
+test("channel preview fails closed for missing B2B identity and overlapping priorities",async()=>{
+ const a=mock();
+ const missing=await handleManagedPriceLists({request:request("/resolve","POST",{
+  sku_cong_ty:"0114",channel_code:"dealer_app"
+ }),actor,db:a.db});
+ assert.equal(missing.status,400);
+ assert.equal(a.queries.length,0);
+ const candidates=[{specificity:1,priority:100,valid_from:"2027-01-01",list_code:"WEB-A"},
+  {specificity:1,priority:100,valid_from:"2027-01-01",list_code:"WEB-B"}];
+ const db=async(fn)=>fn({query:async()=>({rowCount:2,rows:candidates})});
+ const conflict=await handleManagedPriceLists({request:request("/resolve","POST",{
+  sku_cong_ty:"0114",channel_code:"public_web",price_at:"2027-05-01"
+ }),actor,db});
+ assert.equal((await conflict.json()).data.status,"ambiguous_price");
+});
