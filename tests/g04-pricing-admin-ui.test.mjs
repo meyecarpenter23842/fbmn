@@ -61,7 +61,7 @@ test("Admin price save feedback uses top-right toast without hiding reload after
  assert.match(panel,/setLoadFailed\(true\)/);
  assert.match(panel,/Dữ liệu giá chưa tải được\. Chọn Làm mới để thử lại/);
  assert.match(toast,/variant==="error"\?"alert":"status"/);
- assert.match(css,/\.catalogue-toast \{ position:fixed; right:16px; top:16px/);
+ assert.match(css,/\.catalogue-toast \{ position:fixed; right:12px; top:12px/);
  assert.match(css,/\.catalogue-toast--error/);
 });
 

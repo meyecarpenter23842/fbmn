@@ -1,22 +1,9 @@
 /* Futurebook admin visual polish: compact controls, independent panes, rich surfaces. */
 :root {
-  --fb-ui-primary:#6d249e;
-  --fb-ui-primary-hover:#572080;
-  --fb-ui-primary-strong:#431078;
-  --fb-ui-primary-subtle:#f4edfa;
-  --fb-ui-canvas:#f7f8fc;
-  --fb-ui-surface:#fff;
-  --fb-ui-border:#e4e7ef;
-  --fb-ui-ink:#20223b;
-  --fb-ui-muted:#667085;
-  --fb-ui-danger:#b42318;
-  --fb-ui-radius-control:10px;
-  --fb-ui-radius-card:14px;
-  --fb-ui-shadow-card:0 4px 18px rgba(32,24,70,.045);
-  --fb-ui-focus-ring:0 0 0 3px rgba(109,36,158,.20);
-  --fb-ink:var(--fb-ui-ink);
-  --fb-accent:var(--fb-ui-primary);
-  --fb-line:var(--fb-ui-border);
+  --fb-ink:#20264c;
+  --fb-accent:#6358d7;
+  --fb-blue:#367cda;
+  --fb-line:#dfe4f4;
   --fb-ease:cubic-bezier(.2,.75,.3,1);
 }
 @media (min-width: 781px) {
@@ -26,7 +13,7 @@
 .work-area { display:flex; flex-direction:column; min-height:0; height:100dvh; overflow:hidden; }
 .workspace-main { flex:1; min-height:0; overflow-y:auto; overscroll-behavior:contain; scrollbar-gutter:stable; }
 .sidebar {
-  background:linear-gradient(160deg,#4b2783 0%,#3f236f 50%,#2f1c57 100%);
+  background:linear-gradient(160deg,#363e9a 0%,#39328f 42%,#2b276d 100%);
   box-shadow:8px 0 32px rgba(28,29,92,.19), inset -1px 0 rgba(255,255,255,.14);
 }
 .brand { justify-content:flex-start; padding:6px 10px 17px; border-bottom:1px solid rgba(255,255,255,.16); }
@@ -35,16 +22,16 @@
 .side-menu { margin-top:16px; gap:3px; }
 .side-link { min-height:41px; padding:9px 12px; gap:12px; border-radius:10px; letter-spacing:.004em; transition:background-color .2s var(--fb-ease),box-shadow .2s var(--fb-ease),transform .2s var(--fb-ease); }
 .side-link:hover:not(:disabled) { background:rgba(214,226,255,.14); transform:translateX(2px); }
-.side-link.active { background:rgba(255,255,255,.16); box-shadow:inset 3px 0 #d5b3f3,inset 0 0 0 1px rgba(255,255,255,.13); }
-.work-area { background:var(--fb-ui-canvas); }
+.side-link.active { background:linear-gradient(100deg,rgba(129,126,249,.48),rgba(73,109,216,.26)); box-shadow:inset 3px 0 #a4d3ff,inset 0 0 0 1px rgba(255,255,255,.11),0 6px 17px rgba(16,16,70,.12); }
+.work-area { background:linear-gradient(140deg,#f5f7ff,#f8f9ff 43%,#eef2fd); }
 .topbar { flex-shrink:0; background:rgba(255,255,255,.96); box-shadow:0 3px 19px rgba(43,51,115,.06); border-bottom:1px solid #e2e7f7; }
-.surface,.metric,.import-upload-panel,.import-kpis>div,.catalogue-media-card { border-color:var(--fb-ui-border); box-shadow:var(--fb-ui-shadow-card); transition:border-color .18s var(--fb-ease),box-shadow .18s var(--fb-ease); }
-.catalogue-media-card:hover { border-color:#cdb7db; box-shadow:0 5px 20px rgba(69,28,98,.075); }
-.btn,.import-btn,.catalogue-actions-trigger { min-height:36px; padding:8px 13px; border-radius:var(--fb-ui-radius-control); font-size:13px; line-height:1.25; transition:background-color .16s var(--fb-ease),border-color .16s var(--fb-ease),box-shadow .16s var(--fb-ease); }
-.btn:not(:disabled):hover,.import-btn:not(:disabled):hover { box-shadow:0 2px 9px rgba(69,28,98,.09); }
-.btn:not(:disabled):active,.import-btn:not(:disabled):active { box-shadow:inset 0 1px 3px rgba(30,20,50,.12); }
-.import-primary,.btn-primary { background:var(--fb-ui-primary); color:#fff; border-color:var(--fb-ui-primary); box-shadow:0 2px 8px rgba(109,36,158,.13); }
-.import-primary:hover:not(:disabled),.btn-primary:hover:not(:disabled) { background:var(--fb-ui-primary-hover); border-color:var(--fb-ui-primary-hover); }
+.surface,.metric,.import-upload-panel,.import-kpis>div,.catalogue-media-card { border-color:var(--fb-line); box-shadow:0 3px 7px rgba(29,38,100,.035),0 15px 34px rgba(52,67,142,.065); transition:border-color .18s var(--fb-ease),box-shadow .22s var(--fb-ease),transform .22s var(--fb-ease); }
+.surface:hover,.metric:hover,.catalogue-media-card:hover { border-color:#cdd4ee; box-shadow:0 6px 16px rgba(31,43,109,.07),0 19px 37px rgba(38,48,120,.075); }
+.btn,.import-btn,.catalogue-actions-trigger { min-height:34px; padding:7px 12px; border-radius:9px; font-size:12px; line-height:1.2; transition:background-color .18s var(--fb-ease),border-color .18s var(--fb-ease),box-shadow .18s var(--fb-ease),transform .18s var(--fb-ease); }
+.btn:not(:disabled):hover,.import-btn:not(:disabled):hover { transform:translateY(-1px); box-shadow:0 5px 13px rgba(49,51,120,.12); }
+.btn:not(:disabled):active,.import-btn:not(:disabled):active { transform:scale(.985); transition-duration:.08s; }
+.import-primary,.btn-primary { background:linear-gradient(112deg,#6454db,#3d6bd9); color:#fff; border-color:#605bce; box-shadow:0 6px 16px rgba(74,76,190,.19); }
+.import-primary:hover:not(:disabled),.btn-primary:hover:not(:disabled) { background:linear-gradient(112deg,#5546cb,#3261cb); }
 .catalogue-channel-actions .import-btn { min-height:29px; padding:5px 8px; }
 .catalogue-list-table tbody tr { transition:background-color .16s ease; }
 .catalogue-list-table tbody tr:hover { background:#f6f8ff; }
@@ -65,30 +52,8 @@
 .catalogue-existing-row small { color:#7b85a2; flex-shrink:0; }
 .catalogue-existing-row button { border:0; background:none; padding:2px 0; text-align:left; color:#3b4384; font-weight:700; cursor:pointer; }
 .catalogue-existing-row button:hover { text-decoration:underline; }
-.catalogue-toast { position:fixed; right:16px; top:16px; z-index:20050; width:min(370px,calc(100vw - 32px)); display:flex; gap:10px; align-items:flex-start; border:1px solid var(--fb-ui-border); border-left:3px solid var(--fb-ui-primary); border-radius:var(--fb-ui-radius-card); padding:12px; background:var(--fb-ui-surface); color:var(--fb-ui-ink); box-shadow:0 12px 36px rgba(37,23,58,.17); font-size:13px; line-height:1.5; animation:fb-toast-in .18s var(--fb-ease) both; }
-.catalogue-toast--success { border-left-color:#18845b; }
-.catalogue-toast--error { border-left-color:var(--fb-ui-danger); }
-.catalogue-toast-icon { width:22px; height:22px; flex-shrink:0; display:grid; place-items:center; border-radius:50%; background:var(--fb-ui-primary-subtle); color:var(--fb-ui-primary-strong); font-weight:800; }
-.catalogue-toast--success .catalogue-toast-icon { background:#e4f6ec; color:#166c4c; }
-.catalogue-toast--error .catalogue-toast-icon { background:#fff0ed; color:var(--fb-ui-danger); }
-.catalogue-toast-text { flex:1; min-width:0; overflow-wrap:anywhere; }
-.catalogue-toast button { border:0; border-radius:8px; background:transparent; color:var(--fb-ui-muted); font-size:20px; line-height:1; padding:2px 6px; flex-shrink:0; }
-.catalogue-toast button:hover { background:var(--fb-ui-primary-subtle); color:var(--fb-ui-primary-strong); }
-.catalogue-toast button:focus-visible { outline:2px solid var(--fb-ui-primary); outline-offset:2px; }
-/* One fixed stack per modal: simultaneous media/price/save toasts never overlap. */
-.catalogue-toast-anchor { display:none; }
-.fb-product-modal-toast-stack {
-  position:fixed; top:16px; right:16px; z-index:20050;
-  width:min(370px,calc(100vw - 32px)); display:flex; flex-direction:column;
-  align-items:stretch; gap:10px; pointer-events:none;
-}
-.fb-product-modal-toast-stack .catalogue-toast {
-  position:relative; top:auto; right:auto; width:100%; pointer-events:auto;
-}
-@media(max-width:780px){
-  .fb-product-modal-toast-stack {top:12px;right:12px;width:min(370px,calc(100vw - 24px));}
-}
-
+.catalogue-toast { position:fixed; right:12px; top:12px; z-index:20050; width:min(320px,calc(100vw - 24px)); display:flex; gap:9px; align-items:flex-start; border:1px solid #e6dbea; border-left:3px solid #6d249e; border-radius:11px; padding:9px 10px; background:#fff; color:#30243c; box-shadow:0 10px 25px rgba(37,23,58,.15); font-size:12px; line-height:1.45; animation:fb-toast-in .22s var(--fb-ease) both; }
+.catalogue-toast button { border:0; border-radius:7px; background:transparent; color:#6c6475; font-size:18px; line-height:1; padding:2px 5px; flex-shrink:0; }
 @keyframes fb-toast-in { from { opacity:0; transform:translateY(-9px); } to { opacity:1; transform:translateY(0); } }
 @media(max-width:1080px){.catalogue-editor-shell{grid-template-columns:1fr}.catalogue-editor-media .catalogue-media-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media(max-width:780px){
@@ -164,22 +129,16 @@
   .top-actions{margin-left:auto;}
 }
 
-/* Component finishing rules: stable layout, purple accents, no ornamental card lift. */
-.fb-admin :where(.surface,.metric,.import-upload-panel,.import-kpis>div,.catalogue-media-card) { border-radius:var(--fb-ui-radius-card); }
-.fb-admin :where(.filter-search,.filter-row select,.field input,.field textarea,
-  .catalogue-workspace-fields input,.catalogue-workspace-fields select,.catalogue-workspace-fields textarea,
-  .catalogue-pricebook-quick-grid input,.catalogue-pricebook-form-grid input) {
-  border-radius:var(--fb-ui-radius-control); border-color:var(--fb-ui-border);
-}
-.fb-admin :where(.filter-search,.field input,.field textarea,.catalogue-workspace-fields input,
-  .catalogue-workspace-fields select,.catalogue-workspace-fields textarea,
-  .catalogue-pricebook-quick-grid input,.catalogue-pricebook-form-grid input):focus-within {
-  border-color:var(--fb-ui-primary); box-shadow:var(--fb-ui-focus-ring);
-}
-.fb-admin :where(.btn,.import-btn,.catalogue-actions-trigger):focus-visible { outline:2px solid var(--fb-ui-primary); outline-offset:2px; }
-.fb-admin :where(.import-secondary,.btn-outline):hover:not(:disabled) { border-color:#c5a6d9; background:var(--fb-ui-primary-subtle); }
-.fb-admin .catalogue-list-table tbody tr:hover { background:#faf6fc; }
-.fb-admin :where(.catalogue-pricebook-kinds button.active,.catalogue-pricebook-vat-options button.active) {
-  background:var(--fb-ui-primary-subtle); border-color:var(--fb-ui-primary); color:var(--fb-ui-primary-strong);
-}
-@media(max-width:780px) { .catalogue-toast{top:12px;right:12px;width:min(370px,calc(100vw - 24px));} }
+/* Owner: only save/error notifications — small fixed top-right toasts, never inline banners. */
+.catalogue-toast--success { border-left-color:#18845b; }
+.catalogue-toast--error { border-left-color:#b42318; }
+.catalogue-toast-icon { flex:none; width:19px; height:19px; display:grid; place-items:center; border-radius:50%; background:#f3eafa; color:#572080; font-size:12px; font-weight:800; }
+.catalogue-toast--success .catalogue-toast-icon { background:#e9f6ee; color:#18845b; }
+.catalogue-toast--error .catalogue-toast-icon { background:#fff1ef; color:#b42318; }
+.catalogue-toast-text { flex:1; min-width:0; overflow-wrap:anywhere; }
+.catalogue-toast button:hover { background:#f4edfa; color:#431078; }
+.catalogue-toast button:focus-visible { outline:2px solid #6d249e; outline-offset:2px; }
+.catalogue-toast-anchor { display:none; }
+/* Multiple notifications inside the existing SKU modal share one small corner stack. */
+.fb-product-modal-toast-stack { position:fixed; top:12px; right:12px; z-index:20050; width:min(320px,calc(100vw - 24px)); display:flex; flex-direction:column; gap:8px; align-items:stretch; pointer-events:none; }
+.fb-product-modal-toast-stack .catalogue-toast { position:relative; top:auto; right:auto; width:100%; pointer-events:auto; }
