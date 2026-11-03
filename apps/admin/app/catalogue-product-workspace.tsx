@@ -3,6 +3,7 @@
 import {useMemo,useState} from "react";
 import type {ReactNode} from "react";
 import CatalogueMediaManager,{PrivateImage} from "./catalogue-media-manager";
+import CataloguePricebookPanel from "./catalogue-pricebook-panel";
 
 type WorkspaceItem={
   sku_cong_ty:string;
@@ -120,6 +121,7 @@ export default function CatalogueProductWorkspace({
               placeholder="Chỉ nhập thông tin sản phẩm có nguồn, không tự tạo nội dung"/>
           </label>
         </div>
+        {selectedSku&&<CataloguePricebookPanel key={selectedSku} sku={selectedSku}/>}
         {selected?.family_label&&<p className="catalogue-workspace-family">
           Nhóm mẫu hiện tại: <strong>{selected.family_label}</strong>
         </p>}

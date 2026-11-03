@@ -85,3 +85,32 @@
   .catalogue-workspace-media{max-height:none;overflow:visible;padding:14px;}
   .catalogue-workspace-specs .catalogue-spec-grid{grid-template-columns:1fr;}
 }
+
+
+/* G04 — pricebook is client-only, never serialized into the public catalogue. */
+.catalogue-pricebook{min-width:0;grid-column:1/-1;background:#fff;border:1px solid #dadff0;border-radius:13px;padding:15px;display:grid;gap:13px}
+.catalogue-pricebook-head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.catalogue-pricebook-head h4{margin:0;color:#37336e;font-size:16px}
+.catalogue-pricebook-head small,.catalogue-pricebook-muted{font-size:12px;color:#737c9b}
+.catalogue-pricebook-body{display:grid;gap:12px;min-width:0}
+.catalogue-pricebook-kinds{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+.catalogue-pricebook-kinds button{border:1px solid #d9dff0;background:#fbfbff;border-radius:9px;padding:10px 11px;display:grid;gap:4px;text-align:left;font-size:12px;font-weight:750;color:#4f567e;cursor:pointer}
+.catalogue-pricebook-kinds button small{font-size:10px;color:#8287a0;font-weight:500}
+.catalogue-pricebook-kinds button.active{border-color:#aaa9df;background:#eeedfd;color:#443e9b}
+.catalogue-pricebook-content{display:grid;gap:13px;min-width:0}
+.catalogue-pricebook-notice{padding:12px;border-radius:10px;background:#f5f6fc;display:grid;gap:4px;font-size:12px;color:#626c8f}
+.catalogue-pricebook-notice strong{color:#3c3c7b}
+.catalogue-pricebook-empty{font-size:12px;color:#727b99;font-weight:650;margin:0;padding:12px;border:1px dashed #ccd2e5;border-radius:8px}
+.catalogue-pricebook-entries{display:grid;gap:8px;max-height:250px;overflow-y:auto}
+.catalogue-pricebook-entry{display:flex;gap:14px;justify-content:space-between;align-items:center;padding:11px;border:1px solid #e5e6f2;border-radius:9px}
+.catalogue-pricebook-entry>div{display:grid;gap:4px;min-width:0}
+.catalogue-pricebook-entry strong{font-size:15px;color:#353677}
+.catalogue-pricebook-entry small{font-size:11px;color:#67738f;overflow-wrap:anywhere}
+.catalogue-pricebook-form{display:grid;gap:12px;padding-top:12px;border-top:1px solid #e6e8f3}
+.catalogue-pricebook-form-title{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;color:#37376f;font-size:13px}
+.catalogue-pricebook-form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.catalogue-pricebook-form-grid label{display:grid;align-content:start;gap:6px;font-size:12px;font-weight:700;color:#5d6688;min-width:0}
+.catalogue-pricebook-form-grid :where(input,select){width:100%;min-width:0;min-height:39px;border:1px solid #d2d9e9;border-radius:8px;background:#fff;color:#343d66;padding:8px 10px;font-size:12px}
+.catalogue-pricebook-wide{grid-column:1/-1}
+.catalogue-pricebook-form>.import-btn{justify-self:start}
+@media(max-width:760px){.catalogue-pricebook-kinds{grid-template-columns:1fr}.catalogue-pricebook-form-grid{grid-template-columns:1fr}.catalogue-pricebook-entry{align-items:flex-start;flex-direction:column}}
