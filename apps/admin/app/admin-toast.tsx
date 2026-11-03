@@ -18,6 +18,10 @@ export default function AdminToast({message,onClose,duration=4800,variant="succe
     return ()=>{active=false;};
   },[]);
   useEffect(()=>{
+    // Emit only a generic operation-failure signal. Never forward toast text.
+    if(message && variant==="error")window.dispatchEvent(new Event("fbmn-admin-operation-error"));
+  },[message,variant]);
+  useEffect(()=>{
     if(!message)return;
     const timer=window.setTimeout(onClose,duration);
     return ()=>window.clearTimeout(timer);
