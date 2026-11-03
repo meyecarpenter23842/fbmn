@@ -57,11 +57,12 @@ function issueLabel(change:Change){
  return ({new:"Thêm mới",updated:"Cập nhật",unchanged:"Không đổi",
   skipped:"Bỏ qua",invalid:"Không hợp lệ"} as const)[change.status];
 }
-export default function CatalogueManagedPriceImport({initialListId,onBusyChange,onGoLists}:{
- initialListId:string;onBusyChange?:(busy:boolean)=>void;onGoLists?:()=>void
+export default function CatalogueManagedPriceImport({selectedListId,onBusyChange,onGoLists,onMutated}:{
+ selectedListId:string;
+ onBusyChange?:(busy:boolean)=>void;onGoLists?:()=>void;onMutated?:()=>void
 }){
  const [lists,setLists]=useState<PriceList[]>([]);
- const [chosenId,setChosenId]=useState(initialListId);
+ const chosenId=selectedListId;
  const [priceDate,setPriceDate]=useState("");
  const [loading,setLoading]=useState(true);
  const [busy,setBusy]=useState(false);
@@ -86,14 +87,11 @@ export default function CatalogueManagedPriceImport({initialListId,onBusyChange,
   let cancelled=false;
   void api<{items:PriceList[]}>("").then(result=>{
    if(cancelled)return;
-   setLists(result.items);setChosenId(current=>{
-    const id=initialListId||current;
-    return result.items.some(item=>item.id===id)?id:result.items[0]?.id||"";
-   });
+   setLists(result.items);
   }).catch(err=>{if(!cancelled)notify(err instanceof Error?err.message:"Không tải được bảng giá.");})
    .finally(()=>{if(!cancelled)setLoading(false);});
   return()=>{cancelled=true;};
- },[initialListId,notify]);
+ },[notify]);
  const readFile=async(file:File)=>{
   if(!/\.(xlsx|csv)$/i.test(file.name))throw Error("Chỉ nhận Excel (.xlsx) hoặc CSV.");
   if(file.size>8_000_000)throw Error("File vượt giới hạn 8 MB.");
@@ -157,6 +155,7 @@ export default function CatalogueManagedPriceImport({initialListId,onBusyChange,
    const result=await api<{applied:number;list_code:string}>("/bulk-apply","POST",{
     ...prepared,preview_fingerprint:preview.preview_fingerprint,confirm:"XAC_NHAN_GIA_NHAP"});
    invalidate();setSheet(null);setFileName("");
+   onMutated?.();
    notify("Đã lưu "+result.applied+" giá nháp vào "+result.list_code+".","success");
   }catch(e){invalidate();notify(e instanceof Error?e.message:"Không lưu được giá.");}
   finally{setBusy(false);}
@@ -189,7 +188,7 @@ export default function CatalogueManagedPriceImport({initialListId,onBusyChange,
   <AdminToast message={toast?.message||""} variant={toast?.variant||"info"} onClose={()=>setToast(null)}/>
   <div className="fb-managed-import-header">
    <div><h2>Nhập / cập nhật giá</h2>
-    <p>Chọn bảng giá đã tạo, nhập file chỉ gồm Mã công ty và Giá mới.</p></div>
+    <p>File chỉ cần Mã công ty và Giá mới (VND). Giá được nhập vào bảng giá đang chọn ở phía trên.</p></div>
    {onGoLists&&<button type="button" className="import-btn import-secondary"
     onClick={onGoLists} disabled={busy}>Quản lý bảng giá</button>}
   </div>
@@ -202,17 +201,11 @@ export default function CatalogueManagedPriceImport({initialListId,onBusyChange,
    </div>:
   <>
    <div className="fb-managed-import-primary">
-    <label>Nhập giá vào bảng giá
-     <select value={chosenId} disabled={busy} onChange={e=>{
-      invalidate();setChosenId(e.target.value);
-      setPriceDate(lists.find(item=>item.id===e.target.value)?.valid_from||"");
-     }}>
-      {lists.map(item=><option key={item.id} value={item.id}>
-       {item.list_code} — {item.list_name}
-       {item.approval_state==="draft"?" (Nháp)":item.approval_state==="approved"?" (Đã duyệt)":" (Đã ngừng)"}
-      </option>)}
-     </select>
-    </label>
+    <div className="fb-managed-import-selection">
+     <strong>{selected?.list_code||"Chưa chọn bảng giá"}</strong>
+     <span>{selected?.list_name||"Chọn bảng giá ở thanh phía trên."}</span>
+     <small>Đang dùng bảng giá chung của ba tab.</small>
+    </div>
     <label>Ngày áp dụng giá
      <input type="date" value={priceDate||selected?.valid_from||""}
       disabled={busy||!selected} onChange={e=>{invalidate();setPriceDate(e.target.value);}}/>

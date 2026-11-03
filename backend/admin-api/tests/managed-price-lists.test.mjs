@@ -155,3 +155,34 @@ test("channel preview fails closed for missing B2B identity and overlapping prio
  }),actor,db});
  assert.equal((await conflict.json()).data.status,"ambiguous_price");
 });
+
+test("Owner may create one unscoped list for Website, consumer App and dealer App",async()=>{
+ const a=mock();
+ const input={...base,list_code:"BG_DA_KENH",list_name:"Bảng giá áp dụng nhiều kênh",
+  audience:"mixed",channel_codes:["public_web","consumer_app","dealer_app"],
+  scope_customer_type:null,scope_customer_id:null};
+ const created=await handleManagedPriceLists({
+  request:request("/create","POST",input),actor,db:a.db
+ });
+ assert.equal(created.status,200);
+ const sql=a.queries.find(x=>x.sql.startsWith("INSERT INTO fbmn_catalog_private.managed_price_lists "));
+ assert.equal(sql.args[3],"mixed");
+ assert.deepEqual(sql.args[4],["public_web","consumer_app","dealer_app"]);
+ assert.equal(sql.args[5],null);
+ assert.ok(a.queries.some(x=>x.sql.includes("managed_price_audit")));
+});
+test("mixed channel price list never accepts private customer scope",async()=>{
+ const a=mock();
+ for(const leak of [
+  {...base,audience:"mixed",channel_codes:["public_web","dealer_app"],
+    scope_customer_type:"dealer",scope_customer_id:null},
+  {...base,audience:"mixed",channel_codes:["consumer_app","dealer_app"],
+    scope_customer_type:null,scope_customer_id:"10000000-0000-4000-8000-000000000001"},
+  {...base,audience:"mixed",channel_codes:["public_web"],
+    scope_customer_type:null,scope_customer_id:null}
+ ]){
+  const answer=await handleManagedPriceLists({request:request("/create","POST",leak),actor,db:a.db});
+  assert.equal(answer.status,400,JSON.stringify(leak));
+ }
+ assert.equal(a.queries.length,0);
+});

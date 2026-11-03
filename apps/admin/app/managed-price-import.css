@@ -53,3 +53,9 @@
  .fb-managed-import-options{align-items:stretch;flex-direction:column}
  .fb-managed-import-export label{width:100%}
 }
+
+
+.fb-managed-import-selection{box-sizing:border-box;min-height:40px;border:1px solid #e3d7ee;border-radius:var(--fb-control-radius);background:var(--fb-ui-primary-subtle);padding:8px 12px;display:flex;flex-direction:column;gap:3px;justify-content:center}
+.fb-managed-import-selection strong{color:#4b2074;font-size:13px}
+.fb-managed-import-selection span{color:#463751;font-size:13px}
+.fb-managed-import-selection small{font-size:11px;color:#73687a}

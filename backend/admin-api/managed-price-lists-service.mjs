@@ -37,7 +37,7 @@ async function tx(db,fn){
 function validateList(input,creating=false){
  if(!input||creating&&!CODE(input.list_code)||!TEXT(input.list_name,2,120)||
   typeof input.note!=="string"||input.note.length>500||
-  !["internal","consumer","dealer"].includes(input.audience)||!Array.isArray(input.channel_codes)||
+  !["internal","consumer","dealer","mixed"].includes(input.audience)||!Array.isArray(input.channel_codes)||
   input.channel_codes.length>3||
   new Set(input.channel_codes).size!==input.channel_codes.length||
   !input.channel_codes.every(x=>CHANNELS.has(x))||
@@ -49,7 +49,9 @@ function validateList(input,creating=false){
  if(type!==null&&!CUSTOMER_TYPES.has(type)||id!==null&&!UUID(id)||type&&id)return "invalid_customer_scope";
  if(input.audience==="internal"&&(channels.length!==0||type||id)||
   input.audience==="consumer"&&(channels.length===0||channels.some(x=>x==="dealer_app")||type||id)||
-  input.audience==="dealer"&&(channels.length!==1||channels[0]!=="dealer_app"))
+  input.audience==="dealer"&&(channels.length!==1||channels[0]!=="dealer_app")||
+  input.audience==="mixed"&&(channels.length<2||!channels.includes("dealer_app")||
+   !channels.some(x=>x==="public_web"||x==="consumer_app")||type||id))
   return "invalid_channel_scope";
  return null;
 }
@@ -260,9 +262,9 @@ async function resolvePrice(db,input){
     "AND p.sku_cong_ty=$1 AND $2::text=ANY(l.channel_codes) "+
     "AND l.valid_from<=$3::date AND (l.valid_until IS NULL OR l.valid_until>=$3::date) "+
     "AND p.valid_from<=$3::date AND (p.valid_until IS NULL OR p.valid_until>=$3::date) "+
-    "AND ((l.audience='consumer' AND $2::text IN ('public_web','consumer_app') "+
+    "AND ((l.audience IN ('consumer','mixed') AND $2::text IN ('public_web','consumer_app') "+
     "AND l.scope_customer_id IS NULL AND l.scope_customer_type IS NULL) "+
-    "OR (l.audience='dealer' AND $2::text='dealer_app' "+
+    "OR (l.audience IN ('dealer','mixed') AND $2::text='dealer_app' "+
     "AND (l.scope_customer_id IS NULL OR l.scope_customer_id=$4::uuid) "+
     "AND (l.scope_customer_type IS NULL OR l.scope_customer_type=$5::text))) "+
     "ORDER BY specificity DESC,l.priority DESC,p.valid_from DESC,l.list_code "+

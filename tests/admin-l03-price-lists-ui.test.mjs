@@ -5,7 +5,7 @@ const read=p=>readFileSync(new URL("../"+p,import.meta.url),"utf8");
 test("user-defined list code and name replace fixed prices as default Admin workflow",()=>{
  const ui=read("apps/admin/app/catalogue-side-workspace.tsx");
  const list=read("apps/admin/app/catalogue-managed-prices.tsx");
- assert.match(ui,/useState<"lists"\|"import">\("lists"\)/);
+ assert.match(ui,/useState<"lists"\|"products"\|"excel">\("lists"\)/);
  assert.match(ui,/>Bảng giá<\/button>/);
  assert.match(ui,/<CatalogueManagedPriceLists/);
  assert.match(list,/Mã bảng giá/);
@@ -16,7 +16,7 @@ test("user-defined list code and name replace fixed prices as default Admin work
  assert.match(list,/Áp dụng cho một khách hàng/);
  assert.match(list,/approval_state==="draft"/);
  assert.match(list,/Duyệt bảng giá/);
- assert.match(list,/Nơi sử dụng bảng giá/);
+ assert.match(list,/Kênh sử dụng bảng giá/);
  assert.doesNotMatch(list,/localStorage|sessionStorage|console\.log/);
 });
 test("price list API authenticates Owner and scopes are not public",()=>{
@@ -63,27 +63,58 @@ test("Owner-created price list is the only bulk import target; no hardcoded four
  const page=read("apps/admin/app/catalogue-managed-prices.tsx");
  const importUi=read("apps/admin/app/catalogue-managed-price-import.tsx");
  assert.match(nav,/>Bảng giá<\/button>/);
- assert.match(nav,/>Nhập \/ cập nhật giá<\/button>/);
+ assert.match(nav,/>Nhập \/ xuất Excel<\/button>/);
  assert.doesNotMatch(nav,/>Excel giá hiện có<\/button>/);
  assert.doesNotMatch(nav,/>Giá theo SKU hiện có<\/button>/);
  assert.match(page,/onOpenImport\?\.\(chosen\.id\)/);
- assert.match(nav,/setChosenManagedListId\(id\);setPricingView\("import"\)/);
+ assert.match(nav,/setChosenManagedListId\(id\);setPricingView\("excel"\)/);
  assert.match(importUi,/list_id:selected\.id/);
- assert.match(importUi,/setChosenId\(e\.target\.value\)/);
+ assert.match(importUi,/const chosenId=selectedListId/);
+ assert.doesNotMatch(importUi,/setChosenId|initialListId/);
+ assert.match(nav,/Bảng giá đang làm việc/);
  assert.match(importUi,/bulk-preview/);
  assert.match(importUi,/bulk-apply/);
  assert.match(importUi,/preview_fingerprint:preview\.preview_fingerprint/);
  assert.match(importUi,/XAC_NHAN_GIA_NHAP/);
  assert.doesNotMatch(importUi,/net_internal|retail_public|dealer_contract|price_kind/);
 });
-test("single clear channel placement and business-ready labels",()=>{
+test("explicit multiple channel checkboxes and business-ready labels",()=>{
  const list=read("apps/admin/app/catalogue-managed-prices.tsx");
- assert.match(list,/>Nơi sử dụng bảng giá/);
- assert.match(list,/value="web_consumer"/);
- assert.match(list,/value="dealer_app"/);
- assert.match(list,/value="admin"/);
- assert.match(list,/Ví dụ: Bảng giá đại lý miền Tây/);
+ const backend=read("backend/admin-api/managed-price-lists-service.mjs");
+ const migration=read("backend/neon/migrations/20261103_admin_l03_multi_channel_lists.up.sql");
+ assert.match(list,/Kênh sử dụng bảng giá/);
+ assert.match(list,/type="checkbox"/);
+ assert.match(list,/toggleChannel\(code,e\.target\.checked\)/);
+ assert.match(list,/audience:Audience=dealer&&consumer\?"mixed"/);
+ assert.match(backend,/audience==="mixed"/);
+ assert.match(backend,/l\.audience IN \('consumer','mixed'\)/);
+ assert.match(backend,/l\.audience IN \('dealer','mixed'\)/);
+ assert.match(migration,/audience='mixed'/);
+ assert.match(migration,/scope_customer_type IS NULL AND scope_customer_id IS NULL/);
  assert.doesNotMatch(list,/Tên do anh lựa chọn|Phạm vi bảo mật|Tạo bảng giá mới/);
+});
+test("three tabs share one selected list and price editors live only in responsive drawer",()=>{
+ const nav=read("apps/admin/app/catalogue-side-workspace.tsx");
+ const list=read("apps/admin/app/catalogue-managed-prices.tsx");
+ const importUi=read("apps/admin/app/catalogue-managed-price-import.tsx");
+ const style=read("apps/admin/app/managed-price-lists.css");
+ assert.match(nav,/>Bảng giá<\/button>/);
+ assert.match(nav,/>Giá sản phẩm<\/button>/);
+ assert.match(nav,/>Nhập \/ xuất Excel<\/button>/);
+ assert.match(nav,/selectedListId=\{chosenManagedListId\}/);
+ assert.match(nav,/onSelectedListIdChange=\{setChosenManagedListId\}/);
+ assert.match(nav,/skuNames=\{skuNames\}/);
+ assert.match(list,/view==="products"/);
+ assert.match(list,/onOpenPrices\?\.\(chosen\.id\)/);
+ assert.match(list,/className="fb-managed-drawer-backdrop"/);
+ assert.match(list,/role="dialog" aria-modal="true"/);
+ assert.match(list,/skuNames\?\.\[priceForm\.sku_cong_ty\]/);
+ assert.match(importUi,/selectedListId:string/);
+ assert.match(importUi,/list_id:selected\.id/);
+ assert.doesNotMatch(importUi,/setChosenId/);
+ assert.match(style,/position:fixed;inset:0/);
+ assert.match(style,/width:min\(580px,100vw\)/);
+ assert.match(style,/@media\(max-width:780px\)/);
 });
 
 test("file preview is dropped after any VAT or Excel mapping change",()=>{

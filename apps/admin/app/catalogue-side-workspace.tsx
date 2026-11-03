@@ -19,6 +19,7 @@ type CatalogSku={
 };
 type Envelope<T>={data?:T;error?:{code?:string}};
 type WorkspaceMode="pricing"|"media";
+type ManagedListOption={id:string;list_code:string;list_name:string;approval_state:string};
 
 export default function CatalogueSideWorkspace({mode,onBusyChange}:{mode:WorkspaceMode;onBusyChange?:(busy:boolean)=>void}){
   const [skus,setSkus]=useState<CatalogSku[]>([]);
@@ -29,9 +30,15 @@ export default function CatalogueSideWorkspace({mode,onBusyChange}:{mode:Workspa
   const [revision,setRevision]=useState(0);
   const [mediaBusy,setMediaBusy]=useState(false);
   const [priceBusy,setPriceBusy]=useState(false);
-  const [pricingOwner,setPricingOwner]=useState(false);
-  const [pricingView,setPricingView]=useState<"lists"|"import">("lists");
+  const [pricingOwner,setPricingOwner]=useState<boolean|null>(null);
+  const [pricingView,setPricingView]=useState<"lists"|"products"|"excel">("lists");
   const [chosenManagedListId,setChosenManagedListId]=useState("");
+  const [managedLists,setManagedLists]=useState<ManagedListOption[]>([]);
+  const [managedEpoch,setManagedEpoch]=useState(0);
+  const onManagedMutation=useCallback((preferred?:string)=>{
+    if(preferred)setChosenManagedListId(preferred);
+    setManagedEpoch(v=>v+1);
+  },[]);
   const [bulkBusy,setBulkBusy]=useState(false);
   const refresh=useCallback(()=>setRevision(v=>v+1),[]);
   const handlePriceBusy=useCallback((value:boolean)=>{
@@ -85,6 +92,38 @@ export default function CatalogueSideWorkspace({mode,onBusyChange}:{mode:Workspa
     return()=>controller.abort();
   },[revision,mode]);
 
+  // The selected price-list ID lives in this workspace, not each tab.
+  // All three tabs use this same ID; do not fall back to fixed price kinds.
+  useEffect(()=>{
+    if(mode!=="pricing"||!pricingOwner)return;
+    const controller=new AbortController();
+    void Promise.resolve().then(async()=>{
+      const tokenResponse=await fetch("/api/auth/token",{
+        cache:"no-store",credentials:"same-origin",signal:controller.signal
+      });
+      if(!tokenResponse.ok)throw Error("Hết phiên đăng nhập Owner.");
+      const authResult=await tokenResponse.json() as {token?:string};
+      if(!authResult.token)throw Error("Không có quyền truy cập bảng giá.");
+      const response=await fetch("/api/pricing/managed",{
+        cache:"no-store",credentials:"same-origin",signal:controller.signal,
+        headers:{Authorization:"Bearer "+authResult.token,Accept:"application/json"}
+      });
+      if(!response.ok)throw Error("Không tải được danh sách bảng giá.");
+      const payload=await response.json() as Envelope<{items:ManagedListOption[]}>;
+      if(!Array.isArray(payload.data?.items))throw Error("Danh sách bảng giá không hợp lệ.");
+      if(controller.signal.aborted)return;
+      setManagedLists(payload.data.items);
+      setChosenManagedListId(current=>payload.data!.items.some(x=>x.id===current)?
+        current:payload.data!.items[0]?.id||"");
+    }).catch(e=>{if(!controller.signal.aborted)
+      setError(e instanceof Error?e.message:"Không tải được bảng giá.");});
+    return()=>controller.abort();
+  },[mode,pricingOwner,managedEpoch]);
+
+  const skuNames=useMemo(()=>Object.fromEntries(skus.map(item=>[
+    item.sku_cong_ty,item.ten_san_pham||item.ten_goc_xnt||item.ten_goc_bang_gia||"Chưa có tên"
+  ])),[skus]);
+
   const visible=useMemo(()=>{
     const q=search.trim().toLocaleLowerCase("vi");
     return skus.filter(item=>
@@ -113,24 +152,47 @@ export default function CatalogueSideWorkspace({mode,onBusyChange}:{mode:Workspa
       Bảng giá được quản lý riêng trong Admin. Chỉ Owner được tạo và sửa giá.
       Việc chọn Website hoặc App không tự công khai giá cho khách hàng.
     </p>}
-    {pricing&&pricingOwner&&<nav className="fb-pricing-tabs" aria-label="Quản lý bảng giá">
-      <button type="button" className={pricingView==="lists"?"active":""}
-       aria-current={pricingView==="lists"?"page":undefined} disabled={bulkBusy||priceBusy}
-       onClick={()=>setPricingView("lists")}>Bảng giá</button>
-      <button type="button" className={pricingView==="import"?"active":""}
-       aria-current={pricingView==="import"?"page":undefined} disabled={bulkBusy||priceBusy}
-       onClick={()=>setPricingView("import")}>Nhập / cập nhật giá</button>
-    </nav>}
-    {pricing&&pricingOwner?
-      pricingView==="lists"?
-      <div className="fb-pricing-tab-content" aria-label="Quản lý bảng giá">
-        <CatalogueManagedPriceLists onBusyChange={handleBulkBusy}
-         onOpenImport={id=>{setChosenManagedListId(id);setPricingView("import");}}/>
-      </div>:
-      <div className="fb-pricing-tab-content" aria-label="Nhập và cập nhật giá">
-        <CatalogueManagedPriceImport initialListId={chosenManagedListId}
-         onBusyChange={handleBulkBusy} onGoLists={()=>setPricingView("lists")}/>
-      </div>:
+    {pricing&&pricingOwner&&<>
+      <div className="fb-pricing-context">
+        <label htmlFor="fb-pricing-selected-list">Bảng giá đang làm việc</label>
+        <select id="fb-pricing-selected-list" value={chosenManagedListId}
+         disabled={bulkBusy||priceBusy||managedLists.length===0}
+         onChange={e=>setChosenManagedListId(e.target.value)}>
+         {managedLists.length===0&&<option value="">Chưa có bảng giá</option>}
+         {managedLists.map(item=><option key={item.id} value={item.id}>
+          {item.list_code} — {item.list_name}
+          {item.approval_state==="draft"?" (Nháp)":item.approval_state==="approved"?" (Đã duyệt)":" (Ngừng)"}
+         </option>)}
+        </select>
+        <span className="fb-pricing-context-help">Bảng giá này dùng chung cho cả ba khu vực.</span>
+      </div>
+      <nav className="fb-pricing-tabs" aria-label="Các khu vực quản lý giá">
+        <button type="button" className={pricingView==="lists"?"active":""}
+         aria-current={pricingView==="lists"?"page":undefined} disabled={bulkBusy||priceBusy}
+         onClick={()=>setPricingView("lists")}>Bảng giá</button>
+        <button type="button" className={pricingView==="products"?"active":""}
+         aria-current={pricingView==="products"?"page":undefined} disabled={bulkBusy||priceBusy}
+         onClick={()=>setPricingView("products")}>Giá sản phẩm</button>
+        <button type="button" className={pricingView==="excel"?"active":""}
+         aria-current={pricingView==="excel"?"page":undefined} disabled={bulkBusy||priceBusy}
+         onClick={()=>setPricingView("excel")}>Nhập / xuất Excel</button>
+      </nav>
+      <div className="fb-pricing-tab-content">
+       {pricingView==="excel"?
+        <CatalogueManagedPriceImport key={chosenManagedListId} selectedListId={chosenManagedListId}
+         onBusyChange={handleBulkBusy} onGoLists={()=>setPricingView("lists")}
+         onMutated={()=>onManagedMutation()}/>:
+        <CatalogueManagedPriceLists key={pricingView} view={pricingView}
+         skuNames={skuNames} selectedListId={chosenManagedListId} onSelectedListIdChange={setChosenManagedListId}
+         onListsChanged={onManagedMutation} onBusyChange={handleBulkBusy}
+         onOpenPrices={id=>{setChosenManagedListId(id);setPricingView("products");}}
+         onOpenImport={id=>{setChosenManagedListId(id);setPricingView("excel");}}/>}
+      </div>
+    </>}
+    {pricing&&pricingOwner===null&&<p className="catalogue-side-placeholder">
+      Đang xác minh quyền quản lý bảng giá…
+    </p>}
+    {(!pricing||pricingOwner===false)&&
     <div className="catalogue-side-layout">
       <aside className="catalogue-side-index" aria-label="Chọn mã công ty">
         <label htmlFor="catalogue-side-find">Tìm sản phẩm

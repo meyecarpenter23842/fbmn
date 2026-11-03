@@ -31,3 +31,34 @@
 @media(max-width:860px){.fb-managed-layout{grid-template-columns:1fr}.fb-managed-list{max-height:230px}}
 @media(max-width:560px){.fb-managed-fields{grid-template-columns:1fr}.fb-managed-wide{grid-column:auto}
 .fb-managed-head,.fb-managed-summary{flex-direction:column}}
+
+
+/* Pricing workspace: the list tab has navigation; the SKU tab is a full-width table. */
+.fb-managed-layout-single{display:block}
+.fb-managed-layout-single .fb-managed-detail{width:100%}
+.fb-managed-prices .fb-managed-head{margin-bottom:16px}
+.fb-managed-prices .fb-managed-head .fb-managed-actions{align-items:center;justify-content:flex-end}
+.fb-managed-prices .fb-managed-summary{padding:12px 14px;border:1px solid #ebe3f5;border-radius:10px;background:#faf8fd}
+.fb-managed-prices .fb-managed-warning{margin:12px 0}
+.fb-managed-prices .fb-managed-channel-set{display:flex;align-items:flex-start;gap:12px;border:1px solid #e7dced;padding:12px;margin:0}
+.fb-managed-channel-set legend{color:#4f276f;font-size:13px;font-weight:700;padding:0 5px}
+.fb-managed-channel-set p{flex-basis:100%;margin:0;color:#667085;font-weight:400;font-size:13px;line-height:1.5}
+.fb-managed-channel-set .fb-managed-channel-option{display:flex;gap:8px;align-items:center;padding:8px 10px;border:1px solid #ebe5f1;border-radius:9px;background:#fff;cursor:pointer}
+.fb-managed-channel-set .fb-managed-channel-option input[type=checkbox]{accent-color:var(--fb-ui-primary);width:17px;height:17px;flex:none}
+.fb-managed-channel-notice{flex-basis:100%;line-height:1.55;color:#744f8c;font-size:12px;font-weight:400}
+.fb-managed-prices .fb-managed-sku-name{font-size:12px;font-weight:400;color:#5a4270;line-height:1.5}
+.fb-managed-drawer-backdrop{position:fixed;inset:0;z-index:1100;background:rgba(24,15,44,.43);display:flex;justify-content:flex-end;align-items:stretch}
+.fb-managed-drawer{box-sizing:border-box;background:#fff;width:min(580px,100vw);height:100%;max-height:100dvh;overflow:auto;padding:20px;box-shadow:-10px 0 40px rgba(27,13,50,.16);display:flex;flex-direction:column;gap:14px}
+.fb-managed-drawer>h3{font-size:17px;line-height:1.5;color:#43215f;padding:12px 14px;margin:-20px -20px 0;border-bottom:1px solid #e6d8f2;background:var(--fb-ui-primary-subtle)}
+.fb-managed-drawer .fb-managed-fields{margin:0}
+.fb-managed-drawer .fb-managed-footer{position:sticky;bottom:-20px;z-index:1;margin-top:auto;padding:14px 0 10px;border-top:1px solid #e8e3ee;background:#fff}
+.fb-managed-prices .fb-managed-section-title{margin:12px 0}
+.fb-managed-prices .fb-managed-empty{min-height:60px;display:flex;align-items:center}
+.fb-managed-prices .fb-managed-table-wrap thead th{background:var(--fb-ui-table-header-bg);color:var(--fb-ui-table-header-ink)}
+@media(max-width:780px){
+ .fb-managed-drawer{width:100vw;padding:16px}
+ .fb-managed-drawer>h3{margin:-16px -16px 0}
+ .fb-managed-drawer .fb-managed-footer{bottom:-16px;gap:8px}
+ .fb-managed-prices .fb-managed-head{flex-wrap:wrap;gap:10px}
+ .fb-managed-prices .fb-managed-head .fb-managed-actions{width:100%;justify-content:flex-start}
+}

@@ -143,3 +143,14 @@
     min-height: var(--fb-control-height-touch);
   }
 }
+
+
+/* Parent-controlled selected price list; stays visible across all three tabs. */
+.fb-admin .fb-pricing-context{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:12px 0 0;padding:11px 14px;border:1px solid #e8e2ef;background:#fff;border-radius:10px}
+.fb-admin .fb-pricing-context>label{font-size:13px;font-weight:700;color:#43215f;white-space:nowrap}
+.fb-admin .fb-pricing-context>select{width:min(470px,100%);min-width:180px;max-width:100%;flex:0 1 470px;height:var(--fb-field-height);border:1px solid #ded4ea;padding:0 11px;background:#fff;border-radius:var(--fb-control-radius);font-size:var(--fb-control-font-size)}
+.fb-admin .fb-pricing-context-help{font-size:12px;color:#76677e;line-height:1.45}
+@media(max-width:780px){
+ .fb-admin .fb-pricing-context{align-items:stretch;flex-direction:column}
+ .fb-admin .fb-pricing-context>select{width:100%;flex:auto}
+}
