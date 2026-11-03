@@ -56,7 +56,8 @@ test("200 categories and products paginate canonical DTO", async () => {
   const v = await parse(b);
   assert.equal(v.pagination.total, 1);
   assert.equal(v.data[0].variants[0].sku, "DEMO-SKU");
-  assert.equal(b.headers.get("cache-control"), "public, max-age=60");
+  assert.equal(b.headers.get("cache-control"), "no-store");
+  assert.equal(a.headers.get("cache-control"), "no-store");
 });
 test("200 content exposes only approved DTO keys", async () => {
   const r = await hit(instance(), "/v1/public/content");

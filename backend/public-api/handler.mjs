@@ -220,7 +220,9 @@ export function createPublicApi({ getPublicCatalog, getPublicContent, allowedOri
           const slug = url.searchParams.get("slug");
           const data = slug ? catalog.categories.filter(c => c.slug === slug) : catalog.categories;
           if (slug && !data.length) return failure(404, "not_found", corsOrigin);
-          return response(200, { data }, corsOrigin, "public, max-age=60");
+          // Channel visibility can change in Admin without a Website release.
+          // Never retain previously published SKUs in shared HTTP caches.
+          return response(200, { data }, corsOrigin, "no-store");
         }
         const slug = url.searchParams.get("slug");
         const categoryId = url.searchParams.get("categoryId");
@@ -233,7 +235,7 @@ export function createPublicApi({ getPublicCatalog, getPublicContent, allowedOri
         return response(200, {
           data: items.slice((page - 1) * limit, page * limit),
           pagination: { page, limit, total, totalPages: Math.max(1, Math.ceil(total / limit)) },
-        }, corsOrigin, "public, max-age=60");
+        }, corsOrigin, "no-store");
       } catch {
         // Do not include DB, customer identifiers, exceptions or credentials in HTTP errors.
         return failure(503, "read_model_unavailable", corsOrigin);
