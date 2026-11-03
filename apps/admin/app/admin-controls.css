@@ -11,6 +11,10 @@
   --fb-ui-table-header-bg: #f4edfa;
   --fb-ui-table-header-ink: #43215f;
   --fb-ui-table-header-border: #e5d7f1;
+  --fb-ui-success-ink: #25734d;
+  --fb-ui-warning-ink: #87511c;
+  --fb-ui-warning-bg: #fffaf2;
+  --fb-ui-warning-border: #eadac0;
   --fb-control-height-compact: 36px;
   --fb-control-height-default: 40px;
   --fb-field-height: 40px;

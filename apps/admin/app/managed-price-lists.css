@@ -62,3 +62,9 @@
  .fb-managed-prices .fb-managed-head{flex-wrap:wrap;gap:10px}
  .fb-managed-prices .fb-managed-head .fb-managed-actions{width:100%;justify-content:flex-start}
 }
+
+/* Approval readiness is persistent guidance; colors belong to shared semantic tokens. */
+.fb-managed-prices .fb-managed-summary .fb-managed-approved-count{display:block;margin-top:8px;font-size:13px;font-weight:650;color:var(--fb-ui-success-ink)}
+.fb-managed-prices .fb-managed-summary .fb-managed-approved-count--blocked{color:var(--fb-ui-warning-ink)}
+.fb-managed-prices .fb-managed-approval-guide{margin:12px 0 0;padding:10px 12px;border:1px solid var(--fb-ui-warning-border);border-radius:var(--fb-control-radius);background:var(--fb-ui-warning-bg);color:var(--fb-ui-warning-ink);font-size:13px;line-height:1.6}
+.fb-managed-prices .fb-managed-approval-guide strong{font-weight:700;color:var(--fb-ui-warning-ink)}

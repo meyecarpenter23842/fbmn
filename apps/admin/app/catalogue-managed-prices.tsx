@@ -55,7 +55,7 @@ const labels:Record<string,string>={
  customer_not_found:"Khách đã chọn không còn hoạt động.",
  revision_conflict:"Dữ liệu đã thay đổi. Tải lại rồi kiểm tra.",
  approved_list_locked:"Bảng giá đã duyệt, không thể sửa nội dung đã xác nhận.",
- approved_price_required:"Cần duyệt ít nhất một giá SKU trước khi duyệt bảng.",
+ approved_price_required:"Bảng giá chưa có mức giá SKU được duyệt. Vào Giá sản phẩm → thêm hoặc nhập giá → duyệt từng mức giá SKU, rồi duyệt bảng.",
  list_not_editable:"Chỉ sửa mức giá khi bảng còn là bản nháp.",
  sku_not_found:"Mã công ty không tồn tại.",
  approved_price_locked:"Mức giá đã duyệt không được ghi đè.",
@@ -119,6 +119,14 @@ export default function CatalogueManagedPriceLists({view,selectedListId,onSelect
  useEffect(()=>{onBusyChange?.(busy);},[busy,onBusyChange]);
  const chosen=useMemo(()=>lists.find(x=>x.id===chosenId)||null,[lists,chosenId]);
  const visiblePrices=loadedPriceListId===chosenId?prices:[];
+ // A list is approvable only after at least one verified SKU price is approved.
+ // Until prices finish loading, leave server-side validation authoritative.
+ const approvedSkuCount=loadedPriceListId===chosenId?
+  visiblePrices.filter(item=>item.approval_state==="approved").length:null;
+ const priceListIsPartial=!!chosen&&loadedPriceListId===chosenId&&
+  visiblePrices.length<chosen.price_count;
+ const approvalBlocked=!!chosen&&chosen.approval_state==="draft"&&
+  (chosen.price_count===0||(approvedSkuCount===0&&!priceListIsPartial));
  const refresh=useCallback(async(preferred?:string)=>{
   const data=await query<{items:List[]}>("");
   setLists(data.items);
@@ -255,6 +263,10 @@ export default function CatalogueManagedPriceLists({view,selectedListId,onSelect
   });
  }
  async function approveList(item:List){
+  if(item.price_count===0||(item.id===chosenId&&approvedSkuCount===0&&!priceListIsPartial)){
+   notify("Chưa thể duyệt bảng "+item.list_code+": chưa có giá SKU được duyệt. Vào Giá sản phẩm → thêm hoặc nhập giá → duyệt từng giá SKU.","info");
+   return;
+  }
   if(!window.confirm("Duyệt bảng giá "+item.list_code+"? Chỉ mở trạng thái nội bộ, không tự công khai Web/App."))return;
   await work(async()=>{
    await query("/approve","POST",{id:item.id,expected_revision:item.revision});
@@ -350,18 +362,30 @@ export default function CatalogueManagedPriceLists({view,selectedListId,onSelect
        <small>{chosen.scope_customer_type?"Nhóm khách: "+(CATEGORIES.find(x=>x[0]===chosen.scope_customer_type)?.[1]||chosen.scope_customer_type):""}
         {chosen.scope_customer_id?"Khách: "+(chosen.customer_code||"")+" "+(chosen.customer_name||""):""}</small>
        <small>Hiệu lực {chosen.valid_from} {chosen.valid_until?"→ "+chosen.valid_until:""}</small>
+       {view==="lists"&&chosen.approval_state==="draft"&&<small
+        className={"fb-managed-approved-count"+(approvalBlocked?" fb-managed-approved-count--blocked":"")}>
+        {priceListIsPartial?"Đã tải "+visiblePrices.length+"/"+chosen.price_count+
+         " mức giá; "+(approvedSkuCount??0)+" giá SKU được duyệt trong phần đã tải":
+         approvedSkuCount===null&&chosen.price_count>0?"Đang kiểm tra trạng thái duyệt giá SKU…":
+         (approvedSkuCount??0)+" / "+chosen.price_count+" giá SKU đã duyệt"}
+       </small>}
       </div>
       {view==="lists"&&<div className="fb-managed-actions">
        {chosen.approval_state==="draft"&&<button type="button" className="import-btn import-secondary"
         disabled={busy} onClick={()=>editList(chosen)}>Sửa bảng giá</button>}
        {chosen.approval_state==="draft"&&<button type="button" className="import-btn import-secondary"
-        disabled={busy} onClick={()=>void approveList(chosen)}>Duyệt bảng giá</button>}
+        disabled={busy||approvalBlocked} onClick={()=>void approveList(chosen)}>Duyệt bảng giá</button>}
        {chosen.approval_state!=="inactive"&&<button type="button" className="import-btn import-secondary"
         disabled={busy} onClick={()=>void deactivateList(chosen)}>Ngừng sử dụng</button>}
        <button type="button" className="import-btn import-secondary" disabled={busy}
         onClick={()=>onOpenPrices?.(chosen.id)}>Xem giá</button>
       </div>}
      </div>
+     {view==="lists"&&approvalBlocked&&<p className="fb-managed-approval-guide" role="note">
+      <strong>Chưa đủ điều kiện duyệt bảng giá.</strong> Bấm <strong>Xem giá</strong> →
+      chọn <strong>Thêm giá</strong> hoặc <strong>Nhập từ Excel</strong> →
+      duyệt từng mức giá SKU đã xác minh. Sau đó quay lại duyệt bảng giá.
+     </p>}
      <p className="fb-managed-warning">Giá và kênh chỉ được lưu trong hệ thống nội bộ. Việc duyệt không tự đưa NET hoặc bảng giá này ra Website/App.</p>
      {view==="products"&&<details className="fb-managed-resolution">
       <summary>Kiểm tra giá theo kênh (nội bộ)</summary>
