@@ -90,7 +90,10 @@ async function api<T>(route:string,method:"GET"|"POST"|"PATCH"="GET",body?:objec
   if(!payload.data)throw new Error("Không nhận được thông tin. Vui lòng thử lại.");
   return payload.data;
 }
-export default function CatalogueManager({onImport}:{onImport:()=>void}){
+export default function CatalogueManager({onImport,onStructure,view="products",initialPane="categories"}:{
+  onImport:()=>void;onStructure?:(pane:"categories"|"families")=>void;
+  view?:"products"|"structure";initialPane?:"categories"|"families";
+}){
   const [items,setItems]=useState<SKU[]>([]);
   const [families,setFamilies]=useState<Family[]>([]);
   const [visibility,setVisibility]=useState<Record<string,Visibility>>({});
@@ -353,11 +356,64 @@ export default function CatalogueManager({onImport}:{onImport:()=>void}){
     setSelected([]);setGroupMode(false);
     setMessage("Đã gắn "+selected.length+" mã vào nhóm mẫu.");
   });
+  const editorDialog=<>{(create||editing)&&<ProductModal title={editing?"Sửa sản phẩm · "+editing.sku_cong_ty:"Thêm sản phẩm"}
+      wide onClose={closeEditor} locked={busy||mediaBusy}>
+      <AdminToast message={error||message} variant={error?"error":"success"} onClose={clearToast}/>
+      <CatalogueProductWorkspace items={items} selectedSku={editing?.sku_cong_ty||null}
+        companySku={editing?.sku_cong_ty||sku} name={editing?editName:name}
+        shortDescription={spec.short_description} longDescription={spec.long_description}
+        fields={<fieldset className="catalogue-workspace-fieldset"
+          disabled={!!editing&&!["draft","needs_review"].includes(editing.review_status)}>
+          <CatalogueFields spec={spec} onChange={setSpec} categories={categories}/>
+        </fieldset>}
+        editingAllowed={!editing||["draft","needs_review"].includes(editing.review_status)}
+        loading={busy||mediaBusy} error={error} notice={editorNotice}
+        onSku={setSku} onName={editing?setEditName:setName}
+        onShortDescription={value=>setSpec(previous=>({...previous,short_description:value}))}
+        onLongDescription={value=>setSpec(previous=>({...previous,long_description:value}))}
+        onSave={editing?save:add} onClose={closeEditor} onNew={()=>startEditor(null)}
+        onSelect={code=>{const row=items.find(item=>item.sku_cong_ty===code);if(row)startEditor(row);}}
+        onMediaChanged={()=>void refresh()} onMediaBusy={setMediaBusy}/>
+    </ProductModal>}</>;
+  const currentStructurePane=view==="structure"?initialPane:structurePane||initialPane;
+  const structureContent=<CatalogueStructureManager key={currentStructurePane} initialPane={currentStructurePane} categories={categories}
+        families={families} items={items} busy={busy} error={error} selectedBulk={selected}
+        onCreateCategory={createCategory} onRenameCategory={renameCategory}
+        onChangeCategoryCode={changeCategoryCode}
+        onCreateFamily={createFamily} onRenameFamily={renameFamily}
+        onChangeFamilyCode={changeFamilyCode}
+        onChangeMember={(row,familyId)=>{
+          const current=items.find(item=>item.sku_cong_ty===row.sku_cong_ty);
+          if(current)changeMembership(current,familyId);
+        }} onBulkAssign={bulkAssign}
+        onOpenSku={row=>{
+          const current=items.find(item=>item.sku_cong_ty===row.sku_cong_ty);
+          if(current){setStructurePane(null);startEditor(current);}
+        }}/>;
+  if(view==="structure")return <section className="catalogue-manager catalogue-structure-page">
+    <div className="page-title">
+      <div><h1>Danh mục & nhóm mẫu</h1>
+        <p>Quản lý cây danh mục, nhóm mẫu và SKU liên kết; không đổi mã công ty.</p></div>
+      <div className="action-row">
+        <button type="button" className="import-btn import-secondary"
+          disabled={busy||loading} onClick={()=>void refresh()}>Làm mới</button>
+      </div>
+    </div>
+    <div className="catalogue-overview">
+      <strong>{categories.length} danh mục</strong><span>{families.length} nhóm mẫu</span>
+      <span>{items.length} sản phẩm</span>
+    </div>
+    {!(create||editing)&&<AdminToast message={error||message}
+      variant={error?"error":"success"} onClose={clearToast}/>}
+    {loading&&<p className="catalogue-workspace-empty" role="status">Đang làm mới cấu trúc sản phẩm…</p>}
+    {structureContent}
+    {editorDialog}
+  </section>;
   return <section className="catalogue-manager">
     <div className="page-title"><div><h1>Quản lý sản phẩm</h1>
       <p>Thêm, tìm và sửa sản phẩm. Mã công ty giữ nguyên, kể cả số 0 đầu.</p></div>
       <div className="action-row">
-        <button type="button" className="import-btn import-secondary" onClick={()=>setStructurePane("categories")}>Danh mục</button>
+        <button type="button" className="import-btn import-secondary" onClick={()=>onStructure?onStructure("categories"):setStructurePane("categories")}>Danh mục</button>
         <button type="button" className="import-btn import-secondary" onClick={()=>void refresh()} disabled={busy||loading||pendingKeys.length>0}>Làm mới</button>
         <div className="catalogue-export-anchor" ref={exportAnchor}>
           <button type="button" className="import-btn import-secondary catalogue-export-trigger"
@@ -380,42 +436,11 @@ export default function CatalogueManager({onImport}:{onImport:()=>void}){
     </div>
 
     {!(create||editing||structurePane||showImport)&&<AdminToast message={error||message} variant={error?"error":"success"} onClose={clearToast}/>}
-    {(create||editing)&&<ProductModal title={editing?"Sửa sản phẩm · "+editing.sku_cong_ty:"Thêm sản phẩm"}
-      wide onClose={closeEditor} locked={busy||mediaBusy}>
-      <AdminToast message={error||message} variant={error?"error":"success"} onClose={clearToast}/>
-      <CatalogueProductWorkspace items={items} selectedSku={editing?.sku_cong_ty||null}
-        companySku={editing?.sku_cong_ty||sku} name={editing?editName:name}
-        shortDescription={spec.short_description} longDescription={spec.long_description}
-        fields={<fieldset className="catalogue-workspace-fieldset"
-          disabled={!!editing&&!["draft","needs_review"].includes(editing.review_status)}>
-          <CatalogueFields spec={spec} onChange={setSpec} categories={categories}/>
-        </fieldset>}
-        editingAllowed={!editing||["draft","needs_review"].includes(editing.review_status)}
-        loading={busy||mediaBusy} error={error} notice={editorNotice}
-        onSku={setSku} onName={editing?setEditName:setName}
-        onShortDescription={value=>setSpec(previous=>({...previous,short_description:value}))}
-        onLongDescription={value=>setSpec(previous=>({...previous,long_description:value}))}
-        onSave={editing?save:add} onClose={closeEditor} onNew={()=>startEditor(null)}
-        onSelect={code=>{const row=items.find(item=>item.sku_cong_ty===code);if(row)startEditor(row);}}
-        onMediaChanged={()=>void refresh()} onMediaBusy={setMediaBusy}/>
-    </ProductModal>}
+    {editorDialog}
     {structurePane&&<ProductModal title="Danh mục & nhóm mẫu sản phẩm" wide
       onClose={()=>setStructurePane(null)} locked={busy}>
       <AdminToast message={error||message} variant={error?"error":"success"} onClose={clearToast}/>
-      <CatalogueStructureManager initialPane={structurePane} categories={categories}
-        families={families} items={items} busy={busy} error={error} selectedBulk={selected}
-        onCreateCategory={createCategory} onRenameCategory={renameCategory}
-        onChangeCategoryCode={changeCategoryCode}
-        onCreateFamily={createFamily} onRenameFamily={renameFamily}
-        onChangeFamilyCode={changeFamilyCode}
-        onChangeMember={(row,familyId)=>{
-          const current=items.find(item=>item.sku_cong_ty===row.sku_cong_ty);
-          if(current)changeMembership(current,familyId);
-        }} onBulkAssign={bulkAssign}
-        onOpenSku={row=>{
-          const current=items.find(item=>item.sku_cong_ty===row.sku_cong_ty);
-          if(current){setStructurePane(null);startEditor(current);}
-        }}/>
+      {structureContent}
     </ProductModal>}
     <div className="import-controls catalogue-search-controls">
       <label className="import-search-label">Tìm mã công ty / tên / nhóm
@@ -426,7 +451,7 @@ export default function CatalogueManager({onImport}:{onImport:()=>void}){
         {categories.map(c=><option value={c.id} key={c.id}>{c.parent_id?"↳ ":""}{c.category_label}</option>)}
       </select></label>
       <button type="button" className="import-btn import-secondary" aria-pressed={groupMode}
-        onClick={()=>{setActionMenu(null);setStructurePane("families")}}>Quản lý nhóm mẫu</button>
+        onClick={()=>{setActionMenu(null);if(groupMode&&selected.length>0)setStructurePane("families");else if(onStructure)onStructure("families");else setStructurePane("families");}}>Quản lý nhóm mẫu</button>
     </div>
     <div className="import-table-wrap"><table className="import-table catalogue-list-table"><thead><tr>
       {groupMode&&<th>Chọn</th>}<th>Ảnh</th><th>Mã công ty</th><th>Tên sản phẩm</th>

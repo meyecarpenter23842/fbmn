@@ -40,7 +40,7 @@ test("Import endpoint allows only authenticated, DB-backed Admin preview, limits
 
 test("Import preview is reachable inside existing login-gated Admin without altering login", () => {
   assert.match(page,/section==="import-products" && <CatalogueImportPreview\/>/);
-  assert.match(page,/<CatalogueManager onImport=\{\(\)=>navigate\("import-products"\)\}/);
+  assert.match(page,/<CatalogueManager\s+onImport=\{\(\)=>navigate\("import-products"\)\}/);
   assert.match(page,/authState==="authorised" && <>/);
   assert.match(ui,/fetch\("\/api\/auth\/token"/);
   assert.match(ui,/fetch\("\/api\/catalogue\/preview"/);

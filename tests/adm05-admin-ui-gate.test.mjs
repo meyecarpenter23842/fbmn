@@ -46,16 +46,16 @@ test("Admin popup blocks the workspace until both Neon session and DB principal 
 
 test("Admin does not invent catalogue, prices, customer counts or persist uploaded files locally",()=>{
   assert.doesNotMatch(page,/1\.248|2\.458|FB-VHS-200|18\.000/);
-  assert.match(page,/<CatalogueManager onImport=/);
-  assert.match(page,/<CatalogueManager onImport=/);
-  assert.match(page,/chưa tải lên Cloudflare R2/);
+  assert.match(page,/<CatalogueManager\s+onImport=/);
+  assert.match(page,/section==="pricing"&&<CatalogueSideWorkspace mode="pricing" onBusyChange=\{setWorkspaceOperationBusy\}\/>/);
+  assert.match(page,/section==="media"&&<CatalogueSideWorkspace mode="media" onBusyChange=\{setWorkspaceOperationBusy\}\/>/);
   assert.doesNotMatch(page,/localStorage|sessionStorage/);
   assert.match(page,/URL\.revokeObjectURL/);
   assert.match(route,/const ALLOWED = new Set\(\["session", "channels", "publish-capability", "pricing-capability"\]\)/);
 });
 
 test("Admin reference UI retains purple side navigation, responsive panels and mandatory login overlay",()=>{
-  for(const item of ["Quản lý sản phẩm","Thêm sản phẩm mới","Upload & quản lý ảnh","Banner & Popup","Media","Thêm biến thể"])assert.ok(page.includes(item),item);
+  for(const item of ["Danh sách sản phẩm","Danh mục & nhóm mẫu","Thư viện hình ảnh","Nhập / cập nhật Excel","Giá & bảng giá","Thêm sản phẩm mới","Thêm biến thể"])assert.ok(page.includes(item),item);
   for(const rule of [".sidebar",".auth-overlay",".gallery-grid",".editor-grid",".metric-grid","@media(max-width:780px)"])assert.ok(styles.includes(rule),rule);
   for(const rule of [".auth-modal",".auth-logo img",".first-login-hint span","background:#fff","@media(max-width:480px)"])assert.ok(authStyles.includes(rule),rule);
 });

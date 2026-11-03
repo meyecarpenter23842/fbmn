@@ -28,11 +28,12 @@ async function bearer(){
 }
 const emptyForm=()=>({amount:"",source:"",date:"",until:"",vatIncluded:"" as ""|"yes"|"no",
  vatPercent:"",customerId:""});
-export default function CataloguePricebookPanel({sku}:{sku:string}){
+export default function CataloguePricebookPanel({sku,onBusyChange}:{sku:string;onBusyChange?:(busy:boolean)=>void}){
  const [authorized,setAuthorized]=useState(false);
  const [owner,setOwner]=useState(false);
  const [loading,setLoading]=useState(true);
  const [saving,setSaving]=useState(false);
+ useEffect(()=>{onBusyChange?.(saving);return()=>onBusyChange?.(false);},[saving,onBusyChange]);
  const [error,setError]=useState("");
  const [loadFailed,setLoadFailed]=useState(false);
  const [notice,setNotice]=useState("");
