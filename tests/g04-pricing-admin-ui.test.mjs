@@ -49,3 +49,29 @@ test("G04 source/VAT must be explicit and never infer retail price from NET",()=
  assert.match(css,/\.catalogue-pricebook-form-grid/);
  assert.match(css,/@media\(max-width:760px\)/);
 });
+
+test("Admin price save feedback uses top-right toast without hiding reload after transient failures",()=>{
+ const panel=read("apps/admin/app/catalogue-pricebook-panel.tsx");
+ const toast=read("apps/admin/app/admin-toast.tsx");
+ const css=read("apps/admin/app/admin-refinement.css");
+ assert.match(panel,/<AdminToast message=\{error\|\|notice\}/);
+ assert.doesNotMatch(panel,/className="catalogue-pricebook-inline-(success|error)"/);
+ assert.match(panel,/const \[loadFailed,setLoadFailed\]=useState\(false\)/);
+ assert.match(panel,/if\(!loading&&!authorized&&!loadFailed\)return null/);
+ assert.match(panel,/setLoadFailed\(true\)/);
+ assert.match(panel,/Dữ liệu giá chưa tải được\. Chọn Làm mới để thử lại/);
+ assert.match(toast,/variant==="error"\?"alert":"status"/);
+ assert.match(css,/\.catalogue-toast \{ position:fixed; right:16px; top:16px/);
+ assert.match(css,/\.catalogue-toast--error/);
+});
+
+test("Concurrent price and media toasts stack within the modal focus trap",()=>{
+ const toast=read("apps/admin/app/admin-toast.tsx");
+ const modal=read("apps/admin/app/product-modal.tsx");
+ const css=read("apps/admin/app/admin-refinement.css");
+ assert.match(toast,/createPortal\(content,target.host\)/);
+ assert.match(toast,/closest\("\.fb-product-modal"\)/);
+ assert.match(modal,/className="fb-product-modal-toast-stack"/);
+ assert.match(css,/\.fb-product-modal-toast-stack \{/);
+ assert.match(css,/flex-direction:column/);
+});

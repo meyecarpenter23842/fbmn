@@ -101,7 +101,7 @@ export default function CatalogueManager({onImport}:{onImport:()=>void}){
   const [busy,setBusy]=useState(false);
   const [error,setError]=useState("");
   const [message,setMessage]=useState("");
-  const clearToast=useCallback(()=>setMessage(""),[]);
+  const clearToast=useCallback(()=>{setMessage("");setError("");},[]);
   const pendingVisibility=useRef(new Set<string>());
   const visibilityEpoch=useRef(0);
   const [pendingKeys,setPendingKeys]=useState<string[]>([]);
@@ -378,10 +378,11 @@ export default function CatalogueManager({onImport}:{onImport:()=>void}){
     <div className="catalogue-overview" aria-label="Tổng quan danh mục">
       <strong>{items.length} sản phẩm</strong><span>{families.length} nhóm mẫu</span>
     </div>
-    {error&&!create&&!editing&&!structurePane&&<div className="import-error" role="alert">{error}</div>}
-    <AdminToast message={message} onClose={clearToast}/>
+
+    {!(create||editing||structurePane||showImport)&&<AdminToast message={error||message} variant={error?"error":"success"} onClose={clearToast}/>}
     {(create||editing)&&<ProductModal title={editing?"Sửa sản phẩm · "+editing.sku_cong_ty:"Thêm sản phẩm"}
       wide onClose={closeEditor} locked={busy||mediaBusy}>
+      <AdminToast message={error||message} variant={error?"error":"success"} onClose={clearToast}/>
       <CatalogueProductWorkspace items={items} selectedSku={editing?.sku_cong_ty||null}
         companySku={editing?.sku_cong_ty||sku} name={editing?editName:name}
         shortDescription={spec.short_description} longDescription={spec.long_description}
@@ -400,6 +401,7 @@ export default function CatalogueManager({onImport}:{onImport:()=>void}){
     </ProductModal>}
     {structurePane&&<ProductModal title="Danh mục & nhóm mẫu sản phẩm" wide
       onClose={()=>setStructurePane(null)} locked={busy}>
+      <AdminToast message={error||message} variant={error?"error":"success"} onClose={clearToast}/>
       <CatalogueStructureManager initialPane={structurePane} categories={categories}
         families={families} items={items} busy={busy} error={error} selectedBulk={selected}
         onCreateCategory={createCategory} onRenameCategory={renameCategory}

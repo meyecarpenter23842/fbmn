@@ -9,7 +9,7 @@ export type StructureSku={sku_cong_ty:string;revision:number;category_id:string|
 
 type Pane="categories"|"families";
 export default function CatalogueStructureManager({
-  initialPane,categories,families,items,busy,error,
+  initialPane,categories,families,items,busy,
   selectedBulk,onCreateCategory,onRenameCategory,onChangeCategoryCode,onCreateFamily,onRenameFamily,onChangeFamilyCode,
   onChangeMember,onBulkAssign,onOpenSku
 }:{
@@ -97,7 +97,7 @@ export default function CatalogueStructureManager({
       <button type="button" className="import-btn import-secondary" disabled={!categories.length&&!families.length}
         onClick={exportCodes}>Xuất bảng mã CSV</button>
     </div>
-    {error&&<p className="import-error" role="alert">{error}</p>}
+
     <div className="catalogue-structure-grid">
       <section className="catalogue-structure-sidebar" aria-label={pane==="categories"?"Cây danh mục":"Danh sách nhóm mẫu"}>
         <label className="catalogue-structure-field">Tìm {pane==="categories"?"danh mục":"nhóm mẫu"}

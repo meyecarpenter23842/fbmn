@@ -67,7 +67,15 @@ Sử dụng **semantic CSS custom properties** thay cho thêm các mã hex tùy 
 - Hành động hủy/phụ phía trái, hành động lưu/xác nhận phía phải nếu không xung đột luồng hiện hành; xóa có xác nhận riêng.
 - Không chuyển toàn bộ modal quản lý SKU thành drawer nếu chưa có yêu cầu Owner; đó là thay đổi UX, không phải polish.
 
-### 2.6 Icon / Status / Motion
+### 2.6 Notification / Toast (Owner, 03/11/2026)
+- Phản hồi thao tác ngắn (lưu thành công/thất bại, lưu giá, lỗi import, sửa danh mục, trạng thái hiển thị) bắt buộc là **toast nhỏ cố định góc trên bên phải**, không chèn banner vào luồng nội dung khiến nút và form dịch vị trí.
+- Dùng chung `apps/admin/app/admin-toast.tsx`, `variant="success"|"error"|"info"`; lỗi phải có `role="alert"`, thông báo khác `role="status"`. Có nút đóng và tự ẩn sau khoảng 4–5 giây.
+- **Riêng màn hình Giá** bỏ thông báo `catalogue-pricebook-inline-success/error` dưới nút Lưu giá. Giữ nguyên xác thực, giá, VAT, nguồn và quy trình lưu.
+- Helper text, empty state, cảnh báo bảo mật cần đọc lâu và hộp thoại xác nhận xóa **không thay bằng toast tự biến mất**.
+- Khi có modal đang mở, toast phải vẫn hiển thị góc trên phải và không bị modal che. Test desktop/mobile.
+- Nếu có nhiều thao tác đồng thời (giá, ảnh, sản phẩm), các toast trong cùng modal phải xếp dọc trong `.fb-product-modal-toast-stack`, không phủ lên nhau, và nút đóng vẫn nằm trong focus trap của modal.
+ 
+### 2.7 Icon / Status / Motion
 - Icon nét đồng bộ (16/18/20px, stroke khoảng 1.75–2), không phối tùy tiện nét đậm/mỏng/3D; dùng lại bộ SVG đang có nếu phù hợp thay vì tự bổ sung thư viện.
 - Success / warning / error có icon và text, không phụ thuộc màu sắc; không dùng tím thay mọi trạng thái.
 - Motion 120–180ms cho hover/focus, chuyển trạng thái nhỏ, tránh bounce, glow, scale lớn; tôn trọng `prefers-reduced-motion`.

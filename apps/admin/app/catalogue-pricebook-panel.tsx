@@ -1,5 +1,6 @@
 "use client";
 import {useCallback,useEffect,useState} from "react";
+import AdminToast from "./admin-toast";
 
 type PriceKind="source"|"net_internal"|"retail_public"|"dealer_contract";
 type PriceEntry={id:string;sku_cong_ty:string;price_kind:PriceKind;customer_id:string|null;
@@ -33,6 +34,7 @@ export default function CataloguePricebookPanel({sku}:{sku:string}){
  const [loading,setLoading]=useState(true);
  const [saving,setSaving]=useState(false);
  const [error,setError]=useState("");
+ const [loadFailed,setLoadFailed]=useState(false);
  const [notice,setNotice]=useState("");
  const [entries,setEntries]=useState<PriceEntry[]>([]);
  const [kind,setKind]=useState<PriceKind>("net_internal");
@@ -49,7 +51,7 @@ export default function CataloguePricebookPanel({sku}:{sku:string}){
      {headers,cache:"no-store",credentials:"same-origin",signal})
   ]);
   if(signal?.aborted)return;
-  if(prices.status===403||session.status===403){setAuthorized(false);setEntries([]);return;}
+  if(prices.status===403||session.status===403){setAuthorized(false);setLoadFailed(false);setEntries([]);return;}
   if(!session.ok||!prices.ok)throw new Error(
     prices.status===401?"Phiên đăng nhập đã hết hạn.":"Không tải được bảng giá riêng tư.");
   const identity=await session.json() as Data<{role?:string}>;
@@ -57,6 +59,7 @@ export default function CataloguePricebookPanel({sku}:{sku:string}){
   if(!payload.data||!Array.isArray(payload.data.entries))
     throw new Error("Dữ liệu giá không hợp lệ.");
   setAuthorized(true);
+  setLoadFailed(false);
   setOwner(identity.data?.role==="owner");
   setEntries(payload.data.entries);
  },[sku]);
@@ -69,7 +72,7 @@ export default function CataloguePricebookPanel({sku}:{sku:string}){
   void Promise.resolve().then(()=>{
     if(!controller.signal.aborted)return refresh(controller.signal);
   }).catch(e=>{
-    if(!controller.signal.aborted)setError(e instanceof Error?e.message:"Không tải được dữ liệu giá.");
+    if(!controller.signal.aborted){setLoadFailed(true);setError(e instanceof Error?e.message:"Không tải được dữ liệu giá.");}
   }).finally(()=>{if(!controller.signal.aborted)setLoading(false);});
   return ()=>controller.abort();
  },[refresh]);
@@ -136,15 +139,19 @@ export default function CataloguePricebookPanel({sku}:{sku:string}){
   }catch(e){setError(e instanceof Error?e.message:"Không lưu được giá.");}
   finally{setSaving(false);}
  };
- if(!loading&&!authorized&&!error)return null;
+ // A transient load failure must not remove the retry button after the toast dismisses.
+ if(!loading&&!authorized&&!loadFailed)return null;
  return <section className="catalogue-pricebook" aria-label="Giá sản phẩm nội bộ">
+  <AdminToast message={error||notice} variant={error?"error":"success"}
+    onClose={()=>{setError("");setNotice("");}}/>
   <div className="catalogue-pricebook-head">
    <div><h4>Giá sản phẩm</h4><small>Giá nội bộ · Chỉ Owner được sửa · Chưa công khai</small></div>
    <button type="button" className="import-btn import-secondary" disabled={saving||loading}
-     onClick={()=>{setLoading(true);void refresh().catch(e=>setError(e instanceof Error?e.message:"Không tải được giá.")).finally(()=>setLoading(false));}}>
+     onClick={()=>{setLoading(true);void refresh().catch(e=>{setLoadFailed(true);setError(e instanceof Error?e.message:"Không tải được giá.");}).finally(()=>setLoading(false));}}>
      Làm mới
    </button>
   </div>
+  {!loading&&!authorized&&loadFailed&&<p className="catalogue-pricebook-muted">Dữ liệu giá chưa tải được. Chọn Làm mới để thử lại.</p>}
   {loading?<p className="catalogue-pricebook-muted">Đang tải dữ liệu giá…</p>:
    authorized?<div className="catalogue-pricebook-body">
     <p className="catalogue-pricebook-lead">Chọn loại giá cần nhập cho mã <strong>{sku}</strong>. Mỗi loại giá được lưu riêng, không tự tính từ nhau.</p>
@@ -227,12 +234,9 @@ export default function CataloguePricebookPanel({sku}:{sku:string}){
            onClick={()=>void save()}>{saving?"Đang lưu…":"Lưu giá"}</button>
          <span>Chỉ lưu bản nháp nội bộ, không hiển thị trên website hoặc app.</span>
        </div>
-       {error&&<p className="catalogue-pricebook-inline-error" role="alert">{error}</p>}
-       {notice&&<p className="catalogue-pricebook-inline-success" role="status">{notice}</p>}
       </div>:
       <p className="catalogue-pricebook-muted">Tài khoản này chỉ được xem giá. Owner mới có thể sửa.</p>}
     </div>
    </div>:null}
-  {!owner&&error&&<p className="catalogue-pricebook-inline-error" role="alert">{error}</p>}
  </section>;
 }

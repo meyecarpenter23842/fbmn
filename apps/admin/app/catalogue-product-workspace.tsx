@@ -17,7 +17,7 @@ type WorkspaceItem={
 };
 export default function CatalogueProductWorkspace({
   items,selectedSku,companySku,name,shortDescription,longDescription,fields,
-  editingAllowed,loading,error,notice,onSku,onName,onShortDescription,onLongDescription,
+  editingAllowed,loading,onSku,onName,onShortDescription,onLongDescription,
   onSave,onClose,onNew,onSelect,onMediaChanged,onMediaBusy
 }:{
   items:WorkspaceItem[];
@@ -91,8 +91,6 @@ export default function CatalogueProductWorkspace({
         </div>
         <span className="catalogue-workspace-status">{selectedSku?"Bản nháp nội bộ":"Chưa lưu"}</span>
       </div>
-      {error&&<div role="alert" className="import-error">{error}</div>}
-      {notice&&<p role="status" className="catalogue-workspace-notice">{notice}</p>}
       <div className="catalogue-workspace-fields">
         <label>Mã công ty
           <input value={companySku} onChange={event=>onSku(event.target.value)}

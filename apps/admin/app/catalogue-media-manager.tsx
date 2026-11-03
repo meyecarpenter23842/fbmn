@@ -96,7 +96,7 @@ export default function CatalogueMediaManager({sku,onChanged,onBusyChange}:{
   const [busy,setBusy]=useState(false);
   const [error,setError]=useState("");
   const [message,setMessage]=useState("");
-  const clearToast=useCallback(()=>setMessage(""),[]);
+  const clearToast=useCallback(()=>{setMessage("");setError("");},[]);
   const fileInput=useRef<HTMLInputElement>(null);
   const replaceFileInput=useRef<HTMLInputElement>(null);
   const replaceAssetRef=useRef<string|null>(null);
@@ -200,8 +200,7 @@ export default function CatalogueMediaManager({sku,onChanged,onBusyChange}:{
   const cover=ordered.find(item=>item.media_role==="cover")?.id||ordered[0]?.id;
   return <section className="catalogue-media-manager" aria-label={"Ảnh SKU "+sku}>
     <p><strong>Mã công ty: {sku}.</strong> Có thể tải nhiều ảnh, sắp xếp và chọn ảnh đại diện. Hỗ trợ JPG, PNG và WebP.</p>
-    {error&&<div className="import-error" role="alert">{error}</div>}
-    <AdminToast message={message} onClose={clearToast}/>
+    <AdminToast message={error||message} variant={error?"error":"success"} onClose={clearToast}/>
     <div className="catalogue-media-actions">
       <label className="import-btn import-primary catalogue-media-upload">
         + Chọn tối đa 5 ảnh

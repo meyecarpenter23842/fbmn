@@ -436,8 +436,8 @@ export default function CatalogueImportPreview({onBusyChange,onSaved}:{onBusyCha
       {!mappingReady&&<small className="import-bad">Chọn ít nhất một thuộc tính ngoài mã công ty và không gán trùng trường.</small>}
       <small><b>Quy tắc duy nhất:</b> Chọn Bỏ qua = không cập nhật cột đó. Chọn một trường = lấy giá trị Excel làm giá trị mới; ô trống sẽ xóa dữ liệu cũ của trường tương ứng. Mã công ty cố định; tên sản phẩm là trường bắt buộc nên để trống sẽ báo lỗi. Nhấn Cột tiếp / Cột trước để xem hết các cột. Chỉ lưu sau khi xem trước.</small>
     </section>}
-    {error&&<div className="import-error" role="alert">{error}</div>}
-    <AdminToast message={receipt} onClose={closeReceipt}/>
+
+    <AdminToast message={error||receipt} variant={error?"error":"success"} onClose={()=>{setError("");closeReceipt();}}/>
     {preview&&<section aria-label="Báo cáo xem trước">
       <div className="import-kpis import-kpis-simple">
         <div><small>SKU trong file</small><strong>{preview.counts.total_rows}</strong></div>

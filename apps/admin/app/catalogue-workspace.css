@@ -113,9 +113,9 @@
 .catalogue-pricebook-kinds button strong{font-size:13px;font-weight:750;color:#2f3255}
 .catalogue-pricebook-kinds button small{font-size:11px;font-weight:400;line-height:1.4;color:#6d738d}
 .catalogue-pricebook-kinds button span{font-size:10px;font-weight:650;color:#747b95}
-.catalogue-pricebook-kinds button.active{border-color:#6a59ce;background:#f8f7fe;box-shadow:0 0 0 1px rgb(106 89 206 / 14%)}
-.catalogue-pricebook-kinds button.active strong,.catalogue-pricebook-kinds button.active span{color:#5941bc}
-.catalogue-pricebook-kinds button:focus-visible,.catalogue-pricebook-vat-options button:focus-visible,.catalogue-pricebook-advanced summary:focus-visible{outline:2px solid #6a59ce;outline-offset:3px}
+.catalogue-pricebook-kinds button.active{border-color:var(--fb-ui-primary);background:var(--fb-ui-primary-subtle);box-shadow:0 0 0 1px rgba(109,36,158,.10)}
+.catalogue-pricebook-kinds button.active strong,.catalogue-pricebook-kinds button.active span{color:var(--fb-ui-primary-strong)}
+.catalogue-pricebook-kinds button:focus-visible,.catalogue-pricebook-vat-options button:focus-visible,.catalogue-pricebook-advanced summary:focus-visible{outline:2px solid var(--fb-ui-primary);outline-offset:3px}
 .catalogue-pricebook-selection{display:flex;align-items:baseline;justify-content:space-between;gap:7px 14px;flex-wrap:wrap}
 .catalogue-pricebook-selection strong{color:#343158;font-size:13px}
 .catalogue-pricebook-selection small{font-size:11px;color:#72768d}
@@ -129,11 +129,11 @@
 .catalogue-pricebook-quick-grid label>span,.catalogue-pricebook-vat legend span{color:#8055be}
 .catalogue-pricebook-quick-grid label>small,.catalogue-pricebook-advanced label small{font-size:10px;line-height:1.5;color:#83879e;font-weight:400}
 .catalogue-pricebook-quick-grid input{width:100%;min-width:0;min-height:43px;padding:9px 12px;border:1px solid #d8dce7;border-radius:10px;background:#fff;font-size:13px;color:#292d56}
-.catalogue-pricebook-quick-grid input:focus-visible,.catalogue-pricebook-form-grid input:focus-visible{outline:2px solid #6a59ce;outline-offset:1px}
+.catalogue-pricebook-quick-grid input:focus-visible,.catalogue-pricebook-form-grid input:focus-visible{outline:2px solid var(--fb-ui-primary);outline-offset:1px}
 .catalogue-pricebook-vat{min-width:0;border:0;margin:0;padding:0;display:grid;align-content:start;gap:6px}
 .catalogue-pricebook-vat-options{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
 .catalogue-pricebook-vat-options button{min-height:43px;padding:8px;border:1px solid #d9dce8;border-radius:10px;background:#fff;color:#424969;font-size:12px;font-weight:650;cursor:pointer;transition:border-color .15s,background .15s}
-.catalogue-pricebook-vat-options button.active{border-color:#6a59ce;background:#f0ecff;color:#553cba}
+.catalogue-pricebook-vat-options button.active{border-color:var(--fb-ui-primary);background:var(--fb-ui-primary-subtle);color:var(--fb-ui-primary-strong)}
 .catalogue-pricebook-source,.catalogue-pricebook-dealer{grid-column:1/-1}
 .catalogue-pricebook-advanced{border-top:1px solid #eeeef5;padding-top:10px}
 .catalogue-pricebook-advanced summary{font-size:12px;color:#5b4aa5;font-weight:650;cursor:pointer;width:fit-content;padding:6px 0}
@@ -142,8 +142,6 @@
 .catalogue-pricebook-actions{display:flex;align-items:center;flex-wrap:wrap;gap:10px}
 .catalogue-pricebook-actions .import-btn{min-width:116px;min-height:40px}
 .catalogue-pricebook-actions>span{font-size:11px;color:#777c94;line-height:1.5}
-.catalogue-pricebook-inline-error{margin:0;color:#ab342b;background:#fff4f2;border:1px solid #f0c4bc;border-radius:9px;padding:10px 12px;font-size:12px}
-.catalogue-pricebook-inline-success{margin:0;color:#246547;background:#f1faf5;border:1px solid #b7dfcb;border-radius:9px;padding:10px 12px;font-size:12px}
 @media(max-width:760px){.catalogue-pricebook-entry{align-items:flex-start;flex-direction:column}.catalogue-pricebook-form-grid{grid-template-columns:1fr}.catalogue-pricebook-quick-grid{grid-template-columns:1fr}.catalogue-pricebook-selection{display:grid}.catalogue-pricebook-kinds{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:480px){.catalogue-pricebook-kinds{grid-template-columns:1fr}.catalogue-pricebook-vat-options{grid-template-columns:repeat(2,minmax(0,1fr))}.catalogue-pricebook{padding:12px}}
 @media(prefers-reduced-motion:reduce){.catalogue-pricebook-kinds button,.catalogue-pricebook-vat-options button{transition:none}}

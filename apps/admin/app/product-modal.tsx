@@ -44,6 +44,7 @@ export default function ProductModal({title,onClose,children,wide=false,locked=f
           className="fb-product-modal-close">×</button>
       </header>
       <div className="fb-product-modal-content">{children}</div>
+      <div className="fb-product-modal-toast-stack" aria-label="Thông báo thao tác"/>
     </div>
   </div>,document.body);
 }
