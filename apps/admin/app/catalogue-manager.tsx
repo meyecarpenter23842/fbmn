@@ -83,7 +83,9 @@ async function api<T>(route:string,method:"GET"|"POST"|"PATCH"="GET",body?:objec
     ...(body?{body:JSON.stringify(body)}:{})});
   const payload=await res.json() as ApiResult<T>;
   if(!res.ok){
-    if(res.status===409)throw new Error("SKU đã được thay đổi hoặc đã tồn tại. Hãy tải lại danh sách.");
+    if(res.status===409)throw new Error(route==="visibility-bulk"?
+      "Trạng thái hiển thị đã thay đổi ở phiên khác. Hãy làm mới và xem trước lại.":
+      "SKU đã được thay đổi hoặc đã tồn tại. Hãy tải lại danh sách.");
     if(res.status===403)throw new Error("Tài khoản chưa được cấp quyền thao tác này.");
     throw new Error("Không thực hiện được thao tác. Vui lòng thử lại.");
   }
@@ -111,6 +113,10 @@ export default function CatalogueManager({onImport,onStructure,view="products",i
   const [query,setQuery]=useState("");
   const [page,setPage]=useState(1);
   const [selected,setSelected]=useState<string[]>([]);
+  const [bulkOpen,setBulkOpen]=useState(false);
+  const [bulkStep,setBulkStep]=useState<"setup"|"preview">("setup");
+  const [bulkChannels,setBulkChannels]=useState<Visibility["channel_code"][]>([]);
+  const [bulkAction,setBulkAction]=useState<"show"|"hide">("show");
   const [editing,setEditing]=useState<SKU|null>(null);
   const [editorNotice,setEditorNotice]=useState("");
   const [editName,setEditName]=useState("");
@@ -211,6 +217,41 @@ export default function CatalogueManager({onImport,onStructure,view="products",i
   const pages=Math.max(1,Math.ceil(filtered.length/50));
   const visible=filtered.slice((page-1)*50,page*50);
   const selectedActionRow=actionMenu?visible.find(row=>row.sku_cong_ty===actionMenu.sku):null;
+  const selectedSet=useMemo(()=>new Set(selected),[selected]);
+  const selectedRows=useMemo(()=>items.filter(row=>selectedSet.has(row.sku_cong_ty)),[items,selectedSet]);
+  const pageSelectKeys=visible.filter(row=>!groupMode||
+    ["draft","needs_review"].includes(row.review_status)).map(row=>row.sku_cong_ty);
+  const allPageSelected=pageSelectKeys.length>0&&pageSelectKeys.every(code=>selectedSet.has(code));
+  const togglePageSelection=(checked:boolean)=>{
+    if(checked){
+      const next=[...new Set([...selected,...pageSelectKeys])];
+      if(next.length>200){setError("Chọn tối đa 200 sản phẩm mỗi lần thao tác.");return;}
+      setSelected(next);
+    }else setSelected(old=>old.filter(code=>!pageSelectKeys.includes(code)));
+  };
+  const desiredBulkState=bulkAction==="show"?"published":"hidden";
+  const bulkEntries=useMemo(()=>selectedRows.flatMap(row=>
+    bulkChannels.flatMap(channel=>{
+      const state=visibility[row.sku_cong_ty+":"+channel];
+      if((state?.state||"hidden")===desiredBulkState)return [];
+      return [{sku_cong_ty:row.sku_cong_ty,channel_code:channel,
+        expected_revision:state?.revision??0}];
+    })),[selectedRows,bulkChannels,visibility,desiredBulkState]);
+  const openBulk=()=>{setBulkStep("setup");setBulkChannels([]);setBulkAction("show");setBulkOpen(true);};
+  const applyBulkVisibility=()=>void run(async()=>{
+    if(!selectedRows.length||selectedRows.length>200||!bulkChannels.length||
+      bulkEntries.length<1||bulkEntries.length>600)
+      throw Error("Danh sách cập nhật không hợp lệ. Hãy chọn lại.");
+    const chosenCount=selectedRows.length,updateCount=bulkEntries.length;
+    const applied=await api<{items:Visibility[];updated:number}>("visibility-bulk","POST",{
+      entries:bulkEntries,visible:bulkAction==="show",confirm:"CAP_NHAT_HIEN_THI_HANG_LOAT"});
+    visibilityEpoch.current++;
+    setVisibility(prev=>({...prev,...Object.fromEntries(applied.items.map(v=>
+      [v.sku_cong_ty+":"+v.channel_code,v]))}));
+    setBulkOpen(false);setSelected([]);setGroupMode(false);
+    setMessage("Đã "+(bulkAction==="show"?"bật":"ẩn")+" "+updateCount+
+      " lượt hiển thị trên "+chosenCount+" SKU. Giá NET không được công khai.");
+  });
   const run=async(work:()=>Promise<void>)=>{
     if(busy)return;setBusy(true);setError("");setMessage("");
     try{await work();await refresh();}
@@ -354,6 +395,9 @@ export default function CatalogueManager({onImport,onStructure,view="products",i
   });
   const bulkAssign=(familyId:string)=>void run(async()=>{
     if(selected.length<2||selected.length>200)throw new Error("Chọn từ 2 đến 200 SKU.");
+    if(selected.some(code=>!items.some(row=>row.sku_cong_ty===code&&
+      ["draft","needs_review"].includes(row.review_status))))
+      throw Error("Chỉ có thể ghép nhóm SKU còn được phép chỉnh sửa.");
     await api("group","POST",{family_id:familyId,sku_cong_ty:selected});
     setSelected([]);setGroupMode(false);
     setMessage("Đã gắn "+selected.length+" mã vào nhóm mẫu.");
@@ -437,7 +481,7 @@ export default function CatalogueManager({onImport,onStructure,view="products",i
       <strong>{items.length} sản phẩm</strong><span>{families.length} nhóm mẫu</span>
     </div>
 
-    {!(create||editing||structurePane||showImport)&&<AdminToast message={error||message} variant={error?"error":"success"} onClose={clearToast}/>}
+    {!(create||editing||structurePane||showImport||bulkOpen)&&<AdminToast message={error||message} variant={error?"error":"success"} onClose={clearToast}/>}
     {editorDialog}
     {structurePane&&<ProductModal title="Danh mục & nhóm mẫu sản phẩm" wide
       onClose={()=>setStructurePane(null)} locked={busy}>
@@ -455,16 +499,31 @@ export default function CatalogueManager({onImport,onStructure,view="products",i
       <button type="button" className="import-btn import-secondary" aria-pressed={groupMode}
         onClick={()=>{setActionMenu(null);if(groupMode&&selected.length>0)setStructurePane("families");else if(onStructure)onStructure("families");else setStructurePane("families");}}>Quản lý nhóm mẫu</button>
     </div>
+    {selectedRows.length>0&&<div className="fb-bulk-selection-bar" role="group" aria-label="Thao tác sản phẩm đã chọn">
+      <strong>Đã chọn {selectedRows.length} sản phẩm</strong>
+      <button type="button" className="import-btn import-primary" disabled={busy||pendingKeys.length>0}
+        onClick={openBulk}>Bật / ẩn hàng loạt</button>
+      <button type="button" className="import-btn import-secondary" disabled={busy}
+        onClick={()=>{setSelected([]);setGroupMode(false);}}>Bỏ chọn</button>
+      <span>Chọn tất cả ở đầu bảng áp dụng cho trang đang xem (tối đa 200 SKU).</span>
+    </div>}
     <div className="import-table-wrap"><table className="import-table catalogue-list-table"><thead><tr>
-      {groupMode&&<th>Chọn</th>}<th>Ảnh</th><th>Mã công ty</th><th>Tên sản phẩm</th>
+      <th><input type="checkbox" aria-label="Chọn tất cả sản phẩm trong trang hiện tại"
+        checked={allPageSelected} disabled={busy||loading||!pageSelectKeys.length}
+        onChange={event=>togglePageSelection(event.target.checked)}/></th><th>Ảnh</th><th>Mã công ty</th><th>Tên sản phẩm</th>
       <th>Danh mục</th><th>Quy cách</th><th>Nhóm mẫu</th><th>Hiển thị</th><th>Thao tác</th>
     </tr></thead><tbody>
       {visible.map(row=>{
         const editable=row.review_status==="draft"||row.review_status==="needs_review";
         return <tr key={row.sku_cong_ty}>
-        {groupMode&&<td><input type="checkbox" aria-label={"Chọn SKU "+row.sku_cong_ty}
-          disabled={!editable} checked={selected.includes(row.sku_cong_ty)}
-          onChange={e=>setSelected(old=>e.target.checked?[...old,row.sku_cong_ty]:old.filter(x=>x!==row.sku_cong_ty))}/></td>}
+        <td><input type="checkbox" aria-label={"Chọn SKU "+row.sku_cong_ty}
+          disabled={busy||loading||(groupMode&&!editable)} checked={selectedSet.has(row.sku_cong_ty)}
+          onChange={event=>{
+            if(event.target.checked){
+              if(selected.length>=200){setError("Chọn tối đa 200 sản phẩm mỗi lần.");return;}
+              setSelected(old=>[...old,row.sku_cong_ty]);
+            }else setSelected(old=>old.filter(code=>code!==row.sku_cong_ty));
+          }}/></td>
         <td className="catalogue-media-cell">
           <button type="button" className="catalogue-media-shortcut"
             title={"Quản lý ảnh SKU "+row.sku_cong_ty}
@@ -508,7 +567,7 @@ export default function CatalogueManager({onImport,onStructure,view="products",i
             }}>···</button>
         </td>
       </tr>})}
-      {!visible.length&&<tr><td colSpan={groupMode?9:8} className="import-empty">
+      {!visible.length&&<tr><td colSpan={9} className="import-empty">
         {loading?"Đang tải sản phẩm…":"Chưa có sản phẩm phù hợp."}</td></tr>}
     </tbody></table></div>
     {actionMenu&&selectedActionRow&&createPortal(
@@ -540,6 +599,59 @@ export default function CatalogueManager({onImport,onStructure,view="products",i
       <button className="import-btn import-secondary" disabled={page<=1} onClick={()=>{setPage(x=>Math.max(x-1,1));setActionMenu(null)}}>Trước</button>
       <button className="import-btn import-secondary" disabled={page>=pages} onClick={()=>{setPage(x=>Math.min(x+1,pages));setActionMenu(null)}}>Sau</button>
     </div></div>
+    {bulkOpen&&<ProductModal title="Cập nhật hiển thị hàng loạt"
+      onClose={()=>setBulkOpen(false)} locked={busy}>
+      <div className="fb-bulk-visibility">
+        <p><strong>{selectedRows.length} sản phẩm</strong> đang được chọn. Mỗi kênh là một lựa chọn độc lập.</p>
+        <div className="fb-bulk-channel-picker" role="group" aria-label="Kênh áp dụng">
+          {CHANNELS.map(channel=><label key={channel.code}>
+            <input type="checkbox" checked={bulkChannels.includes(channel.code)}
+              disabled={busy||bulkStep==="preview"}
+              onChange={event=>setBulkChannels(old=>event.target.checked?
+                [...old,channel.code]:old.filter(code=>code!==channel.code))}/>
+            {channel.label==="Web"?"Website":channel.label==="Đại lý"?"App đại lý":"App người tiêu dùng"}
+          </label>)}
+        </div>
+        <div className="fb-bulk-channel-picker" role="group" aria-label="Trạng thái mới">
+          <label><input type="radio" name="bulk-visibility-action" checked={bulkAction==="show"}
+            disabled={busy||bulkStep==="preview"} onChange={()=>setBulkAction("show")}/>Bật hiển thị</label>
+          <label><input type="radio" name="bulk-visibility-action" checked={bulkAction==="hide"}
+            disabled={busy||bulkStep==="preview"} onChange={()=>setBulkAction("hide")}/>Ẩn sản phẩm</label>
+        </div>
+        {bulkStep==="preview"&&<div className="fb-bulk-preview" role="region" aria-label="Xem trước thay đổi">
+          <h3>Xem trước · {bulkEntries.length} lượt thay đổi</h3>
+          <p>{selectedRows.length} SKU đã chọn · {bulkChannels.length} kênh ·
+            {bulkAction==="show"?" Bật hiển thị":" Ẩn sản phẩm"}.
+            Các lượt không thay đổi trạng thái được bỏ qua.</p>
+          <div className="import-table-wrap"><table className="import-table"><thead><tr>
+            <th>Mã SKU</th><th>Kênh</th><th>Hiện tại</th><th>Sau cập nhật</th>
+          </tr></thead><tbody>
+            {bulkEntries.slice(0,20).map(entry=><tr key={entry.sku_cong_ty+":"+entry.channel_code}>
+              <td>{entry.sku_cong_ty}</td>
+              <td>{CHANNELS.find(channel=>channel.code===entry.channel_code)?.label}</td>
+              <td>{visibility[entry.sku_cong_ty+":"+entry.channel_code]?.state==="published"?"Hiện":"Ẩn"}</td>
+              <td>{bulkAction==="show"?"Hiện":"Ẩn"}</td>
+            </tr>)}
+          </tbody></table></div>
+          {bulkEntries.length>20&&<small>Hiển thị 20/{bulkEntries.length} lượt; toàn bộ danh sách được kiểm tra khi xác nhận.</small>}
+          <p className="fb-managed-warning">Chỉ thay đổi hiển thị sản phẩm. Không công khai giá NET hoặc giá riêng.</p>
+        </div>}
+        <div className="fb-product-modal-actions">
+          {bulkStep==="preview"&&<button type="button" className="import-btn import-secondary"
+            disabled={busy} onClick={()=>setBulkStep("setup")}>Quay lại</button>}
+          {bulkStep==="setup"?
+            <button type="button" className="import-btn import-primary"
+              disabled={busy||!bulkChannels.length||!selectedRows.length||bulkEntries.length===0}
+              onClick={()=>setBulkStep("preview")}>Xem trước</button>:
+            <button type="button" className="import-btn import-primary"
+              disabled={busy||pendingKeys.length>0||bulkEntries.length===0}
+              onClick={applyBulkVisibility}>
+              {busy?"Đang cập nhật…":"Xác nhận "+bulkEntries.length+" thay đổi"}
+            </button>}
+        </div>
+      </div>
+      <AdminToast message={error||message} variant={error?"error":"success"} onClose={clearToast}/>
+    </ProductModal>}
     {groupMode&&<div className="catalogue-group-trigger">
       <span><b>Nhóm mẫu</b> · Đã chọn {selected.length} SKU để ghép nhiều mẫu trong một thẻ.</span>
       <div className="catalogue-group-trigger-actions">

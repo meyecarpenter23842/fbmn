@@ -78,7 +78,9 @@ test("buttons and fields keep shared geometry without screen-level sizing copies
  assert.doesNotMatch(prices,/\.fb-managed-prices \.import-btn\s*\{/);
  assert.match(css,/input\[type="date"\]/);
  assert.match(css,/input\[type="search"\]/);
- assert.doesNotMatch(css,/input\[type="checkbox"\]/);
+ const fieldGeometry=css.slice(css.indexOf("/* Native file inputs"),css.indexOf("/* The tab content boundary"));
+ assert.doesNotMatch(fieldGeometry,/input\[type="checkbox"\]/,
+  "checkboxes remain excluded from shared text-field height rule but may have dedicated styles");
 });
 
 test("mandatory smooth motion and compact purple popup header rules persist across AI sessions",()=>{

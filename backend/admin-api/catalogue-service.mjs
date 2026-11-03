@@ -85,7 +85,7 @@ export async function handleCatalogue({request,actor,db,r2}) {
   if(url.pathname.startsWith("/v1/admin/catalogue/media/"))
     return handleMedia({request,actor,db,r2});
   const route=url.pathname.slice("/v1/admin/catalogue/".length);
-  if(!["snapshot","skus","families","categories","apply","sync","group","visibility","membership"].includes(route))
+  if(!["snapshot","skus","families","categories","apply","sync","group","visibility","visibility-bulk","membership"].includes(route))
     return fail("not_found",404);
   if(!roles.has(actor?.role))return fail("forbidden",403);
   if(url.search)return fail("invalid_query");
@@ -110,6 +110,56 @@ export async function handleCatalogue({request,actor,db,r2}) {
   let input;
   try{input=await parsed(request);}catch{return fail("invalid_body");}
   try{
+    if(route==="visibility-bulk" && request.method==="POST"){
+      if(actor.role!=="owner")return fail("owner_required",403);
+      const entries=input?.entries;
+      if(!Array.isArray(entries)||entries.length<1||entries.length>600||
+         typeof input.visible!=="boolean"||
+         input.confirm!=="CAP_NHAT_HIEN_THI_HANG_LOAT"||
+         entries.some(row=>!row||!validSku(row.sku_cong_ty)||
+           !["public_web","dealer_app","consumer_app"].includes(row.channel_code)||
+           !Number.isSafeInteger(row.expected_revision)||row.expected_revision<0))
+        return fail("invalid_visibility_batch");
+      const skus=[...new Set(entries.map(row=>row.sku_cong_ty))];
+      const channels=[...new Set(entries.map(row=>row.channel_code))];
+      const keys=entries.map(row=>row.sku_cong_ty.toUpperCase()+":"+row.channel_code);
+      if(skus.length>200||channels.length>3||new Set(keys).size!==entries.length)
+        return fail("invalid_visibility_batch");
+      const saved=await transactional(db,async c=>{
+        // Lock SKU rows in a deterministic order. Single-SKU writes acquire
+        // the same lock; all expected revisions are checked before any update.
+        const found=await c.query(
+          "SELECT sku_cong_ty FROM fbmn_catalog.skus WHERE sku_cong_ty=ANY($1::text[]) ORDER BY sku_cong_ty FOR UPDATE",
+          [skus]);
+        if(found.rowCount!==skus.length)throw Error("sku_not_found");
+        const current=await c.query(
+          "SELECT sku_cong_ty,channel_code,revision FROM fbmn_catalog.publications "+
+          "WHERE sku_cong_ty=ANY($1::text[]) AND channel_code=ANY($2::text[]) FOR UPDATE",
+          [skus,channels]);
+        const revisions=new Map(current.rows.map(row=>[row.sku_cong_ty+":"+row.channel_code,row.revision]));
+        if(entries.some(row=>(revisions.get(row.sku_cong_ty+":"+row.channel_code)??0)!==row.expected_revision))
+          throw Error("catalogue_conflict");
+        const result=await c.query(
+          "INSERT INTO fbmn_catalog.publications "+
+          "(sku_cong_ty,channel_code,state,approved_by,approved_at,published_at,revision) "+
+          "SELECT x.sku_cong_ty,x.channel_code,CASE WHEN $2::boolean THEN 'published' ELSE 'hidden' END,"+
+          "$3,now(),CASE WHEN $2::boolean THEN now() ELSE NULL END,x.expected_revision+1 "+
+          "FROM jsonb_to_recordset($1::jsonb) AS x(sku_cong_ty text,channel_code text,expected_revision integer) "+
+          "ON CONFLICT(sku_cong_ty,channel_code) DO UPDATE SET "+
+          "state=EXCLUDED.state,approved_by=EXCLUDED.approved_by,approved_at=EXCLUDED.approved_at,"+
+          "published_at=EXCLUDED.published_at,revision=fbmn_catalog.publications.revision+1 "+
+          "WHERE fbmn_catalog.publications.revision=EXCLUDED.revision-1 "+
+          "RETURNING sku_cong_ty,channel_code,state,revision",
+          [JSON.stringify(entries),input.visible,actor.subject]);
+        if(result.rowCount!==entries.length)throw Error("catalogue_conflict");
+        await audit(c,actor.subject,"channel_visibility_bulk",{
+          sku_count:skus.length,channels,visible:input.visible,
+          pairs:result.rowCount,sku_cong_ty:skus
+        });
+        return result.rows;
+      });
+      return reply(200,{data:{items:saved,updated:saved.length,sku_count:skus.length}});
+    }
     if(route==="visibility" && request.method==="POST"){
       if(actor.role!=="owner")return fail("owner_required",403);
       if(!validSku(input?.sku_cong_ty)||
