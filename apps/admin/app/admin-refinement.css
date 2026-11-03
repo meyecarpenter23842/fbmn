@@ -52,9 +52,6 @@
 .catalogue-existing-row small { color:#7b85a2; flex-shrink:0; }
 .catalogue-existing-row button { border:0; background:none; padding:2px 0; text-align:left; color:#3b4384; font-weight:700; cursor:pointer; }
 .catalogue-existing-row button:hover { text-decoration:underline; }
-.catalogue-toast { position:fixed; right:12px; top:12px; z-index:20050; width:min(320px,calc(100vw - 24px)); display:flex; gap:9px; align-items:flex-start; border:1px solid #e6dbea; border-left:3px solid #6d249e; border-radius:11px; padding:9px 10px; background:#fff; color:#30243c; box-shadow:0 10px 25px rgba(37,23,58,.15); font-size:12px; line-height:1.45; animation:fb-toast-in .22s var(--fb-ease) both; }
-.catalogue-toast button { border:0; border-radius:7px; background:transparent; color:#6c6475; font-size:18px; line-height:1; padding:2px 5px; flex-shrink:0; }
-@keyframes fb-toast-in { from { opacity:0; transform:translateY(-9px); } to { opacity:1; transform:translateY(0); } }
 @media(max-width:1080px){.catalogue-editor-shell{grid-template-columns:1fr}.catalogue-editor-media .catalogue-media-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media(max-width:780px){
   .workspace{min-height:100dvh}
@@ -63,7 +60,6 @@
   .workspace-main { scrollbar-gutter:auto; }
   .brand-symbol { height:60px; max-width:178px; }
   .catalogue-editor-media .catalogue-media-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
-  .catalogue-toast { top:12px; right:12px; }
 }
 /* Channel controls keep geometry stable while requests are in flight. */
 .catalogue-channel-actions .import-btn {
@@ -99,14 +95,12 @@
   border-color:#7676dc;
   box-shadow:0 0 0 3px rgba(78,92,190,.14);
 }
-.catalogue-toast span { min-width:0; overflow-wrap:anywhere; }
 @media (max-width:780px) {
   .sidebar:not(.sidebar-open) { visibility:hidden; pointer-events:none; }
   .sidebar.sidebar-open { visibility:visible; }
 }
 @media(prefers-reduced-motion:reduce){
   .side-link,.surface,.metric,.import-btn,.btn,.catalogue-actions-trigger,.catalogue-list-table tbody tr { transition:none!important; transform:none!important; }
-  .catalogue-toast { animation:none; }
 }
 
 /* G02: true edge-to-edge working area and profile pinned to top-right. */
@@ -129,16 +123,3 @@
   .top-actions{margin-left:auto;}
 }
 
-/* Owner: only save/error notifications — small fixed top-right toasts, never inline banners. */
-.catalogue-toast--success { border-left-color:#18845b; }
-.catalogue-toast--error { border-left-color:#b42318; }
-.catalogue-toast-icon { flex:none; width:19px; height:19px; display:grid; place-items:center; border-radius:50%; background:#f3eafa; color:#572080; font-size:12px; font-weight:800; }
-.catalogue-toast--success .catalogue-toast-icon { background:#e9f6ee; color:#18845b; }
-.catalogue-toast--error .catalogue-toast-icon { background:#fff1ef; color:#b42318; }
-.catalogue-toast-text { flex:1; min-width:0; overflow-wrap:anywhere; }
-.catalogue-toast button:hover { background:#f4edfa; color:#431078; }
-.catalogue-toast button:focus-visible { outline:2px solid #6d249e; outline-offset:2px; }
-.catalogue-toast-anchor { display:none; }
-/* Multiple notifications inside the existing SKU modal share one small corner stack. */
-.fb-product-modal-toast-stack { position:fixed; top:12px; right:12px; z-index:20050; width:min(320px,calc(100vw - 24px)); display:flex; flex-direction:column; gap:8px; align-items:stretch; pointer-events:none; }
-.fb-product-modal-toast-stack .catalogue-toast { position:relative; top:auto; right:auto; width:100%; pointer-events:auto; }

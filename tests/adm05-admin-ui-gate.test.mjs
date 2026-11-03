@@ -77,12 +77,13 @@ test("Polished Admin shell separates sidebar/main scroll and avoids dead navigat
   assert.doesNotMatch(page,/<span className="brand-copy">/);
   assert.match(page,/\{ key:"products",label:"Sản phẩm"/);
   assert.doesNotMatch(page,/\{ key:"banners",label:"Banner & Popup"/);
-  // The toast portal stays *inside* the modal focus trap, never on document.body.
-  assert.match(toast,/createPortal\(content,target\.host\)/);
+  // The modal host stays inside the focus trap; outside modals share the Admin toast stack.
+  assert.match(toast,/createPortal\(content,host\)/);
   assert.match(toast,/closest\("\.fb-product-modal"\)/);
   assert.doesNotMatch(toast,/createPortal\([^,]+,\s*document\.body\)/);
   assert.match(read("apps/admin/app/product-modal.tsx"),/fb-product-modal-toast-stack/);
-  assert.match(toast,/setTimeout\(onClose,duration\)/);
+  assert.match(toast,/setTimeout\(\(\)=>setClosing\(\{message,notificationId\}\),lifespan\)/);
+  assert.match(toast,/onCloseRef\.current\(\)/);
   assert.match(toast,/aria-label="Đóng thông báo"/);
   assert.match(manager,/pendingVisibility\.current\.has\(key\)/);
   assert.match(manager,/epochAtStart===visibilityEpoch\.current&&pendingVisibility\.current\.size===0/);

@@ -17,5 +17,5 @@ export const metadata: Metadata = {
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
-  return <html lang="vi"><body><div className="fb-admin">{children}</div></body></html>;
+  return <html lang="vi"><body><div className="fb-admin">{children}<div id="fb-admin-toast-root" className="fb-admin-toast-stack" aria-label="Thông báo thao tác"/></div></body></html>;
 }

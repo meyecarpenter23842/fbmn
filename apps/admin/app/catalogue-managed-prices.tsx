@@ -108,13 +108,14 @@ export default function CatalogueManagedPriceLists({view,selectedListId,onSelect
  const [loading,setLoading]=useState(true);
  const [showPriceEditor,setShowPriceEditor]=useState(false);
  const drawerRef=useRef<HTMLElement|null>(null);
- const [toast,setToast]=useState<{message:string;variant:"success"|"error"|"info"}|null>(null);
+ const [toast,setToast]=useState<{message:string;variant:"success"|"error"|"info";id:number}|null>(null);
+ const nextToastId=useRef(0);
  const [scopeForm,setScopeForm]=useState({sku_cong_ty:"",channel_code:"public_web",customer_code:"",
   price_at:""});
  const [scopeResult,setScopeResult]=useState<PriceResolution|null>(null);
  const scopeGeneration=useRef(0);
  const notify=useCallback((message:string,variant:"success"|"error"|"info"="error")=>
-  setToast({message,variant}),[]);
+  setToast({message,variant,id:++nextToastId.current}),[]);
  useEffect(()=>{onBusyChange?.(busy);},[busy,onBusyChange]);
  const chosen=useMemo(()=>lists.find(x=>x.id===chosenId)||null,[lists,chosenId]);
  const visiblePrices=loadedPriceListId===chosenId?prices:[];
@@ -311,7 +312,7 @@ export default function CatalogueManagedPriceLists({view,selectedListId,onSelect
   });
  }
  return <section className="fb-managed-prices" aria-label={view==="lists"?"Quản lý bảng giá":"Giá sản phẩm"}>
-  <AdminToast message={toast?.message||""} variant={toast?.variant||"info"} onClose={()=>setToast(null)}/>
+  <AdminToast message={toast?.message||""} variant={toast?.variant||"info"} notificationId={toast?.id} onClose={()=>setToast(null)}/>
   <div className="fb-managed-head">
    <div><h2>{view==="lists"?"Danh sách bảng giá":"Giá sản phẩm"}</h2>
     <p>{view==="lists"?"Thiết lập bảng giá và nơi sử dụng.":

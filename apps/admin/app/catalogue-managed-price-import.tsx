@@ -74,11 +74,12 @@ export default function CatalogueManagedPriceImport({selectedListId,onBusyChange
  const [exportFormat,setExportFormat]=useState<"xlsx"|"csv">("xlsx");
  const [preview,setPreview]=useState<Preview|null>(null);
  const [prepared,setPrepared]=useState<Record<string,unknown>|null>(null);
- const [toast,setToast]=useState<{message:string;variant:"success"|"error"|"info"}|null>(null);
+ const [toast,setToast]=useState<{message:string;variant:"success"|"error"|"info";id:number}|null>(null);
+ const nextToastId=useRef(0);
  const fileInput=useRef<HTMLInputElement|null>(null);
  const generation=useRef(0);
  const notify=useCallback((message:string,variant:"success"|"error"|"info"="error")=>
-  setToast({message,variant}),[]);
+  setToast({message,variant,id:++nextToastId.current}),[]);
  const selected=lists.find(item=>item.id===chosenId);
  // The selected list date is a derived fallback; only user selection changes it.
  const invalidate=()=>{generation.current++;setPreview(null);setPrepared(null);};
@@ -185,7 +186,7 @@ export default function CatalogueManagedPriceImport({selectedListId,onBusyChange
   finally{setBusy(false);}
  }
  return <section className="fb-managed-import" aria-label="Nhập cập nhật giá theo bảng giá">
-  <AdminToast message={toast?.message||""} variant={toast?.variant||"info"} onClose={()=>setToast(null)}/>
+  <AdminToast message={toast?.message||""} variant={toast?.variant||"info"} notificationId={toast?.id} onClose={()=>setToast(null)}/>
   <div className="fb-managed-import-header">
    <div><h2>Nhập / cập nhật giá</h2>
     <p>File chỉ cần Mã công ty và Giá mới (VND). Giá được nhập vào bảng giá đang chọn ở phía trên.</p></div>
