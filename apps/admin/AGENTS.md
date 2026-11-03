@@ -1,5 +1,10 @@
 # Agent instructions — Futurebook Admin (`apps/admin/**`)
 
+## Mandatory Futurebook-wide UI contract (Owner, 03/11/2026)
+
+**FIRST read `../../docs/futurebook-ui-contract.md` and root `../../AGENTS.md`.** These rules are binding for every Admin change and supersede any approximate values below:
+desktop button **36px**; input/select **40px**; mobile button **44px**; control text **13px**; radius **8–10px**; purple accents; **lavender-tinted data table headers**; **small top-right toast**; **create/edit via modal or drawer, never inline in a list**. Use shared `apps/admin/app/admin-controls.css`, not screen-scoped duplicate tab/button dimensions. CI test `tests/futurebook-ui-contract.test.mjs` must pass. Do not remove approved tabs, lose multi-channel selection, or disconnect dynamic price lists from their Excel flow as incidental simplifications.
+
 ## Mandatory UI design contract
 Before editing any Admin frontend TSX/CSS, read **[`docs/admin-ui-design-system.md`](../../docs/admin-ui-design-system.md)**. It is the canonical **component-level** visual contract for Futurebook Admin; `docs/ui-system.md` applies to the public website instead.
 

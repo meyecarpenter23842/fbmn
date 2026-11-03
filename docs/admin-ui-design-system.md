@@ -1,4 +1,6 @@
 # Futurebook Miền Nam — Admin UI Component Design System v1
+
+> **Quy chuẩn bắt buộc từ Owner (03/11/2026):** [Futurebook UI Contract](futurebook-ui-contract.md) là nguồn chuẩn cao nhất cho kích thước nút **36px desktop/44px mobile**, ô nhập **40px**, font **13px**, bo **8–10px**, header bảng dữ liệu **tím nhạt**, toast trên phải, form tạo/sửa modal/drawer. Các dải giá trị ước lượng ở v1 bên dưới chỉ là tham khảo lịch sử khi không mâu thuẫn. CSS runtime tập trung tại `apps/admin/app/admin-controls.css` và dùng chung cho mọi màn hình.
 Ngày chốt quy tắc: 03/11/2026 · Phạm vi: `apps/admin/**` · Trạng thái: **quy tắc thiết kế mục tiêu; chưa phải xác nhận đã triển khai vào CSS**.
 
 ## 0. Quyết định của Owner
@@ -44,12 +46,12 @@ Sử dụng **semantic CSS custom properties** thay cho thêm các mã hex tùy 
 
 ### 2.2 Button
 - Variants: `primary` (nền tím, chữ trắng), `secondary` (nền trắng, viền trung tính), `ghost` (trong suốt), `danger` (dùng khi xóa/thao tác phá hủy).
-- Mục tiêu height: compact 34–36px, default 40px; vùng nhấn mobile tối thiểu 44px khi đủ không gian. Border radius 9–10px, icon 16–18px, gap 8px.
+- **Bắt buộc:** button desktop 36px, button mobile 44px, font 13px; không tùy màn hình nâng lên 40/48px. Border radius 9–10px, icon 16–18px, gap 8px.
 - Rõ hover, focus-visible, active, disabled, loading; loading giữ nguyên độ rộng để tránh layout shift. Icon-only bắt buộc có accessible name/tooltip.
 - **Không biến mọi action thành nút tím đậm**, không gradient nhiều sắc và không tạo thêm CTA trùng mục đích.
 
 ### 2.3 Input / Select / Dropdown
-- Label nằm trên control, cùng kiểu, khoảng cách ~6px. Mục tiêu input height 40–44px; viền nhẹ; focus ring tím rõ và không làm layout dịch.
+- Label nằm trên control, cùng kiểu, khoảng cách ~6px. **Bắt buộc:** input/select/dropdown 40px; viền nhẹ; focus ring tím rõ và không làm layout dịch.
 - Placeholder khác dữ liệu thật; read-only khác disabled; lỗi có thông báo sát trường, không chỉ đổi màu viền.
 - Một trường chỉ có **một nơi chọn**. Không lặp tên cột ở trên rồi thêm dropdown/selector bên dưới gây thừa UI.
 - Với Excel mapping: **Bỏ qua cột = không đụng dữ liệu cột đó**; cột được ánh xạ thì mới đưa vào quy trình cập nhật. Theo quyết định UX gần nhất của Owner, **ô nguồn trống ở cột đã ánh xạ có ý nghĩa chủ động để trống/xóa dữ liệu**, KHÁC với Bỏ qua. *Chú ý:* tài liệu P3 cũ từng quy định blank giữ nguyên. Không tự sửa thuật toán khi chỉ làm skin; nếu logic hiện tại chưa khớp, tách thành thay đổi nghiệp vụ riêng, xác nhận bằng test trước deploy.

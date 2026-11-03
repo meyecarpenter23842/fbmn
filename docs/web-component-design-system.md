@@ -1,4 +1,6 @@
 # Futurebook Miền Nam — Website component design v1
+
+> **Quy chuẩn chung ưu tiên:** [Futurebook UI Contract](futurebook-ui-contract.md) — button desktop 36px/mobile 44px, field 40px, font control 13px, radius 8–10px, header data grid lavender, toast gọn trên phải, form tạo/sửa modal/drawer. Trên website giữ ngoại lệ CTA đỏ đã duyệt; không đồng nhất bố cục Website với Admin.
 Ngày: 03/11/2026. Áp dụng cho website công khai tại repo root, KHÔNG đồng nhất bố cục với Admin.
 
 - Không thay bố cục, khối nội dung, sản phẩm, màu sắc brand đã duyệt (tím nền tảng, CTA đỏ tại vị trí hiện có), không thêm dock mobile.

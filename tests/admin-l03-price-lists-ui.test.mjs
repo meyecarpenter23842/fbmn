@@ -35,10 +35,10 @@ test("price list API authenticates Owner and scopes are not public",()=>{
 test("shared button geometry is consistent and retains mobile hit target",()=>{
  const controls=read("apps/admin/app/admin-controls.css");
  const layout=read("apps/admin/app/layout.tsx");
- assert.match(controls,/--fb-control-height-compact:36px/);
- assert.match(controls,/--fb-control-height-touch:44px/);
- assert.match(controls,/\.fb-admin :is\(\.btn,\.import-btn,\.catalogue-actions-trigger\)/);
- assert.match(controls,/align-items:center/);
+ assert.match(controls,/--fb-control-height-compact:\s*36px/);
+ assert.match(controls,/--fb-control-height-touch:\s*44px/);
+ assert.match(controls,/\.fb-admin :is\(\.btn,\s*\.import-btn,\s*\.catalogue-actions-trigger,\s*\.fb-ui-button\)/);
+ assert.match(controls,/align-items:\s*center/);
  assert.match(layout,/import "\.\/admin-controls\.css"/);
 });
 

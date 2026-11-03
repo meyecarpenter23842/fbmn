@@ -2,6 +2,10 @@
 
 **Một backend dùng chung cho Website + App Đại lý/NPP + App End-user.** Website đang chạy; app native iOS/Android sẽ phát triển phần frontend về sau. Backend admin đa kênh hiện đang ở giai đoạn lập kế hoạch.
 
+## Quy chuẩn UI bắt buộc cho mọi chat/AI/PR
+
+Trước mọi công việc liên quan đến giao diện Futurebook, đọc [root AGENTS.md](AGENTS.md) và [Futurebook UI Contract](docs/futurebook-ui-contract.md). Đây là quy chuẩn chung cho nút (36px desktop, 44px mobile), input/dropdown (40px), chữ điều khiển (13px), bo góc (8–10px), điểm nhấn tím, header bảng lavender nhạt, toast góc trên phải và popup/drawer cho form tạo/sửa. CI có kiểm thử hợp đồng UI; không tự deploy.
+
 ## Kế hoạch & GitHub Issues
 
 - **[Roadmap duy nhất](docs/roadmap.md)** — scope, kênh, phân quyền, ưu tiên, điều kiện nghiệm thu và release.

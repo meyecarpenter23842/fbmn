@@ -1,20 +1,12 @@
-/* Separate pricing modes: keep the SKU inspector out of the Excel workflow. */
-.fb-pricing-tabs{display:flex;align-items:center;gap:4px;max-width:100%;overflow-x:auto;margin:16px 0 16px;padding:4px;border:1px solid var(--fb-ui-border,#e4e7ef);border-radius:12px;background:var(--fb-ui-surface,#fff)}
-.fb-pricing-tabs button{font:inherit;font-size:13px;font-weight:650;line-height:1.4;min-height:40px;padding:9px 16px;border:1px solid transparent;border-radius:9px;background:transparent;color:var(--fb-ui-muted,#667085);white-space:nowrap;cursor:pointer}
-.fb-pricing-tabs button:hover:not(:disabled){background:var(--fb-ui-primary-subtle,#f4edfa);color:var(--fb-ui-primary-strong,#431078)}
-.fb-pricing-tabs button.active{background:var(--fb-ui-primary-subtle,#f4edfa);border-color:#ddc8f0;color:var(--fb-ui-primary-strong,#431078)}
-.fb-pricing-tabs button:focus-visible{outline:2px solid var(--fb-ui-primary,#6d249e);outline-offset:2px}
-.fb-pricing-tabs button:disabled{opacity:.55;cursor:not-allowed}
-.fb-pricing-tab-content{min-width:0}
-.fb-pricing-tab-content .fb-price-bulk{margin:0 0 20px}
-@media(max-width:520px){.fb-pricing-tabs button{padding:10px 12px;font-size:12px;min-height:44px}}
+/* Shared navigation tabs and tab-content geometry live in admin-controls.css. */
+.fb-price-bulk{margin:0 0 20px}
 
 .fb-price-bulk{margin:16px 0 20px;padding:16px 18px;border:1px solid #e4e7ef;border-radius:14px;background:#fff;box-shadow:0 4px 18px rgba(32,24,70,.045);font-size:14px;color:#20223b}
 .fb-price-bulk-heading,.fb-price-bulk-history-head{display:flex;align-items:center;justify-content:space-between;gap:16px}
 .fb-price-bulk-heading strong{display:block;font-size:16px}
 .fb-price-bulk-heading small,.fb-price-bulk small{display:block;color:#667085;font-size:12px;line-height:1.5}
 .fb-price-bulk-tools,.fb-price-bulk-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-.fb-price-bulk .import-btn{min-height:36px;white-space:nowrap}
+.fb-price-bulk .import-btn{white-space:nowrap}
 .fb-price-bulk .import-btn:focus-visible,.fb-price-bulk input:focus-visible,.fb-price-bulk select:focus-visible{outline:2px solid #6d249e;outline-offset:2px}
 .fb-price-bulk-form{margin-top:16px;padding-top:16px;border-top:1px solid #e4e7ef}
 .fb-price-bulk-settings{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
@@ -29,7 +21,7 @@
 .fb-price-bulk-scroll{max-width:100%;overflow-x:auto;border:1px solid #e4e7ef;border-radius:10px;background:#fff}
 .fb-price-bulk table{border-collapse:collapse;width:100%;font-size:13px;text-align:left;white-space:nowrap}
 .fb-price-bulk th,.fb-price-bulk td{padding:10px 12px;border-bottom:1px solid #eff0f5;vertical-align:middle}
-.fb-price-bulk th{background:#f7f8fc;color:#45445c;font-weight:600}
+.fb-price-bulk th{font-weight:600}
 .fb-price-bulk tr:last-child td{border-bottom:0}
 .fb-price-bulk tbody tr:hover{background:#f8f5fc}
 .fb-price-bulk th select{min-width:158px;width:100%;max-width:210px;border-radius:8px;border:1px solid #cdd0db;padding:7px;background:white;color:#20223b;font:inherit}

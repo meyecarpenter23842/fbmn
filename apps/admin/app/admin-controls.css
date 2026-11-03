@@ -1,23 +1,145 @@
-/* Shared Admin control geometry. One contract, not per-screen padding hacks. */
-:root{--fb-control-height-compact:36px;--fb-control-height-default:40px;
- --fb-control-height-touch:44px;--fb-control-radius:9px;--fb-control-font-size:13px}
-.fb-admin :is(.btn,.import-btn,.catalogue-actions-trigger){
- box-sizing:border-box;min-height:var(--fb-control-height-compact);
- height:var(--fb-control-height-compact);padding:0 12px;
- border-radius:var(--fb-control-radius);font-size:var(--fb-control-font-size);
- line-height:1.35;display:inline-flex;align-items:center;justify-content:center;
- gap:8px;vertical-align:middle;white-space:nowrap
+/*
+ * Futurebook Admin shared component contract.
+ * Canonical Owner policy: docs/futurebook-ui-contract.md.
+ * Keep control geometry, tabs and data table header styling in ONE file.
+ */
+:root {
+  --fb-ui-primary: #6d249e;
+  --fb-ui-primary-hover: #572080;
+  --fb-ui-primary-strong: #431078;
+  --fb-ui-primary-subtle: #f4edfa;
+  --fb-ui-table-header-bg: #f4edfa;
+  --fb-ui-table-header-ink: #43215f;
+  --fb-ui-table-header-border: #e5d7f1;
+  --fb-control-height-compact: 36px;
+  --fb-control-height-default: 40px;
+  --fb-field-height: 40px;
+  --fb-control-height-touch: 44px;
+  --fb-control-radius: 9px;
+  --fb-control-font-size: 13px;
 }
-.fb-admin :is(.btn,.import-btn,.catalogue-actions-trigger) svg{
- width:16px;height:16px;flex:none
+
+.fb-admin :is(.btn, .import-btn, .catalogue-actions-trigger, .fb-ui-button) {
+  box-sizing: border-box;
+  height: var(--fb-control-height-compact);
+  min-height: var(--fb-control-height-compact);
+  padding: 0 12px;
+  border-radius: var(--fb-control-radius);
+  font-size: var(--fb-control-font-size);
+  line-height: 1.35;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  vertical-align: middle;
+  white-space: nowrap;
 }
-.fb-admin .fb-pricing-tabs button{box-sizing:border-box;min-height:40px;padding:0 14px;
- display:inline-flex;align-items:center;justify-content:center;font-size:13px;line-height:1.35}
-.fb-admin :is(.btn,.import-btn,.catalogue-actions-trigger):focus-visible{
- outline:2px solid #6d249e;outline-offset:2px
+
+.fb-admin :is(.btn, .import-btn, .catalogue-actions-trigger, .fb-ui-button) svg {
+  width: 16px;
+  height: 16px;
+  flex: none;
 }
-@media(max-width:780px){
- .fb-admin :is(.btn,.import-btn,.catalogue-actions-trigger){height:var(--fb-control-height-touch);
- min-height:var(--fb-control-height-touch)}
- .fb-admin .fb-pricing-tabs button{min-height:44px}
+
+/* Native file inputs, checkboxes, radio buttons and color/range controls
+   are deliberately excluded from the text-field contract. */
+.fb-admin :is(
+  input:not([type]),
+  input[type="text"],
+  input[type="search"],
+  input[type="email"],
+  input[type="password"],
+  input[type="number"],
+  input[type="date"],
+  input[type="datetime-local"],
+  input[type="tel"],
+  input[type="url"],
+  select,
+  .fb-ui-field,
+  .fb-ui-select
+) {
+  box-sizing: border-box;
+  height: var(--fb-field-height);
+  min-height: var(--fb-field-height);
+  border-radius: var(--fb-control-radius);
+  font-size: var(--fb-control-font-size);
+}
+
+/* The tab content boundary is part of the shared navigation, not Excel CSS. */
+.fb-admin .fb-pricing-tab-content {
+  min-width: 0;
+}
+/* The navigation tabs are part of the Admin shell, not of the legacy Excel
+   screen. They MUST render correctly even if Excel-related CSS is removed. */
+.fb-admin .fb-pricing-tabs {
+  display: flex;
+  align-items: center;
+  flex-wrap: nowrap;
+  gap: 4px;
+  max-width: 100%;
+  overflow-x: auto;
+  margin: 16px 0;
+  padding: 4px;
+  border: 1px solid var(--fb-ui-border, #e4e7ef);
+  border-radius: 12px;
+  background: var(--fb-ui-surface, #fff);
+}
+
+.fb-admin .fb-pricing-tabs > button {
+  box-sizing: border-box;
+  height: var(--fb-control-height-compact);
+  min-height: var(--fb-control-height-compact);
+  padding: 0 12px;
+  border: 1px solid transparent;
+  border-radius: var(--fb-control-radius);
+  background: transparent;
+  color: var(--fb-ui-muted, #667085);
+  font-family: inherit;
+  font-size: var(--fb-control-font-size);
+  font-weight: 650;
+  line-height: 1.35;
+  white-space: nowrap;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.fb-admin .fb-pricing-tabs > button:hover:not(:disabled) {
+  background: var(--fb-ui-primary-subtle);
+  color: var(--fb-ui-primary-strong);
+}
+
+.fb-admin .fb-pricing-tabs > button.active,
+.fb-admin .fb-pricing-tabs > button[aria-current="page"] {
+  background: var(--fb-ui-primary-subtle);
+  border-color: var(--fb-ui-table-header-border);
+  color: var(--fb-ui-primary-strong);
+}
+
+.fb-admin .fb-pricing-tabs > button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.fb-admin :is(.btn, .import-btn, .catalogue-actions-trigger, .fb-ui-button):focus-visible,
+.fb-admin .fb-pricing-tabs > button:focus-visible {
+  outline: 2px solid var(--fb-ui-primary);
+  outline-offset: 2px;
+}
+
+/* Every Admin data table/header now has a subtle purple accent, including
+   custom price list grids, Excel previews, and catalogue tables. */
+.fb-admin :is(table thead th, [role="columnheader"], .fb-ui-data-header) {
+  background-color: var(--fb-ui-table-header-bg);
+  color: var(--fb-ui-table-header-ink);
+  border-bottom-color: var(--fb-ui-table-header-border);
+}
+
+@media (max-width: 780px) {
+  .fb-admin :is(.btn, .import-btn, .catalogue-actions-trigger, .fb-ui-button),
+  .fb-admin .fb-pricing-tabs > button {
+    height: var(--fb-control-height-touch);
+    min-height: var(--fb-control-height-touch);
+  }
 }
