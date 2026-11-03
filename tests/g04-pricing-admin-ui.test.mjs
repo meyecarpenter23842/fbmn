@@ -22,13 +22,15 @@ test("G04 UI keeps price memory private, gates by verified Admin session, and re
  assert.match(panel,/if\(prices.status===403\|\|session.status===403\)/);
  assert.match(panel,/setOwner\(identity.data\?\.role==="owner"\)/);
  assert.match(panel,/if\(!owner\|\|saving\|\|loading\)return/);
- assert.match(panel,/Chưa thiết lập. Không đồng nghĩa 0 đồng/);
+ assert.match(panel,/Chưa có giá cho loại này. Không có giá không có nghĩa là 0 đồng/);
  assert.match(panel,/Chưa được duyệt hoặc công khai/);
- assert.match(panel,/Giá NET nội bộ/);
- assert.match(panel,/Giá bán lẻ \(chưa công bố\)/);
- assert.match(panel,/Giá theo đại lý/);
+ assert.match(panel,/Giá NET/);
+ assert.match(panel,/Giá bán lẻ/);
+ assert.match(panel,/Giá đại lý/);
  assert.match(panel,/source_document:form.source.trim\(\)/);
- assert.match(panel,/effective_from:form.date/);
+ assert.match(panel,/effective_from:effectiveFrom/);
+ assert.match(panel,/Date\.now\(\)\+7\*60\*60\*1000/);
+ assert.doesNotMatch(panel,/!form\.date\|\|/);
  assert.match(panel,/expected_revision:editing.revision/);
  assert.match(panel,/confirm:"LUU_GIA_NHAP"/);
  assert.match(panel,/confirm:"CAP_NHAT_GIA_NHAP"/);
@@ -37,9 +39,9 @@ test("G04 UI keeps price memory private, gates by verified Admin session, and re
 test("G04 source/VAT must be explicit and never infer retail price from NET",()=>{
  const panel=read("apps/admin/app/catalogue-pricebook-panel.tsx");
  assert.match(panel,/vatIncluded:"" as ""\|"yes"\|"no"/);
- assert.match(panel,/form.vatIncluded===""\|\|/);
+ assert.match(panel,/if\(form.vatIncluded===""\)/);
  assert.match(panel,/!form.source.trim\(\)/);
- assert.match(panel,/form.until<form.date/);
+ assert.match(panel,/form.until<effectiveFrom/);
  assert.match(panel,/!validUuid\(form.customerId\)/);
  assert.doesNotMatch(panel,/price_kind:"retail_public".*net_internal/);
  assert.doesNotMatch(panel,/\/\s*1\.08|\*\s*1\.08/);

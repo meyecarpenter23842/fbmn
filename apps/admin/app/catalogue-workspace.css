@@ -88,29 +88,62 @@
 
 
 /* G04 — pricebook is client-only, never serialized into the public catalogue. */
-.catalogue-pricebook{min-width:0;grid-column:1/-1;background:#fff;border:1px solid #dadff0;border-radius:13px;padding:15px;display:grid;gap:13px}
 .catalogue-pricebook-head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
 .catalogue-pricebook-head h4{margin:0;color:#37336e;font-size:16px}
 .catalogue-pricebook-head small,.catalogue-pricebook-muted{font-size:12px;color:#737c9b}
 .catalogue-pricebook-body{display:grid;gap:12px;min-width:0}
-.catalogue-pricebook-kinds{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
-.catalogue-pricebook-kinds button{border:1px solid #d9dff0;background:#fbfbff;border-radius:9px;padding:10px 11px;display:grid;gap:4px;text-align:left;font-size:12px;font-weight:750;color:#4f567e;cursor:pointer}
-.catalogue-pricebook-kinds button small{font-size:10px;color:#8287a0;font-weight:500}
-.catalogue-pricebook-kinds button.active{border-color:#aaa9df;background:#eeedfd;color:#443e9b}
 .catalogue-pricebook-content{display:grid;gap:13px;min-width:0}
 .catalogue-pricebook-notice{padding:12px;border-radius:10px;background:#f5f6fc;display:grid;gap:4px;font-size:12px;color:#626c8f}
 .catalogue-pricebook-notice strong{color:#3c3c7b}
-.catalogue-pricebook-empty{font-size:12px;color:#727b99;font-weight:650;margin:0;padding:12px;border:1px dashed #ccd2e5;border-radius:8px}
 .catalogue-pricebook-entries{display:grid;gap:8px;max-height:250px;overflow-y:auto}
-.catalogue-pricebook-entry{display:flex;gap:14px;justify-content:space-between;align-items:center;padding:11px;border:1px solid #e5e6f2;border-radius:9px}
 .catalogue-pricebook-entry>div{display:grid;gap:4px;min-width:0}
 .catalogue-pricebook-entry strong{font-size:15px;color:#353677}
 .catalogue-pricebook-entry small{font-size:11px;color:#67738f;overflow-wrap:anywhere}
-.catalogue-pricebook-form{display:grid;gap:12px;padding-top:12px;border-top:1px solid #e6e8f3}
 .catalogue-pricebook-form-title{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;color:#37376f;font-size:13px}
 .catalogue-pricebook-form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
 .catalogue-pricebook-form-grid label{display:grid;align-content:start;gap:6px;font-size:12px;font-weight:700;color:#5d6688;min-width:0}
 .catalogue-pricebook-form-grid :where(input,select){width:100%;min-width:0;min-height:39px;border:1px solid #d2d9e9;border-radius:8px;background:#fff;color:#343d66;padding:8px 10px;font-size:12px}
 .catalogue-pricebook-wide{grid-column:1/-1}
 .catalogue-pricebook-form>.import-btn{justify-self:start}
-@media(max-width:760px){.catalogue-pricebook-kinds{grid-template-columns:1fr}.catalogue-pricebook-form-grid{grid-template-columns:1fr}.catalogue-pricebook-entry{align-items:flex-start;flex-direction:column}}
+.catalogue-pricebook{min-width:0;grid-column:1/-1;display:grid;gap:12px;background:#fff;border:1px solid #e3e5ec;border-radius:13px;padding:17px;box-shadow:0 2px 12px rgb(33 29 67 / 3%)}
+.catalogue-pricebook-lead{font-size:12px;line-height:1.55;color:#6f748c;margin:0}
+.catalogue-pricebook-lead strong{color:#33315f}
+.catalogue-pricebook-kinds{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+.catalogue-pricebook-kinds button{display:grid;text-align:left;cursor:pointer;font-size:12px;font-weight:750;color:#4f567e;gap:6px;border:1px solid #e0e1eb;background:#fff;border-radius:12px;padding:12px 13px;box-shadow:0 1px 4px rgb(33 29 67 / 3%);transition:background .16s,border-color .16s,box-shadow .16s}
+.catalogue-pricebook-kinds button strong{font-size:13px;font-weight:750;color:#2f3255}
+.catalogue-pricebook-kinds button small{font-size:11px;font-weight:400;line-height:1.4;color:#6d738d}
+.catalogue-pricebook-kinds button span{font-size:10px;font-weight:650;color:#747b95}
+.catalogue-pricebook-kinds button.active{border-color:#6a59ce;background:#f8f7fe;box-shadow:0 0 0 1px rgb(106 89 206 / 14%)}
+.catalogue-pricebook-kinds button.active strong,.catalogue-pricebook-kinds button.active span{color:#5941bc}
+.catalogue-pricebook-kinds button:focus-visible,.catalogue-pricebook-vat-options button:focus-visible,.catalogue-pricebook-advanced summary:focus-visible{outline:2px solid #6a59ce;outline-offset:3px}
+.catalogue-pricebook-selection{display:flex;align-items:baseline;justify-content:space-between;gap:7px 14px;flex-wrap:wrap}
+.catalogue-pricebook-selection strong{color:#343158;font-size:13px}
+.catalogue-pricebook-selection small{font-size:11px;color:#72768d}
+.catalogue-pricebook-empty{margin:0;border:1px dashed #ccd2e5;border-radius:8px;font-size:12px;color:#727b99;background:#fbfcfe;padding:10px 12px;font-weight:500}
+.catalogue-pricebook-entry{display:flex;gap:14px;justify-content:space-between;align-items:center;padding:11px;border:1px solid #e5e6f2;border-radius:9px;background:#fff}
+.catalogue-pricebook-form{display:grid;gap:13px;padding-top:12px;border-top:1px solid #e6e8f3}
+.catalogue-pricebook-form-title strong{font-size:14px}
+.catalogue-pricebook-quick-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.catalogue-pricebook-quick-grid label,.catalogue-pricebook-vat legend{display:grid;gap:6px;align-content:start;font-size:12px;font-weight:700;color:#424566}
+.catalogue-pricebook-quick-grid label{min-width:0}
+.catalogue-pricebook-quick-grid label>span,.catalogue-pricebook-vat legend span{color:#8055be}
+.catalogue-pricebook-quick-grid label>small,.catalogue-pricebook-advanced label small{font-size:10px;line-height:1.5;color:#83879e;font-weight:400}
+.catalogue-pricebook-quick-grid input{width:100%;min-width:0;min-height:43px;padding:9px 12px;border:1px solid #d8dce7;border-radius:10px;background:#fff;font-size:13px;color:#292d56}
+.catalogue-pricebook-quick-grid input:focus-visible,.catalogue-pricebook-form-grid input:focus-visible{outline:2px solid #6a59ce;outline-offset:1px}
+.catalogue-pricebook-vat{min-width:0;border:0;margin:0;padding:0;display:grid;align-content:start;gap:6px}
+.catalogue-pricebook-vat-options{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.catalogue-pricebook-vat-options button{min-height:43px;padding:8px;border:1px solid #d9dce8;border-radius:10px;background:#fff;color:#424969;font-size:12px;font-weight:650;cursor:pointer;transition:border-color .15s,background .15s}
+.catalogue-pricebook-vat-options button.active{border-color:#6a59ce;background:#f0ecff;color:#553cba}
+.catalogue-pricebook-source,.catalogue-pricebook-dealer{grid-column:1/-1}
+.catalogue-pricebook-advanced{border-top:1px solid #eeeef5;padding-top:10px}
+.catalogue-pricebook-advanced summary{font-size:12px;color:#5b4aa5;font-weight:650;cursor:pointer;width:fit-content;padding:6px 0}
+.catalogue-pricebook-advanced .catalogue-pricebook-form-grid{margin-top:12px}
+.catalogue-pricebook-advanced .catalogue-pricebook-form-grid label{display:grid;gap:6px;font-size:12px}
+.catalogue-pricebook-actions{display:flex;align-items:center;flex-wrap:wrap;gap:10px}
+.catalogue-pricebook-actions .import-btn{min-width:116px;min-height:40px}
+.catalogue-pricebook-actions>span{font-size:11px;color:#777c94;line-height:1.5}
+.catalogue-pricebook-inline-error{margin:0;color:#ab342b;background:#fff4f2;border:1px solid #f0c4bc;border-radius:9px;padding:10px 12px;font-size:12px}
+.catalogue-pricebook-inline-success{margin:0;color:#246547;background:#f1faf5;border:1px solid #b7dfcb;border-radius:9px;padding:10px 12px;font-size:12px}
+@media(max-width:760px){.catalogue-pricebook-entry{align-items:flex-start;flex-direction:column}.catalogue-pricebook-form-grid{grid-template-columns:1fr}.catalogue-pricebook-quick-grid{grid-template-columns:1fr}.catalogue-pricebook-selection{display:grid}.catalogue-pricebook-kinds{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:480px){.catalogue-pricebook-kinds{grid-template-columns:1fr}.catalogue-pricebook-vat-options{grid-template-columns:repeat(2,minmax(0,1fr))}.catalogue-pricebook{padding:12px}}
+@media(prefers-reduced-motion:reduce){.catalogue-pricebook-kinds button,.catalogue-pricebook-vat-options button{transition:none}}

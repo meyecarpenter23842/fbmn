@@ -8,11 +8,11 @@ type PriceEntry={id:string;sku_cong_ty:string;price_kind:PriceKind;customer_id:s
  approval_state:"draft";revision:number};
 type PriceList={entries:PriceEntry[];currency:string;empty:boolean};
 type Data<T>={data?:T;error?:{code?:string}};
-const KINDS:[PriceKind,string][]=[
- ["source","Giá nguồn / bảng giá"],
- ["net_internal","Giá NET nội bộ"],
- ["retail_public","Giá bán lẻ (chưa công bố)"],
- ["dealer_contract","Giá theo đại lý"]
+const KINDS:[PriceKind,string,string][]=[
+ ["source","Giá bảng giá","Theo tài liệu gốc của công ty, chưa chắc là giá NET."],
+ ["net_internal","Giá NET","Giá NET nội bộ đã xác minh, không tự trừ chiết khấu."],
+ ["retail_public","Giá bán lẻ","Giá dành cho người tiêu dùng, chưa công khai."],
+ ["dealer_contract","Giá đại lý","Giá riêng cho tài khoản đại lý đã có."]
 ];
 const validUuid=(value:string)=>/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(value);
 const formatVnd=(value:string)=>/^[0-9]+$/.test(value)?
@@ -35,7 +35,7 @@ export default function CataloguePricebookPanel({sku}:{sku:string}){
  const [error,setError]=useState("");
  const [notice,setNotice]=useState("");
  const [entries,setEntries]=useState<PriceEntry[]>([]);
- const [kind,setKind]=useState<PriceKind>("source");
+ const [kind,setKind]=useState<PriceKind>("net_internal");
  const [editing,setEditing]=useState<PriceEntry|null>(null);
  const [form,setForm]=useState(emptyForm);
  const set=(key:keyof ReturnType<typeof emptyForm>,value:string)=>
@@ -86,17 +86,27 @@ export default function CataloguePricebookPanel({sku}:{sku:string}){
   if(!owner||saving||loading)return;
   const amount=Number(form.amount);
   const percent=Number(form.vatPercent);
-  if(!/^\d+$/.test(form.amount)||!Number.isSafeInteger(amount)||amount>1000000000000||
-      !form.source.trim()||form.source.trim().length>300||!form.date||
-      form.vatIncluded===""||form.vatPercent!==""&&
-       (!Number.isFinite(percent)||percent<0||percent>100||
-        !Number.isInteger(percent*100))){
-    setError("Cần nhập số tiền VND, nguồn giá, ngày hiệu lực và tình trạng VAT rõ ràng.");return;
+  // Viet Nam has a fixed UTC+07 offset; choose the local calendar date at save time.
+  // Do not force Owner to enter a date for ordinary price entry.
+  const effectiveFrom=editing?.effective_from||form.date||
+    new Date(Date.now()+7*60*60*1000).toISOString().slice(0,10);
+  if(!/^\d+$/.test(form.amount)||!Number.isSafeInteger(amount)||amount>1000000000000){
+    setError("Vui lòng nhập giá bằng số nguyên VND.");return;
+  }
+  if(form.vatIncluded===""){
+    setError("Vui lòng chọn giá đã gồm VAT hay chưa gồm VAT.");return;
+  }
+  if(!form.source.trim()||form.source.trim().length>300){
+    setError("Vui lòng ghi nguồn giá, ví dụ tên bảng giá hoặc mã chứng từ.");return;
+  }
+  if(form.vatPercent!==""&&
+     (!Number.isFinite(percent)||percent<0||percent>100||!Number.isInteger(percent*100))){
+    setError("Thuế suất VAT phải từ 0 đến 100%, tối đa hai chữ số thập phân.");return;
   }
   if(kind==="dealer_contract"&&!editing&&!validUuid(form.customerId)){
     setError("Giá đại lý cần đúng ID tài khoản đã có, không được tự suy khách hàng.");return;
   }
-  if(form.until&&form.until<form.date){setError("Ngày kết thúc phải từ ngày hiệu lực trở đi.");return;}
+  if(form.until&&form.until<effectiveFrom){setError("Ngày kết thúc phải từ ngày hiệu lực trở đi.");return;}
   setSaving(true);setError("");setNotice("");
   try{
    const token=await bearer();
@@ -109,7 +119,7 @@ export default function CataloguePricebookPanel({sku}:{sku:string}){
      sku_cong_ty:sku,price_kind:kind,customer_id:kind==="dealer_contract"?form.customerId:null,
      amount_vnd:amount,currency:"VND",vat_included:form.vatIncluded==="yes",
      vat_rate_bps:form.vatPercent===""?null:percent*100,
-     source_document:form.source.trim(),effective_from:form.date,effective_until:form.until||null,
+     source_document:form.source.trim(),effective_from:effectiveFrom,effective_until:form.until||null,
      confirm:"LUU_GIA_NHAP"
    };
    const response=await fetch("/api/pricing/entries",{
@@ -118,7 +128,7 @@ export default function CataloguePricebookPanel({sku}:{sku:string}){
      body:JSON.stringify(payload)
    });
    if(!response.ok)throw new Error(response.status===409?
-     "Giá đã có hoặc có người cập nhật. Tải lại trước khi sửa.":
+     (editing?"Giá đã được cập nhật bởi người khác. Hãy tải lại trước khi sửa.":"Đã có giá nháp với ngày áp dụng này. Chọn Sửa giá ở bản nháp bên trên."):
      response.status===403?"Chỉ Owner có quyền lưu giá.":"Không lưu được giá, kiểm tra thông tin và nguồn.");
    await refresh();
    startNew();
@@ -129,75 +139,100 @@ export default function CataloguePricebookPanel({sku}:{sku:string}){
  if(!loading&&!authorized&&!error)return null;
  return <section className="catalogue-pricebook" aria-label="Giá sản phẩm nội bộ">
   <div className="catalogue-pricebook-head">
-   <div><h4>Giá sản phẩm</h4><small>Chỉ nội bộ · VND · Không tự công bố</small></div>
+   <div><h4>Giá sản phẩm</h4><small>Giá nội bộ · Chỉ Owner được sửa · Chưa công khai</small></div>
    <button type="button" className="import-btn import-secondary" disabled={saving||loading}
-      onClick={()=>{setLoading(true);void refresh().catch(e=>setError(e instanceof Error?e.message:"Không tải được giá.")).finally(()=>setLoading(false));}}>
-      Làm mới giá
+     onClick={()=>{setLoading(true);void refresh().catch(e=>setError(e instanceof Error?e.message:"Không tải được giá.")).finally(()=>setLoading(false));}}>
+     Làm mới
    </button>
   </div>
-  {loading?<p className="catalogue-pricebook-muted">Đang kiểm tra quyền và tải bảng giá…</p>:
+  {loading?<p className="catalogue-pricebook-muted">Đang tải dữ liệu giá…</p>:
    authorized?<div className="catalogue-pricebook-body">
-    <div className="catalogue-pricebook-kinds" role="tablist" aria-label="Phân loại bảng giá">
-     {KINDS.map(([code,label])=><button key={code} type="button"
+    <p className="catalogue-pricebook-lead">Chọn loại giá cần nhập cho mã <strong>{sku}</strong>. Mỗi loại giá được lưu riêng, không tự tính từ nhau.</p>
+    <div className="catalogue-pricebook-kinds" role="tablist" aria-label="Chọn loại giá">
+     {KINDS.map(([code,label,description])=><button key={code} type="button"
        role="tab" aria-selected={kind===code} className={kind===code?"active":""}
        onClick={()=>{setKind(code);startNew();}}>
-       {label}
-       <small>{entries.filter(e=>e.price_kind===code).length?entries.filter(e=>e.price_kind===code).length+" bản nháp":"Chưa thiết lập"}</small>
+       <strong>{label}</strong>
+       <small>{description}</small>
+       <span>{entries.filter(e=>e.price_kind===code).length?entries.filter(e=>e.price_kind===code).length+" bản nháp":"Chưa có giá"}</span>
       </button>)}
     </div>
     <div className="catalogue-pricebook-content">
-     <div className="catalogue-pricebook-notice">
+     <div className="catalogue-pricebook-selection">
        <strong>{KINDS.find(k=>k[0]===kind)?.[1]}</strong>
-       <span>{kind==="retail_public"?"Giá lẻ chưa công khai, không suy từ giá NET.":
-         kind==="dealer_contract"?"Giá theo từng tài khoản. Chưa mở quyền B2B.":"Giá nguồn và NET được lưu độc lập, không tự tính từ nhau."}</span>
+       <small>{kind==="dealer_contract"?"Chỉ dùng cho đại lý đã có tài khoản. Chưa bật giá B2B.":"Bản nháp nội bộ — lưu không đồng nghĩa công khai giá."}</small>
      </div>
-     {selected.length===0?<p className="catalogue-pricebook-empty">Chưa thiết lập. Không đồng nghĩa 0 đồng.</p>:
+     {selected.length===0?<p className="catalogue-pricebook-empty">Chưa có giá cho loại này. Không có giá không có nghĩa là 0 đồng.</p>:
        <div className="catalogue-pricebook-entries">
         {selected.map(entry=><div className="catalogue-pricebook-entry" key={entry.id}>
          <div><strong>{formatVnd(entry.amount_vnd)}</strong>
-          <small>{entry.effective_from}{entry.effective_until?" – "+entry.effective_until:""} ·
+          <small>Áp dụng từ {entry.effective_from}{entry.effective_until?" đến "+entry.effective_until:""} ·
            {entry.vat_included?" Đã gồm VAT":" Chưa gồm VAT"} · Nháp #{entry.revision}</small>
           <small>Nguồn: {entry.source_document}</small>
-          {entry.customer_id&&<small>Tài khoản: {entry.customer_id}</small>}
+          {entry.customer_id&&<small>Đại lý: {entry.customer_id}</small>}
          </div>
          {owner&&<button type="button" className="import-btn import-secondary" onClick={()=>edit(entry)}
-           disabled={saving}>Sửa nháp</button>}
+           disabled={saving}>Sửa giá</button>}
         </div>)}
        </div>}
      {owner?<div className="catalogue-pricebook-form">
        <div className="catalogue-pricebook-form-title">
-         <strong>{editing?"Sửa bản nháp (có kiểm tra phiên bản)":"Thêm giá nháp"}</strong>
-         {editing&&<button type="button" className="import-btn import-secondary" onClick={startNew}>Thêm giá mới</button>}
+         <strong>{editing?"Đang sửa giá nháp":"Nhập giá nhanh"}</strong>
+         {editing&&<button type="button" className="import-btn import-secondary" onClick={startNew}>Nhập giá mới</button>}
        </div>
-       <div className="catalogue-pricebook-form-grid">
-        <label>Giá (VND)<input type="text" inputMode="numeric" placeholder="Nhập số tiền, kể cả 0 nếu đúng nguồn"
-          value={form.amount} onChange={e=>set("amount",e.target.value.replace(/[^0-9]/g,""))}/></label>
-        <label>Tình trạng VAT<select value={form.vatIncluded} onChange={e=>set("vatIncluded",e.target.value)}>
-          <option value="">Chọn tình trạng VAT…</option>
-          <option value="yes">Đã gồm VAT</option><option value="no">Chưa gồm VAT</option>
-        </select></label>
-        <label>Thuế suất VAT (%)<input type="number" min="0" max="100" step="0.01" value={form.vatPercent}
-          onChange={e=>set("vatPercent",e.target.value)} placeholder="Để trống nếu chưa xác minh"/></label>
-        <label>Hiệu lực từ<input type="date" value={form.date}
-          disabled={!!editing} onChange={e=>set("date",e.target.value)}/></label>
-        <label>Đến ngày<input type="date" value={form.until} onChange={e=>set("until",e.target.value)}/></label>
-        {kind==="dealer_contract"&&<label className="catalogue-pricebook-wide">
-          ID khách hàng đã xác minh
-          <input value={form.customerId} disabled={!!editing} onChange={e=>set("customerId",e.target.value)}
-           placeholder="UUID khách hàng; không nhập tên phỏng đoán"/>
-        </label>}
-        <label className="catalogue-pricebook-wide">Chứng từ / nguồn giá
-         <input value={form.source} maxLength={300} onChange={e=>set("source",e.target.value)}
-          placeholder="Tên bảng giá, tài liệu hoặc mã chứng từ đã xác minh"/>
-        </label>
+       <div className="catalogue-pricebook-quick-grid">
+         <label className="catalogue-pricebook-amount">Số tiền (VND) <span aria-hidden="true">*</span>
+           <input type="text" inputMode="numeric" placeholder="Ví dụ: 11200" autoComplete="off"
+             value={form.amount} onChange={e=>set("amount",e.target.value.replace(/[^0-9]/g,""))}/>
+         </label>
+         <fieldset className="catalogue-pricebook-vat">
+           <legend>Giá này đã gồm VAT chưa? <span aria-hidden="true">*</span></legend>
+           <div className="catalogue-pricebook-vat-options">
+             <button type="button" aria-pressed={form.vatIncluded==="yes"} className={form.vatIncluded==="yes"?"active":""}
+               onClick={()=>set("vatIncluded","yes")}>Đã gồm VAT</button>
+             <button type="button" aria-pressed={form.vatIncluded==="no"} className={form.vatIncluded==="no"?"active":""}
+               onClick={()=>set("vatIncluded","no")}>Chưa gồm VAT</button>
+           </div>
+         </fieldset>
+         <label className="catalogue-pricebook-source">Nguồn giá <span aria-hidden="true">*</span>
+           <input value={form.source} maxLength={300} onChange={e=>set("source",e.target.value)}
+             placeholder="Ví dụ: BG NET VPP 05.10.2026"/>
+           <small>Ghi tài liệu xác nhận số tiền này, không tự lấy từ loại giá khác.</small>
+         </label>
+         {kind==="dealer_contract"&&<label className="catalogue-pricebook-dealer">
+           ID tài khoản đại lý <span aria-hidden="true">*</span>
+           <input value={form.customerId} disabled={!!editing} onChange={e=>set("customerId",e.target.value)}
+             placeholder="ID khách hàng đã tồn tại"/>
+           <small>Giá đại lý chỉ tạo được khi có ID tài khoản hợp lệ.</small>
+         </label>}
        </div>
-       <button type="button" className="import-btn import-primary" disabled={saving}
-         onClick={()=>void save()}>{saving?"Đang lưu…":"Lưu giá nháp (không công khai)"}</button>
+       <details className="catalogue-pricebook-advanced">
+         <summary>Tùy chọn nâng cao: ngày áp dụng, thuế suất VAT</summary>
+         <div className="catalogue-pricebook-form-grid">
+           <label>Áp dụng từ
+             <input type="date" value={form.date} disabled={!!editing} onChange={e=>set("date",e.target.value)}/>
+             <small>{editing?"Ngày áp dụng đã cố định ở bản giá này.":"Để trống sẽ tự lấy ngày lưu theo giờ Việt Nam."}</small>
+           </label>
+           <label>Đến ngày (nếu có)
+             <input type="date" value={form.until} onChange={e=>set("until",e.target.value)}/>
+           </label>
+           <label>Thuế suất VAT (%)
+             <input type="number" min="0" max="100" step="0.01" value={form.vatPercent}
+               onChange={e=>set("vatPercent",e.target.value)} placeholder="Chưa xác minh thì để trống"/>
+           </label>
+         </div>
+       </details>
+       <div className="catalogue-pricebook-actions">
+         <button type="button" className="import-btn import-primary" disabled={saving}
+           onClick={()=>void save()}>{saving?"Đang lưu…":"Lưu giá"}</button>
+         <span>Chỉ lưu bản nháp nội bộ, không hiển thị trên website hoặc app.</span>
+       </div>
+       {error&&<p className="catalogue-pricebook-inline-error" role="alert">{error}</p>}
+       {notice&&<p className="catalogue-pricebook-inline-success" role="status">{notice}</p>}
       </div>:
-      <p className="catalogue-pricebook-muted">Chỉ Owner được tạo hoặc sửa giá nháp.</p>}
+      <p className="catalogue-pricebook-muted">Tài khoản này chỉ được xem giá. Owner mới có thể sửa.</p>}
     </div>
    </div>:null}
-  {error&&<p className="import-error" role="alert">{error}</p>}
-  {notice&&<p className="catalogue-workspace-notice" role="status">{notice}</p>}
+  {!owner&&error&&<p className="catalogue-pricebook-inline-error" role="alert">{error}</p>}
  </section>;
 }
