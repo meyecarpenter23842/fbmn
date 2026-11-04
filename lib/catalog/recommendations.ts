@@ -1,5 +1,10 @@
 import type {PublicCatalog,PublicProduct} from "./schema";
-import {foldVietnamese} from "./query";
+// Keep this pure scorer independently testable in Node (no extensionless runtime imports).
+function foldVietnamese(value:string):string{
+  return value.normalize("NFD").replace(/[\u0300-\u036f]/g,"")
+    .replace(/[đĐ]/g,"d").toLocaleLowerCase("vi-VN")
+    .replace(/\s+/g," ").trim();
+}
 
 const COMMON=new Set(["vo","tap","so","giay","quyen","trang","mau","san","pham","hoc","sinh","vien"]);
 function tokens(value:string):string[]{
