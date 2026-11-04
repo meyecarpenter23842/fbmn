@@ -203,6 +203,6 @@ test("L06 detail stays server-sourced without client API requests",()=>{
   assert.match(page,/getPublicCatalog/);
   assert.match(page,/CatalogueProductOptions/);
   assert.match(ui,/aria-pressed/);
-  assert.match(ui,/const candidates=product\.variants;/); // missing size/GSM still selectable
+  assert.match(ui,/const choices=product\.variants\.filter/); // missing dimensions retain a selectable group
   assert.doesNotMatch(ui,/fetch\(|DATABASE_URL|net_price/i);
 });

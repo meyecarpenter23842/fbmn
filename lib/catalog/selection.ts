@@ -31,3 +31,24 @@ export function photosForSku(photos: ProductPhoto[], sku: string): ProductPhoto[
     seen.add(p.src);return true;
   }).sort((a,b)=>a.position-b.position);
 }
+
+/** Paper-size data sometimes contains customer-facing groups (e.g. Học Sinh).
+ * Use it only as an existing grouping value; do not call every value a paper size. */
+export function productType(variant: PublicVariant): string {
+  return variant.specifications.paperSize?.trim() ?? "";
+}
+export function groupedProductTypes(variants: PublicVariant[]): string[] {
+  return [...new Set(variants.map(productType))];
+}
+/** Compact, source-backed customer label. Keep the original code separate to
+ * disambiguate distinct company products with identical public specifications. */
+export function shortVariantLabel(variant: PublicVariant): string {
+  const s=variant.specifications;
+  const parts=[
+    s.pageCount!==undefined?String(s.pageCount)+" trang":null,
+    s.ruling||null,
+    s.paperWeightGsm!==undefined?String(s.paperWeightGsm)+" gsm":null,
+    s.coverFinish||null,
+  ].filter((v):v is string=>v!==null);
+  return parts.join(" · ")||"Quy cách khác";
+}
