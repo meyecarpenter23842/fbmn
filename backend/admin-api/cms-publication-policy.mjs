@@ -13,7 +13,7 @@ function millis(value) {
   if (typeof value !== "string" || !TIMESTAMP.test(value)) return null;
   // Date.parse normalizes some impossible ISO calendar dates (e.g. Feb 30).
   // Validate Gregorian date/time fields first, including leap years.
-  const match = /^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2})/.exec(value);
+  const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})/.exec(value);
   if (!match) return null;
   const [year, month, day, hour, minute, second] = match.slice(1).map(Number);
   const leap = year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0);
