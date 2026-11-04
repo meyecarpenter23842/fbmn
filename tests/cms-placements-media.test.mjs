@@ -139,9 +139,11 @@ test("CMS modal prevents overlapping text save and image upload, including pre-c
  const upload=readFileSync("apps/admin/app/cms-media-editor.tsx","utf8");
  assert.match(editor,/if\(busy\|\|mediaBusy\|\|operationLock\.current\)return/);
  assert.match(editor,/operationLock\.current=true/);
- assert.match(editor,/saveBusy=\{busy\} operationLock=\{operationLock\}/);
- assert.match(upload,/if\(!id\|\|!file\|\|busy\|\|saveBusy\|\|operationLock\.current\)return/);
- assert.match(upload,/operationLock\.current=true/);
+ assert.match(editor,/saveBusy=\{busy\}/);
+ assert.match(editor,/acquireLock=\{\(\)=>/);
+ assert.match(editor,/releaseLock=\{\(\)=>/);
+ assert.match(upload,/if\(!id\|\|!file\|\|busy\|\|saveBusy\|\|!acquireLock\(\)\)return/);
+ assert.match(upload,/releaseLock\(\)/);
  assert.match(upload,/disabled=\{busy\|\|saveBusy\}/);
  assert.match(editor,/onSavingChange\(value\|\|busy\)/);
 });
