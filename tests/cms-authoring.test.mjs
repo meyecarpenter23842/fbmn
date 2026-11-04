@@ -184,6 +184,6 @@ test("CMS Admin is real, uses shared modal/toast and has no invented live publis
  assert.match(ui,/expectedRevision:item.revision/);
  assert.match(ui,/Nội dung chưa lưu/);
  assert.match(proxy,/origin_forbidden/);
- assert.match(proxy,/method:"POST"/);
+ assert.match(proxy,/method==="POST"/);
  assert.doesNotMatch(ui,/NET_PRICE|fake_price|DEMO_/);
 });
