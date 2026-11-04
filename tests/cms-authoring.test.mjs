@@ -39,8 +39,15 @@ function env({role="owner",failAudit=false}={}){
    return {rows:row?[{...row}]:[],rowCount:row?1:0};
   }
   if(sql.includes("SELECT id::text,kind,slug,title")){
-   const selected=state.rows.filter(x=>!params[0]||x.kind===params[0]);
-   return {rows:selected,rowCount:selected.length};
+   if(sql.includes("WHERE id=$1::uuid")){
+    const row=state.rows.find(x=>x.id===params[0]);
+    return {rows:row?[{...row}]:[],rowCount:row?1:0};
+   }
+   if(!sql.includes("LIMIT 51 OFFSET $2"))throw Error("Unbounded CMS list query");
+   const selected=state.rows.filter(x=>params[0]==="marketing"?
+    ["banner","popup"].includes(x.kind):["article","promotion"].includes(x.kind));
+   const summary=selected.slice(params[1],params[1]+51).map(({paragraphs,cta_url,...row})=>row);
+   return {rows:summary,rowCount:summary.length};
   }
   if(sql.includes("UPDATE fbmn_catalog_private.cms_entries")){
    const row=state.rows.find(r=>r.id===params[0]);
@@ -97,9 +104,15 @@ test("CMS creates draft with private audit, no auto publication",async()=>{
  assert.equal(row.channel_targets[0],"public_web");
  assert.equal(row.revision,1);
  assert.deepEqual(a.state.cmsAudit.map(x=>x.action),["create"]);
- const list=await a.hit("/v1/admin/cms?kind=article");
- assert.equal((await list.json()).data.items.length,1);
+ const list=await a.hit("/v1/admin/cms?mode=editorial&page=1");
+ const listed=(await list.json()).data;
+ assert.equal(listed.items.length,1);
+ assert.equal(listed.hasNext,false);
+ assert.equal("paragraphs" in listed.items[0],false);
+ const detail=await a.hit("/v1/admin/cms/entry?id="+UUID);
+ assert.deepEqual((await detail.json()).data.item.paragraphs,payload().paragraphs);
  assert.equal((await a.hit("/v1/admin/cms?kind=private")).status,400);
+ assert.equal((await a.hit("/v1/admin/cms/entry?id=wrong")).status,400);
 });
 
 test("CMS publication requires verified source and channels",async()=>{
@@ -159,6 +172,36 @@ test("CMS validates bad dates, channels, slugs, content and URLs",async()=>{
  assert.notEqual(parseCmsTimestamp("2024-02-29T12:00:00Z"),null);
 });
 
+test("CMS lightweight pages remain below proxy cap with many long articles",async()=>{
+ const a=env();
+ const base=payload();
+ for(let i=0;i<60;i++)a.state.rows.push({
+  id:String(i).padStart(8,"0")+"-1111-4111-8111-111111111111",
+  kind:"article",slug:base.slug+"-"+i,title:base.title,summary:base.summary,
+  paragraphs:Array.from({length:30},()=> "x".repeat(3000)),
+  cta_url:null,channel_targets:["public_web"],sort_order:0,
+  starts_at:null,ends_at:null,source_ref:base.sourceRef,
+  status:"draft",revision:1,updated_at:new Date()
+ });
+ const first=await a.hit("/v1/admin/cms?mode=editorial&page=1");
+ assert.equal(first.status,200);
+ const body=await first.text();
+ assert.ok(body.length<100000,"List must never include full prose");
+ const data=JSON.parse(body).data;
+ assert.equal(data.items.length,50);
+ assert.equal(data.hasNext,true);
+ assert.equal(data.items[0].paragraphs,undefined);
+ const second=await a.hit("/v1/admin/cms?mode=editorial&page=2");
+ assert.equal((await second.json()).data.items.length,10);
+ assert.equal((await a.hit("/v1/admin/cms?mode=editorial&page=0")).status,400);
+ assert.equal((await a.hit("/v1/admin/cms?mode=editorial&page=1&page=2")).status,400);
+ assert.equal((await a.hit("/v1/admin/cms?mode=secret&page=1")).status,400);
+ const item=await a.hit("/v1/admin/cms/entry?id=00000000-1111-4111-8111-111111111111");
+ assert.equal((await item.json()).data.item.paragraphs.length,30);
+ const marketing=await a.hit("/v1/admin/cms?mode=marketing&page=1");
+ assert.equal((await marketing.json()).data.items.length,0);
+});
+
 test("CMS audits must be atomic and never send data to public reader",async()=>{
  const f=env({failAudit:true});
  assert.equal((await f.hit("/v1/admin/cms/create","POST",payload())).status,503);
@@ -170,6 +213,8 @@ test("CMS audits must be atomic and never send data to public reader",async()=>{
  assert.doesNotMatch(sql,/GRANT .*fbmn_public_reader/);
  assert.doesNotMatch(sql,/GRANT DELETE/);
  assert.match(sql,/GRANT UPDATE \(title,summary/);
+ for(const action of ["catalogue.manage","pricing.private","cms.manage"])
+  assert.ok(sql.includes("'"+action+"'"),"Preserve historical audit action "+action);
 });
 
 test("CMS Admin is real, uses shared modal/toast and has no invented live publish claim",()=>{
