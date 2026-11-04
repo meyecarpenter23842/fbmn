@@ -104,7 +104,7 @@ export function createReadModel(query,{enableP5=false}={}) {
         cover:m.media_role==="cover"});
       bySku.set(String(m.sku_cong_ty),arr);
     }
-    const categories=new Map(),groups=new Map(),familyCounts=new Map();
+    const categories=new Map(),groups=new Map(),familyCounts=new Map(),oldCategoryCounts=new Map();
     for(const row of skus){
       const sku=String(row.sku_cong_ty),name=normalized(row.name)||sku;
       const categoryId=row.category_id?"p5-"+String(row.category_id):"p5-uncategorized";
@@ -114,7 +114,15 @@ export function createReadModel(query,{enableP5=false}={}) {
           "cat-"+String(row.category_id).replaceAll("-",""):"chua-phan-loai",
           name:label,group:groupFor(label),sortOrder:categories.size+100});
       }
-      const key=String(row.family_id??sku)+"|"+categoryId;
+      // Admin family controls one public product across different SKU categories.
+      // Standalone SKUs remain isolated even when names/categories happen to match.
+      const key=row.family_id?"family:"+String(row.family_id):"sku:"+sku;
+      // Old published URLs were hashed from the SKU's family + category + part.
+      // Retain every old category-specific address as an alias when merging.
+      const oldKey=String(row.family_id??sku)+"|"+categoryId;
+      const oldCount=oldCategoryCounts.get(oldKey)??0;
+      oldCategoryCounts.set(oldKey,oldCount+1);
+      const oldPageKey=oldKey+"|part:"+Math.floor(oldCount/100);
       const spec=row.product_spec&&typeof row.product_spec==="object"?row.product_spec:{};
       const values={};
       const paperSize=normalized(row.paper_size,120);
@@ -138,23 +146,44 @@ export function createReadModel(query,{enableP5=false}={}) {
       let group=groups.get(pageKey);
       if(!group){
         group={id:pageKey,categoryId,name:((normalized(row.family_label)||name).slice(0,160-(part?(" · Phần "+(part+1)).length:0))+(part?" · Phần "+(part+1):"")),
-          sourceSku:sku,slug:"",priceLabel:"Liên hệ báo giá",variants:[],media:[]};
+          sourceSku:sku,slug:"",priceLabel:"Liên hệ báo giá",variants:[],media:[],legacyKeys:new Map()};
         groups.set(pageKey,group);
       }
+      // The public DTO has one categoryId. Prefer an explicitly assigned
+      // category over "Chưa phân loại" when family members differ.
+      if(row.category_id&&group.categoryId==="p5-uncategorized")group.categoryId=categoryId;
+      group.legacyKeys.set(oldPageKey,(group.legacyKeys.get(oldPageKey)??0)+1);
       group.variants.push({sku,name,specifications:values,price:null});
       const ownImages=(bySku.get(sku)??[]).sort((a,b)=>Number(b.cover)-Number(a.cover)||a.position-b.position);
       for(const media of ownImages){
-        if(group.media.length>=50)break;
+        // 100 variants x Admin's max 20 photos/SKU: never silently drop
+        // another published SKU's gallery after cross-category merging.
+        if(group.media.length>=2000)throw Error("P5 family media limit exceeded");
         group.media.push({r2Key:media.r2Key,alt:name,position:group.media.length,sku});
       }
     }
     const products=[...groups.values()];
-    // Bounded concurrency avoids hundreds of sequential crypto awaits per request.
-    // Hash input and result are unchanged: stable URLs and leading-zero SKUs remain.
+    // One old per-category page can overlap two new 100-SKU family pages.
+    // Assign its legacy address to the page containing the most old members.
+    const legacyOwners=new Map();
+    for(const group of products){
+      for(const [oldKey,count] of group.legacyKeys){
+        const oldOwner=legacyOwners.get(oldKey);
+        if(!oldOwner||count>oldOwner.count)legacyOwners.set(oldKey,{group,count});
+      }
+    }
+    // Retain the exact old slug for unchanged, one-category products. Mixed
+    // families use a category-independent canonical slug and serve old URLs.
+    // Bounded concurrency avoids sequential crypto operations per product.
     for(let offset=0;offset<products.length;offset+=32){
       await Promise.all(products.slice(offset,offset+32).map(async group=>{
-        group.slug=await makeSlug(group.id);
+        const owned=[...group.legacyKeys.keys()].filter(k=>legacyOwners.get(k)?.group===group);
+        const canonicalKey=group.legacyKeys.size===1&&owned.length===1?owned[0]:group.id;
+        group.slug=await makeSlug(canonicalKey);
         group.id=group.slug;
+        const aliases=(await Promise.all(owned.map(makeSlug))).filter(slug=>slug!==group.slug);
+        if(aliases.length)group.legacySlugs=aliases;
+        delete group.legacyKeys;
         delete group.sourceSku;
       }));
     }

@@ -58,7 +58,7 @@ function safeProduct(raw: unknown): PublicProduct {
   const p = obj(raw);
   const variants = arr(p.variants, 100).map(safeVariant);
   const allowedSkus = new Set(variants.map(v => v.sku));
-  const media = arr(p.media, 50).map(item => {
+  const media = arr(p.media, 2000).map(item => {
     const m = obj(item), key = str(m.r2Key, 400);
     if (!/^products\/[A-Za-z0-9_-]+\/[A-Za-z0-9_-]+-v[1-9]\d*\.(webp|png|jpg|jpeg|avif)$/i.test(key)) throw new Error("Unapproved media key");
     const sku = m.sku == null ? undefined : str(m.sku, 100);
@@ -67,9 +67,15 @@ function safeProduct(raw: unknown): PublicProduct {
       ...(sku === undefined ? {} : { sku }) };
   });
   if (p.priceLabel !== null && p.priceLabel !== "Liên hệ báo giá") throw new Error("Disallowed price label");
+  const legacySlugs=p.legacySlugs==null?undefined:arr(p.legacySlugs,100).map(s=>{
+    const value=str(s,80);
+    if(!/^sku-[0-9a-f]{32}$/.test(value))throw new Error("Invalid legacy slug");
+    return value;
+  });
   return {
     id: str(p.id, 80), categoryId: str(p.categoryId, 80),
     name: str(p.name, 160), slug: str(p.slug, 80),
+    ...(legacySlugs?.length?{legacySlugs}:{}),
     ...(p.description == null ? {} : { description: str(p.description, 3000) }),
     priceLabel: p.priceLabel as PublicProduct["priceLabel"], variants, media,
   };
@@ -120,11 +126,22 @@ async function getData(origin: string, route: string, transport: typeof fetch): 
   }
   return obj(JSON.parse(chunks.join("")) as unknown);
 }
+// Most catalogues still need one Worker snapshot. Only unusually large, fully
+// approved SKU galleries trigger bounded, smaller product pages. Never discard
+// a gallery or silently convert publication state into a cached snapshot.
 export async function fetchPublicCatalog(input: string, transport: typeof fetch = fetch): Promise<PublicCatalog> {
   const origin = baseUrl(input);
-  // One combined, allowlisted snapshot prevents duplicate Worker/DB reads.
-  // No cross-request caching: Admin visibility changes are always read anew.
-  const batchSize = 1000;
+  for (const batchSize of [1000, 100, 20, 5]) {
+    try { return await fetchPublicCatalogPageSize(origin, transport, batchSize); }
+    catch (error) {
+      if (error instanceof Error && error.message === "Public API payload too large" && batchSize !== 5) continue;
+      throw error;
+    }
+  }
+  throw new Error("Public API payload too large");
+}
+async function fetchPublicCatalogPageSize(origin: string, transport: typeof fetch,
+  batchSize: number): Promise<PublicCatalog> {
   const firstPage = await getData(origin, "/v1/public/catalog?page=1&limit=" + batchSize, transport);
   const firstData = obj(firstPage.data);
   const categories = arr(firstData.categories, 2000).map(item => {
@@ -138,7 +155,7 @@ export async function fetchPublicCatalog(input: string, transport: typeof fetch 
   const firstPagination = obj(firstPage.pagination);
   const total = integer(firstPagination.total);
   const pages = integer(firstPagination.totalPages, 1);
-  if (total > 10000 || pages > 10 || pages !== Math.max(1, Math.ceil(total / batchSize))) {
+  if (total > 10000 || pages > Math.ceil(10000 / batchSize) || pages !== Math.max(1, Math.ceil(total / batchSize))) {
     throw new Error("Invalid public API pagination");
   }
   for (let page = 1; page <= pages; page++) {

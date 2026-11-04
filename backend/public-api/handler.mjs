@@ -69,7 +69,7 @@ export function projectPublicCatalog(raw) {
   const products = raw.products.map(p => {
     guard(object(p) && ids.has(p.categoryId));
     guard(Array.isArray(p.variants) && p.variants.length <= 100);
-    guard(Array.isArray(p.media) && p.media.length <= 50);
+    guard(Array.isArray(p.media) && p.media.length <= 2000);
     const variants = p.variants.map(v => {
       guard(object(v));
       let price = null;
@@ -93,9 +93,12 @@ export function projectPublicCatalog(raw) {
         ...(sku === undefined ? {} : { sku }) };
     });
     guard(p.priceLabel === null || p.priceLabel === "Liên hệ báo giá");
+    const legacySlugs=p.legacySlugs===undefined?undefined:strings(p.legacySlugs,100,80);
+    if(legacySlugs)guard(legacySlugs.every(s=>/^sku-[0-9a-f]{32}$/.test(s)));
     return {
       id: text(p.id, 80), categoryId: text(p.categoryId, 80),
       name: text(p.name, 160), slug: text(p.slug, 80),
+      ...(legacySlugs?.length ? {legacySlugs}:{}),
       ...(optionalText(p.description, 3000) ? { description: p.description } : {}),
       priceLabel: p.priceLabel, variants, media,
     };
@@ -234,7 +237,8 @@ export function createPublicApi({ getPublicCatalog, getPublicContent, allowedOri
         const page = integerParam(url.searchParams.get("page"), 1, 1000);
         const limit = integerParam(url.searchParams.get("limit"), 20, 1000);
         const items = catalog.products.filter(p =>
-          (!slug || p.slug === slug) && (!categoryId || p.categoryId === categoryId));
+          (!slug || p.slug === slug || p.legacySlugs?.includes(slug)) &&
+          (!categoryId || p.categoryId === categoryId));
         if (slug && !items.length) return failure(404, "not_found", corsOrigin);
         const total = items.length;
         const pagination = { page, limit, total, totalPages: Math.max(1, Math.ceil(total / limit)) };

@@ -125,5 +125,5 @@ export function getCategoryBySlug(publicCatalog: PublicCatalog, slug: string) {
 }
 
 export function getProductBySlug(publicCatalog: PublicCatalog, slug: string) {
-  return publicCatalog.products.find(p => p.slug === slug);
+  return publicCatalog.products.find(p => p.slug === slug || p.legacySlugs?.includes(slug));
 }
