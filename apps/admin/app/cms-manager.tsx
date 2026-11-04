@@ -175,6 +175,43 @@ function CmsEditor({item,kind,onSaved,onSavingChange,dirtyRef}:{item:CmsItem|nul
      {ch.label}
     </label>)}
    </fieldset>
+   <fieldset className="cms-placement-grid cms-wide">
+    <legend>Vị trí xuất hiện theo từng kênh</legend>
+    <p>Chọn chính xác trang và vùng hiển thị. App có bố cục riêng, không ép theo desktop Website.</p>
+    {draft.channelTargets.length===0?<p>Chọn kênh ở trên để cấu hình vị trí.</p>:
+     draft.channelTargets.map(ch=><label key={ch}>
+      <span>{CHANNELS.find(c=>c.code===ch)?.label}</span>
+      <select value={draft.placements[ch]||""} disabled={busy||mediaBusy}
+       onChange={e=>{
+        const next={...draft.placements};
+        if(e.target.value)next[ch]=e.target.value;else delete next[ch];
+        set("placements",next);
+       }}>
+       <option value="">Chọn vị trí (có thể lưu nháp trước)</option>
+       {CMS_SLOTS[draft.kind][ch].map(slot=><option key={slot.value} value={slot.value}>{slot.label}</option>)}
+      </select>
+      {CMS_SLOTS[draft.kind][ch].filter(slot=>slot.value===draft.placements[ch]).map(slot=>
+       <small key={slot.value}>{slot.description}</small>)}
+     </label>)}
+   </fieldset>
+   {draft.kind==="popup"&&<fieldset className="cms-popup-frequency cms-wide">
+    <legend>Popup quảng bá khi khách truy cập</legend>
+    <p>Đây là popup khuyến mãi trên Website/App, không phải cửa sổ sửa trong Admin.</p>
+    <div className="cms-form-grid">
+     <label>Chờ sau khi mở trang (giây)
+      <input type="number" min={0} max={120} value={draft.popupDelaySeconds}
+       disabled={busy||mediaBusy} onChange={e=>set("popupDelaySeconds",Number(e.target.value))}/>
+     </label>
+     <label>Tối đa mỗi phiên
+      <input type="number" min={1} max={20} value={draft.popupMaxPerSession}
+       disabled={busy||mediaBusy} onChange={e=>set("popupMaxPerSession",Number(e.target.value))}/>
+     </label>
+     <label>Chờ sau khi đóng (phút)
+      <input type="number" min={0} max={43200} value={draft.popupCooldownMinutes}
+       disabled={busy||mediaBusy} onChange={e=>set("popupCooldownMinutes",Number(e.target.value))}/>
+     </label>
+    </div>
+   </fieldset>}
    <label>Bắt đầu hiển thị
     <input type="datetime-local" value={draft.startsAt} disabled={busy}
      onChange={e=>set("startsAt",e.target.value)}/>
@@ -193,12 +230,28 @@ function CmsEditor({item,kind,onSaved,onSavingChange,dirtyRef}:{item:CmsItem|nul
      placeholder="Tên tài liệu / thông tin được Owner phê duyệt"/>
    </label>
   </div>
-  <p className="cms-help">Lưu nháp không công khai. Owner chỉ được xuất bản sau khi có nguồn xác minh,
-   chọn kênh và kiểm tra nội dung. Banner và popup chưa hiển thị trên Website khi chưa nối media.</p>
+  <section className="cms-live-preview cms-wide" aria-label="Xem trước nội dung">
+   <strong>Xem trước cấu hình · Chưa công khai</strong>
+   <div className="cms-live-preview-content">
+    <h3>{draft.title||"Tiêu đề nội dung"}</h3>
+    <p>{draft.summary||"Mô tả tại vị trí được chọn"}</p>
+    <small>{draft.channelTargets.length?draft.channelTargets.map(ch=>
+     (CHANNELS.find(c=>c.code===ch)?.label||ch)+" · "+
+     (CMS_SLOTS[draft.kind][ch].find(slot=>slot.value===draft.placements[ch])?.label||"Chưa đặt vị trí")
+    ).join(" | "):"Chưa chọn kênh"}</small>
+   </div>
+   <p>Đây là xem trước cấu hình, không phải giao diện Website/App đã xuất bản.</p>
+  </section>
+  <CmsMediaEditor id={savedRecord?.id??null} revision={savedRecord?.revision??0}
+   channels={savedRecord?.channel_targets??[]}
+   onRevision={next=>setSavedRecord(prev=>prev?{...prev,revision:next}:prev)}
+   onBusyChange={value=>{setMediaBusy(value);onSavingChange(value);}}/>
+  <p className="cms-help">Lưu bản nháp trước, sau đó chọn ảnh ngay tại đây.
+   Chỉ xuất bản khi Website/App thực sự kết nối nội dung CMS.</p>
   <div className="cms-actions">
-   <button type="button" className="fb-ui-button cms-secondary" disabled={busy} onClick={close}>Hủy</button>
-   <button type="submit" className="fb-ui-button cms-primary" disabled={busy}>
-    {busy?"Đang lưu…":item?"Lưu thay đổi":"Lưu bản nháp"}
+   <button type="button" className="fb-ui-button cms-secondary" disabled={busy||mediaBusy} onClick={close}>Đóng</button>
+   <button type="submit" className="fb-ui-button cms-primary" disabled={busy||mediaBusy} aria-busy={busy}>
+    {busy?"Đang lưu…":savedRecord?"Lưu thay đổi":"Lưu bản nháp"}
    </button>
   </div>
  </form>;
