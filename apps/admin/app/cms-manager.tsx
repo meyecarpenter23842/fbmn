@@ -264,6 +264,7 @@ export default function CmsManager({mode,owner}:{
  const [hasNext,setHasNext]=useState(false);
  const [opening,setOpening]=useState(false);
  const [loading,setLoading]=useState(false);
+ const [loadError,setLoadError]=useState("");
  const [busy,setBusy]=useState(false);
  const [editorSaving,setEditorSaving]=useState(false);
  const [editing,setEditing]=useState<CmsItem|null|undefined>(undefined);
@@ -290,9 +291,13 @@ export default function CmsManager({mode,owner}:{
    const v=await cmsApi<{items:CmsSummary[];page:number;hasNext:boolean}>(
     "?mode="+mode+"&page="+page);
    if(v.page!==page || !Array.isArray(v.items))throw Error("Danh sách CMS không hợp lệ.");
-   setItems(v.items);setHasNext(v.hasNext===true);
+   setItems(v.items);setHasNext(v.hasNext===true);setLoadError("");
   }
-  catch(e){setError(e instanceof Error?e.message:"Không tải được CMS.");setToastId(v=>v+1);}
+  catch(e){
+   const reason=e instanceof Error?e.message:"Không tải được CMS.";
+   setLoadError(reason);setItems([]);setHasNext(false);
+   setError(reason);setToastId(v=>v+1);
+  }
   finally{setLoading(false);}
  },[owner,mode,page]);
  useEffect(()=>{const task=window.setTimeout(()=>{void refresh();},0);return()=>window.clearTimeout(task);},[refresh]);
@@ -318,7 +323,7 @@ export default function CmsManager({mode,owner}:{
   <AdminToast message={error||message} variant={error?"error":"success"}
    notificationId={toastId} onClose={()=>{setMessage("");setError("");}}/>
   <div className="page-title cms-heading"><div><h1>{title}</h1>
-   <p>Tạo và quản lý nội dung thật, chỉ xuất bản sau khi Owner kiểm tra nguồn.</p></div>
+   <p>Chọn vị trí và ảnh riêng cho Web/App, desktop/mobile. Lưu nháp không tự xuất bản.</p></div>
    <button type="button" className="fb-ui-button fb-ui-button--primary" onClick={()=>void openEditor(null)}>
     Thêm nội dung
    </button>
@@ -328,6 +333,7 @@ export default function CmsManager({mode,owner}:{
     <thead><tr><th>Tiêu đề</th><th>Loại</th><th>Kênh</th><th>Trạng thái</th><th>Thao tác</th></tr></thead>
     <tbody>
      {loading?<tr><td colSpan={5}>Đang tải nội dung…</td></tr>:
+      loadError?<tr><td colSpan={5} role="alert" className="cms-error-state">{loadError} <button type="button" className="fb-ui-button fb-ui-button--secondary" onClick={()=>void refresh()}>Thử lại</button></td></tr>:
       visible.length===0?<tr><td colSpan={5}>Chưa có nội dung. Chọn Thêm nội dung để tạo bản nháp.</td></tr>:
       visible.map(item=><tr key={item.id}>
        <td><strong>{item.title}</strong><small>{item.slug}</small></td>
@@ -340,8 +346,8 @@ export default function CmsManager({mode,owner}:{
         {item.status==="published"?
          <button type="button" className="fb-ui-button fb-ui-button--secondary" disabled={busy}
           onClick={()=>void change(item,"hide")}>Ẩn</button>:
-         <button type="button" className="fb-ui-button fb-ui-button--primary" disabled={busy}
-          onClick={()=>void change(item,"publish")}>Xuất bản</button>}
+         <button type="button" className="fb-ui-button fb-ui-button--secondary" disabled
+          title="Chưa nối CMS với Website/App, không thể xuất bản">Chờ kết nối Web/App</button>}
        </div></td>
       </tr>)
      }
@@ -355,8 +361,8 @@ export default function CmsManager({mode,owner}:{
    <button type="button" className="fb-ui-button fb-ui-button--secondary" disabled={loading||busy||!hasNext}
     onClick={()=>setPage(v=>v+1)}>Trang sau</button>
   </div>
-  <p className="cms-help">Nội dung đang xuất bản cần Ẩn trước khi sửa. Các thay đổi đều lưu lịch sử và chống ghi đè phiên khác.
-   Chưa có dữ liệu thực thì Website tiếp tục giữ trạng thái hiện tại.</p>
+  <p className="cms-help">Đã lưu nháp và có ảnh chưa đồng nghĩa đã xuất bản lên Website.
+   Chỉ bật nút xuất bản sau khi public API và giao diện Web/App thực sự được kết nối, kiểm thử.</p>
   {editing!==undefined&&<ProductModal title={editing?"Sửa "+LABELS[editing.kind]:"Thêm nội dung"}
    onClose={()=>setEditing(undefined)} wide locked={busy||editorSaving}
    beforeClose={()=>!editorDirtyRef.current || window.confirm("Nội dung chưa lưu. Anh có muốn đóng mà không lưu?")}>
