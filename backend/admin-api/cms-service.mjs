@@ -76,14 +76,24 @@ function errorFor(e) {
  if(e?.message==="source_required"||e?.message==="channels_required")return fail(400,e.message);
  return fail(e?.code==="23505"?409:503,e?.code==="23505"?"slug_conflict":"cms_unavailable");
 }
-async function list(db,kind){
+// Fetch lightweight summaries in bounded pages; full prose is loaded only on edit.
+async function list(db,mode,page){
  const result=await db(client=>client.query(
-  "SELECT id::text,kind,slug,title,summary,paragraphs,cta_url,channel_targets,sort_order,"+
+  "SELECT id::text,kind,slug,title,summary,channel_targets,sort_order,"+
   "starts_at,ends_at,source_ref,status,revision,created_at,updated_at "+
-  "FROM "+TABLE+" WHERE ($1::text IS NULL OR kind=$1) ORDER BY updated_at DESC,id LIMIT 501",
-  [kind]));
- if(result.rows.length>500)return fail(409,"cms_list_limit");
- return ok({items:result.rows});
+  "FROM "+TABLE+" WHERE (($1::text='marketing' AND kind IN ('banner','popup')) "+
+  "OR ($1::text='editorial' AND kind IN ('article','promotion'))) "+
+  "ORDER BY updated_at DESC,id LIMIT 51 OFFSET $2",
+  [mode,(page-1)*50]));
+ return ok({items:result.rows.slice(0,50),page,hasNext:result.rows.length>50});
+}
+async function detail(db,id){
+ const result=await db(client=>client.query(
+  "SELECT id::text,kind,slug,title,summary,paragraphs,cta_url,channel_targets,"+
+  "sort_order,starts_at,ends_at,source_ref,status,revision,created_at,updated_at "+
+  "FROM "+TABLE+" WHERE id=$1::uuid LIMIT 1",[id]));
+ if(result.rowCount!==1)return fail(404,"cms_not_found");
+ return ok({item:result.rows[0]});
 }
 async function create(db,input,subject){
  const item=validate(input,true);
@@ -150,11 +160,20 @@ export async function handleCms({request,actor,db}){
  const action=u.pathname===ROOT?"":u.pathname.startsWith(ROOT+"/")?
   u.pathname.slice(ROOT.length+1):"unknown";
  if(request.method==="GET"){
-  if(action!=="" || [...u.searchParams.keys()].some(k=>k!=="kind") ||
-     u.searchParams.getAll("kind").length>1)return fail(400,"invalid_query");
-  const kind=u.searchParams.get("kind");
-  if(kind!==null&&!KIND.has(kind))return fail(400,"invalid_kind");
-  try{return await list(db,kind);}catch{return fail(503,"cms_unavailable");}
+  const keys=[...u.searchParams.keys()];
+  if(keys.length!==new Set(keys).size)return fail(400,"invalid_query");
+  if(action==="entry"){
+   if(keys.length!==1 || keys[0]!=="id")return fail(400,"invalid_query");
+   const id=u.searchParams.get("id");
+   if(!IDENTIFIER.test(id))return fail(400,"invalid_id");
+   try{return await detail(db,id);}catch{return fail(503,"cms_unavailable");}
+  }
+  if(action!=="" || keys.some(k=>k!=="mode"&&k!=="page"))return fail(400,"invalid_query");
+  const mode=u.searchParams.get("mode")??"editorial";
+  const rawPage=u.searchParams.get("page")??"1";
+  if(!["marketing","editorial"].includes(mode) || !/^[1-9]\\d{0,3}$/.test(rawPage))
+   return fail(400,"invalid_query");
+  try{return await list(db,mode,Number(rawPage));}catch{return fail(503,"cms_unavailable");}
  }
  if(request.method!=="POST")return fail(405,"method_not_allowed");
  if(u.search)return fail(400,"invalid_query");
