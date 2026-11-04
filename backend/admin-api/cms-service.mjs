@@ -44,7 +44,7 @@ function validate(input,creating=false) {
     date(input.startsAt)===undefined || date(input.endsAt)===undefined)
   return null;
  const starts=date(input.startsAt),ends=date(input.endsAt);
- if(starts!==null && ends!==null && starts>end)return null;
+ if(starts!==null && ends!==null && starts>ends)return null;
  if(creating && ["article","promotion"].includes(input.kind) && !input.paragraphs.length)return null;
  return { title:input.title,summary:input.summary,paragraphs:input.paragraphs,
   cta_url:input.ctaUrl,channel_targets:input.channelTargets,sort_order:input.sortOrder,
