@@ -52,3 +52,47 @@ export function shortVariantLabel(variant: PublicVariant): string {
   ].filter((v):v is string=>v!==null);
   return parts.join(" · ")||"Quy cách khác";
 }
+
+/** Customer-visible filters only use explicit values in the public specifications
+ * or product name. "Học sinh" is never treated as a paper format. */
+function normalized(value:string):string{
+  return value.normalize("NFD").replace(/[\u0300-\u036f]/g,"")
+    .replace(/đ/gi,"d").toLocaleLowerCase("vi");
+}
+export function variantAudience(variant:PublicVariant):string{
+  const from=normalized([variant.specifications.paperSize??"",variant.name].join(" "));
+  if(/\bhoc\s+sinh\b/.test(from))return "Học sinh";
+  if(/\bsinh\s+vien\b/.test(from))return "Sinh viên";
+  return "";
+}
+export function variantPaperFormat(variant:PublicVariant):string{
+  const raw=variant.specifications.paperSize?.trim().toUpperCase()??"";
+  if(/^[AB][3-6]$/.test(raw))return raw;
+  // The company name sometimes explicitly contains a real format, e.g. "(A4)".
+  const explicit=variant.name.toUpperCase().match(/\b([AB][3-6])\b/);
+  return explicit?.[1]??"";
+}
+export function availableVariantFacets(variants:PublicVariant[]):{audiences:string[];formats:string[]}{
+  return {
+    audiences:[...new Set(variants.map(variantAudience).filter(Boolean))].sort((a,b)=>a.localeCompare(b,"vi")),
+    formats:[...new Set(variants.map(variantPaperFormat).filter(Boolean))].sort((a,b)=>a.localeCompare(b,"vi")),
+  };
+}
+export function visibleVariants(variants:PublicVariant[],audience:string,format:string):PublicVariant[]{
+  return variants.filter(v=>(!audience||variantAudience(v)===audience)
+    &&(!format||variantPaperFormat(v)===format));
+}
+/** A facet click may reset the incompatible OTHER facet, but never creates a fake SKU. */
+export function moveVariantFacet(variants:PublicVariant[],current:PublicVariant,
+  facet:"audience"|"format",value:string,audience:string,format:string):{
+    audience:string;format:string;sku:string;
+  }{
+  const nextAudience=facet==="audience"?value:audience;
+  const nextFormat=facet==="format"?value:format;
+  let filtered=visibleVariants(variants,nextAudience,nextFormat);
+  const resolvedAudience=filtered.length||facet!=="format"?nextAudience:"";
+  const resolvedFormat=filtered.length||facet!=="audience"?nextFormat:"";
+  filtered=visibleVariants(variants,resolvedAudience,resolvedFormat);
+  return {audience:resolvedAudience,format:resolvedFormat,
+    sku:(filtered.find(v=>v.sku===current.sku)??filtered[0]??current).sku};
+}

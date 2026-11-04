@@ -2,66 +2,96 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {readFileSync} from "node:fs";
 import {chooseVariant,paperSizes,paperWeights,photosForSku,
-  groupedProductTypes,productType,shortVariantLabel} from "../lib/catalog/selection.ts";
+  availableVariantFacets,variantAudience,variantPaperFormat,visibleVariants,moveVariantFacet,
+  shortVariantLabel} from "../lib/catalog/selection.ts";
+import {relatedProducts} from "../lib/catalog/recommendations.ts";
 
 const read=path=>readFileSync(new URL("../"+path,import.meta.url),"utf8");
-
-test("Issue #130 follow-up uses concise customer language, without duplicate specifications or CTA",()=>{
+const mk=(sku,name,paperSize,pageCount,ruling)=>({
+  sku,name,price:null,specifications:{paperSize,pageCount,ruling}
+});
+test("Issue #130 approved B mockup: real code cards, related products, one CTA, shared tokens",()=>{
   const page=read("app/san-pham/[slug]/page.tsx");
   const picker=read("components/catalogue-product-options.tsx");
+  const related=read("components/catalogue-related-products.tsx");
   const css=read("app/catalog.css");
   assert.match(page,/<CatalogueProductOptions product={product} photos={images}\/>/);
-  assert.doesNotMatch(page,/catalog-variants|catalog-variant-list|product\.variants\.map/);
-  assert.doesNotMatch(css,/catalog-variants|catalog-variant-list|catalog-variant__price/);
+  assert.match(page,/<CatalogueRelatedProducts items={suggested} title={recommendations.title}\/>/);
+  assert.match(page,/m\.sku===undefined\|\|m\.sku===firstCode/);
+  assert.doesNotMatch(page,/catalog-variants|catalog-variant-list/);
   assert.match(picker,/const selected=product\.variants\.find/);
-  assert.match(picker,/groupedProductTypes\(product\.variants\)/);
-  assert.match(picker,/product\.variants\.filter/);
-  assert.match(picker,/shortVariantLabel\(variant\)/);
+  assert.match(picker,/const choices=visibleVariants\(product\.variants,audience,format\)/);
+  assert.match(picker,/photosForSku\(photos,selected\.sku\)/);
+  assert.match(picker,/availableVariantFacets\(product\.variants\)/);
+  assert.match(picker,/Chọn mã sản phẩm/);
   assert.match(picker,/aria-pressed/);
   assert.match(picker,/aria-live="polite"/);
-  assert.match(picker,/photosForSku\(photos,selected\.sku\)/);
-  assert.match(picker,/Loại sản phẩm/);
-  assert.match(picker,/groups\.length===1&&groups\[0\]!==""/);
-  assert.match(picker,/Loại \/ khổ:/);
-  assert.match(css,/\.catalogue-single-type/);
-  assert.match(picker,/Chọn quy cách/);
-  assert.doesNotMatch(picker,/Khổ giấy|catalogue-sku-specs|<select|SKU này|>SKU|Có \{product\.variants\.length\}|giá NET|giá đại lý/i);
+  assert.match(picker,/Mã \{variant\.sku\}/);
+  assert.doesNotMatch(picker,/SKU này|>SKU|<select|giá NET|giá đại lý/i);
   assert.equal((picker.match(/Liên hệ báo giá/g)||[]).length,1);
-  assert.match(css,/\.catalogue-variant-options/);
-  assert.match(css,/\.catalogue-option-group:focus-within~\.catalogue-option-announcement/);
-  assert.match(css,/@media\(max-width:780px\)\{\.catalogue-option-announcement\{position:static/);
+  assert.match(picker,/selected\.price\?\.kind==="retail"/);
+  assert.match(picker,/extraInfo\.length>0&&<details className="catalogue-extra-details"/);
+  assert.match(picker,/specs\.binding/);
+  assert.match(picker,/specs\.packaging\?\.unitsPerPack/);
+  assert.match(picker,/specs\.packaging\?\.unitsPerCarton/);
+  assert.match(css,/\.catalogue-extra-details summary:focus-visible/);
+  assert.match(related,/prefetch={false}/);
+  assert.match(related,/scrollBy\(/);
+  assert.match(related,/Xem chi tiết/);
   assert.match(css,/\.catalogue-variant-option\{[^\n]*height:var\(--fb-control-height-compact\)/);
-  assert.match(css,/\.catalogue-variant-option__code\{font-size:var\(--fb-control-font-size\)/);
-  assert.match(css,/height:var\(--fb-control-height-touch\)/);
-  assert.doesNotMatch(css,/\.catalogue-variant-option\{[^\n]*min-height:64px/);
-  assert.match(css,/@media\(max-width:500px\)/);
+  assert.match(css,/\.catalogue-variant-option__code\{[^\n]*font-size:var\(--fb-control-font-size\)/);
+  assert.match(css,/@media\(max-width:780px\)/);
+  assert.match(css,/@media\(max-width:700px\)\{\.catalogue-variant-options\{grid-template-columns:1fr/);
+  assert.match(css,/\.catalogue-related__track/);
   assert.match(page,/category\.id!=="p5-uncategorized"/);
 });
-
-test("Eight family variants plus unclassified items stay selectable with accurate concise labels",()=>{
-  const variants=[
-    {sku:"0110",name:"(DG) F04 - Song Of Nature 96TR Ô ly",price:null,
-      specifications:{paperSize:"Học Sinh",pageCount:96,ruling:"4 ô ly"}},
-    {sku:"0114",name:"Vở học sinh - SONG OF NATURE - 96 trang - 4 ô ly",price:null,
-      specifications:{paperSize:"Học Sinh",pageCount:96,ruling:"4 ô ly"}},
-    ...Array.from({length:6},(_,i)=>({sku:String(120+i).padStart(4,"0"),
-      name:"Song Natural sản phẩm "+i,price:null,
-      specifications:{paperSize:i<3?"Sinh Viên":"A4",pageCount:i%2?200:120,ruling:"Kẻ ngang"}})),
-    {sku:"L009",name:"Thiếu quy cách",price:null,specifications:{}},
+test("Facet values are only from explicit source fields or name: never invent Học sinh/A4",()=>{
+  const v=[
+    mk("0110","(DG) F04 Song Of Nature 96TR Ô ly","Học Sinh",96,"4 ô ly"),
+    mk("0114","Vở học sinh - Song of Nature - 96 trang","Học Sinh",96,"4 ô ly"),
+    mk("0120","Song of Nature 200 trang","Học Sinh",200,"4 ô ly"),
+    mk("0124","Vở học sinh 200 trang","Học Sinh",200,"4 ô ly"),
+    mk("8381","(MG) SV4 Song Natural","Sinh Viên",120,"Kẻ ngang"),
+    mk("8384","Vở sinh viên","Sinh Viên",120,"4 ô ly"),
+    mk("8394","Vở sinh viên","Sinh Viên",200,"4 ô ly"),
+    mk("M439","Vở may chỉ bìa bồi (A4) - Song Natural","A4",200,"Kẻ ngang"),
+    mk("L009","Không rõ nhóm/khổ",undefined,undefined,undefined),
   ];
-  const groups=groupedProductTypes(variants);
-  assert.deepEqual(groups,["Học Sinh","Sinh Viên","A4",""]);
-  assert.equal(new Set(variants.map(v=>v.sku)).size,9);
-  assert.equal(groups.flatMap(group=>variants.filter(v=>productType(v)===group)).length,9);
-  assert.equal(shortVariantLabel(variants[0]),"96 trang · 4 ô ly");
-  assert.equal(shortVariantLabel(variants[1]),"96 trang · 4 ô ly");
-  assert.equal(shortVariantLabel(variants[8]),"Quy cách khác");
-  assert.equal(variants[0].sku,"0110");
-  assert.deepEqual(paperSizes(variants),["A4","Học Sinh","Sinh Viên"]);
-  assert.deepEqual(paperWeights(variants,"A4"),[]);
-  assert.ok(variants.includes(chooseVariant(variants,variants[0],"paperSize","A4")));
-  const media=[{src:"/own.webp",alt:"Bìa đúng mã",sku:"0110",position:0},
-    {src:"/other.webp",alt:"Bìa mã khác",sku:"0114",position:1}];
-  assert.deepEqual(photosForSku(media,"0110").map(p=>p.src),["/own.webp"]);
-  assert.deepEqual(photosForSku(media,"L009"),[]);
+  assert.deepEqual(availableVariantFacets(v),{audiences:["Học sinh","Sinh viên"],formats:["A4"]});
+  assert.equal(variantAudience(v[7]),"");
+  assert.equal(variantPaperFormat(v[0]),"");
+  assert.equal(variantPaperFormat(v[7]),"A4");
+  assert.equal(visibleVariants(v,"","").length,9);
+  assert.equal(visibleVariants(v,"Học sinh","").length,4);
+  assert.equal(visibleVariants(v,"","A4").length,1);
+  assert.equal(visibleVariants(v,"Học sinh","A4").length,0);
+  const jump=moveVariantFacet(v,v[0],"format","A4","Học sinh","");
+  assert.deepEqual(jump,{audience:"",format:"A4",sku:"M439"});
+  const reset=moveVariantFacet(v,v[7],"audience","Sinh viên","","A4");
+  assert.equal(reset.sku,"8381");
+  assert.equal(reset.format,"");
+  assert.equal(new Set(v.map(x=>x.sku)).size,9);
+  assert.equal(shortVariantLabel(v[0]),"96 trang · 4 ô ly");
+  assert.deepEqual(paperSizes(v),["A4","Học Sinh","Sinh Viên"]);
+  assert.deepEqual(paperWeights(v,"Học Sinh"),[]);
+  assert.ok(v.includes(chooseVariant(v,v[0],"paperSize","A4")));
+  const photos=[{src:"/own.webp",alt:"Own",sku:"0110",position:0},
+    {src:"/other.webp",alt:"Other",sku:"0114",position:1}];
+  assert.deepEqual(photosForSku(photos,"0110").map(x=>x.src),["/own.webp"]);
+  assert.deepEqual(photosForSku(photos,"L009"),[]);
+});
+test("Recommendations only contain other real public families, never fake suggestions",()=>{
+  const prod=(id,name,categoryId,format,ruling)=>({id,slug:id,name,categoryId,
+    variants:[mk("SKU-"+id,name,format,96,ruling)],media:[],priceLabel:null});
+  const catalog={categories:[
+    {id:"school",name:"Tập học sinh",group:"school_notebook",slug:"school",sortOrder:0},
+    {id:"office",name:"Văn phòng phẩm",group:"stationery",slug:"office",sortOrder:0}
+  ],products:[prod("one","Song Natural","school","A4","4 ô ly"),
+    prod("two","Song Classic","school","A4","4 ô ly"),
+    prod("three","Sổ xếp giấy","office","A4","Kẻ ngang")]};
+  const result=relatedProducts(catalog,catalog.products[0]);
+  assert.equal(result.title,"Sản phẩm tương tự");
+  assert.deepEqual(result.items.map(p=>p.id),["two","three"]);
+  assert.ok(!result.items.some(p=>p.id==="one"));
+  assert.deepEqual(relatedProducts({categories:[],products:[catalog.products[0]]},catalog.products[0]).items,[]);
 });
