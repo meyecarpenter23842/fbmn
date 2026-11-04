@@ -16,8 +16,8 @@ test("Issue #130 approved B mockup: real code cards, related products, one CTA, 
   const related=read("components/catalogue-related-products.tsx");
   const css=read("app/catalog.css");
   assert.match(page,/<CatalogueProductOptions product={product} photos={images}\/>/);
-  assert.match(page,/<CatalogueRelatedProducts items={suggested} title={recommendations.title}\/>/);
-  assert.match(page,/m\.sku===undefined\|\|m\.sku===firstCode/);
+  assert.match(page,/<CatalogueRelatedProducts items={recommendations.items}\/>/);
+  assert.doesNotMatch(page,/const suggested=recommendations\.items\.map/);
   assert.doesNotMatch(page,/catalog-variants|catalog-variant-list/);
   assert.match(picker,/const selected=product\.variants\.find/);
   assert.match(picker,/const choices=visibleVariants\(product\.variants,audience,format\)/);
@@ -35,14 +35,21 @@ test("Issue #130 approved B mockup: real code cards, related products, one CTA, 
   assert.match(picker,/specs\.packaging\?\.unitsPerPack/);
   assert.match(picker,/specs\.packaging\?\.unitsPerCarton/);
   assert.match(css,/\.catalogue-extra-details summary:focus-visible/);
-  assert.match(related,/prefetch={false}/);
-  assert.match(related,/scrollBy\(/);
-  assert.match(related,/Xem chi tiết/);
+  assert.match(related,/import \{ProductCard\} from "\.\/catalog-ui"/);
+  assert.match(related,/<ProductCard key={product.id} product={product}\/>/);
+  assert.match(related,/Sản phẩm gợi ý/);
+  assert.doesNotMatch(related,/scrollBy|useRef|"use client"|catalogue-related-card/);
   assert.match(css,/\.catalogue-variant-option\{[^\n]*height:var\(--fb-control-height-compact\)/);
   assert.match(css,/\.catalogue-variant-option__code\{[^\n]*font-size:var\(--fb-control-font-size\)/);
   assert.match(css,/@media\(max-width:780px\)/);
   assert.match(css,/@media\(max-width:700px\)\{\.catalogue-variant-options\{grid-template-columns:1fr/);
-  assert.match(css,/\.catalogue-related__track/);
+  assert.match(css,/\.catalogue-related__grid\{display:grid;grid-template-columns:repeat\(4,minmax\(0,1fr\)\)/);
+  assert.match(css,/@media\(max-width:1100px\).*repeat\(3,minmax\(0,1fr\)\)/);
+  assert.match(css,/@media\(max-width:700px\)[\s\S]*\.catalogue-related__grid\{grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
+  assert.match(css,/\.catalogue-related__grid>\.catalog-product:nth-child\(n\+7\)/);
+  assert.doesNotMatch(css,/\.catalogue-related__track|overflow-x:auto|scroll-snap-type/);
+  assert.match(picker,/Bỏ lọc/);
+  assert.doesNotMatch(picker,/>Tất cả<\/button>/);
   assert.match(page,/category\.id!=="p5-uncategorized"/);
 });
 test("Facet values are only from explicit source fields or name: never invent Học sinh/A4",()=>{
@@ -90,8 +97,14 @@ test("Recommendations only contain other real public families, never fake sugges
     prod("two","Song Classic","school","A4","4 ô ly"),
     prod("three","Sổ xếp giấy","office","A4","Kẻ ngang")]};
   const result=relatedProducts(catalog,catalog.products[0]);
-  assert.equal(result.title,"Sản phẩm tương tự");
+  assert.equal(result.title,"Sản phẩm gợi ý");
   assert.deepEqual(result.items.map(p=>p.id),["two","three"]);
   assert.ok(!result.items.some(p=>p.id==="one"));
   assert.deepEqual(relatedProducts({categories:[],products:[catalog.products[0]]},catalog.products[0]).items,[]);
+  const bigger={...catalog,products:[catalog.products[0],...Array.from({length:18},(_,i)=>prod(
+    "suggestion-"+i,"Song Natural "+i,"school","A4","4 ô ly"))]};
+  const suggested=relatedProducts(bigger,bigger.products[0]);
+  assert.equal(suggested.items.length,12);
+  assert.ok(suggested.items.every(p=>p.id!=="one"));
+
 });

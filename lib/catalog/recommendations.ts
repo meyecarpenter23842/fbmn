@@ -22,7 +22,7 @@ function overlaps(a:Set<string>,b:Set<string>):boolean{
   return false;
 }
 /** Suggestions are only existing public catalogue families, never synthesized SKUs/media. */
-export function relatedProducts(catalog:PublicCatalog,current:PublicProduct,limit=8):{
+export function relatedProducts(catalog:PublicCatalog,current:PublicProduct,limit=12):{
   title:string;items:PublicProduct[]
 }{
   const category=catalog.categories.find(c=>c.id===current.categoryId);
@@ -43,6 +43,6 @@ export function relatedProducts(catalog:PublicCatalog,current:PublicProduct,limi
     }).sort((a,b)=>b.score-a.score||a.product.name.localeCompare(b.product.name,"vi")||a.product.slug.localeCompare(b.product.slug,"vi"));
   const related=candidates.filter(item=>item.score>=2);
   const shortlist=related.length>0?related:candidates;
-  return {title:related.length>0?"Sản phẩm tương tự":"Khám phá thêm",
+  return {title:"Sản phẩm gợi ý",
     items:shortlist.slice(0,Math.min(12,Math.max(0,limit))).map(item=>item.product)};
 }

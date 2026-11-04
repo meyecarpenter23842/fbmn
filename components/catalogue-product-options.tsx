@@ -20,7 +20,7 @@ export default function CatalogueProductOptions({product,photos}:{
   const [format,setFormat]=useState("");
   const selected=product.variants.find(v=>v.sku===sku)??product.variants[0];
   const facets=availableVariantFacets(product.variants);
-  // "Tất cả" keeps every company code reachable, including records missing either facet.
+  // Without a filter, all company codes remain reachable, including missing facet data.
   const choices=visibleVariants(product.variants,audience,format);
   const gallery=photosForSku(photos,selected.sku).map(({src,alt})=>({src,alt}));
   const selectFacet=(facet:"audience"|"format",value:string)=>{
@@ -50,7 +50,6 @@ export default function CatalogueProductOptions({product,photos}:{
           {facets.audiences.length>0&&<fieldset className="catalogue-option-group">
             <legend>Nhóm sản phẩm</legend>
             <div className="catalogue-option-choices">
-              <button type="button" aria-pressed={audience===""} onClick={()=>selectFacet("audience","")}>Tất cả</button>
               {facets.audiences.map(group=><button key={group} type="button"
                 aria-pressed={audience===group} onClick={()=>selectFacet("audience",group)}>{group}</button>)}
             </div>
@@ -58,11 +57,14 @@ export default function CatalogueProductOptions({product,photos}:{
           {facets.formats.length>0&&<fieldset className="catalogue-option-group">
             <legend>Khổ giấy</legend>
             <div className="catalogue-option-choices">
-              <button type="button" aria-pressed={format===""} onClick={()=>selectFacet("format","")}>Tất cả</button>
               {facets.formats.map(size=><button key={size} type="button"
                 aria-pressed={format===size} onClick={()=>selectFacet("format",size)}>{size}</button>)}
             </div>
           </fieldset>}
+          {(audience||format)&&<button type="button" className="catalogue-facets__reset"
+            onClick={()=>{setAudience("");setFormat("");}} aria-label="Bỏ lọc, xem toàn bộ mã sản phẩm">
+            Bỏ lọc
+          </button>}
         </div>}
         <fieldset className="catalogue-option-group">
           <legend>Chọn mã sản phẩm</legend>
