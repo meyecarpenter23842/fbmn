@@ -90,15 +90,16 @@ function CmsEditor({item,kind,onSaved,onSavingChange,dirtyRef}:{item:CmsItem|nul
  const close=useProductModalClose();
  const [draft,setDraft]=useState<Draft>(()=>item?fromItem(item):blank(kind));
  const [busy,setBusy]=useState(false);
+ const [mediaBusy,setMediaBusy]=useState(false);
+ const [savedRecord,setSavedRecord]=useState<CmsItem|null>(item);
  const [error,setError]=useState("");
  const [toastId,setToastId]=useState(0);
  const set=<K extends keyof Draft>(key:K,value:Draft[K])=>{
   dirtyRef.current=true;setDraft(prev=>({...prev,[key]:value}));
  };
  const submit=async(e:FormEvent<HTMLFormElement>)=>{
-  e.preventDefault();if(busy)return;
+  e.preventDefault();if(busy||mediaBusy)return;
   setBusy(true);onSavingChange(true);setError("");
-  let succeeded=false;
   try{
    const startsAt=draft.startsAt?new Date(draft.startsAt).toISOString():null;
    const endsAt=draft.endsAt?new Date(draft.endsAt).toISOString():null;
@@ -107,27 +108,38 @@ function CmsEditor({item,kind,onSaved,onSavingChange,dirtyRef}:{item:CmsItem|nul
     title:draft.title.trim(),summary:draft.summary.trim(),sourceRef:draft.sourceRef.trim(),
     paragraphs:draft.paragraphs.trim()?draft.paragraphs.trim().split(/\n\s*\n/).map(s=>s.trim()):[]
    };
-   await cmsApi(item?"update":"create",{
-    ...data,...(item?{id:item.id,expectedRevision:item.revision}:{})
+   const result=await cmsApi<{item:CmsItem}>(savedRecord?"update":"create",{
+    ...data,...(savedRecord?{id:savedRecord.id,expectedRevision:savedRecord.revision}:{})
    });
+   setSavedRecord(result.item);
    dirtyRef.current=false;
    onSaved();
-   succeeded=true;
   }catch(ex){
    setError(ex instanceof Error?ex.message:"Không lưu được nội dung.");
    setToastId(v=>v+1);
   }finally{
    setBusy(false);onSavingChange(false);
-   if(succeeded)window.setTimeout(()=>close(),0);
   }
  };
- const canChangeKind=!item;
+ const canChangeKind=!savedRecord;
+ const toggleChannel=(ch:CmsChannel,checked:boolean)=>{
+  dirtyRef.current=true;
+  setDraft(prev=>{
+   const targets=checked?[...prev.channelTargets,ch]:prev.channelTargets.filter(v=>v!==ch);
+   const placements={...prev.placements};
+   if(!checked)delete placements[ch];
+   return {...prev,channelTargets:targets,placements};
+  });
+ };
  return <form className="cms-editor" onSubmit={e=>void submit(e)}>
   <AdminToast variant="error" message={error} notificationId={toastId} onClose={()=>setError("")}/>
   <div className="cms-form-grid">
    <label>Loại nội dung
-    <select value={draft.kind} disabled={!canChangeKind||busy}
-     onChange={e=>set("kind",e.target.value as CmsKind)}>
+    <select value={draft.kind} disabled={!canChangeKind||busy||mediaBusy}
+     onChange={e=>{
+      set("kind",e.target.value as CmsKind);
+      set("placements",{});
+     }}>
      {([kind==="banner"||kind==="popup"?"banner":"article",
        kind==="banner"||kind==="popup"?"popup":"promotion"] as CmsKind[])
       .map(k=><option key={k} value={k}>{LABELS[k]}</option>)}
@@ -159,8 +171,7 @@ function CmsEditor({item,kind,onSaved,onSavingChange,dirtyRef}:{item:CmsItem|nul
     <legend>Kênh hiển thị (chọn nhiều)</legend>
     {CHANNELS.map(ch=><label key={ch.code}>
      <input type="checkbox" checked={draft.channelTargets.includes(ch.code)}
-      onChange={e=>set("channelTargets",e.target.checked?
-       [...draft.channelTargets,ch.code]:draft.channelTargets.filter(v=>v!==ch.code))}/>
+      onChange={e=>toggleChannel(ch.code,e.target.checked)}/>
      {ch.label}
     </label>)}
    </fieldset>
