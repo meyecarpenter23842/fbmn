@@ -32,6 +32,9 @@ export default function CatalogueProductOptions({product,photos}:{
       <h1>{product.name}</h1>
       {product.description&&<p className="catalog-detail__description">{product.description}</p>}
       <div className="catalogue-options">
+        {groups.length===1&&groups[0]!==""&&<p className="catalogue-single-type">
+          Loại / khổ: <strong>{groups[0]}</strong>
+        </p>}
         {groups.length>1&&<fieldset className="catalogue-option-group">
           <legend>Loại sản phẩm</legend>
           <div className="catalogue-option-choices">{groups.map(group=>

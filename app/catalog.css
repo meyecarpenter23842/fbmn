@@ -167,6 +167,8 @@
 .catalogue-options{display:grid;gap:15px;margin:16px 0 18px}
 .catalogue-option-group{margin:0;padding:0;border:0;min-width:0}
 .catalogue-option-group legend{display:block;font-size:var(--fb-control-font-size);font-weight:750;color:#4b3063;margin:0 0 8px}
+.catalogue-single-type{margin:0;font-size:13px;color:#695778;line-height:1.5}
+.catalogue-single-type strong{font-weight:750;color:#4b3063}
 .catalogue-option-choices{display:flex;flex-wrap:wrap;gap:8px}
 .catalogue-option-choices button{min-height:var(--fb-control-height-compact);padding:6px 12px;font-size:var(--fb-control-font-size);font-weight:700;border:1px solid #d8c7e4;border-radius:var(--fb-control-radius);background:#fff;color:#4e3762;cursor:pointer;transition:background-color var(--fb-motion-button) var(--fb-easing-open),border-color var(--fb-motion-button) var(--fb-easing-open)}
 .catalogue-option-choices button[aria-pressed="true"]{color:#562182;border-color:var(--fb-ui-primary);background:#f4edfa}
