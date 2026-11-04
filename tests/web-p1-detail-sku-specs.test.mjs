@@ -42,7 +42,7 @@ test("Issue #130 approved B mockup: real code cards, related products, one CTA, 
   assert.match(css,/\.catalogue-variant-option\{[^\n]*height:var\(--fb-control-height-compact\)/);
   assert.match(css,/\.catalogue-variant-option__code\{[^\n]*font-size:var\(--fb-control-font-size\)/);
   assert.match(css,/@media\(max-width:780px\)/);
-  assert.match(css,/@media\(max-width:700px\)\{\.catalogue-variant-options\{grid-template-columns:1fr/);
+  assert.match(css,/@media\(max-width:700px\)\{\s*\.catalogue-variant-options\{grid-template-columns:1fr/);
   assert.match(css,/\.catalogue-related__grid\{display:grid;grid-template-columns:repeat\(4,minmax\(0,1fr\)\)/);
   assert.match(css,/@media\(max-width:1100px\).*repeat\(3,minmax\(0,1fr\)\)/);
   assert.match(css,/@media\(max-width:700px\)[\s\S]*\.catalogue-related__grid\{grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
