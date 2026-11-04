@@ -1,6 +1,7 @@
 // ADM-03 (#20). Private CMS CRUD. No public DTO, no pricing or customer data.
 import { parseCmsTimestamp } from "./cms-publication-policy.mjs";
 import { validCmsPlacements, cmsPlacementIsReady, validatePopupFrequency } from "./cms-placement-contract.mjs";
+import { handleCmsMedia } from "./cms-media-service.mjs";
 
 const ROOT = "/v1/admin/cms";
 const KIND = new Set(["banner","popup","article","promotion"]);
@@ -181,6 +182,8 @@ export async function handleCms({request,actor,db,r2,publicSurfaceReady=false}){
  const u=new URL(request.url);
  const action=u.pathname===ROOT?"":u.pathname.startsWith(ROOT+"/")?
   u.pathname.slice(ROOT.length+1):"unknown";
+ if(["assets","image","image-upload"].includes(action))
+  return handleCmsMedia({request,db,r2,actor,action});
  if(request.method==="GET"){
   const keys=[...u.searchParams.keys()];
   if(keys.length!==new Set(keys).size)return fail(400,"invalid_query");
