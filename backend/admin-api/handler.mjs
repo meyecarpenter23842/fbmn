@@ -1,5 +1,6 @@
 // ADM-01. Every admin route requires a verified external identity and a DB grant.
 import { handleCatalogue } from "./catalogue-service.mjs";
+import { handleCms } from "./cms-service.mjs";
 import { handlePricebook } from "./pricebook-service.mjs";
 import { handleBulkPricebook } from "./pricebook-bulk-service.mjs";
 import { handleManagedPriceLists } from "./managed-price-lists-service.mjs";
@@ -17,6 +18,7 @@ const PERMITTED = Object.freeze({
   "publish.check": new Set(["publisher", "admin", "owner"]),
   "pricing.check": new Set(["pricing", "admin", "owner"]),
   "catalogue.manage": new Set(["owner", "admin", "editor"]),
+  "cms.manage": new Set(["owner"]),
   "pricing.private": new Set(["owner","admin","pricing"]),
 });
 const error = (status, code, corsOrigin) =>
@@ -46,7 +48,8 @@ export function createAdminApi({ verifyToken, loadActor, listChannels, recordAud
       const corsOrigin = origin && origins.has(origin) ? origin : null;
       if (origin && !corsOrigin) return error(403, "origin_forbidden", null);
       const url = new URL(request.url);
-      const action = url.pathname.startsWith("/v1/admin/catalogue/") ? "catalogue.manage" :
+      const action = (url.pathname === "/v1/admin/cms" || url.pathname.startsWith("/v1/admin/cms/")) ? "cms.manage" :
+        url.pathname.startsWith("/v1/admin/catalogue/") ? "catalogue.manage" :
         url.pathname.startsWith("/v1/admin/pricing/") ? "pricing.private" : ROUTES.get(url.pathname);
       if (!action) return error(404, "not_found", corsOrigin);
       if (request.method === "OPTIONS") {
@@ -80,6 +83,9 @@ export function createAdminApi({ verifyToken, loadActor, listChannels, recordAud
         try { await recordAudit({ subject, action, outcome: "denied" }); }
         catch { return error(503, "service_unavailable", corsOrigin); }
         return error(403, "forbidden", corsOrigin);
+      }
+      if (action === "cms.manage") {
+        return handleCms({request,actor:{...actor,subject},db:catalogueDb});
       }
       if (action === "pricing.private") {
         if (url.pathname === "/v1/admin/pricing/managed" || url.pathname.startsWith("/v1/admin/pricing/managed/")) {
