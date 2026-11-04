@@ -136,7 +136,7 @@ export default function CmsMediaEditor({id,revision,channels,onRevision,onBusyCh
        {asset?<CmsPrivateImage id={id} channel={ch} device={device} stamp={asset.updated_at}/>:
         <span className="cms-media-placeholder">Chưa có ảnh {device==="desktop"?"desktop":"mobile"}</span>}
       </div>
-      <label className="cms-media-upload">
+      <label className="fb-ui-button fb-ui-button--secondary cms-media-upload">
        <span>{asset?"Thay ảnh":"Chọn ảnh"}</span>
        <input ref={node=>{fileInputs.current[identifier]=node;}}
         type="file" accept="image/jpeg,image/png,image/webp" disabled={busy}
