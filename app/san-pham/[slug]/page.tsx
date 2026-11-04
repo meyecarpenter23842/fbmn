@@ -33,7 +33,7 @@ export default async function ProductPage({ params }: Props) {
   return <CatalogShell><div className="catalog-wrap">
     <CatalogBreadcrumb trail={[
       { label: "Sản phẩm", href: "/san-pham" },
-      ...(category ? [{ label: category.name, href: "/danh-muc/" + encodeURIComponent(category.slug) }] : []),
+      ...(category && category.id!=="p5-uncategorized" && category.name.toLocaleLowerCase("vi")!=="chưa phân loại" ? [{ label: category.name, href: "/danh-muc/" + encodeURIComponent(category.slug) }] : []),
       { label: product.name },
     ]}/>
     <CatalogueProductOptions product={product} photos={images}/>

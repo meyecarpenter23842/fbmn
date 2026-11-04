@@ -163,25 +163,24 @@
 }
 
 
-/* L06 SKU choice: inside the existing detail grid; shared control tokens. */
-.catalogue-options{display:grid;gap:13px;margin-top:16px}
+/* Customer-facing picker: one group selector and compact, real-variant choices. */
+.catalogue-options{display:grid;gap:15px;margin:16px 0 18px}
 .catalogue-option-group{margin:0;padding:0;border:0;min-width:0}
-.catalogue-option-group legend,.catalogue-option-group label{display:block;font-size:13px;font-weight:750;color:#4b3063;margin:0 0 7px}
+.catalogue-option-group legend{display:block;font-size:var(--fb-control-font-size);font-weight:750;color:#4b3063;margin:0 0 8px}
 .catalogue-option-choices{display:flex;flex-wrap:wrap;gap:8px}
 .catalogue-option-choices button{min-height:var(--fb-control-height-compact);padding:6px 12px;font-size:var(--fb-control-font-size);font-weight:700;border:1px solid #d8c7e4;border-radius:var(--fb-control-radius);background:#fff;color:#4e3762;cursor:pointer;transition:background-color var(--fb-motion-button) var(--fb-easing-open),border-color var(--fb-motion-button) var(--fb-easing-open)}
 .catalogue-option-choices button[aria-pressed="true"]{color:#562182;border-color:var(--fb-ui-primary);background:#f4edfa}
 .catalogue-option-choices button:hover{border-color:var(--fb-ui-primary)}
-.catalogue-option-choices button:focus-visible,.catalogue-option-group select:focus-visible{outline:2px solid var(--fb-ui-primary);outline-offset:2px}
-.catalogue-option-group select{display:block;width:100%;max-width:100%;height:var(--fb-field-height);padding:0 12px;border:1px solid #d8c7e4;border-radius:var(--fb-control-radius);background:#fff;color:#352441;font:inherit;font-size:var(--fb-control-font-size)}
-.catalogue-selected-sku,.catalogue-cover-note{margin:0;font-size:13px;line-height:1.5;color:#695778;overflow-wrap:anywhere}
-.catalogue-selected-sku strong{color:#43215f}
-.catalogue-sku-specs{margin:0;border:1px solid #e8dcef;border-radius:12px;background:#fbf8fe;padding:14px 16px;min-width:0}
-.catalogue-sku-specs h2{margin:0 0 10px;color:#46177e;font-size:16px;line-height:1.35}
-.catalogue-sku-specs dl{display:grid;gap:8px;margin:0;font-size:13px;line-height:1.5}
-.catalogue-sku-specs__row{display:grid;grid-template-columns:minmax(0,40%) minmax(0,1fr);gap:12px}
-.catalogue-sku-specs dt{color:#71607d}
-.catalogue-sku-specs dd{margin:0;color:#372443;font-weight:700;overflow-wrap:anywhere}
-.catalogue-sku-specs__empty{margin:0;color:#71607d;font-size:13px;line-height:1.5}
-.catalogue-cover-note{font-size:12px}
-@media(max-width:780px){.catalogue-option-choices button{min-height:var(--fb-control-height-touch)}}
-@media(prefers-reduced-motion:reduce){.catalogue-option-choices button{transition:none}}
+.catalogue-variant-options{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.catalogue-variant-option{display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:4px;min-height:64px;min-width:0;width:100%;padding:10px 12px;text-align:left;background:#fff;color:#3c2b49;border:1px solid #ded1e9;border-radius:var(--fb-control-radius);cursor:pointer;transition:background-color var(--fb-motion-button) var(--fb-easing-open),border-color var(--fb-motion-button) var(--fb-easing-open),box-shadow var(--fb-motion-button) var(--fb-easing-open)}
+.catalogue-variant-option__name{font-size:var(--fb-control-font-size);font-weight:750;line-height:1.4;overflow-wrap:anywhere}
+.catalogue-variant-option__code{font-size:12px;font-weight:500;color:#796b83}
+.catalogue-variant-option[aria-pressed="true"]{border-color:var(--fb-ui-primary);background:#f4edfa;box-shadow:0 0 0 1px #6d249e33}
+.catalogue-variant-option[aria-pressed="true"] .catalogue-variant-option__code{color:#5b3282}
+.catalogue-variant-option:hover{border-color:var(--fb-ui-primary)}
+.catalogue-option-choices button:focus-visible,.catalogue-variant-option:focus-visible{outline:2px solid var(--fb-ui-primary);outline-offset:2px}
+.catalogue-option-announcement{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+.catalogue-product-extra{margin:0;color:#695778;font-size:13px;line-height:1.55;overflow-wrap:anywhere}
+@media(max-width:780px){.catalogue-option-choices button,.catalogue-variant-option{min-height:var(--fb-control-height-touch)}}
+@media(max-width:500px){.catalogue-variant-options{grid-template-columns:1fr}}
+@media(prefers-reduced-motion:reduce){.catalogue-option-choices button,.catalogue-variant-option{transition:none}}
