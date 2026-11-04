@@ -28,6 +28,10 @@ test("Issue #130 follow-up uses concise customer language, without duplicate spe
   assert.doesNotMatch(picker,/Khổ giấy|catalogue-sku-specs|<select|SKU này|>SKU|Có \{product\.variants\.length\}|giá NET|giá đại lý/i);
   assert.equal((picker.match(/Liên hệ báo giá/g)||[]).length,1);
   assert.match(css,/\.catalogue-variant-options/);
+  assert.match(css,/\.catalogue-variant-option\{[^\n]*height:var\(--fb-control-height-compact\)/);
+  assert.match(css,/\.catalogue-variant-option__code\{font-size:var\(--fb-control-font-size\)/);
+  assert.match(css,/height:var\(--fb-control-height-touch\)/);
+  assert.doesNotMatch(css,/\.catalogue-variant-option\{[^\n]*min-height:64px/);
   assert.match(css,/@media\(max-width:500px\)/);
   assert.match(page,/category\.id!=="p5-uncategorized"/);
 });
