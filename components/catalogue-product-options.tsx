@@ -30,6 +30,14 @@ export default function CatalogueProductOptions({product,photos}:{
   const selectedName=shortVariantLabel(selected);
   const selectedAudience=variantAudience(selected);
   const selectedFormat=variantPaperFormat(selected);
+  const specs=selected.specifications;
+  const extraInfo:{label:string;value:string}[]=[];
+  if(specs.binding)extraInfo.push({label:"Đóng gáy",value:specs.binding});
+  if(specs.packaging?.saleUnit)extraInfo.push({label:"Đơn vị bán",value:specs.packaging.saleUnit});
+  if(specs.packaging?.unitsPerPack!==undefined)
+    extraInfo.push({label:"Đơn vị/gói",value:String(specs.packaging.unitsPerPack)});
+  if(specs.packaging?.unitsPerCarton!==undefined)
+    extraInfo.push({label:"Đơn vị/thùng",value:String(specs.packaging.unitsPerCarton)});
   return <div className="catalog-detail">
     <PublishedImageGallery key={selected.sku} items={gallery}/>
     <div className="catalog-detail__info">
@@ -78,6 +86,12 @@ export default function CatalogueProductOptions({product,photos}:{
           {selectedFormat&&<span>{selectedFormat}</span>}
           <Link href="/#contact" className="catalog-button catalogue-selected-summary__action">Liên hệ báo giá <span aria-hidden="true">→</span></Link>
         </div>
+        {extraInfo.length>0&&<details className="catalogue-extra-details">
+          <summary>Thông tin thêm</summary>
+          <dl>{extraInfo.map(row=><div key={row.label}>
+            <dt>{row.label}</dt><dd>{row.value}</dd>
+          </div>)}</dl>
+        </details>}
         {selected.price?.kind==="retail"&&<p className="catalog-detail__price">
           {new Intl.NumberFormat("vi-VN").format(selected.price.amountVnd)+" đ"}
         </p>}
