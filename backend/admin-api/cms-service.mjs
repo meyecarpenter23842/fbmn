@@ -1,5 +1,6 @@
 // ADM-03 (#20). Private CMS CRUD. No public DTO, no pricing or customer data.
 import { parseCmsTimestamp } from "./cms-publication-policy.mjs";
+import { validCmsPlacements, cmsPlacementIsReady, validatePopupFrequency } from "./cms-placement-contract.mjs";
 
 const ROOT = "/v1/admin/cms";
 const KIND = new Set(["banner","popup","article","promotion"]);
@@ -41,14 +42,21 @@ function validate(input,creating=false) {
     !input.channelTargets.every(c=>CHANNEL.has(c)) ||
     !Number.isSafeInteger(input.sortOrder) || input.sortOrder<0 || input.sortOrder>10000 ||
     (input.sourceRef!=="" && !clean(input.sourceRef,1,500)) ||
-    date(input.startsAt)===undefined || date(input.endsAt)===undefined)
+    date(input.startsAt)===undefined || date(input.endsAt)===undefined ||
+    !validCmsPlacements(input.kind??"article",input.channelTargets,input.placements??{}) ||
+    !validatePopupFrequency({popupDelaySeconds:input.popupDelaySeconds??3,
+     popupCooldownMinutes:input.popupCooldownMinutes??1440,
+     popupMaxPerSession:input.popupMaxPerSession??1}))
   return null;
  const starts=date(input.startsAt),ends=date(input.endsAt);
  if(starts!==null && ends!==null && starts>ends)return null;
  if(creating && ["article","promotion"].includes(input.kind) && !input.paragraphs.length)return null;
  return { title:input.title,summary:input.summary,paragraphs:input.paragraphs,
   cta_url:input.ctaUrl,channel_targets:input.channelTargets,sort_order:input.sortOrder,
-  starts_at:starts,ends_at:ends,source_ref:input.sourceRef };
+  starts_at:starts,ends_at:ends,source_ref:input.sourceRef,
+  placements:input.placements??{},popup_delay_seconds:input.popupDelaySeconds??3,
+  popup_cooldown_minutes:input.popupCooldownMinutes??1440,
+  popup_max_per_session:input.popupMaxPerSession??1 };
 }
 async function body(request){
  if(request.headers.get("content-type")?.split(";")[0]!=="application/json")return null;
@@ -71,16 +79,17 @@ async function record(client,id,subject,action,before,after){
   [id,subject,action,before?JSON.stringify(before):null,JSON.stringify(after)]);
 }
 function errorFor(e) {
+ if(e?.message==="surface_unavailable")return fail(409,"surface_unavailable");
  if(e?.message==="revision_conflict"||e?.message==="hide_before_edit"||
     e?.message==="already_published"||e?.message==="already_hidden")return fail(409,e.message);
- if(e?.message==="source_required"||e?.message==="channels_required")return fail(400,e.message);
+ if(e?.message==="source_required"||e?.message==="channels_required"||e?.message==="placements_required"||e?.message==="media_required")return fail(400,e.message);
  return fail(e?.code==="23505"?409:503,e?.code==="23505"?"slug_conflict":"cms_unavailable");
 }
 // Fetch lightweight summaries in bounded pages; full prose is loaded only on edit.
 async function list(db,mode,page){
  const result=await db(client=>client.query(
   "SELECT id::text,kind,slug,title,summary,channel_targets,sort_order,"+
-  "starts_at,ends_at,source_ref,status,revision,created_at,updated_at "+
+  "starts_at,ends_at,source_ref,placements,popup_delay_seconds,popup_cooldown_minutes,popup_max_per_session,status,revision,created_at,updated_at "+
   "FROM "+TABLE+" WHERE (($1::text='marketing' AND kind IN ('banner','popup')) "+
   "OR ($1::text='editorial' AND kind IN ('article','promotion'))) "+
   "ORDER BY updated_at DESC,id LIMIT 51 OFFSET $2",
@@ -90,7 +99,7 @@ async function list(db,mode,page){
 async function detail(db,id){
  const result=await db(client=>client.query(
   "SELECT id::text,kind,slug,title,summary,paragraphs,cta_url,channel_targets,"+
-  "sort_order,starts_at,ends_at,source_ref,status,revision,created_at,updated_at "+
+  "sort_order,starts_at,ends_at,source_ref,placements,popup_delay_seconds,popup_cooldown_minutes,popup_max_per_session,status,revision,created_at,updated_at "+
   "FROM "+TABLE+" WHERE id=$1::uuid LIMIT 1",[id]));
  if(result.rowCount!==1)return fail(404,"cms_not_found");
  return ok({item:result.rows[0]});
@@ -101,10 +110,11 @@ async function create(db,input,subject){
  try{
   const result=await transaction(db,async c=>{
    const columns="kind,slug,title,summary,paragraphs,cta_url,channel_targets,sort_order,"+
-    "starts_at,ends_at,source_ref,created_by,updated_by";
+    "starts_at,ends_at,source_ref,placements,popup_delay_seconds,popup_cooldown_minutes,popup_max_per_session,created_by,updated_by";
    const values=[input.kind,input.slug,item.title,item.summary,item.paragraphs,
     item.cta_url,item.channel_targets,item.sort_order,item.starts_at,item.ends_at,
-    item.source_ref,subject,subject];
+    item.source_ref,JSON.stringify(item.placements),item.popup_delay_seconds,
+    item.popup_cooldown_minutes,item.popup_max_per_session,subject,subject];
    const added=await c.query("INSERT INTO "+TABLE+" ("+columns+") VALUES ("+
     values.map((_,i)=>"$"+(i+1)).join(",")+") RETURNING *",values);
    await record(c,added.rows[0].id,subject,"create",null,added.rows[0]);
@@ -113,7 +123,7 @@ async function create(db,input,subject){
   return ok({item:result});
  }catch(e){return errorFor(e);}
 }
-async function mutate(db,input,subject,action){
+async function mutate(db,input,subject,action,publicSurfaceReady=false){
  if(!IDENTIFIER.test(input?.id)||!Number.isSafeInteger(input?.expectedRevision)||
     input.expectedRevision<1)return fail(400,"invalid_revision");
  const next=action==="update"?validate(input):null;
@@ -128,14 +138,26 @@ async function mutate(db,input,subject,action){
    if(action==="hide"&&old.status==="hidden")throw Error("already_hidden");
    if(action==="publish" && !old.source_ref.trim())throw Error("source_required");
    if(action==="publish" && !old.channel_targets.length)throw Error("channels_required");
+   if(action==="publish" && !cmsPlacementIsReady(old.kind,old.channel_targets,old.placements))
+    throw Error("placements_required");
+   // No phantom releases while public read-model + frontend do not consume CMS.
+   if(action==="publish" && (!publicSurfaceReady || old.channel_targets.some(c=>c!=="public_web")))
+    throw Error("surface_unavailable");
+   if(action==="publish" && ["banner","popup"].includes(old.kind)){
+    const media=await c.query("SELECT channel,device FROM fbmn_catalog_private.cms_entry_media WHERE entry_id=$1::uuid",[input.id]);
+    if(!["desktop","mobile"].every(device=>media.rows.some(m=>m.channel==="public_web"&&m.device===device)))
+     throw Error("media_required");
+   }
    let result;
    if(action==="update"){
     result=await c.query("UPDATE "+TABLE+" SET "+
      "title=$2,summary=$3,paragraphs=$4,cta_url=$5,channel_targets=$6,sort_order=$7,"+
-     "starts_at=$8,ends_at=$9,source_ref=$10,status='draft',revision=revision+1,"+
-     "updated_by=$11,updated_at=now() WHERE id=$1::uuid RETURNING *",[
+     "starts_at=$8,ends_at=$9,source_ref=$10,placements=$11::jsonb,"+
+     "popup_delay_seconds=$12,popup_cooldown_minutes=$13,popup_max_per_session=$14,"+
+     "status='draft',revision=revision+1,updated_by=$15,updated_at=now() WHERE id=$1::uuid RETURNING *",[
      input.id,next.title,next.summary,next.paragraphs,next.cta_url,next.channel_targets,
-     next.sort_order,next.starts_at,next.ends_at,next.source_ref,subject]);
+     next.sort_order,next.starts_at,next.ends_at,next.source_ref,JSON.stringify(next.placements),
+     next.popup_delay_seconds,next.popup_cooldown_minutes,next.popup_max_per_session,subject]);
    }else if(action==="publish"){
     result=await c.query("UPDATE "+TABLE+" SET "+
      "status='published',verified_by=$2,verified_at=now(),approved_by=$2,approved_at=now(),"+
@@ -153,7 +175,7 @@ async function mutate(db,input,subject,action){
   return ok({item:changed});
  }catch(e){return errorFor(e);}
 }
-export async function handleCms({request,actor,db}){
+export async function handleCms({request,actor,db,r2,publicSurfaceReady=false}){
  // Limit release rights until Editor/Publisher scope is approved by Owner.
  if(actor?.role!=="owner")return fail(403,"owner_required");
  const u=new URL(request.url);
@@ -181,5 +203,5 @@ export async function handleCms({request,actor,db}){
  const input=await body(request);
  if(!input)return fail(400,"invalid_body");
  if(action==="create")return create(db,input,actor.subject);
- return mutate(db,input,actor.subject,action);
+ return mutate(db,input,actor.subject,action,publicSurfaceReady);
 }
