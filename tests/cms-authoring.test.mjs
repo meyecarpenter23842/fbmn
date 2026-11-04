@@ -11,9 +11,10 @@ const payload=()=>({
  summary:"Thông tin đã được xác minh",paragraphs:["Nội dung bản nháp để kiểm tra."],
  ctaUrl:"/san-pham",channelTargets:["public_web"],sortOrder:0,
  startsAt:"2026-11-04T10:00:00+07:00",endsAt:"2026-11-20T10:00:00+07:00",
- sourceRef:"nguon-owner"
+ sourceRef:"nguon-owner",placements:{public_web:"news.list"},
+ popupDelaySeconds:3,popupCooldownMinutes:1440,popupMaxPerSession:1
 });
-function env({role="owner",failAudit=false}={}){
+function env({role="owner",failAudit=false,publicReady=false}={}){
  const state={rows:[],cmsAudit:[],queries:[]};
  const db=async work=>work({query:async(sql,params=[])=>{
   state.queries.push(sql);
@@ -23,7 +24,9 @@ function env({role="owner",failAudit=false}={}){
     id:UUID,kind:params[0],slug:params[1],title:params[2],summary:params[3],
     paragraphs:params[4],cta_url:params[5],channel_targets:params[6],
     sort_order:params[7],starts_at:params[8],ends_at:params[9],
-    source_ref:params[10],created_by:params[11],updated_by:params[12],
+    source_ref:params[10],placements:JSON.parse(params[11]),
+    popup_delay_seconds:params[12],popup_cooldown_minutes:params[13],
+    popup_max_per_session:params[14],created_by:params[15],updated_by:params[16],
     status:"draft",revision:1,verified_at:null,published_at:null,
     approved_at:null,withdrawn_at:null,created_at:new Date(),updated_at:new Date()
    };
@@ -55,7 +58,9 @@ function env({role="owner",failAudit=false}={}){
     Object.assign(row,{title:params[1],summary:params[2],paragraphs:params[3],
      cta_url:params[4],channel_targets:params[5],sort_order:params[6],
      starts_at:params[7],ends_at:params[8],source_ref:params[9],
-     status:"draft",updated_by:params[10]});
+     placements:JSON.parse(params[10]),popup_delay_seconds:params[11],
+     popup_cooldown_minutes:params[12],popup_max_per_session:params[13],
+     status:"draft",updated_by:params[14]});
    } else if(sql.includes("status='published'")){
     Object.assign(row,{status:"published",approved_by:params[1],
      approved_at:new Date(),verified_at:new Date(),published_at:new Date(),
@@ -73,6 +78,7 @@ function env({role="owner",failAudit=false}={}){
   recordAudit:async()=>{},
   listChannels:async()=>[],
   catalogueDb:db,
+  cmsPublicSurfaceReady:publicReady,
   allowedOrigins:["https://admin.example.test"]
  });
  const hit=(path,method="GET",data)=>api.fetch(new Request("https://worker.example.invalid"+path,{
@@ -123,7 +129,7 @@ test("CMS publication requires verified source and channels",async()=>{
   {id:UUID,expectedRevision:1})).status,400);
  // Updating draft with no source remains possible; publication is not.
  const upd=await a.hit("/v1/admin/cms/update","POST",{
-  ...d,sourceRef:"nguon-xac-minh",channelTargets:[],
+  ...d,sourceRef:"nguon-xac-minh",channelTargets:[],placements:{},
   id:UUID,expectedRevision:1
  });
  assert.equal(upd.status,200);
@@ -132,7 +138,7 @@ test("CMS publication requires verified source and channels",async()=>{
 });
 
 test("CMS publish/hide/update uses optimistic revision and append-only audit",async()=>{
- const a=env();
+ const a=env({publicReady:true});
  await a.hit("/v1/admin/cms/create","POST",payload());
  const published=await a.hit("/v1/admin/cms/publish","POST",{id:UUID,expectedRevision:1});
  assert.equal(published.status,200);
@@ -200,6 +206,23 @@ test("CMS lightweight pages remain below proxy cap with many long articles",asyn
  assert.equal((await item.json()).data.item.paragraphs.length,30);
  const marketing=await a.hit("/v1/admin/cms?mode=marketing&page=1");
  assert.equal((await marketing.json()).data.items.length,0);
+});
+
+test("CMS refuses phantom website/app publication and validates per-channel slots",async()=>{
+ const a=env();
+ await a.hit("/v1/admin/cms/create","POST",payload());
+ const denied=await a.hit("/v1/admin/cms/publish","POST",{id:UUID,expectedRevision:1});
+ assert.equal(denied.status,409);
+ assert.equal((await denied.json()).error.code,"surface_unavailable");
+ const invalid=env();
+ const wrong=await invalid.hit("/v1/admin/cms/create","POST",{
+  ...payload(),kind:"banner",placements:{public_web:"news.list"}
+ });
+ assert.equal(wrong.status,400);
+ const wrongApp=await invalid.hit("/v1/admin/cms/create","POST",{
+  ...payload(),placements:{dealer_app:"home.banner"}
+ });
+ assert.equal(wrongApp.status,400);
 });
 
 test("CMS audits must be atomic and never send data to public reader",async()=>{
