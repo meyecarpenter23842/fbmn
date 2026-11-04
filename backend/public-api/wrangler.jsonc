@@ -8,16 +8,21 @@
   "workers_dev": false,
   "vars": {
     "PUBLIC_ALLOWED_ORIGINS": "https://fbmn-web.vercel.app",
-    "EXPECTED_DB_ROLE": "fbmn_public_http_staging",
-    "PUBLIC_P5_ENABLED": "false"
+    "EXPECTED_DB_ROLE": "fbmn_p5_public_login",
+    "PUBLIC_P5_ENABLED": "true"
   },
   "hyperdrive": [
     {
       "binding": "HYPERDRIVE",
-      "id": "a49c268446874bda9c9f0c0ec2777e7e"
+      "id": "a41b7ba00cbe4bf6b6485dee613f0a77"
     }
   ],
-  "r2_buckets": [{ "binding": "PUBLIC_MEDIA_R2", "bucket_name": "fbmn" }],
+  "r2_buckets": [
+    {
+      "binding": "PUBLIC_MEDIA_R2",
+      "bucket_name": "fbmn"
+    }
+  ],
   "ratelimits": [
     {
       "name": "RATE_LIMITER",

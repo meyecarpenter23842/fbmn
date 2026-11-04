@@ -87,6 +87,6 @@ test("staging Worker binds the dedicated public read-only Hyperdrive, never B2B"
  assert.equal(config.workers_dev,false);
  assert.notEqual(config.hyperdrive[0].id,"680f8ad608b845039dcb889240ace3d2");
  assert.equal(config.ratelimits[0].name,"RATE_LIMITER");
- assert.equal(config.vars.EXPECTED_DB_ROLE,"fbmn_public_http_staging");
- assert.equal(config.hyperdrive[0].id,"a49c268446874bda9c9f0c0ec2777e7e");
+ assert.equal(config.vars.EXPECTED_DB_ROLE,"fbmn_p5_public_login");
+ assert.equal(config.hyperdrive[0].id,"a41b7ba00cbe4bf6b6485dee613f0a77");
 });
