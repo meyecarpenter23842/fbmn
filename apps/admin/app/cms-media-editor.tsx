@@ -1,5 +1,6 @@
 "use client";
 import {useCallback,useEffect,useRef,useState} from "react";
+import type {MutableRefObject} from "react";
 import AdminToast from "./admin-toast";
 
 type CmsChannel="public_web"|"dealer_app"|"consumer_app";
@@ -66,8 +67,9 @@ function CmsPrivateImage({id,channel,device,stamp}:{id:string;channel:CmsChannel
  return url?<img className="cms-media-image" src={url} alt={"Ảnh "+CHANNEL_NAMES[channel]+" "+device}/>:
   <span className="cms-media-placeholder">Ảnh chưa tải được</span>;
 }
-export default function CmsMediaEditor({id,revision,channels,onRevision,onBusyChange}:{
+export default function CmsMediaEditor({id,revision,channels,saveBusy,operationLock,onRevision,onBusyChange}:{
  id:string|null;revision:number;channels:CmsChannel[];
+ saveBusy:boolean;operationLock:MutableRefObject<boolean>;
  onRevision:(revision:number)=>void;onBusyChange:(busy:boolean)=>void;
 }){
  const [items,setItems]=useState<Media[]>([]);
@@ -88,7 +90,8 @@ export default function CmsMediaEditor({id,revision,channels,onRevision,onBusyCh
   return()=>window.clearTimeout(handle);
  },[refresh]);
  const upload=async(channel:CmsChannel,device:CmsDevice,file:File|undefined)=>{
-  if(!id||!file||busy)return;
+  if(!id||!file||busy||saveBusy||operationLock.current)return;
+  operationLock.current=true;
   setBusy(true);onBusyChange(true);setError("");setMessage("");
   try{
    const image=await convertToWebP(file,device==="mobile"?1100:2000);
@@ -114,6 +117,7 @@ export default function CmsMediaEditor({id,revision,channels,onRevision,onBusyCh
   }finally{
    const node=fileInputs.current[channel+":"+device];
    if(node)node.value="";
+   operationLock.current=false;
    setBusy(false);onBusyChange(false);
   }
  };
@@ -139,7 +143,7 @@ export default function CmsMediaEditor({id,revision,channels,onRevision,onBusyCh
       <label className="fb-ui-button fb-ui-button--secondary cms-media-upload">
        <span>{asset?"Thay ảnh":"Chọn ảnh"}</span>
        <input ref={node=>{fileInputs.current[identifier]=node;}}
-        type="file" accept="image/jpeg,image/png,image/webp" disabled={busy}
+        type="file" accept="image/jpeg,image/png,image/webp" disabled={busy||saveBusy}
         onChange={e=>void upload(ch,device,e.target.files?.[0])}/>
       </label>
       <small>{asset?asset.width+" × "+asset.height+" px":"JPG/PNG/WebP · tối đa 5MB"}</small>
