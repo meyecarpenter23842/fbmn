@@ -4,7 +4,7 @@ import { CatalogShell, CatalogBreadcrumb, EmptyState, formatRetail } from "@/com
 import { getPublicCatalog } from "@/lib/catalog/adapter";
 import { getProductBySlug } from "@/lib/catalog/query";
 import { getPublishedProductImageUrl } from "@/lib/catalog/product-image";
-import PublishedImageGallery from "@/components/published-image-gallery";
+import CatalogueProductOptions from "@/components/catalogue-product-options";
 
 export const dynamic = "force-dynamic";
 
@@ -29,7 +29,7 @@ export default async function ProductPage({ params }: Props) {
   const category = catalog.categories.find(item => item.id === product.categoryId);
   const images=product.media.flatMap(media=>{
     const src=getPublishedProductImageUrl(media.r2Key,process.env.NEXT_PUBLIC_MEDIA_BASE_URL);
-    return src?[{src,alt:media.alt}]:[];
+    return src?[{src,alt:media.alt,position:media.position,sku:media.sku}]:[];
   });
   return <CatalogShell><div className="catalog-wrap">
     <CatalogBreadcrumb trail={[
@@ -37,18 +37,7 @@ export default async function ProductPage({ params }: Props) {
       ...(category ? [{ label: category.name, href: "/danh-muc/" + encodeURIComponent(category.slug) }] : []),
       { label: product.name },
     ]}/>
-    <div className="catalog-detail">
-      <PublishedImageGallery items={images}/>
-      <div className="catalog-detail__info">
-        <p className="catalog-overline">THÔNG TIN SẢN PHẨM ĐÃ XÁC MINH</p>
-        <h1>{product.name}</h1>
-        {product.description && <p className="catalog-detail__description">{product.description}</p>}
-        <p className="catalog-detail__count">Có {product.variants.length} quy cách đã xác minh</p>
-        <p className="catalog-detail__price">{product.priceLabel ?? "Giá bán lẻ theo quy cách bên dưới"}</p>
-        <Link href="/#contact" className="catalog-button">Liên hệ báo giá</Link>
-        <p className="catalog-detail__policy">Giá NET, giá đại lý và giá theo hợp đồng không công khai trên website.</p>
-      </div>
-    </div>
+    <CatalogueProductOptions product={product} photos={images}/>
     <section className="catalog-variants" aria-labelledby="variant-heading">
       <h2 id="variant-heading">Thông số và biến thể</h2>
       <div className="catalog-variant-list">

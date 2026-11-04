@@ -123,6 +123,8 @@ export function createReadModel(query,{enableP5=false}={}) {
       const gsm=strictGsm(spec.gsm);if(gsm)values.paperWeightGsm=gsm;
       const coverFinish=normalized(spec.cover_type,120);
       if(coverFinish)values.coverFinish=coverFinish;
+      const ruling=normalized(spec.ruling,120);
+      if(ruling)values.ruling=ruling;
       const unit=normalized(spec.unit,80);
       if(unit)values.packaging={saleUnit:unit};
       if(values.packaging&&strictCount(spec.units_per_pack))
@@ -143,7 +145,7 @@ export function createReadModel(query,{enableP5=false}={}) {
       const ownImages=(bySku.get(sku)??[]).sort((a,b)=>Number(b.cover)-Number(a.cover)||a.position-b.position);
       for(const media of ownImages){
         if(group.media.length>=50)break;
-        group.media.push({r2Key:media.r2Key,alt:name,position:group.media.length});
+        group.media.push({r2Key:media.r2Key,alt:name,position:group.media.length,sku});
       }
     }
     const products=[...groups.values()];

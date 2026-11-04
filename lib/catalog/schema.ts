@@ -40,6 +40,7 @@ export interface Specifications {
   paperWeightGsm?: number;
   binding?: string;
   coverFinish?: string;
+  ruling?: string;
   packaging?: Packaging;
   details?: Record<string, string>;
 }
@@ -106,7 +107,7 @@ export interface PublicProduct {
   description?: string;
   priceLabel: "Liên hệ báo giá" | null;
   variants: PublicVariant[];
-  media: Array<{ r2Key: string; alt: string; position: number }>;
+  media: Array<{ r2Key: string; alt: string; position: number; sku?: string }>;
 }
 
 export interface PublicCatalog {

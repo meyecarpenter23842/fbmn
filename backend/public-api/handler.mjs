@@ -34,7 +34,7 @@ function positiveNumber(value) {
 function copySpecifications(specs) {
   guard(object(specs));
   const result = {};
-  for (const name of ["paperSize", "binding", "coverFinish"]) {
+  for (const name of ["paperSize", "binding", "coverFinish", "ruling"]) {
     if (specs[name] !== undefined) result[name] = text(specs[name], 120);
   }
   for (const name of ["pageCount"]) {
@@ -82,11 +82,15 @@ export function projectPublicCatalog(raw) {
         specifications: copySpecifications(v.specifications), price,
       };
     });
+    const allowedSkus = new Set(variants.map(v => v.sku));
     const media = p.media.map(m => {
       guard(object(m) && Number.isSafeInteger(m.position) && m.position >= 0);
       const r2Key = text(m.r2Key, 400);
       guard(/^products\/[a-zA-Z0-9_-]+\/[a-zA-Z0-9_-]+-v[1-9]\d*\.(webp|png|jpg|jpeg|avif)$/i.test(r2Key));
-      return { r2Key, alt: text(m.alt, 240), position: m.position };
+      const sku = m.sku == null ? undefined : text(m.sku, 100);
+      guard(sku === undefined || allowedSkus.has(sku));
+      return { r2Key, alt: text(m.alt, 240), position: m.position,
+        ...(sku === undefined ? {} : { sku }) };
     });
     guard(p.priceLabel === null || p.priceLabel === "Liên hệ báo giá");
     return {

@@ -172,3 +172,20 @@
   .catalog-main > .catalog-wrap:not(.catalog-route-loading),
   .catalogue-gallery-photo { animation: none; }
 }
+
+
+/* L06 SKU choice: inside the existing detail grid; shared control tokens. */
+.catalogue-options{display:grid;gap:13px;margin-top:16px}
+.catalogue-option-group{margin:0;padding:0;border:0;min-width:0}
+.catalogue-option-group legend,.catalogue-option-group label{display:block;font-size:13px;font-weight:750;color:#4b3063;margin:0 0 7px}
+.catalogue-option-choices{display:flex;flex-wrap:wrap;gap:8px}
+.catalogue-option-choices button{min-height:var(--fb-control-height-compact);padding:6px 12px;font-size:var(--fb-control-font-size);font-weight:700;border:1px solid #d8c7e4;border-radius:var(--fb-control-radius);background:#fff;color:#4e3762;cursor:pointer;transition:background-color var(--fb-motion-button) var(--fb-easing-open),border-color var(--fb-motion-button) var(--fb-easing-open)}
+.catalogue-option-choices button[aria-pressed="true"]{color:#562182;border-color:var(--fb-ui-primary);background:#f4edfa}
+.catalogue-option-choices button:hover{border-color:var(--fb-ui-primary)}
+.catalogue-option-choices button:focus-visible,.catalogue-option-group select:focus-visible{outline:2px solid var(--fb-ui-primary);outline-offset:2px}
+.catalogue-option-group select{display:block;width:100%;max-width:100%;height:var(--fb-field-height);padding:0 12px;border:1px solid #d8c7e4;border-radius:var(--fb-control-radius);background:#fff;color:#352441;font:inherit;font-size:var(--fb-control-font-size)}
+.catalogue-selected-sku,.catalogue-selected-spec,.catalogue-cover-note{margin:0;font-size:13px;line-height:1.5;color:#695778;overflow-wrap:anywhere}
+.catalogue-selected-sku strong{color:#43215f}
+.catalogue-cover-note{font-size:12px}
+@media(max-width:780px){.catalogue-option-choices button{min-height:var(--fb-control-height-touch)}}
+@media(prefers-reduced-motion:reduce){.catalogue-option-choices button{transition:none}}

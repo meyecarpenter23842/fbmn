@@ -29,7 +29,7 @@ function optionalText(x: unknown, max = 3000): string | undefined {
 }
 function safeSpec(raw: unknown): Specifications {
   const s = obj(raw), result: Specifications = {};
-  for (const k of ["paperSize", "binding", "coverFinish"] as const) {
+  for (const k of ["paperSize", "binding", "coverFinish", "ruling"] as const) {
     if (s[k] != null) result[k] = str(s[k], 120);
   }
   if (s.pageCount != null) result.pageCount = integer(s.pageCount, 1);
@@ -57,10 +57,14 @@ function safeVariant(raw: unknown): PublicVariant {
 function safeProduct(raw: unknown): PublicProduct {
   const p = obj(raw);
   const variants = arr(p.variants, 100).map(safeVariant);
+  const allowedSkus = new Set(variants.map(v => v.sku));
   const media = arr(p.media, 50).map(item => {
     const m = obj(item), key = str(m.r2Key, 400);
     if (!/^products\/[A-Za-z0-9_-]+\/[A-Za-z0-9_-]+-v[1-9]\d*\.(webp|png|jpg|jpeg|avif)$/i.test(key)) throw new Error("Unapproved media key");
-    return { r2Key: key, alt: str(m.alt, 240), position: integer(m.position) };
+    const sku = m.sku == null ? undefined : str(m.sku, 100);
+    if (sku !== undefined && !allowedSkus.has(sku)) throw new Error("Orphan public media SKU");
+    return { r2Key: key, alt: str(m.alt, 240), position: integer(m.position),
+      ...(sku === undefined ? {} : { sku }) };
   });
   if (p.priceLabel !== null && p.priceLabel !== "Liên hệ báo giá") throw new Error("Disallowed price label");
   return {
