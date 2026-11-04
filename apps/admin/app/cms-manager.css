@@ -12,16 +12,6 @@
 .cms-table strong{display:block;max-width:430px;overflow-wrap:anywhere}
 .cms-table small{display:block;color:var(--fb-ui-muted,#667085);margin-top:4px}
 .cms-row-actions,.cms-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-.cms-panel .cms-primary,.cms-editor .cms-primary{background:var(--fb-ui-primary);color:#fff;
- border:1px solid var(--fb-ui-primary);cursor:pointer}
-.cms-panel .cms-primary:hover:not(:disabled),.cms-editor .cms-primary:hover:not(:disabled){
- background:var(--fb-ui-primary-hover);border-color:var(--fb-ui-primary-hover)}
-.cms-panel .cms-secondary,.cms-editor .cms-secondary{background:#fff;
- color:var(--fb-ui-primary-strong);border:1px solid var(--fb-ui-table-header-border);cursor:pointer}
-.cms-panel .cms-secondary:hover:not(:disabled),.cms-editor .cms-secondary:hover:not(:disabled){
- background:var(--fb-ui-primary-subtle)}
-.cms-panel .fb-ui-button:disabled,.cms-editor .fb-ui-button:disabled{opacity:.55;cursor:default}
-.cms-panel .fb-ui-button,.cms-editor .fb-ui-button{transition:background-color 190ms,border-color 190ms,box-shadow 190ms}
 .cms-editor{font-size:13px}
 .cms-form-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px}
 .cms-form-grid>label{display:flex;flex-direction:column;gap:6px;font-weight:600;min-width:0}
