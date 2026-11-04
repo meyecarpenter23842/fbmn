@@ -79,11 +79,11 @@ export function SiteHeader() {
       </Container>
       <nav ref={menuPanel} id="site-navigation" className={"ref-navigation" + (menuOpen ? " ref-navigation--open" : "")} aria-label="Điều hướng chính">
         <Container className="ref-navigation__inner">
-          <Link className="ref-navigation__catalog" href="/san-pham" onClick={() => setMenuOpen(false)}><Icon name="menu" size={17}/> Danh mục sản phẩm <Icon name="down" size={15}/></Link>
+          <Link className="ref-navigation__catalog" href="/san-pham" prefetch={false} onClick={() => setMenuOpen(false)}><Icon name="menu" size={17}/> Danh mục sản phẩm <Icon name="down" size={15}/></Link>
           {desktopNavigation.map(item => {
             const active = item.href === "/#home" ? pathname === "/" : pathname === item.href;
             return <Link className={"ref-navigation__link" + (active ? " ref-navigation__link--active" : "")}
-              key={item.label} href={item.href} onClick={() => setMenuOpen(false)}
+              key={item.label} href={item.href} prefetch={false} onClick={() => setMenuOpen(false)}
               aria-current={active ? "page" : undefined}>{item.label}</Link>;
           })}
           <AppDownloadMenuButton onOpen={() => setMenuOpen(false)} />

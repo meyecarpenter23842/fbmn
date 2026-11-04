@@ -22,7 +22,8 @@ test("mobile header hamburger/search panels remain accessible", () => {
   assert.match(header, /aria-controls="site-navigation"/);
   assert.match(header, /aria-controls="ref-mobile-search"/);
   assert.match(header, /event\.key === "Escape"/);
-  assert.match(css, /\.ref-navigation--open \{ display: block; \}/);
+  assert.match(css, /\.ref-navigation--open \{[\s\S]*?visibility: visible; pointer-events: auto;/);
+  assert.match(css, /opacity: 0; visibility: hidden; pointer-events: none;/);
   assert.match(css, /\.ref-header__mobile-icon \{ display: grid; place-items: center; \}/);
 });
 

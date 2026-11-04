@@ -13,6 +13,17 @@
   --content-width: 1200px;
   --radius-card: 14px;
   --shadow-soft: 0 10px 28px rgba(72, 28, 117, .1);
+  /* Website uses the mandatory Futurebook control/motion contract; no per-page timings. */
+  --fb-control-height-compact: 36px;
+  --fb-field-height: 40px;
+  --fb-control-height-touch: 44px;
+  --fb-control-font-size: 13px;
+  --fb-control-radius: 9px;
+  --fb-motion-button: 190ms;
+  --fb-motion-menu: 200ms;
+  --fb-motion-skeleton: 1300ms;
+  --fb-easing-open: cubic-bezier(.22, 1, .36, 1);
+  --fb-easing-close: cubic-bezier(.4, 0, 1, 1);
 }
 * { box-sizing: border-box; }
 html { scroll-behavior: smooth; }

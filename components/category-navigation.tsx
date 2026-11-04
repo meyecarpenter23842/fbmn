@@ -15,6 +15,7 @@ export function CategoryNavigation() {
           key={category.title}
           className="category-nav__link"
           href={"/san-pham?q=" + encodeURIComponent(category.title)}
+          prefetch={false}
           aria-label={"Khám phá " + category.title}
         >
           <span className="category-nav__art" aria-hidden="true">

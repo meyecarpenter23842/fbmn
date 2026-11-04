@@ -21,7 +21,7 @@ export function CatalogBreadcrumb({ trail }: { trail: Array<{ label: string; hre
     <Link href="/">Trang chủ</Link>
     {trail.map(item => <span key={item.label}>
       <span aria-hidden="true"> / </span>
-      {item.href ? <Link href={item.href}>{item.label}</Link> : <span aria-current="page">{item.label}</span>}
+      {item.href ? <Link href={item.href} prefetch={false}>{item.label}</Link> : <span aria-current="page">{item.label}</span>}
     </span>)}
   </nav>;
 }
@@ -35,15 +35,15 @@ export function ProductCard({ product }: { product: PublicProduct }) {
       : "Liên hệ báo giá"
   );
   return <article className="catalog-product">
-    <Link className="catalog-product__image" href={"/san-pham/" + encodeURIComponent(product.slug)}
+    <Link className="catalog-product__image" href={"/san-pham/" + encodeURIComponent(product.slug)} prefetch={false}
       aria-label={"Xem sản phẩm " + product.name}>
       <CatalogProductImage src={image} alt={media?.alt ?? product.name}/>
     </Link>
     <div className="catalog-product__body">
-      <h3><Link href={"/san-pham/" + encodeURIComponent(product.slug)}>{product.name}</Link></h3>
+      <h3><Link href={"/san-pham/" + encodeURIComponent(product.slug)} prefetch={false}>{product.name}</Link></h3>
       <p>{product.variants.length} quy cách đã xác minh</p>
       <strong className="catalog-price">{label}</strong>
-      <Link className="catalog-button catalog-button--small" href={"/san-pham/" + encodeURIComponent(product.slug)}>Xem chi tiết</Link>
+      <Link className="catalog-button catalog-button--small" href={"/san-pham/" + encodeURIComponent(product.slug)} prefetch={false}>Xem chi tiết</Link>
     </div>
   </article>;
 }
@@ -112,9 +112,9 @@ export function CatalogListing({ data, heading, description, filters, actionPath
         {results.total ? <>
           <div className="catalog-grid">{results.items.map(product => <ProductCard key={product.id} product={product}/>)}</div>
           {results.pages > 1 && <nav aria-label="Phân trang sản phẩm" className="catalog-pagination">
-            {results.page > 1 && <Link href={actionPath + "?" + filtersToParams(filters, results.page - 1)}>Trang trước</Link>}
+            {results.page > 1 && <Link href={actionPath + "?" + filtersToParams(filters, results.page - 1)} prefetch={false}>Trang trước</Link>}
             <span>Trang {results.page}/{results.pages}</span>
-            {results.page < results.pages && <Link href={actionPath + "?" + filtersToParams(filters, results.page + 1)}>Trang sau</Link>}
+            {results.page < results.pages && <Link href={actionPath + "?" + filtersToParams(filters, results.page + 1)} prefetch={false}>Trang sau</Link>}
           </nav>}
         </> : <EmptyState
           heading={filters.q || filters.size || filters.gsm || filters.group ? "Chưa tìm thấy sản phẩm phù hợp" : "Catalogue đang được cập nhật"}

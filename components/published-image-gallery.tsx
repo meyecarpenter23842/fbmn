@@ -9,18 +9,14 @@ export default function PublishedImageGallery({items}:{items:Array<{src:string;a
       <CatalogProductImage src={current?.src??null} alt={current?.alt??"Sản phẩm Futurebook"}/>
     </div>
     {items.length>1&&<div className="catalogue-gallery-thumbs"
-      role="group" aria-label="Các mẫu ảnh sản phẩm"
-      style={{display:"flex",gap:8,flexWrap:"wrap",marginTop:12}}>
+      role="group" aria-label="Các mẫu ảnh sản phẩm">
       {items.map((img,i)=><button key={img.src} type="button"
         aria-label={"Xem mẫu ảnh "+(i+1)}
         aria-pressed={selected===i}
-        onClick={()=>setSelected(i)}
-        style={{width:68,height:68,overflow:"hidden",borderRadius:8,
-          border:selected===i?"2px solid #7628a4":"1px solid #ddd",
-          background:"#fff",padding:3,cursor:"pointer"}}>
+        onClick={()=>setSelected(i)} className="catalogue-gallery-thumb">
         {/* Browser-native image for small gallery thumbs: the server verifies publication. */}
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={img.src} alt="" loading="lazy" style={{width:"100%",height:"100%",objectFit:"contain"}}/>
+        <img src={img.src} alt="" loading="lazy" className="catalogue-gallery-thumb__image"/>
       </button>)}
     </div>}
   </div>;

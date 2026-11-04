@@ -7,16 +7,16 @@
   gap: 7px;
   flex: 0 0 auto;
   margin-left: auto;
-  min-height: 34px;
+  min-height: var(--fb-control-height-compact);
   border: 1px solid rgba(255,255,255,.5);
-  border-radius: 10px;
+  border-radius: var(--fb-control-radius);
   padding: 0 12px;
   background: rgba(255,255,255,.13);
   color: #fff;
-  font-size: 12px;
+  font-size: var(--fb-control-font-size);
   font-weight: 800;
   white-space: nowrap;
-  transition: background-color .2s ease, transform .2s ease;
+  transition: background-color var(--fb-motion-button) var(--fb-easing-open), transform var(--fb-motion-button) var(--fb-easing-open);
 }
 .ref-navigation__download:hover,
 .ref-navigation__download:focus-visible { background: rgba(255,255,255,.23); transform: translateY(-1px); }
@@ -35,7 +35,7 @@
   color: #291743;
   background: rgba(255,255,255,.98);
   box-shadow: 0 16px 46px rgba(47,14,86,.19), 0 2px 8px rgba(47,14,86,.08);
-  animation: app-download-enter .28s cubic-bezier(.21,1,.33,1) both;
+  animation: app-download-enter 280ms var(--fb-easing-open) both;
 }
 .app-download__head { display: flex; align-items: center; gap: 10px; }
 .app-download__glyph {

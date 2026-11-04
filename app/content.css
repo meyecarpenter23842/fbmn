@@ -16,7 +16,7 @@
 .content-intro-grid h3 { color: #5c2886; font-size: 17px; }
 .content-intro-grid p, .content-information-card p { color: #65596d; font-size: 14px; line-height: 1.75; }
 .content-intro-panel > p, .content-outline-panel > p { margin: 0 0 18px; }
-.content-button { display: inline-flex; align-items: center; justify-content: center; min-height: 42px; padding: 10px 20px; border: none; border-radius: 25px; background: #df0d4d; color: white; font-weight: 850; font-size: 13px; text-decoration: none; }
+.content-button { display: inline-flex; align-items: center; justify-content: center; min-height: var(--fb-control-height-compact); padding: 6px 12px; border: none; border-radius: var(--fb-control-radius); background: #df0d4d; color: white; font-weight: 850; font-size: var(--fb-control-font-size); text-decoration: none; transition: background-color var(--fb-motion-button) var(--fb-easing-open), box-shadow var(--fb-motion-button) var(--fb-easing-open); }
 .content-button:disabled { opacity: .55; cursor: not-allowed; }
 .content-button:not(:disabled):hover { background: #ba0a3e; }
 .content-text-link { font-size: 13px; font-weight: 800; color: #60239c; text-decoration: underline; text-underline-offset: 3px; }
@@ -66,3 +66,6 @@
 @media (prefers-reduced-motion: reduce) {
  .content-main *, .content-footer * { scroll-behavior: auto; transition: none; animation: none; }
 }
+
+@media (max-width: 780px) { .content-button { min-height: var(--fb-control-height-touch); } }
+@media (prefers-reduced-motion: reduce) { .content-button { transition: none; } }
