@@ -104,6 +104,7 @@ export interface PublicProduct {
   categoryId: string;
   name: string;
   slug: string;
+  legacySlugs?: string[]; // previous public URLs when an Admin family spans categories
   description?: string;
   priceLabel: "Liên hệ báo giá" | null;
   variants: PublicVariant[];

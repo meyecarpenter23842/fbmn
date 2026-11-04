@@ -1,3 +1,4 @@
+const MAX_PUBLIC_PRODUCTS = 10000;
 const GROUPS = new Set(["school_notebook", "student_notebook", "memo_book", "stationery"]);
 const IDENTIFIER = /^[a-z0-9][a-z0-9_-]*$/i;
 const EMPTY_CONTENT = { company: null, articles: [], promotions: [], dealerInformation: null };
@@ -57,7 +58,7 @@ function copySpecifications(specs) {
  */
 export function projectPublicCatalog(raw) {
   guard(object(raw) && Array.isArray(raw.categories) && Array.isArray(raw.products));
-  guard(raw.categories.length <= 2000 && raw.products.length <= 10000);
+  guard(raw.categories.length <= 2000 && raw.products.length <= MAX_PUBLIC_PRODUCTS);
   const categories = raw.categories.map(c => {
     guard(object(c) && GROUPS.has(c.group) && Number.isSafeInteger(c.sortOrder));
     return {
@@ -69,7 +70,7 @@ export function projectPublicCatalog(raw) {
   const products = raw.products.map(p => {
     guard(object(p) && ids.has(p.categoryId));
     guard(Array.isArray(p.variants) && p.variants.length <= 100);
-    guard(Array.isArray(p.media) && p.media.length <= 50);
+    guard(Array.isArray(p.media) && p.media.length <= 2000);
     const variants = p.variants.map(v => {
       guard(object(v));
       let price = null;
@@ -93,9 +94,12 @@ export function projectPublicCatalog(raw) {
         ...(sku === undefined ? {} : { sku }) };
     });
     guard(p.priceLabel === null || p.priceLabel === "Liên hệ báo giá");
+    const legacySlugs=p.legacySlugs===undefined?undefined:strings(p.legacySlugs,100,80);
+    if(legacySlugs)guard(legacySlugs.every(s=>/^sku-[0-9a-f]{32}$/.test(s)));
     return {
       id: text(p.id, 80), categoryId: text(p.categoryId, 80),
       name: text(p.name, 160), slug: text(p.slug, 80),
+      ...(legacySlugs?.length ? {legacySlugs}:{}),
       ...(optionalText(p.description, 3000) ? { description: p.description } : {}),
       priceLabel: p.priceLabel, variants, media,
     };
@@ -148,7 +152,7 @@ const QUERY_KEYS = {
 };
 function integerParam(input, defaultValue, max) {
   if (input === null) return defaultValue;
-  if (!/^[1-9]\d{0,3}$/.test(input)) return null;
+  if (!/^[1-9]\d{0,4}$/.test(input)) return null;
   const value = Number(input);
   return value <= max ? value : null;
 }
@@ -162,7 +166,7 @@ function validQuery(url) {
     }
   }
   if (url.pathname === "/v1/public/products" || url.pathname === "/v1/public/catalog") {
-    return integerParam(url.searchParams.get("page"), 1, 1000) !== null &&
+    return integerParam(url.searchParams.get("page"), 1, MAX_PUBLIC_PRODUCTS) !== null &&
       integerParam(url.searchParams.get("limit"), 20, 1000) !== null;
   }
   return true;
@@ -231,10 +235,11 @@ export function createPublicApi({ getPublicCatalog, getPublicContent, allowedOri
         }
         const slug = url.searchParams.get("slug");
         const categoryId = url.searchParams.get("categoryId");
-        const page = integerParam(url.searchParams.get("page"), 1, 1000);
+        const page = integerParam(url.searchParams.get("page"), 1, MAX_PUBLIC_PRODUCTS);
         const limit = integerParam(url.searchParams.get("limit"), 20, 1000);
         const items = catalog.products.filter(p =>
-          (!slug || p.slug === slug) && (!categoryId || p.categoryId === categoryId));
+          (!slug || p.slug === slug || p.legacySlugs?.includes(slug)) &&
+          (!categoryId || p.categoryId === categoryId));
         if (slug && !items.length) return failure(404, "not_found", corsOrigin);
         const total = items.length;
         const pagination = { page, limit, total, totalPages: Math.max(1, Math.ceil(total / limit)) };
