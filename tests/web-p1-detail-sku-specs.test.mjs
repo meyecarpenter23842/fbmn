@@ -20,7 +20,7 @@ test("Issue #130 follow-up uses concise customer language, without duplicate spe
   assert.match(picker,/aria-pressed/);
   assert.match(picker,/aria-live="polite"/);
   assert.match(picker,/photosForSku\(photos,selected\.sku\)/);
-  assert.match(picker,/Loại vở/);
+  assert.match(picker,/Loại sản phẩm/);
   assert.match(picker,/Chọn quy cách/);
   assert.doesNotMatch(picker,/Khổ giấy|catalogue-sku-specs|<select|SKU này|>SKU|Có \{product\.variants\.length\}|giá NET|giá đại lý/i);
   assert.equal((picker.match(/Liên hệ báo giá/g)||[]).length,1);

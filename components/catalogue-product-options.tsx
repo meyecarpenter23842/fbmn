@@ -33,7 +33,7 @@ export default function CatalogueProductOptions({product,photos}:{
       {product.description&&<p className="catalog-detail__description">{product.description}</p>}
       <div className="catalogue-options">
         {groups.length>1&&<fieldset className="catalogue-option-group">
-          <legend>Loại vở</legend>
+          <legend>Loại sản phẩm</legend>
           <div className="catalogue-option-choices">{groups.map(group=>
             <button key={group} type="button" aria-pressed={activeGroup===group}
               onClick={()=>{const first=product.variants.find(v=>productType(v)===group);if(first)setSku(first.sku);}}>
