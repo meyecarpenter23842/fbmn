@@ -4,6 +4,8 @@ import {useCallback,useEffect,useRef,useState} from "react";
 import type {FormEvent,MutableRefObject} from "react";
 import ProductModal,{useProductModalClose} from "./product-modal";
 import AdminToast from "./admin-toast";
+import CmsMediaEditor from "./cms-media-editor";
+import {CMS_SLOTS} from "./cms-placement-options";
 
 type CmsKind = "banner"|"popup"|"article"|"promotion";
 type CmsStatus = "draft"|"published"|"hidden";
@@ -12,13 +14,16 @@ type CmsItem = {
  id:string;kind:CmsKind;slug:string;title:string;summary:string;paragraphs:string[];
  cta_url:string|null;channel_targets:CmsChannel[];sort_order:number;
  starts_at:string|null;ends_at:string|null;source_ref:string;status:CmsStatus;
- revision:number;updated_at:string;
+ revision:number;updated_at:string;placements:Partial<Record<CmsChannel,string>>;
+ popup_delay_seconds:number;popup_cooldown_minutes:number;popup_max_per_session:number;
 };
 type CmsSummary = Omit<CmsItem,"paragraphs"|"cta_url">;
 type Draft = {
  kind:CmsKind;slug:string;title:string;summary:string;paragraphs:string;
  ctaUrl:string;channelTargets:CmsChannel[];sortOrder:number;
  startsAt:string;endsAt:string;sourceRef:string;
+ placements:Partial<Record<CmsChannel,string>>;popupDelaySeconds:number;
+ popupCooldownMinutes:number;popupMaxPerSession:number;
 };
 const LABELS:Record<CmsKind,string>={
  banner:"Banner",popup:"Popup",article:"Tin tức",promotion:"Khuyến mãi"
@@ -37,16 +42,23 @@ function localDate(value:string|null){
 }
 function blank(kind:CmsKind):Draft {
  return {kind,slug:"",title:"",summary:"",paragraphs:"",ctaUrl:"",
-  channelTargets:[],sortOrder:0,startsAt:"",endsAt:"",sourceRef:""};
+  channelTargets:[],sortOrder:0,startsAt:"",endsAt:"",sourceRef:"",
+  placements:{},popupDelaySeconds:3,popupCooldownMinutes:1440,popupMaxPerSession:1};
 }
 function fromItem(item:CmsItem):Draft {
  return {kind:item.kind,slug:item.slug,title:item.title,summary:item.summary,
   paragraphs:item.paragraphs.join("\n\n"),ctaUrl:item.cta_url||"",
   channelTargets:item.channel_targets,sortOrder:item.sort_order,
   startsAt:localDate(item.starts_at),endsAt:localDate(item.ends_at),
-  sourceRef:item.source_ref};
+  sourceRef:item.source_ref,placements:item.placements||{},
+  popupDelaySeconds:item.popup_delay_seconds??3,popupCooldownMinutes:item.popup_cooldown_minutes??1440,
+  popupMaxPerSession:item.popup_max_per_session??1};
 }
 function errorLabel(status:number,code?:string){
+ if(code==="cms_worker_not_deployed"||status===404)return "Worker CMS chưa được triển khai. API chưa sẵn sàng; đây không phải danh sách trống.";
+ if(code==="surface_unavailable")return "Nội dung mới chỉ có trong Admin. Chưa thể xuất bản vì Website/App chưa kết nối CMS.";
+ if(code==="placements_required")return "Chọn vị trí cụ thể cho tất cả kênh trước khi xuất bản.";
+ if(code==="media_required")return "Banner/popup cần ảnh desktop và mobile trước khi xuất bản.";
  if(status===401)return "Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại.";
  if(status===403)return "Chỉ Owner được quản lý nội dung Website.";
  if(status===409)return "Nội dung đã thay đổi hoặc trùng đường dẫn. Hãy tải lại danh sách.";
