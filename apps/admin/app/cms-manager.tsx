@@ -14,6 +14,7 @@ type CmsItem = {
  starts_at:string|null;ends_at:string|null;source_ref:string;status:CmsStatus;
  revision:number;updated_at:string;
 };
+type CmsSummary = Omit<CmsItem,"paragraphs"|"cta_url">;
 type Draft = {
  kind:CmsKind;slug:string;title:string;summary:string;paragraphs:string;
  ctaUrl:string;channelTargets:CmsChannel[];sortOrder:number;
@@ -61,7 +62,7 @@ async function cmsApi<T>(action="",body?:object):Promise<T>{
  if(typeof credentials.token!=="string"||
     !/^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/.test(credentials.token))
   throw Error("Không thể xác thực Owner.");
- const response=await fetch("/api/cms"+(action?"/"+action:""),{
+ const response=await fetch("/api/cms"+(action.startsWith("?")?action:action?"/"+action:""),{
   method:body?"POST":"GET",cache:"no-store",credentials:"same-origin",
   headers:{Authorization:"Bearer "+credentials.token,Accept:"application/json",
    ...(body?{"Content-Type":"application/json"}:{})},
@@ -182,31 +183,48 @@ function CmsEditor({item,kind,onSaved,onSavingChange,dirtyRef}:{item:CmsItem|nul
 export default function CmsManager({mode,owner}:{
  mode:"marketing"|"editorial";owner:boolean
 }){
- const [items,setItems]=useState<CmsItem[]>([]);
+ const [items,setItems]=useState<CmsSummary[]>([]);
+ const [page,setPage]=useState(1);
+ const [hasNext,setHasNext]=useState(false);
+ const [opening,setOpening]=useState(false);
  const [loading,setLoading]=useState(false);
  const [busy,setBusy]=useState(false);
  const [editorSaving,setEditorSaving]=useState(false);
  const [editing,setEditing]=useState<CmsItem|null|undefined>(undefined);
  const editorDirtyRef=useRef(false);
- const openEditor=(item:CmsItem|null)=>{editorDirtyRef.current=false;setEditing(item);};
  const [message,setMessage]=useState("");
+ const openEditor=async(item:CmsSummary|null)=>{
+  if(opening)return;
+  editorDirtyRef.current=false;
+  if(!item){setEditing(null);return;}
+  setOpening(true);
+  try{
+   const record=await cmsApi<{item:CmsItem}>("entry?id="+encodeURIComponent(item.id));
+   if(record.item.id!==item.id)throw Error("Dữ liệu CMS không hợp lệ.");
+   setEditing(record.item);
+  }catch(e){setError(e instanceof Error?e.message:"Không tải được bài viết.");setToastId(v=>v+1);}
+  finally{setOpening(false);}
+ };
  const [error,setError]=useState("");
  const [toastId,setToastId]=useState(0);
  const refresh=useCallback(async()=>{
   if(!owner)return;
   setLoading(true);
-  try{const v=await cmsApi<{items:CmsItem[]}>();setItems(v.items);}
+  try{
+   const v=await cmsApi<{items:CmsSummary[];page:number;hasNext:boolean}>(
+    "?mode="+mode+"&page="+page);
+   if(v.page!==page || !Array.isArray(v.items))throw Error("Danh sách CMS không hợp lệ.");
+   setItems(v.items);setHasNext(v.hasNext===true);
+  }
   catch(e){setError(e instanceof Error?e.message:"Không tải được CMS.");setToastId(v=>v+1);}
   finally{setLoading(false);}
- },[owner]);
+ },[owner,mode,page]);
  useEffect(()=>{const task=window.setTimeout(()=>{void refresh();},0);return()=>window.clearTimeout(task);},[refresh]);
- const belongs=(item:CmsItem)=>mode==="marketing"?
-  ["banner","popup"].includes(item.kind):["article","promotion"].includes(item.kind);
- const visible=items.filter(belongs);
+ const visible=items;
  const kind:CmsKind=mode==="marketing"?"banner":"article";
  const title=mode==="marketing"?"Banner & Popup":"Tin tức & Khuyến mãi";
  const notify=(text:string,problem=false)=>{if(problem)setError(text);else setMessage(text);setToastId(v=>v+1);};
- const change=async(item:CmsItem,action:"publish"|"hide")=>{
+ const change=async(item:CmsSummary,action:"publish"|"hide")=>{
   if(busy || !window.confirm(action==="publish"?
     "Xác nhận nguồn nội dung đã được kiểm chứng và cho xuất bản theo các kênh đã chọn?":
     "Ẩn nội dung này khỏi các kênh đã chọn?"))return;
@@ -225,7 +243,7 @@ export default function CmsManager({mode,owner}:{
    notificationId={toastId} onClose={()=>{setMessage("");setError("");}}/>
   <div className="page-title cms-heading"><div><h1>{title}</h1>
    <p>Tạo và quản lý nội dung thật, chỉ xuất bản sau khi Owner kiểm tra nguồn.</p></div>
-   <button type="button" className="fb-ui-button cms-primary" onClick={()=>openEditor(null)}>
+   <button type="button" className="fb-ui-button cms-primary" onClick={()=>void openEditor(null)}>
     Thêm nội dung
    </button>
   </div>
@@ -242,7 +260,7 @@ export default function CmsManager({mode,owner}:{
        <td>{item.status==="published"?"Đã xuất bản":item.status==="hidden"?"Đã ẩn":"Bản nháp"}</td>
        <td><div className="cms-row-actions">
         <button type="button" className="fb-ui-button cms-secondary"
-         disabled={busy||item.status==="published"} onClick={()=>openEditor(item)}>Sửa</button>
+         disabled={busy||opening||item.status==="published"} onClick={()=>void openEditor(item)}>Sửa</button>
         {item.status==="published"?
          <button type="button" className="fb-ui-button cms-secondary" disabled={busy}
           onClick={()=>void change(item,"hide")}>Ẩn</button>:
@@ -254,6 +272,13 @@ export default function CmsManager({mode,owner}:{
     </tbody>
    </table>
   </div>
+  <div className="cms-actions" aria-label="Phân trang nội dung">
+   <button type="button" className="fb-ui-button cms-secondary" disabled={loading||busy||page===1}
+    onClick={()=>setPage(v=>v-1)}>Trang trước</button>
+   <span>Trang {page}</span>
+   <button type="button" className="fb-ui-button cms-secondary" disabled={loading||busy||!hasNext}
+    onClick={()=>setPage(v=>v+1)}>Trang sau</button>
+  </div>
   <p className="cms-help">Nội dung đang xuất bản cần Ẩn trước khi sửa. Các thay đổi đều lưu lịch sử và chống ghi đè phiên khác.
    Chưa có dữ liệu thực thì Website tiếp tục giữ trạng thái hiện tại.</p>
   {editing!==undefined&&<ProductModal title={editing?"Sửa "+LABELS[editing.kind]:"Thêm nội dung"}
@@ -261,7 +286,8 @@ export default function CmsManager({mode,owner}:{
    beforeClose={()=>!editorDirtyRef.current || window.confirm("Nội dung chưa lưu. Anh có muốn đóng mà không lưu?")}>
    <CmsEditor item={editing} kind={editing?.kind||kind} dirtyRef={editorDirtyRef}
     onSavingChange={setEditorSaving}
-    onSaved={()=>{notify(editing?"Đã lưu nội dung.":"Đã tạo bản nháp.");void refresh();}}/>
+    onSaved={()=>{notify(editing?"Đã lưu nội dung.":"Đã tạo bản nháp.");
+     if(editing===null&&page!==1)setPage(1);else void refresh();}}/>
   </ProductModal>}
  </div>;
 }
