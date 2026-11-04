@@ -17,7 +17,7 @@ test("Issue #130 approved B mockup: real code cards, related products, one CTA, 
   const css=read("app/catalog.css");
   assert.match(page,/<CatalogueProductOptions product={product} photos={images}\/>/);
   assert.match(page,/<CatalogueRelatedProducts items={suggested} title={recommendations.title}\/>/);
-  assert.match(page,/media\.sku===undefined\|\|m\.sku===firstCode/);
+  assert.match(page,/m\.sku===undefined\|\|m\.sku===firstCode/);
   assert.doesNotMatch(page,/catalog-variants|catalog-variant-list/);
   assert.match(picker,/const selected=product\.variants\.find/);
   assert.match(picker,/const choices=visibleVariants\(product\.variants,audience,format\)/);
