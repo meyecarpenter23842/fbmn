@@ -33,7 +33,7 @@ function reply(status, body, corsOrigin) {
   if (corsOrigin) headers.set("Access-Control-Allow-Origin", corsOrigin);
   return new Response(JSON.stringify(body), { status, headers });
 }
-export function createAdminApi({ verifyToken, loadActor, listChannels, recordAudit, catalogueDb, catalogueR2, allowedOrigins = [] }) {
+export function createAdminApi({ verifyToken, loadActor, listChannels, recordAudit, catalogueDb, catalogueR2, cmsPublicSurfaceReady = false, allowedOrigins = [] }) {
   if (![verifyToken,loadActor,listChannels,recordAudit].every(f => typeof f === "function")) {
     throw new Error("ADM-01 dependencies required");
   }
@@ -85,7 +85,7 @@ export function createAdminApi({ verifyToken, loadActor, listChannels, recordAud
         return error(403, "forbidden", corsOrigin);
       }
       if (action === "cms.manage") {
-        return handleCms({request,actor:{...actor,subject},db:catalogueDb,r2:catalogueR2});
+        return handleCms({request,actor:{...actor,subject},db:catalogueDb,r2:catalogueR2,publicSurfaceReady:cmsPublicSurfaceReady});
       }
       if (action === "pricing.private") {
         if (url.pathname === "/v1/admin/pricing/managed" || url.pathname.startsWith("/v1/admin/pricing/managed/")) {
