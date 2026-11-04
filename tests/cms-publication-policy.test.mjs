@@ -56,6 +56,19 @@ test("scheduled banners do not appear early or after expiry", () => {
   assert.equal(isCmsPublished(item, { now: new Date("invalid") }), false);
 });
 
+test("CMS rejects impossible calendar dates rather than letting Date.parse normalize them", () => {
+  for (const invalid of [
+    "2026-02-29T12:00:00Z", "2026-02-30T12:00:00Z",
+    "2026-04-31T12:00:00Z", "2026-13-01T12:00:00Z",
+    "2026-11-04T24:00:00Z",
+  ]) {
+    for (const field of ["verifiedAt", "approvedAt", "publishedAt", "startsAt", "endsAt", "withdrawnAt"]) {
+      assert.equal(isCmsPublished({ ...published(), [field]: invalid }, { now: NOW }), false, field + ": " + invalid);
+    }
+  }
+  assert.equal(isCmsPublished({ ...published(), startsAt: "2024-02-29T00:00:00Z" }, { now: NOW }), true);
+});
+
 test("CMS enforces strict channel targeting including multiple channels", () => {
   const item = { ...published(), channelTargets: ["public_web", "dealer_app"] };
   assert.equal(isCmsPublished(item, { now: NOW, channel: "dealer_app" }), true);
