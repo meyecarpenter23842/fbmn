@@ -73,7 +73,7 @@ async function cmsApi<T>(action="",body?:object):Promise<T>{
  return result.data;
 }
 
-function CmsEditor({item,kind,onSaved,dirtyRef}:{item:CmsItem|null;kind:CmsKind;onSaved:()=>void;dirtyRef:MutableRefObject<boolean>}){
+function CmsEditor({item,kind,onSaved,onSavingChange,dirtyRef}:{item:CmsItem|null;kind:CmsKind;onSaved:()=>void;onSavingChange:(saving:boolean)=>void;dirtyRef:MutableRefObject<boolean>}){
  const close=useProductModalClose();
  const [draft,setDraft]=useState<Draft>(()=>item?fromItem(item):blank(kind));
  const [busy,setBusy]=useState(false);
@@ -84,7 +84,8 @@ function CmsEditor({item,kind,onSaved,dirtyRef}:{item:CmsItem|null;kind:CmsKind;
  };
  const submit=async(e:FormEvent<HTMLFormElement>)=>{
   e.preventDefault();if(busy)return;
-  setBusy(true);setError("");
+  setBusy(true);onSavingChange(true);setError("");
+  let succeeded=false;
   try{
    const startsAt=draft.startsAt?new Date(draft.startsAt).toISOString():null;
    const endsAt=draft.endsAt?new Date(draft.endsAt).toISOString():null;
@@ -98,11 +99,14 @@ function CmsEditor({item,kind,onSaved,dirtyRef}:{item:CmsItem|null;kind:CmsKind;
    });
    dirtyRef.current=false;
    onSaved();
-   close();
+   succeeded=true;
   }catch(ex){
    setError(ex instanceof Error?ex.message:"Không lưu được nội dung.");
    setToastId(v=>v+1);
-  }finally{setBusy(false);}
+  }finally{
+   setBusy(false);onSavingChange(false);
+   if(succeeded)window.setTimeout(()=>close(),0);
+  }
  };
  const canChangeKind=!item;
  return <form className="cms-editor" onSubmit={e=>void submit(e)}>
@@ -181,6 +185,7 @@ export default function CmsManager({mode,owner}:{
  const [items,setItems]=useState<CmsItem[]>([]);
  const [loading,setLoading]=useState(false);
  const [busy,setBusy]=useState(false);
+ const [editorSaving,setEditorSaving]=useState(false);
  const [editing,setEditing]=useState<CmsItem|null|undefined>(undefined);
  const editorDirtyRef=useRef(false);
  const openEditor=(item:CmsItem|null)=>{editorDirtyRef.current=false;setEditing(item);};
@@ -252,9 +257,10 @@ export default function CmsManager({mode,owner}:{
   <p className="cms-help">Nội dung đang xuất bản cần Ẩn trước khi sửa. Các thay đổi đều lưu lịch sử và chống ghi đè phiên khác.
    Chưa có dữ liệu thực thì Website tiếp tục giữ trạng thái hiện tại.</p>
   {editing!==undefined&&<ProductModal title={editing?"Sửa "+LABELS[editing.kind]:"Thêm nội dung"}
-   onClose={()=>setEditing(undefined)} wide locked={busy}
+   onClose={()=>setEditing(undefined)} wide locked={busy||editorSaving}
    beforeClose={()=>!editorDirtyRef.current || window.confirm("Nội dung chưa lưu. Anh có muốn đóng mà không lưu?")}>
    <CmsEditor item={editing} kind={editing?.kind||kind} dirtyRef={editorDirtyRef}
+    onSavingChange={setEditorSaving}
     onSaved={()=>{notify(editing?"Đã lưu nội dung.":"Đã tạo bản nháp.");void refresh();}}/>
   </ProductModal>}
  </div>;
