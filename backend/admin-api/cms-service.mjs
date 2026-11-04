@@ -171,7 +171,7 @@ export async function handleCms({request,actor,db}){
   if(action!=="" || keys.some(k=>k!=="mode"&&k!=="page"))return fail(400,"invalid_query");
   const mode=u.searchParams.get("mode")??"editorial";
   const rawPage=u.searchParams.get("page")??"1";
-  if(!["marketing","editorial"].includes(mode) || !/^[1-9]\\d{0,3}$/.test(rawPage))
+  if(!["marketing","editorial"].includes(mode) || !/^[1-9]\d{0,3}$/.test(rawPage))
    return fail(400,"invalid_query");
   try{return await list(db,mode,Number(rawPage));}catch{return fail(503,"cms_unavailable");}
  }
