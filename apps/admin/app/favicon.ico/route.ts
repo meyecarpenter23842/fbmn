@@ -1,5 +1,5 @@
 // Browsers request /favicon.ico even when a modern icon is advertised.
-// Serve the exact same audited company WebP rather than a made-up icon.
+// Redirect to the shared FBMN symbol, not the long wordmark.
 export function GET(request: Request) {
-  return Response.redirect(new URL("/brand/fbmn-official-logo.webp", request.url), 307);
+  return Response.redirect(new URL("/brand/fbmn-mark.svg?v=20261104", request.url), 307);
 }

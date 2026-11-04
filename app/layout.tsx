@@ -18,6 +18,7 @@ export const metadata: Metadata = {
   title: "Futurebook Miền Nam",
   description: "Website Futurebook Miền Nam đang được xây dựng.",
   robots: { index: false, follow: false },
+  icons: { icon: [{ url: "/brand/fbmn-mark.svg?v=20261104", type: "image/svg+xml" }], shortcut: "/favicon.ico", apple: "/brand/fbmn-mark.svg?v=20261104" },
 };
 
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
