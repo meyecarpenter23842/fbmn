@@ -61,7 +61,7 @@ export async function handleCmsMedia({request,db,r2,actor,action}){
  const digest=Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256",bytes)))
   .map(v=>v.toString(16).padStart(2,"0")).join("");
  const key="cms/"+id+"/"+channel+"/"+device+"/"+crypto.randomUUID()+".webp";
- let inserted=false,committed=false,oldKey=null;
+ let inserted=false,committed=false,commitAttempted=false,oldKey=null;
  try{
   const result=await db(async c=>{
    await c.query("BEGIN");
@@ -91,6 +91,8 @@ export async function handleCmsMedia({request,db,r2,actor,action}){
      "VALUES($1::uuid,$2,'media_upload',$3::jsonb,$4::jsonb)",[
       id,actor.subject,JSON.stringify({channel,device,previous:key===oldKey?null:oldKey}),
       JSON.stringify({channel,device,width:dimensions.width,height:dimensions.height,sha256:digest})]);
+    // An uncertain COMMIT acknowledgement must never delete a newly referenced R2 key.
+    commitAttempted=true;
     await c.query("COMMIT");
     committed=true;
     return {channel,device,width:dimensions.width,height:dimensions.height,revision:updated.rows[0].revision};
@@ -100,7 +102,7 @@ export async function handleCmsMedia({request,db,r2,actor,action}){
   if(oldKey&&oldKey!==key)await r2.delete(oldKey).catch(()=>{});
   return ok(result);
  }catch(e){
-  if(inserted&&!committed)await r2.delete(key).catch(()=>{});
+  if(inserted&&!commitAttempted)await r2.delete(key).catch(()=>{});
   if(e?.message==="revision_conflict"||e?.message==="hide_before_edit")return fail(409,e.message);
   if(e?.message==="not_found")return fail(404,"not_found");
   if(e?.message==="channel_not_selected")return fail(400,"channel_not_selected");
