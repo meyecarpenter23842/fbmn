@@ -63,7 +63,7 @@
     "/v1/public/products": {
       "get": {
         "operationId": "listPublicProducts",
-        "description": "Approved public products only; optional exact slug lookup",
+        "description": "Approved public products only; optional exact slug lookup; server consumers may request up to 1000 approved products per page.",
         "parameters": [
           {
             "name": "slug",
@@ -97,7 +97,7 @@
             "schema": {
               "type": "integer",
               "minimum": 1,
-              "maximum": 50,
+              "maximum": 1000,
               "default": 20
             }
           }

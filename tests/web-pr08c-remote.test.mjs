@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { fetchPublicCatalog, fetchPublicContent } from "../lib/public-api/client.ts";
 import { createReadModel, PUBLIC_READ_QUERIES } from "../backend/public-api/read-model.mjs";
+import { createPublicApi } from "../backend/public-api/handler.mjs";
 
 const fetchMock = pages => async url => {
   const path = new URL(url).pathname;
@@ -12,7 +13,7 @@ const fetchMock = pages => async url => {
 };
 const empty = {
   "/v1/public/categories": { data:[] },
-  "/v1/public/products": { data:[],pagination:{page:1,limit:50,total:0,totalPages:1} },
+  "/v1/public/products": { data:[],pagination:{page:1,limit:1000,total:0,totalPages:1} },
   "/v1/public/content": { data:{company:null,articles:[],promotions:[],dealerInformation:null} },
 };
 test("remote SSR adapters handle empty verified read models", async () => {
@@ -42,6 +43,52 @@ test("unknown private fields are dropped from remote DTO", async () => {
   assert.equal(value.products.length,1);
   assert.doesNotMatch(JSON.stringify(value),/PRIVATE|23456|customer|net/);
 });
+test("P0 613 published SKUs load in two HTTP requests, keeping leading zeros", async () => {
+  const data = structuredClone(empty);
+  data["/v1/public/categories"].data = [{id:"school",slug:"school",name:"Tập",group:"school_notebook",sortOrder:1}];
+  data["/v1/public/products"].data = Array.from({length:613},(_,i)=>({
+    id:"p"+i,categoryId:"school",name:"Tập "+i,slug:"p"+i,priceLabel:"Liên hệ báo giá",
+    variants:[{sku:String(i).padStart(4,"0"),name:"Tập "+i,specifications:{paperSize:"A5"},price:null}],media:[],
+  }));
+  data["/v1/public/products"].pagination={page:1,limit:1000,total:613,totalPages:1};
+  const requests=[];
+  const transport=async url=>{
+    requests.push(new URL(url).pathname+new URL(url).search);
+    return new Response(JSON.stringify(data[new URL(url).pathname]),{status:200});
+  };
+  const result=await fetchPublicCatalog("https://api.example.com",transport);
+  assert.equal(result.products.length,613);
+  assert.equal(result.products[14].variants[0].sku,"0014");
+  assert.deepEqual(requests.sort(),["/v1/public/categories","/v1/public/products?page=1&limit=1000"]);
+});
+
+test("P0 a large real 613-product DTO stays valid with a strict response byte cap", async () => {
+  const data={
+    categories:[{id:"c1",slug:"c1",name:"Tập",group:"school_notebook",sortOrder:1}],
+    products:Array.from({length:613},(_,i)=>({
+      id:"product-"+i,categoryId:"c1",name:"Tập "+i,slug:"product-"+i,
+      description:"ở".repeat(2000),priceLabel:"Liên hệ báo giá",
+      variants:[{sku:String(i).padStart(4,"0"),name:"Tập "+i,
+        specifications:{paperSize:"A5"},price:null}],media:[],
+    })),
+  };
+  const api=createPublicApi({
+    getPublicCatalog:async()=>data,
+    getPublicContent:async()=>({company:null,articles:[],promotions:[],dealerInformation:null}),
+  });
+  const requests=[];
+  const transport=async url=>{
+    requests.push(new URL(url).pathname);
+    return api.fetch(new Request(url));
+  };
+  const result=await fetchPublicCatalog("https://api.example.com",transport);
+  assert.equal(result.products.length,613);
+  assert.equal(result.products[14].variants[0].sku,"0014");
+  assert.deepEqual(requests.sort(),["/v1/public/categories","/v1/public/products"]);
+  const response=await api.fetch(new Request("https://api.example.com/v1/public/products?limit=1000"));
+  assert.ok(new TextEncoder().encode(await response.text()).byteLength>2_000_000);
+});
+
 test("database source only queries fixed public views, no private tables", async () => {
   const sqls = Object.values(PUBLIC_READ_QUERIES);
   assert.equal(sqls.length,11);
@@ -72,7 +119,7 @@ test("published product with no approved variants is excluded by SQL read model"
 test("oversized remote body is rejected during stream consumption", async () => {
   const transport = async () => new Response(new ReadableStream({
     start(controller) {
-      controller.enqueue(new Uint8Array(2_000_001));
+      controller.enqueue(new Uint8Array(8_000_001));
       controller.close();
     },
   }), {status:200});

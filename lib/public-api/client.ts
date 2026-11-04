@@ -86,7 +86,9 @@ async function getData(origin: string, route: string, transport: typeof fetch): 
     signal: AbortSignal.timeout(5000),
   });
   if (!res.ok) throw new Error("Public API unavailable: " + res.status);
-  const maxBytes = 2_000_000;
+  // A bounded 1000-product batch can exceed 2 MB with long Vietnamese descriptions.
+  // Content/categories keep the smaller cap; catalogues remain strictly bounded.
+  const maxBytes = route.startsWith("/v1/public/products?") ? 8_000_000 : 2_000_000;
   const length = res.headers.get("content-length");
   if (length && Number(length) > maxBytes) {
     await res.body?.cancel();
@@ -116,7 +118,13 @@ async function getData(origin: string, route: string, transport: typeof fetch): 
 }
 export async function fetchPublicCatalog(input: string, transport: typeof fetch = fetch): Promise<PublicCatalog> {
   const origin = baseUrl(input);
-  const categoryEnvelope = await getData(origin, "/v1/public/categories", transport);
+  // Two requests for 613 SKUs instead of 14 repeated full-database reads.
+  // Only React request-scoped caching is used; hide/publish stays immediately fresh.
+  const batchSize = 1000;
+  const [categoryEnvelope, firstPage] = await Promise.all([
+    getData(origin, "/v1/public/categories", transport),
+    getData(origin, "/v1/public/products?page=1&limit=" + batchSize, transport),
+  ]);
   const categories = arr(categoryEnvelope.data, 2000).map(item => {
     const c = obj(item);
     if (!GROUPS.has(c.group as string)) throw new Error("Unknown public category group");
@@ -125,25 +133,35 @@ export async function fetchPublicCatalog(input: string, transport: typeof fetch 
   });
   const ids = new Set(categories.map(c => c.id));
   const products: PublicProduct[] = [];
-  for (let page = 1; page <= 200; page++) {
-    const envelope = await getData(origin, "/v1/public/products?page=" + page + "&limit=50", transport);
+  const firstPagination = obj(firstPage.pagination);
+  const total = integer(firstPagination.total);
+  const pages = integer(firstPagination.totalPages, 1);
+  if (total > 10000 || pages > 10 || pages !== Math.max(1, Math.ceil(total / batchSize))) {
+    throw new Error("Invalid public API pagination");
+  }
+  for (let page = 1; page <= pages; page++) {
+    const envelope = page === 1
+      ? firstPage
+      : await getData(origin, "/v1/public/products?page=" + page + "&limit=" + batchSize, transport);
     const pagination = obj(envelope.pagination);
-    const total = integer(pagination.total), pages = integer(pagination.totalPages, 1);
-    if (total > 10000 || pages > 200 || integer(pagination.page, 1) !== page ||
-        integer(pagination.limit, 1) !== 50 || pages !== Math.max(1, Math.ceil(total / 50))) {
+    if (integer(pagination.total) !== total ||
+        integer(pagination.totalPages, 1) !== pages ||
+        integer(pagination.page, 1) !== page ||
+        integer(pagination.limit, 1) !== batchSize) {
       throw new Error("Invalid public API pagination");
     }
-    const items = arr(envelope.data, 50).map(safeProduct);
+    const items = arr(envelope.data, batchSize).map(safeProduct);
+    if (items.length !== Math.min(batchSize, Math.max(0, total - (page - 1) * batchSize))) {
+      throw new Error("Incomplete catalogue page");
+    }
     for (const p of items) {
       if (!ids.has(p.categoryId)) throw new Error("Orphan public product");
       products.push(p);
     }
-    if (page === pages) {
-      if (products.length !== total) throw new Error("Incomplete catalogue");
-      return { categories, products };
-    }
   }
-  throw new Error("Catalogue page limit exceeded");
+  if (products.length !== total) throw new Error("Incomplete catalogue");
+  return { categories, products };
+
 }
 export async function fetchPublicContent(input: string, transport: typeof fetch = fetch): Promise<PublicContent> {
   const envelope = await getData(baseUrl(input), "/v1/public/content", transport);

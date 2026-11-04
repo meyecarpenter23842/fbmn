@@ -158,7 +158,7 @@ function validQuery(url) {
   }
   if (url.pathname === "/v1/public/products") {
     return integerParam(url.searchParams.get("page"), 1, 1000) !== null &&
-      integerParam(url.searchParams.get("limit"), 20, 50) !== null;
+      integerParam(url.searchParams.get("limit"), 20, 1000) !== null;
   }
   return true;
 }
@@ -227,7 +227,7 @@ export function createPublicApi({ getPublicCatalog, getPublicContent, allowedOri
         const slug = url.searchParams.get("slug");
         const categoryId = url.searchParams.get("categoryId");
         const page = integerParam(url.searchParams.get("page"), 1, 1000);
-        const limit = integerParam(url.searchParams.get("limit"), 20, 50);
+        const limit = integerParam(url.searchParams.get("limit"), 20, 1000);
         const items = catalog.products.filter(p =>
           (!slug || p.slug === slug) && (!categoryId || p.categoryId === categoryId));
         if (slug && !items.length) return failure(404, "not_found", corsOrigin);

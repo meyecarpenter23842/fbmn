@@ -59,6 +59,23 @@ test("200 categories and products paginate canonical DTO", async () => {
   assert.equal(b.headers.get("cache-control"), "no-store");
   assert.equal(a.headers.get("cache-control"), "no-store");
 });
+test("P0 public API emits 613 SKU in one approved response, no NET leakage", async () => {
+  const raw=demoCatalog();
+  raw.products=Array.from({length:613},(_,i)=>({...raw.products[0],id:"p-"+i,slug:"p-"+i,
+    variants:[{...raw.products[0].variants[0],sku:String(i).padStart(4,"0")}]}));
+  let reads=0;
+  const api=instance({getPublicCatalog:async()=>{reads++;return raw;}});
+  const response=await hit(api,"/v1/public/products?page=1&limit=1000");
+  assert.equal(response.status,200);
+  assert.equal(response.headers.get("cache-control"),"no-store");
+  const payload=await response.json();
+  assert.equal(payload.data.length,613);
+  assert.equal(payload.pagination.totalPages,1);
+  assert.equal(payload.data[14].variants[0].sku,"0014");
+  assert.equal(reads,1);
+  assert.doesNotMatch(JSON.stringify(payload),/PRIVATE|11001|customerContacts|net_price/);
+});
+
 test("200 content exposes only approved DTO keys", async () => {
   const r = await hit(instance(), "/v1/public/content");
   assert.equal(r.status, 200);
@@ -67,7 +84,7 @@ test("200 content exposes only approved DTO keys", async () => {
 test("400 query validation rejects unknown, repeated and unsafe fields", async () => {
   const api = instance();
   for (const path of [
-    "/v1/public/products?page=0", "/v1/public/products?limit=51",
+    "/v1/public/products?page=0", "/v1/public/products?limit=1001",
     "/v1/public/products?page=1&page=2", "/v1/public/products?net=true",
     "/v1/public/categories?slug=../private", "/v1/public/content?token=1",
   ]) {
