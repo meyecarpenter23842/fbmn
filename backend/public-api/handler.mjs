@@ -135,10 +135,11 @@ export function projectPublicContent(raw) {
   })();
   return { company, articles, promotions, dealerInformation };
 }
-const ROUTES = new Set(["/v1/public/categories", "/v1/public/products", "/v1/public/content"]);
+const ROUTES = new Set(["/v1/public/categories", "/v1/public/products", "/v1/public/catalog", "/v1/public/content"]);
 const QUERY_KEYS = {
   "/v1/public/categories": new Set(["slug"]),
   "/v1/public/products": new Set(["slug", "categoryId", "page", "limit"]),
+  "/v1/public/catalog": new Set(["page", "limit"]),
   "/v1/public/content": new Set(),
 };
 function integerParam(input, defaultValue, max) {
@@ -156,7 +157,7 @@ function validQuery(url) {
       if (!value || value.length > 80 || !IDENTIFIER.test(value)) return false;
     }
   }
-  if (url.pathname === "/v1/public/products") {
+  if (url.pathname === "/v1/public/products" || url.pathname === "/v1/public/catalog") {
     return integerParam(url.searchParams.get("page"), 1, 1000) !== null &&
       integerParam(url.searchParams.get("limit"), 20, 1000) !== null;
   }
@@ -232,10 +233,15 @@ export function createPublicApi({ getPublicCatalog, getPublicContent, allowedOri
           (!slug || p.slug === slug) && (!categoryId || p.categoryId === categoryId));
         if (slug && !items.length) return failure(404, "not_found", corsOrigin);
         const total = items.length;
-        return response(200, {
-          data: items.slice((page - 1) * limit, page * limit),
-          pagination: { page, limit, total, totalPages: Math.max(1, Math.ceil(total / limit)) },
-        }, corsOrigin, "no-store");
+        const pagination = { page, limit, total, totalPages: Math.max(1, Math.ceil(total / limit)) };
+        const batch = items.slice((page - 1) * limit, page * limit);
+        if (url.pathname === "/v1/public/catalog") {
+          // One allowlisted read model for both categories and published products.
+          // Do not cache publication decisions; Admin hide/show remains fresh.
+          return response(200, { data: { categories: catalog.categories, products: batch }, pagination },
+            corsOrigin, "no-store");
+        }
+        return response(200, { data: batch, pagination }, corsOrigin, "no-store");
       } catch {
         // Do not include DB, customer identifiers, exceptions or credentials in HTTP errors.
         return failure(503, "read_model_unavailable", corsOrigin);

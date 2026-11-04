@@ -28,13 +28,13 @@ function setup({wrongRole=false,queryFailure=false}={}) {
 }
 test("200 public categories, products, content with 0 verified publications",async()=>{
  const {worker,history}=setup();
- for(const route of ["/v1/public/categories","/v1/public/products","/v1/public/content"]){
+ for(const route of ["/v1/public/categories","/v1/public/products","/v1/public/catalog","/v1/public/content"]){
    const r=await worker.fetch(url(route),env());
    assert.equal(r.status,200,route);
    assert.ok((await r.json()).data!==undefined);
  }
- assert.equal(history.connections,3);assert.equal(history.closes,3);
- assert.equal(history.statements.filter(s=>s==="SELECT current_user AS role_name").length,3);
+ assert.equal(history.connections,4);assert.equal(history.closes,4);
+ assert.equal(history.statements.filter(s=>s==="SELECT current_user AS role_name").length,4);
 });
 test("400 invalid query, 404 unknown route, 405 write, without DB calls",async()=>{
  const {worker,history}=setup();

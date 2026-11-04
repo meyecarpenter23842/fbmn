@@ -14,6 +14,7 @@ const fetchMock = pages => async url => {
 const empty = {
   "/v1/public/categories": { data:[] },
   "/v1/public/products": { data:[],pagination:{page:1,limit:1000,total:0,totalPages:1} },
+  "/v1/public/catalog": { data:{categories:[],products:[]},pagination:{page:1,limit:1000,total:0,totalPages:1} },
   "/v1/public/content": { data:{company:null,articles:[],promotions:[],dealerInformation:null} },
 };
 test("remote SSR adapters handle empty verified read models", async () => {
@@ -34,23 +35,23 @@ test("missing or broken remote endpoint fails closed, never mock fallback", asyn
 });
 test("unknown private fields are dropped from remote DTO", async () => {
   const data = structuredClone(empty);
-  data["/v1/public/categories"].data=[{id:"c1",slug:"c1",name:"DEMO",group:"stationery",sortOrder:1,privateNote:"PRIVATE"}];
-  data["/v1/public/products"].data=[{id:"p1",categoryId:"c1",name:"DEMO",slug:"p1",
+  data["/v1/public/catalog"].data.categories=[{id:"c1",slug:"c1",name:"DEMO",group:"stationery",sortOrder:1,privateNote:"PRIVATE"}];
+  data["/v1/public/catalog"].data.products=[{id:"p1",categoryId:"c1",name:"DEMO",slug:"p1",
     variants:[{sku:"D01",name:"DEMO",specifications:{paperSize:"A4",secret:"PRIVATE"},price:null,net:23456}],
     media:[],priceLabel:"Liên hệ báo giá",customer:"PRIVATE"}];
-  data["/v1/public/products"].pagination.total=1;
+  data["/v1/public/catalog"].pagination.total=1;
   const value=await fetchPublicCatalog("https://api.example.com",fetchMock(data));
   assert.equal(value.products.length,1);
   assert.doesNotMatch(JSON.stringify(value),/PRIVATE|23456|customer|net/);
 });
-test("P0 613 published SKUs load in two HTTP requests, keeping leading zeros", async () => {
+test("P0B 613 published SKUs load in one HTTP request, keeping leading zeros", async () => {
   const data = structuredClone(empty);
-  data["/v1/public/categories"].data = [{id:"school",slug:"school",name:"Tập",group:"school_notebook",sortOrder:1}];
-  data["/v1/public/products"].data = Array.from({length:613},(_,i)=>({
+  data["/v1/public/catalog"].data.categories = [{id:"school",slug:"school",name:"Tập",group:"school_notebook",sortOrder:1}];
+  data["/v1/public/catalog"].data.products = Array.from({length:613},(_,i)=>({
     id:"p"+i,categoryId:"school",name:"Tập "+i,slug:"p"+i,priceLabel:"Liên hệ báo giá",
     variants:[{sku:String(i).padStart(4,"0"),name:"Tập "+i,specifications:{paperSize:"A5"},price:null}],media:[],
   }));
-  data["/v1/public/products"].pagination={page:1,limit:1000,total:613,totalPages:1};
+  data["/v1/public/catalog"].pagination={page:1,limit:1000,total:613,totalPages:1};
   const requests=[];
   const transport=async url=>{
     requests.push(new URL(url).pathname+new URL(url).search);
@@ -59,7 +60,7 @@ test("P0 613 published SKUs load in two HTTP requests, keeping leading zeros", a
   const result=await fetchPublicCatalog("https://api.example.com",transport);
   assert.equal(result.products.length,613);
   assert.equal(result.products[14].variants[0].sku,"0014");
-  assert.deepEqual(requests.sort(),["/v1/public/categories","/v1/public/products?page=1&limit=1000"]);
+  assert.deepEqual(requests,["/v1/public/catalog?page=1&limit=1000"]);
 });
 
 test("P0 a large real 613-product DTO stays valid with a strict response byte cap", async () => {
@@ -84,8 +85,8 @@ test("P0 a large real 613-product DTO stays valid with a strict response byte ca
   const result=await fetchPublicCatalog("https://api.example.com",transport);
   assert.equal(result.products.length,613);
   assert.equal(result.products[14].variants[0].sku,"0014");
-  assert.deepEqual(requests.sort(),["/v1/public/categories","/v1/public/products"]);
-  const response=await api.fetch(new Request("https://api.example.com/v1/public/products?limit=1000"));
+  assert.deepEqual(requests,["/v1/public/catalog"]);
+  const response=await api.fetch(new Request("https://api.example.com/v1/public/catalog?limit=1000"));
   assert.ok(new TextEncoder().encode(await response.text()).byteLength>2_000_000);
 });
 

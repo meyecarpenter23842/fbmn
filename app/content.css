@@ -69,3 +69,10 @@
 
 @media (max-width: 780px) { .content-button { min-height: var(--fb-control-height-touch); } }
 @media (prefers-reduced-motion: reduce) { .content-button { transition: none; } }
+
+.content-main > .content-wrap { animation: fb-web-content-enter var(--fb-motion-button) var(--fb-easing-open) both; }
+@keyframes fb-web-content-enter {
+  from { opacity: .83; transform: translateY(3px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@media (prefers-reduced-motion: reduce) { .content-main > .content-wrap { animation: none; } }

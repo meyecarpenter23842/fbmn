@@ -6,7 +6,9 @@ export default function PublishedImageGallery({items}:{items:Array<{src:string;a
   const current=items[selected]??items[0];
   return <div className="catalogue-image-gallery">
     <div className="catalog-detail__image">
-      <CatalogProductImage src={current?.src??null} alt={current?.alt??"Sản phẩm Futurebook"}/>
+      <div className="catalogue-gallery-photo" key={current?.src??"empty"}>
+        <CatalogProductImage src={current?.src??null} alt={current?.alt??"Sản phẩm Futurebook"}/>
+      </div>
     </div>
     {items.length>1&&<div className="catalogue-gallery-thumbs"
       role="group" aria-label="Các mẫu ảnh sản phẩm">

@@ -25,10 +25,27 @@ test("P0 website uses canonical geometry and motion tokens, not ad hoc timings",
 });
 
 test("P0 product cards and main nav stop automatic dynamic RSC prefetch storms", () => {
-  for (const file of ["components/site-header.tsx", "components/catalog-ui.tsx",
-    "components/category-navigation.tsx"]) assert.match(source(file), /prefetch=\{false\}/, file);
+  assert.ok(source("components/site-header.tsx").includes('prefetch={item.href === "/san-pham" || item.href === "/#home" ? null : false}'));
+  for (const file of ["components/catalog-ui.tsx", "components/category-navigation.tsx"])
+    assert.match(source(file), /prefetch=\{false\}/, file);
   const list = source("components/catalog-ui.tsx");
   assert.ok((list.match(/prefetch=\{false\}/g) || []).length >= 5);
+});
+
+test("P0B route feedback, gallery fades and compositor-only loading support reduced motion", () => {
+ const header=source("components/site-header.tsx");
+ const nav=source("app/rebaseline.css");
+ const catalog=source("app/catalog.css");
+ const content=source("app/content.css");
+ assert.ok(header.includes('onNavigate={() => beginNavigation(item.href)}'));
+ assert.ok(header.includes('ref-navigation__progress--active'));
+ assert.ok(nav.includes('fb-navigation-pending'));
+ assert.ok(nav.includes('prefers-reduced-motion: reduce'));
+ assert.ok(catalog.includes('fb-web-route-enter'));
+ assert.ok(catalog.includes('fb-web-gallery-enter'));
+ assert.ok(content.includes('fb-web-content-enter'));
+ assert.ok(!catalog.includes('background-position: 160% 0'));
+ assert.ok(source("components/published-image-gallery.tsx").includes('className="catalogue-gallery-photo"'));
 });
 
 test("P0 lightweight route fallbacks and gallery controls preserve accessibility", () => {

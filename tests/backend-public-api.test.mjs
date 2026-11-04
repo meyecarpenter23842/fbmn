@@ -34,11 +34,11 @@ const instance = (options = {}) => createPublicApi({
 const hit = (api, path, init) => api.fetch(new Request("https://worker.example.invalid" + path, init));
 const parse = response => response.json();
 
-test("OpenAPI declares exactly the three public versioned endpoints", () => {
+test("OpenAPI declares the four allowlisted public versioned endpoints", () => {
   const doc = JSON.parse(readFileSync(new URL("../backend/public-api/openapi.json", import.meta.url), "utf8"));
   assert.equal(doc.openapi, "3.1.0");
   assert.deepEqual(Object.keys(doc.paths).sort(), [
-    "/v1/public/categories", "/v1/public/content", "/v1/public/products",
+    "/v1/public/catalog", "/v1/public/categories", "/v1/public/content", "/v1/public/products",
   ]);
   for (const item of Object.values(doc.paths)) {
     assert.ok(item.get.responses["200"]);
@@ -76,6 +76,21 @@ test("P0 public API emits 613 SKU in one approved response, no NET leakage", asy
   assert.doesNotMatch(JSON.stringify(payload),/PRIVATE|11001|customerContacts|net_price/);
 });
 
+test("P0B combined public catalogue returns one read-only allowlisted snapshot", async () => {
+  const raw=demoCatalog();
+  let reads=0;
+  const api=instance({getPublicCatalog:async()=>{reads++;return raw;}});
+  const response=await hit(api,"/v1/public/catalog?page=1&limit=1000");
+  assert.equal(response.status,200);
+  assert.equal(response.headers.get("cache-control"),"no-store");
+  const result=await response.json();
+  assert.equal(result.data.categories[0].name,"DEMO group");
+  assert.equal(result.data.products[0].variants[0].sku,"DEMO-SKU");
+  assert.equal(result.pagination.total,1);
+  assert.equal(reads,1);
+  assert.doesNotMatch(JSON.stringify(result),/PRIVATE|11001|customerContacts|net_price/);
+});
+
 test("200 content exposes only approved DTO keys", async () => {
   const r = await hit(instance(), "/v1/public/content");
   assert.equal(r.status, 200);
@@ -85,6 +100,8 @@ test("400 query validation rejects unknown, repeated and unsafe fields", async (
   const api = instance();
   for (const path of [
     "/v1/public/products?page=0", "/v1/public/products?limit=1001",
+    "/v1/public/catalog?limit=1001", "/v1/public/catalog?net=true",
+    "/v1/public/catalog?page=1&page=2",
     "/v1/public/products?page=1&page=2", "/v1/public/products?net=true",
     "/v1/public/categories?slug=../private", "/v1/public/content?token=1",
   ]) {

@@ -2,7 +2,7 @@ import { createPublicApi } from "./handler.mjs";
 import { createReadModel, PUBLIC_READ_QUERIES } from "./read-model.mjs";
 
 const ALLOWED_SQL = new Set(Object.values(PUBLIC_READ_QUERIES));
-const ROUTES = new Set(["/v1/public/categories", "/v1/public/products", "/v1/public/content"]);
+const ROUTES = new Set(["/v1/public/categories", "/v1/public/products", "/v1/public/catalog", "/v1/public/content"]);
 const error = (status,code) => new Response(JSON.stringify({error:{code,message:"Yêu cầu không thể xử lý."}}),
   {status,headers:{"Content-Type":"application/json; charset=utf-8","Cache-Control":"no-store","X-Content-Type-Options":"nosniff"}});
 

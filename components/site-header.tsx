@@ -27,8 +27,17 @@ function Brand() {
 
 export function SiteHeader() {
   const pathname = usePathname();
+
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
+  // A pending nav indicator is tied to the actual pathname change, never a timer.
+  const [pendingPath, setPendingPath] = useState<string | null>(null);
+  const navigating = pendingPath !== null && pendingPath !== pathname;
+  const beginNavigation = (href: string) => {
+    setMenuOpen(false);
+    const target = href.split("?")[0];
+    setPendingPath(target.startsWith("/#") || target === pathname ? null : target);
+  };
   const menuButton = useRef<HTMLButtonElement>(null);
   const menuPanel = useRef<HTMLElement>(null);
 
@@ -79,15 +88,18 @@ export function SiteHeader() {
       </Container>
       <nav ref={menuPanel} id="site-navigation" className={"ref-navigation" + (menuOpen ? " ref-navigation--open" : "")} aria-label="Điều hướng chính">
         <Container className="ref-navigation__inner">
-          <Link className="ref-navigation__catalog" href="/san-pham" prefetch={false} onClick={() => setMenuOpen(false)}><Icon name="menu" size={17}/> Danh mục sản phẩm <Icon name="down" size={15}/></Link>
+          <Link className="ref-navigation__catalog" href="/san-pham" onNavigate={() => beginNavigation("/san-pham")} onClick={() => setMenuOpen(false)}><Icon name="menu" size={17}/> Danh mục sản phẩm <Icon name="down" size={15}/></Link>
           {desktopNavigation.map(item => {
             const active = item.href === "/#home" ? pathname === "/" : pathname === item.href;
             return <Link className={"ref-navigation__link" + (active ? " ref-navigation__link--active" : "")}
-              key={item.label} href={item.href} prefetch={false} onClick={() => setMenuOpen(false)}
+              key={item.label} href={item.href}
+              prefetch={item.href === "/san-pham" || item.href === "/#home" ? null : false}
+              onNavigate={() => beginNavigation(item.href)} onClick={() => setMenuOpen(false)}
               aria-current={active ? "page" : undefined}>{item.label}</Link>;
           })}
           <AppDownloadMenuButton onOpen={() => setMenuOpen(false)} />
         </Container>
+        <span className={"ref-navigation__progress" + (navigating ? " ref-navigation__progress--active" : "")} aria-hidden="true" />
       </nav>
       <div id="ref-mobile-search" className="ref-search-notice" hidden={!searchOpen} role="status">
         <Container><form action="/san-pham" method="get" role="search" aria-label="Tìm sản phẩm trên điện thoại" className="catalog-mobile-search"><label htmlFor="catalog-header-mobile-q">Tìm sản phẩm theo tên hoặc mã SKU</label><div><input id="catalog-header-mobile-q" name="q" type="search" maxLength={80} placeholder="Nhập sản phẩm cần tìm..." /><button type="submit">Tìm kiếm</button></div></form></Container>

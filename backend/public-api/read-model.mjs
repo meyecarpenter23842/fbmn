@@ -146,12 +146,15 @@ export function createReadModel(query,{enableP5=false}={}) {
         group.media.push({r2Key:media.r2Key,alt:name,position:group.media.length});
       }
     }
-    const products=[];
-    for(const group of groups.values()){
-      group.slug=await makeSlug(group.id);
-      group.id=group.slug; // bounded stable public ID independent of the original company SKU length
-      delete group.sourceSku;
-      products.push(group);
+    const products=[...groups.values()];
+    // Bounded concurrency avoids hundreds of sequential crypto awaits per request.
+    // Hash input and result are unchanged: stable URLs and leading-zero SKUs remain.
+    for(let offset=0;offset<products.length;offset+=32){
+      await Promise.all(products.slice(offset,offset+32).map(async group=>{
+        group.slug=await makeSlug(group.id);
+        group.id=group.slug;
+        delete group.sourceSku;
+      }));
     }
     return {categories:[...categories.values()],products};
   };
