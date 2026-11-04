@@ -23,7 +23,7 @@
   --fb-control-font-size: 13px;
 }
 
-.fb-admin :is(.btn, .import-btn, .catalogue-actions-trigger, .fb-ui-button) {
+:is(.fb-admin,.fb-product-modal) :is(.btn, .import-btn, .catalogue-actions-trigger, .fb-ui-button) {
   box-sizing: border-box;
   height: var(--fb-control-height-compact);
   min-height: var(--fb-control-height-compact);
@@ -39,7 +39,7 @@
   white-space: nowrap;
 }
 
-.fb-admin :is(.btn, .import-btn, .catalogue-actions-trigger, .fb-ui-button) svg {
+:is(.fb-admin,.fb-product-modal) :is(.btn, .import-btn, .catalogue-actions-trigger, .fb-ui-button) svg {
   width: 16px;
   height: 16px;
   flex: none;
@@ -47,7 +47,7 @@
 
 /* Native file inputs, checkboxes, radio buttons and color/range controls
    are deliberately excluded from the text-field contract. */
-.fb-admin :is(
+:is(.fb-admin,.fb-product-modal) :is(
   input:not([type]),
   input[type="text"],
   input[type="search"],
@@ -126,7 +126,7 @@
   opacity: 0.55;
 }
 
-.fb-admin :is(.btn, .import-btn, .catalogue-actions-trigger, .fb-ui-button):focus-visible,
+:is(.fb-admin,.fb-product-modal) :is(.btn, .import-btn, .catalogue-actions-trigger, .fb-ui-button):focus-visible,
 .fb-admin .fb-pricing-tabs > button:focus-visible {
   outline: 2px solid var(--fb-ui-primary);
   outline-offset: 2px;
@@ -134,14 +134,14 @@
 
 /* Every Admin data table/header now has a subtle purple accent, including
    custom price list grids, Excel previews, and catalogue tables. */
-.fb-admin :is(table thead th, [role="columnheader"], .fb-ui-data-header) {
+:is(.fb-admin,.fb-product-modal) :is(table thead th, [role="columnheader"], .fb-ui-data-header) {
   background-color: var(--fb-ui-table-header-bg);
   color: var(--fb-ui-table-header-ink);
   border-bottom-color: var(--fb-ui-table-header-border);
 }
 
 @media (max-width: 780px) {
-  .fb-admin :is(.btn, .import-btn, .catalogue-actions-trigger, .fb-ui-button),
+  :is(.fb-admin,.fb-product-modal) :is(.btn, .import-btn, .catalogue-actions-trigger, .fb-ui-button),
   .fb-admin .fb-pricing-tabs > button {
     height: var(--fb-control-height-touch);
     min-height: var(--fb-control-height-touch);
@@ -285,14 +285,14 @@
   --fb-modal-header-height: 52px;
   --fb-modal-header-mobile-height: 56px;
 }
-.fb-admin :is(.btn,.import-btn,.catalogue-actions-trigger,.fb-ui-button) {
+:is(.fb-admin,.fb-product-modal) :is(.btn,.import-btn,.catalogue-actions-trigger,.fb-ui-button) {
   transition:background-color var(--fb-motion-button) var(--fb-motion-ease-enter),
     border-color var(--fb-motion-button) var(--fb-motion-ease-enter),
     color var(--fb-motion-button) var(--fb-motion-ease-enter),
     box-shadow var(--fb-motion-button) var(--fb-motion-ease-enter),
     transform var(--fb-motion-button) var(--fb-motion-ease-enter);
 }
-.fb-admin :is(.btn,.import-btn):not(:disabled):active {
+:is(.fb-admin,.fb-product-modal) :is(.btn,.import-btn):not(:disabled):active {
   transition-duration:var(--fb-motion-button);
 }
 .fb-product-modal-overlay {
@@ -359,7 +359,7 @@
   .fb-product-modal-header .fb-product-modal-close {width:44px;height:44px;}
 }
 @media (prefers-reduced-motion: reduce) {
-  .fb-admin :is(.btn,.import-btn,.catalogue-actions-trigger,.fb-ui-button),
+  :is(.fb-admin,.fb-product-modal) :is(.btn,.import-btn,.catalogue-actions-trigger,.fb-ui-button),
   .catalogue-actions-popover,.catalogue-export-dropdown,
   .fb-product-modal-overlay,.fb-product-modal-overlay .fb-product-modal {
     animation:none!important;
