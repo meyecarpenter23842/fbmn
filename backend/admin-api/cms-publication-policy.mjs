@@ -9,7 +9,7 @@
 const CHANNELS = new Set(["public_web", "dealer_app", "consumer_app"]);
 const TIMESTAMP = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/;
 
-function millis(value) {
+export function parseCmsTimestamp(value) {
   if (typeof value !== "string" || !TIMESTAMP.test(value)) return null;
   // Date.parse normalizes some impossible ISO calendar dates (e.g. Feb 30).
   // Validate Gregorian date/time fields first, including leap years.
@@ -25,7 +25,7 @@ function millis(value) {
 }
 
 function optionalMillis(value) {
-  return value == null ? undefined : millis(value);
+  return value == null ? undefined : parseCmsTimestamp(value);
 }
 
 function validChannels(value) {
@@ -46,9 +46,9 @@ export function isCmsPublished(record, { channel = "public_web", now = new Date(
   if (!validChannels(record.channelTargets) || !record.channelTargets.includes(channel)) return false;
   if (typeof record.sourceRef !== "string" || !record.sourceRef.trim()) return false;
 
-  const verified = millis(record.verifiedAt);
-  const approved = millis(record.approvedAt);
-  const published = millis(record.publishedAt);
+  const verified = parseCmsTimestamp(record.verifiedAt);
+  const approved = parseCmsTimestamp(record.approvedAt);
+  const published = parseCmsTimestamp(record.publishedAt);
   if (verified === null || approved === null || published === null) return false;
   if (verified > at || approved > at || published > at) return false;
 
@@ -81,7 +81,7 @@ export function isCmsPopupEligible(record, {
       !Number.isSafeInteger(cooldown) || cooldown < 0 || cooldown > 43200 ||
       !Number.isSafeInteger(sessionCount) || sessionCount < 0 || sessionCount >= max) return false;
   if (lastDismissedAt == null) return true;
-  const dismissed = millis(lastDismissedAt);
+  const dismissed = parseCmsTimestamp(lastDismissedAt);
   if (dismissed === null || dismissed > now.getTime()) return false;
   return now.getTime() - dismissed >= cooldown * 60_000;
 }
