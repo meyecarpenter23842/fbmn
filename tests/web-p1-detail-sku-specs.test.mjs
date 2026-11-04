@@ -30,6 +30,11 @@ test("Issue #130 approved B mockup: real code cards, related products, one CTA, 
   assert.doesNotMatch(picker,/SKU này|>SKU|<select|giá NET|giá đại lý/i);
   assert.equal((picker.match(/Liên hệ báo giá/g)||[]).length,1);
   assert.match(picker,/selected\.price\?\.kind==="retail"/);
+  assert.match(picker,/extraInfo\.length>0&&<details className="catalogue-extra-details"/);
+  assert.match(picker,/specs\.binding/);
+  assert.match(picker,/specs\.packaging\?\.unitsPerPack/);
+  assert.match(picker,/specs\.packaging\?\.unitsPerCarton/);
+  assert.match(css,/\.catalogue-extra-details summary:focus-visible/);
   assert.match(related,/prefetch={false}/);
   assert.match(related,/scrollBy\(/);
   assert.match(related,/Xem chi tiết/);
