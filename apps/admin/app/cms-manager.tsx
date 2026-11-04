@@ -92,13 +92,15 @@ function CmsEditor({item,kind,onSaved,onSavingChange,dirtyRef}:{item:CmsItem|nul
  const [busy,setBusy]=useState(false);
  const [mediaBusy,setMediaBusy]=useState(false);
  const [savedRecord,setSavedRecord]=useState<CmsItem|null>(item);
+ const operationLock=useRef(false);
  const [error,setError]=useState("");
  const [toastId,setToastId]=useState(0);
  const set=<K extends keyof Draft>(key:K,value:Draft[K])=>{
   dirtyRef.current=true;setDraft(prev=>({...prev,[key]:value}));
  };
  const submit=async(e:FormEvent<HTMLFormElement>)=>{
-  e.preventDefault();if(busy||mediaBusy)return;
+  e.preventDefault();if(busy||mediaBusy||operationLock.current)return;
+  operationLock.current=true;
   setBusy(true);onSavingChange(true);setError("");
   try{
    const startsAt=draft.startsAt?new Date(draft.startsAt).toISOString():null;
@@ -118,7 +120,8 @@ function CmsEditor({item,kind,onSaved,onSavingChange,dirtyRef}:{item:CmsItem|nul
    setError(ex instanceof Error?ex.message:"Không lưu được nội dung.");
    setToastId(v=>v+1);
   }finally{
-   setBusy(false);onSavingChange(false);
+   operationLock.current=false;
+   setBusy(false);onSavingChange(mediaBusy);
   }
  };
  const canChangeKind=!savedRecord;
@@ -243,9 +246,10 @@ function CmsEditor({item,kind,onSaved,onSavingChange,dirtyRef}:{item:CmsItem|nul
    <p>Đây là xem trước cấu hình, không phải giao diện Website/App đã xuất bản.</p>
   </section>
   <CmsMediaEditor id={savedRecord?.id??null} revision={savedRecord?.revision??0}
+   saveBusy={busy} operationLock={operationLock}
    channels={savedRecord?.channel_targets??[]}
    onRevision={next=>setSavedRecord(prev=>prev?{...prev,revision:next}:prev)}
-   onBusyChange={value=>{setMediaBusy(value);onSavingChange(value);}}/>
+   onBusyChange={value=>{setMediaBusy(value);onSavingChange(value||busy);}}/>
   <p className="cms-help">Lưu bản nháp trước, sau đó chọn ảnh ngay tại đây.
    Chỉ xuất bản khi Website/App thực sự kết nối nội dung CMS.</p>
   <div className="cms-actions">
