@@ -124,7 +124,7 @@ test("CMS creates draft with private audit, no auto publication",async()=>{
 test("CMS publication requires verified source and channels",async()=>{
  const a=env();
  const d=payload();
- await a.hit("/v1/admin/cms/create","POST",{...d,sourceRef:"",channelTargets:[]});
+ await a.hit("/v1/admin/cms/create","POST",{...d,sourceRef:"",channelTargets:[],placements:{}});
  assert.equal((await a.hit("/v1/admin/cms/publish","POST",
   {id:UUID,expectedRevision:1})).status,400);
  // Updating draft with no source remains possible; publication is not.
