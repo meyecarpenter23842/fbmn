@@ -76,7 +76,10 @@ test("Polished Admin shell separates sidebar/main scroll and avoids dead navigat
   assert.match(page,/function Brand\(\)/);
   assert.doesNotMatch(page,/<span className="brand-copy">/);
   assert.match(page,/\{ key:"products",label:"Sản phẩm"/);
-  assert.doesNotMatch(page,/\{ key:"banners",label:"Banner & Popup"/);
+  // ADM-03 now activates Banner & Popup with an authenticated CMS manager.
+  assert.ok(page.includes('{ key:"banners",label:"Banner & Popup"'));
+  assert.match(page,/section==="banners"&&<CmsManager mode="marketing"/);
+  assert.match(read("apps/admin/app/cms-manager.tsx"),/ProductModal/);
   // The modal host stays inside the focus trap; outside modals share the Admin toast stack.
   assert.match(toast,/createPortal\(content,host\)/);
   assert.match(toast,/closest\("\.fb-product-modal"\)/);

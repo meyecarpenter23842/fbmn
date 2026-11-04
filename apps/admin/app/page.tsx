@@ -6,6 +6,7 @@ import { createAuthClient } from "@neondatabase/auth/next";
 import CatalogueImportPreview from "./catalogue-import-preview";
 import CatalogueManager from "./catalogue-manager";
 import CatalogueSideWorkspace from "./catalogue-side-workspace";
+import CmsManager from "./cms-manager";
 import AdminTelemetry from "./admin-telemetry";
 
 type AuthState = "checking" | "anonymous" | "authorised" | "forbidden" | "unavailable";
@@ -60,6 +61,8 @@ const menu: Array<{ key: Section; label: string; icon: GlyphName }> = [
   { key:"dashboard",label:"Tổng quan",icon:"home" },
   { key:"products",label:"Sản phẩm",icon:"box" },
   { key:"pricing",label:"Giá & bảng giá",icon:"layers" },
+  { key:"banners",label:"Banner & Popup",icon:"image" },
+  { key:"content",label:"Tin tức & Khuyến mãi",icon:"file" },
 ];
 const productSections: Array<{key:Section;label:string;icon:GlyphName}> = [
   {key:"products",label:"Danh sách sản phẩm",icon:"box"},
@@ -308,7 +311,7 @@ export default function AdminPage() {
             </div>}
           </div>
           <div className="side-menu-divider" aria-hidden="true"/>
-          {menu.filter(item=>item.key==="pricing").map(item=>
+          {menu.filter(item=>["pricing","banners","content"].includes(item.key)).map(item=>
             <button type="button" key={item.key}
               className={"side-link "+(section===item.key?"active":"")}
               aria-current={section===item.key?"page":undefined}
@@ -334,13 +337,15 @@ export default function AdminPage() {
               onStructure={pane=>setStructureTab(pane)}/>}
             {section==="pricing"&&<CatalogueSideWorkspace mode="pricing" onBusyChange={setWorkspaceOperationBusy}/>}
             {section==="import-products" && <CatalogueImportPreview/>}
+            {section==="banners"&&<CmsManager mode="marketing" owner={session?.role==="owner"}/>}
+            {section==="content"&&<CmsManager mode="editorial" owner={session?.role==="owner"}/>}
             {section==="new-product" && <><div className="page-title"><div><h1>Thêm sản phẩm mới</h1><p>Chuẩn bị thông tin sản phẩm cho Website và App Futurebook.</p></div><div className="action-row"><Button icon="arrow-left" variant="outline" onClick={()=>navigate("products")}>Quay lại</Button><Button icon="save" disabled title="API ghi bản nháp chưa triển khai">Lưu nháp</Button><Button icon="eye" variant="outline" disabled title="Cần bản nháp thật để xem trước">Xem trước</Button><Button icon="upload" variant="primary" disabled title="Cần quyền publisher và API duyệt/xuất bản">Xuất bản</Button></div></div><p className="draft-warning"><Glyph name="alert" size={17}/>Mẫu nhập liệu đang ở chế độ giao diện thử nghiệm. Thông tin chưa lưu lên database; nút lưu và xuất bản bị khóa cho đến khi có API catalogue.</p>
               <div className="editor-grid"><div className="editor-main"><Panel><SectionHeading icon="file">Thông tin cơ bản</SectionHeading><div className="form-grid cols-3"><Field label="Tên sản phẩm" required value={draft.name} setValue={v=>updateDraft("name",v)} placeholder="Nhập tên theo catalogue"/><Field label="Mã SKU" required value={draft.sku} setValue={v=>updateDraft("sku",v)} placeholder="Giữ nguyên mã công ty"/><Field label="Slug" required value={draft.slug} setValue={v=>updateDraft("slug",v)} placeholder="ten-san-pham"/><Field label="Nhóm hàng" required value={draft.family} setValue={v=>updateDraft("family",v)} placeholder="Tập học sinh / Văn phòng phẩm"/><Field label="Danh mục" required value={draft.category} setValue={v=>updateDraft("category",v)} placeholder="Danh mục sản phẩm"/><Field label="Thương hiệu" value={draft.brand} setValue={v=>updateDraft("brand",v)}/></div></Panel><Panel><SectionHeading icon="layers">Mô tả sản phẩm</SectionHeading><Field label="Thông tin mô tả" value={draft.description} area setValue={v=>updateDraft("description",v)} placeholder="Mô tả đúng thông số đã xác minh"/></Panel><Panel><SectionHeading icon="grid">Quy cách & thông số</SectionHeading><div className="form-grid cols-5"><Field label="Kích thước" value={draft.size} setValue={v=>updateDraft("size",v)} placeholder="Ví dụ A4"/><Field label="Số trang/tờ" value={draft.pages} setValue={v=>updateDraft("pages",v)}/><Field label="Chất liệu" value={draft.paper} setValue={v=>updateDraft("paper",v)}/><Field label="Đơn vị tính" value={draft.unit} setValue={v=>updateDraft("unit",v)}/><Field label="Đóng gói" value={draft.pack} setValue={v=>updateDraft("pack",v)}/></div></Panel><Panel><div className="panel-title-line"><SectionHeading icon="box">Biến thể / SKU phụ</SectionHeading><Button icon="plus" variant="outline" disabled title="Chờ API quản lý biến thể">Thêm biến thể</Button></div><div className="empty-mini">Một sản phẩm có thể chứa nhiều mẫu bìa, quy cách và màu sắc. Dữ liệu biến thể sẽ liên kết theo SKU công ty sau khi kích hoạt API.</div></Panel></div>
               <div className="editor-aside"><Panel><SectionHeading icon="image">Ảnh sản phẩm</SectionHeading><div className="photo-feature">{activePhoto?<img src={activePhoto.url} alt={activePhoto.name}/>:<div className="photo-placeholder"><Glyph name="image" size={37}/><span>Chưa có ảnh sản phẩm</span></div>}</div><div className="mini-thumbs">{photos.slice(0,4).map(p=><button type="button" key={p.id} className={selectedPhoto===p.id?"selected":""} onClick={()=>setSelectedPhoto(p.id)}><img src={p.url} alt={p.name}/></button>)}<button type="button" className="add-thumb" onClick={()=>{navigate("media");inputFile.current?.click();}}><Glyph name="plus"/></button></div><Button variant="outline" icon="image" onClick={()=>navigate("media")}>Quản lý ảnh</Button><p className="subtle">JPG, PNG, WEBP • tối đa 10MB/ảnh. Ảnh chỉ xem tạm trên máy.</p></Panel><Panel><SectionHeading icon="search">SEO / hiển thị</SectionHeading><Field label="Meta title" value={draft.metaTitle} setValue={v=>updateDraft("metaTitle",v)} placeholder="Tên sản phẩm - Futurebook Miền Nam"/><Field label="Meta description" value={draft.metaDescription} setValue={v=>updateDraft("metaDescription",v)} area/><small className="subtle">Địa chỉ web và SEO thật sẽ tạo sau khi xuất bản.</small></Panel><div className="suggestion-box"><Glyph name="sparkle"/><div><b>Gợi ý nhập liệu</b><p>Không tự đoán giá, mã SKU hoặc chất lượng giấy. Dùng bảng giá và catalogue đã đối chiếu.</p></div></div></div></div>
             </>}
             {section==="media"&&<CatalogueSideWorkspace mode="media" onBusyChange={setWorkspaceOperationBusy}/>}
             {section==="dashboard"&&<><div className="page-title"><div><h1>Tổng quan quản trị</h1><p>Thông tin tài khoản và quyền quản trị hiện tại.</p></div><span className="tag">Thông tin tài khoản</span></div><div className="metric-grid"><div className="metric"><span className="metric-icon green"><Glyph name="shield"/></span><div><small>Trạng thái</small><strong className="metric-word">Đã xác thực</strong><em>Phiên đăng nhập hợp lệ</em></div></div><div className="metric"><span className="metric-icon purple"><Glyph name="user"/></span><div><small>Vai trò</small><strong className="metric-word">{roleLabel}</strong><em>Quyền theo tài khoản</em></div></div><div className="metric"><span className="metric-icon blue"><Glyph name="layers"/></span><div><small>Kênh được xem</small><strong>{session?.channels.length||0}</strong><em>Phạm vi theo tài khoản</em></div></div></div><Panel><SectionHeading icon="layers">Kênh kinh doanh được cấp quyền</SectionHeading>{channels.map(c=><div className="channel-row" key={c.code}><span>{c.label}</span><b>{session?.role==="admin"||session?.channels.includes(c.code)?"Có quyền":"Không có quyền"}</b></div>)}</Panel></>}
-            {!["dashboard","products","structure","pricing","import-products","new-product","media"].includes(section)&&<><div className="page-title"><div><h1>{sectionName[section]}</h1></div></div><Placeholder title={sectionName[section]+" chưa kích hoạt"} text="Chức năng này đang được hoàn thiện."/></>}
+            {!["dashboard","products","structure","pricing","import-products","new-product","media","banners","content"].includes(section)&&<><div className="page-title"><div><h1>{sectionName[section]}</h1></div></div><Placeholder title={sectionName[section]+" chưa kích hoạt"} text="Chức năng này đang được hoàn thiện."/></>}
           </>}
         </main>
       </div>

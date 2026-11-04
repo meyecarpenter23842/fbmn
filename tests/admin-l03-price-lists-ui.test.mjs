@@ -40,7 +40,7 @@ test("shared button geometry is consistent and retains mobile hit target",()=>{
  const layout=read("apps/admin/app/layout.tsx");
  assert.match(controls,/--fb-control-height-compact:\s*36px/);
  assert.match(controls,/--fb-control-height-touch:\s*44px/);
- assert.match(controls,/\.fb-admin :is\(\.btn,\s*\.import-btn,\s*\.catalogue-actions-trigger,\s*\.fb-ui-button\)/);
+ assert.ok(controls.includes(':is(.fb-admin,.fb-product-modal) :is(.btn, .import-btn, .catalogue-actions-trigger, .fb-ui-button)'));
  assert.match(controls,/align-items:\s*center/);
  assert.match(layout,/import "\.\/admin-controls\.css"/);
 });

@@ -56,7 +56,7 @@ test("pricing tabs are styled by global Admin CSS and never rely on legacy Excel
 });
 
 test("Admin data headers have a lavender tone from the central stylesheet",()=>{
- assert.match(css,/\.fb-admin :is\(table thead th, \[role="columnheader"\], \.fb-ui-data-header\)/);
+ assert.ok(css.includes(':is(.fb-admin,.fb-product-modal) :is(table thead th, [role="columnheader"], .fb-ui-data-header)'));
  assert.match(css,/background-color: var\(--fb-ui-table-header-bg\)/);
  assert.match(css,/color: var\(--fb-ui-table-header-ink\)/);
  assert.match(css,/border-bottom-color: var\(--fb-ui-table-header-border\)/);
@@ -69,7 +69,7 @@ test("Admin data headers have a lavender tone from the central stylesheet",()=>{
 });
 
 test("buttons and fields keep shared geometry without screen-level sizing copies",()=>{
- assert.match(css,/\.fb-admin :is\(\.btn, \.import-btn, \.catalogue-actions-trigger, \.fb-ui-button\)/);
+ assert.ok(css.includes(':is(.fb-admin,.fb-product-modal) :is(.btn, .import-btn, .catalogue-actions-trigger, .fb-ui-button)'));
  assert.match(css,/height: var\(--fb-control-height-compact\)/);
  assert.match(css,/height: var\(--fb-field-height\)/);
  const isolated=source("apps/admin/app/managed-price-import.css");
