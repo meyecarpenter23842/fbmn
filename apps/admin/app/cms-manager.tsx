@@ -1,7 +1,7 @@
 "use client";
 
 import {useCallback,useEffect,useRef,useState} from "react";
-import type {FormEvent} from "react";
+import type {FormEvent,MutableRefObject} from "react";
 import ProductModal,{useProductModalClose} from "./product-modal";
 import AdminToast from "./admin-toast";
 
@@ -73,10 +73,9 @@ async function cmsApi<T>(action="",body?:object):Promise<T>{
  return result.data;
 }
 
-function CmsEditor({item,kind,onSaved}:{item:CmsItem|null;kind:CmsKind;onSaved:()=>void}){
+function CmsEditor({item,kind,onSaved,dirty}:{item:CmsItem|null;kind:CmsKind;onSaved:()=>void;dirty:MutableRefObject<boolean>}){
  const close=useProductModalClose();
  const [draft,setDraft]=useState<Draft>(()=>item?fromItem(item):blank(kind));
- const dirty=useRef(false);
  const [busy,setBusy]=useState(false);
  const [error,setError]=useState("");
  const [toastId,setToastId]=useState(0);
@@ -183,6 +182,8 @@ export default function CmsManager({mode,owner}:{
  const [loading,setLoading]=useState(false);
  const [busy,setBusy]=useState(false);
  const [editing,setEditing]=useState<CmsItem|null|undefined>(undefined);
+ const editorDirty=useRef(false);
+ const openEditor=(item:CmsItem|null)=>{editorDirty.current=false;setEditing(item);};
  const [message,setMessage]=useState("");
  const [error,setError]=useState("");
  const [toastId,setToastId]=useState(0);
@@ -219,7 +220,7 @@ export default function CmsManager({mode,owner}:{
    notificationId={toastId} onClose={()=>{setMessage("");setError("");}}/>
   <div className="page-title cms-heading"><div><h1>{title}</h1>
    <p>Tạo và quản lý nội dung thật, chỉ xuất bản sau khi Owner kiểm tra nguồn.</p></div>
-   <button type="button" className="fb-ui-button cms-primary" onClick={()=>setEditing(null)}>
+   <button type="button" className="fb-ui-button cms-primary" onClick={()=>openEditor(null)}>
     Thêm nội dung
    </button>
   </div>
@@ -236,7 +237,7 @@ export default function CmsManager({mode,owner}:{
        <td>{item.status==="published"?"Đã xuất bản":item.status==="hidden"?"Đã ẩn":"Bản nháp"}</td>
        <td><div className="cms-row-actions">
         <button type="button" className="fb-ui-button cms-secondary"
-         disabled={busy||item.status==="published"} onClick={()=>setEditing(item)}>Sửa</button>
+         disabled={busy||item.status==="published"} onClick={()=>openEditor(item)}>Sửa</button>
         {item.status==="published"?
          <button type="button" className="fb-ui-button cms-secondary" disabled={busy}
           onClick={()=>void change(item,"hide")}>Ẩn</button>:
@@ -252,8 +253,8 @@ export default function CmsManager({mode,owner}:{
    Chưa có dữ liệu thực thì Website tiếp tục giữ trạng thái hiện tại.</p>
   {editing!==undefined&&<ProductModal title={editing?"Sửa "+LABELS[editing.kind]:"Thêm nội dung"}
    onClose={()=>setEditing(undefined)} wide locked={busy}
-   beforeClose={()=>!((window as unknown as {__fb_cms_dirty?:boolean}).__fb_cms_dirty)}>
-   <CmsEditor item={editing} kind={editing?.kind||kind}
+   beforeClose={()=>!editorDirty.current || window.confirm("Nội dung chưa lưu. Anh có muốn đóng mà không lưu?")}>
+   <CmsEditor item={editing} kind={editing?.kind||kind} dirty={editorDirty}
     onSaved={()=>{notify(editing?"Đã lưu nội dung.":"Đã tạo bản nháp.");void refresh();}}/>
   </ProductModal>}
  </div>;
