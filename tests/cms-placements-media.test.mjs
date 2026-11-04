@@ -133,3 +133,15 @@ test("CMS private migration never exposes R2 keys to public roles",()=>{
  assert.match(route,/cms_worker_not_deployed/);
  assert.match(route,/image\/webp/);
 });
+
+test("CMS modal prevents overlapping text save and image upload, including pre-conversion",()=>{
+ const editor=readFileSync("apps/admin/app/cms-manager.tsx","utf8");
+ const upload=readFileSync("apps/admin/app/cms-media-editor.tsx","utf8");
+ assert.match(editor,/if\(busy\|\|mediaBusy\|\|operationLock\.current\)return/);
+ assert.match(editor,/operationLock\.current=true/);
+ assert.match(editor,/saveBusy=\{busy\} operationLock=\{operationLock\}/);
+ assert.match(upload,/if\(!id\|\|!file\|\|busy\|\|saveBusy\|\|operationLock\.current\)return/);
+ assert.match(upload,/operationLock\.current=true/);
+ assert.match(upload,/disabled=\{busy\|\|saveBusy\}/);
+ assert.match(editor,/onSavingChange\(value\|\|busy\)/);
+});
