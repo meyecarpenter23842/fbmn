@@ -9,7 +9,7 @@ import PublishedImageGallery from "./published-image-gallery";
 
 function optionLabel(v:PublicVariant){
   const s=v.specifications;
-  return [v.name,s.pageCount?String(s.pageCount)+" trang":null,
+  return [v.name,s.pageCount!==undefined?String(s.pageCount)+" trang":null,
     s.ruling,s.coverFinish,"SKU "+v.sku].filter(Boolean).join(" · ");
 }
 export default function CatalogueProductOptions({product,photos}:{
@@ -26,6 +26,21 @@ export default function CatalogueProductOptions({product,photos}:{
   const select=(dimension:"paperSize"|"paperWeightGsm",value:string|number)=>{
     setSku(chooseVariant(product.variants,selected,dimension,value).sku);
   };
+
+  // Only public fields actually present on the selected company SKU are displayed.
+  const specRows:{label:string;value:string}[]=[];
+  if(specs.paperSize)specRows.push({label:"Khổ giấy",value:specs.paperSize});
+  if(specs.pageCount!==undefined)specRows.push({label:"Số trang",value:String(specs.pageCount)});
+  if(specs.paperWeightGsm!==undefined)specRows.push({label:"Định lượng",value:specs.paperWeightGsm+" gsm"});
+  if(specs.ruling)specRows.push({label:"Dòng kẻ",value:specs.ruling});
+  if(specs.coverFinish)specRows.push({label:"Bìa",value:specs.coverFinish});
+  if(specs.binding)specRows.push({label:"Đóng gáy",value:specs.binding});
+  if(specs.packaging?.saleUnit)specRows.push({label:"Đơn vị bán",value:specs.packaging.saleUnit});
+  if(specs.packaging?.unitsPerPack!==undefined)
+    specRows.push({label:"Đơn vị/gói",value:String(specs.packaging.unitsPerPack)});
+  if(specs.packaging?.unitsPerCarton!==undefined)
+    specRows.push({label:"Đơn vị/thùng",value:String(specs.packaging.unitsPerCarton)});
+
   return <div className="catalog-detail">
     <PublishedImageGallery key={selected.sku} items={gallery}/>
     <div className="catalog-detail__info">
@@ -52,13 +67,19 @@ export default function CatalogueProductOptions({product,photos}:{
             {candidates.map(v=><option key={v.sku} value={v.sku}>{optionLabel(v)}</option>)}
           </select>
         </div>
-        <p className="catalogue-selected-sku" aria-live="polite">
-          Mã sản phẩm đang chọn: <strong>{selected.sku}</strong>
-        </p>
-        <p className="catalogue-selected-spec">
-          {[specs.pageCount?String(specs.pageCount)+" trang":null,specs.ruling,
-            specs.coverFinish,specs.packaging?.saleUnit].filter(Boolean).join(" · ")}
-        </p>
+        <div aria-live="polite" aria-atomic="true">
+          <p className="catalogue-selected-sku">
+            Mã sản phẩm đang chọn: <strong>{selected.sku}</strong>
+          </p>
+          <section className="catalogue-sku-specs" aria-label="Thông số SKU đang chọn">
+            <h2>Thông số sản phẩm</h2>
+            {specRows.length>0?
+              <dl>{specRows.map(row=><div key={row.label} className="catalogue-sku-specs__row">
+                <dt>{row.label}</dt><dd>{row.value}</dd>
+              </div>)}</dl>:
+              <p className="catalogue-sku-specs__empty">Chưa có thông số công khai cho SKU này.</p>}
+          </section>
+        </div>
         <p className="catalogue-cover-note">
           {gallery.length>1?"Chọn ảnh nhỏ để xem mẫu bìa cùng SKU, không tạo mã mới.":
             gallery.length===0?"SKU này chưa có ảnh chính thức.":"Ảnh của SKU đang chọn."}
