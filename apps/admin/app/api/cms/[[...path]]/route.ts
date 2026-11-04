@@ -19,10 +19,12 @@ async function proxy(request:Request,params:Promise<{path?:string[]}>,method:"GE
  const {path=[]}=await params;
  if(path.length>1)return fail(404,"not_found");
  const action=path[0]||"";
- if(method==="GET" ? action!=="" : !ACTIONS.has(action))return fail(404,"not_found");
+ if(method==="GET" ? !["","entry"].includes(action) : !ACTIONS.has(action))return fail(404,"not_found");
  const url=new URL(request.url);
  if(method==="GET"){
-  if([...url.searchParams.keys()].some(k=>k!=="kind")||url.searchParams.getAll("kind").length>1)
+  const keys=[...url.searchParams.keys()];
+  const allowed=action==="entry"?new Set(["id"]):new Set(["mode","page"]);
+  if(keys.length!==new Set(keys).size || keys.some(k=>!allowed.has(k)))
    return fail(400,"invalid_query");
  }else{
   if(request.headers.get("origin")!==url.origin || request.headers.get("sec-fetch-site")==="cross-site")
