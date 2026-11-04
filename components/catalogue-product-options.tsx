@@ -48,6 +48,7 @@ export default function CatalogueProductOptions({product,photos}:{
           <div className="catalogue-variant-options">
             {choices.map(variant=><button key={variant.sku} type="button"
               className="catalogue-variant-option"
+              title={shortVariantLabel(variant)+" · Mã "+variant.sku}
               aria-pressed={selected.sku===variant.sku} onClick={()=>setSku(variant.sku)}>
               <span className="catalogue-variant-option__name">{shortVariantLabel(variant)}</span>
               <span className="catalogue-variant-option__code">Mã {variant.sku}</span>
