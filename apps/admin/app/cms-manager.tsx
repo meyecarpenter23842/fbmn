@@ -249,8 +249,8 @@ function CmsEditor({item,kind,onSaved,onSavingChange,dirtyRef}:{item:CmsItem|nul
   <p className="cms-help">Lưu bản nháp trước, sau đó chọn ảnh ngay tại đây.
    Chỉ xuất bản khi Website/App thực sự kết nối nội dung CMS.</p>
   <div className="cms-actions">
-   <button type="button" className="fb-ui-button cms-secondary" disabled={busy||mediaBusy} onClick={close}>Đóng</button>
-   <button type="submit" className="fb-ui-button cms-primary" disabled={busy||mediaBusy} aria-busy={busy}>
+   <button type="button" className="fb-ui-button fb-ui-button--secondary" disabled={busy||mediaBusy} onClick={close}>Đóng</button>
+   <button type="submit" className="fb-ui-button fb-ui-button--primary" disabled={busy||mediaBusy} aria-busy={busy}>
     {busy?"Đang lưu…":savedRecord?"Lưu thay đổi":"Lưu bản nháp"}
    </button>
   </div>
@@ -319,7 +319,7 @@ export default function CmsManager({mode,owner}:{
    notificationId={toastId} onClose={()=>{setMessage("");setError("");}}/>
   <div className="page-title cms-heading"><div><h1>{title}</h1>
    <p>Tạo và quản lý nội dung thật, chỉ xuất bản sau khi Owner kiểm tra nguồn.</p></div>
-   <button type="button" className="fb-ui-button cms-primary" onClick={()=>void openEditor(null)}>
+   <button type="button" className="fb-ui-button fb-ui-button--primary" onClick={()=>void openEditor(null)}>
     Thêm nội dung
    </button>
   </div>
@@ -335,12 +335,12 @@ export default function CmsManager({mode,owner}:{
        <td>{item.channel_targets.map(ch=>CHANNELS.find(c=>c.code===ch)?.label).join(", ")||"Chưa chọn"}</td>
        <td>{item.status==="published"?"Đã xuất bản":item.status==="hidden"?"Đã ẩn":"Bản nháp"}</td>
        <td><div className="cms-row-actions">
-        <button type="button" className="fb-ui-button cms-secondary"
+        <button type="button" className="fb-ui-button fb-ui-button--secondary"
          disabled={busy||opening||item.status==="published"} onClick={()=>void openEditor(item)}>Sửa</button>
         {item.status==="published"?
-         <button type="button" className="fb-ui-button cms-secondary" disabled={busy}
+         <button type="button" className="fb-ui-button fb-ui-button--secondary" disabled={busy}
           onClick={()=>void change(item,"hide")}>Ẩn</button>:
-         <button type="button" className="fb-ui-button cms-primary" disabled={busy}
+         <button type="button" className="fb-ui-button fb-ui-button--primary" disabled={busy}
           onClick={()=>void change(item,"publish")}>Xuất bản</button>}
        </div></td>
       </tr>)
@@ -349,10 +349,10 @@ export default function CmsManager({mode,owner}:{
    </table>
   </div>
   <div className="cms-actions" aria-label="Phân trang nội dung">
-   <button type="button" className="fb-ui-button cms-secondary" disabled={loading||busy||page===1}
+   <button type="button" className="fb-ui-button fb-ui-button--secondary" disabled={loading||busy||page===1}
     onClick={()=>setPage(v=>v-1)}>Trang trước</button>
    <span>Trang {page}</span>
-   <button type="button" className="fb-ui-button cms-secondary" disabled={loading||busy||!hasNext}
+   <button type="button" className="fb-ui-button fb-ui-button--secondary" disabled={loading||busy||!hasNext}
     onClick={()=>setPage(v=>v+1)}>Trang sau</button>
   </div>
   <p className="cms-help">Nội dung đang xuất bản cần Ẩn trước khi sửa. Các thay đổi đều lưu lịch sử và chống ghi đè phiên khác.
