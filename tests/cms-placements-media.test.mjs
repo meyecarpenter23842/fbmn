@@ -6,13 +6,14 @@ import {CMS_PLACEMENTS,validCmsPlacements,cmsPlacementIsReady,validatePopupFrequ
 
 const ID="11111111-1111-4111-8111-111111111111";
 const WEBP="UklGRpACAABXRUJQVlA4IIQCAABQDACdASpQAFAAPu1yr1KppqQipnZqATAdiUAaaLD+gNBXz+LNJ4Bv7v4AygeAGkCmTeKx7ARW1l527xCL2PR6L6nm8kEueORWQ9pDlbSHzJg+pPLUVcg/HMbs5ojtXCgxuRVkBpox2Y24AAD+W+sfH4SfXeD0Y7OkpF3CbibiUYiTPJzhyLykXN/oPM7PxxsTGcr5USLJaECoWxt14q+zhL5l+toxlLD8FYqJwIFHMg620MsTdSyAluCclEzztbR+zbNSdpqfBlXjlD/P0Dg76zyvk/BX0r1xxNMcUfcrKOqmuSV2FyfN3dZrBmT0rdEW3RYK7nvuj4A87X0qGnnR8qvEPE7YhR/wZGt8U66vnKnql1g+S7XJnCzUhW1K/bw2dJXEcJt2BhJor6JcD/aJx/ZVvgJSV19gjLruyWB0mzHvRCrpEahM9/pAygtpfQ2pXi3BTwVHhbM/dOP1wRhpJ6T80dOjfHvuJrEyQ3NJRn+92fWeb+v4qJ+tKtHPNH6hmeugLw2W6om3/GiPjo5zFuSQo3NstSANFaO3ODjrPZUQ1Jo3jFUROCxXNmjAuVKCG16ghHAiG6yROpPwQzlf0MItIbbEO3PWCaAzLBMTEGihyZEMjY6FBL2+vQOy+UB53VRZtwdQrqgFJ0HQEF/vD5UmUCdZwf76Bo9npRvlg06KXLpuujf5Drrq8iBDrTW555K98mJcVlcdnKRTzvGDr2MAPt1c4Nvyg899YBQ1HGXKB/OX1lJzYUuhOSRdi14dvp+OQ7sZERGm3rLdfA7+grpgNmtj36xT9mN+E3sEK7VT4VBcXJx4sKoIAfdApagI45PUFBvRvAb+NQmR+GH7SAAAAA==";
-function fixture(){
+function fixture({failCommitAck=false}={}){
  const asset=new Map(),audit=[];
  const entry={id:ID,status:"draft",revision:1,channel_targets:["public_web"]};
  const r2={get:async key=>{const b=asset.get(key);return b?{body:new Blob([b]).stream(),size:b.byteLength}:null;},
   put:async(key,bytes)=>{asset.set(key,bytes);},delete:async key=>asset.delete(key)};
  const media=new Map();
  const db=async work=>work({query:async (sql,params=[])=>{
+  if(sql==="COMMIT"&&failCommitAck)throw Error("Lost COMMIT acknowledgement");
   if(["BEGIN","COMMIT","ROLLBACK"].includes(sql))return {rows:[],rowCount:0};
   if(sql.includes("SELECT * FROM fbmn_catalog_private.cms_entries"))
    return {rows:[{...entry}],rowCount:1};
@@ -72,6 +73,21 @@ test("CMS upload of real WebP stores private channel/device image and audits rev
  assert.equal(image.headers.get("content-type"),"image/webp");
  assert.equal((await image.arrayBuffer()).byteLength,bytes.length);
 });
+test("CMS keeps R2 bytes when COMMIT acknowledgement is uncertain",async()=>{
+ const f=fixture({failCommitAck:true});
+ const bytes=Buffer.from(WEBP,"base64");
+ const result=await f.hit("image-upload","POST",{
+  headers:{"content-type":"image/webp","x-cms-id":ID,"x-cms-channel":"public_web",
+   "x-cms-device":"mobile","x-cms-revision":"1"},body:bytes
+ });
+ assert.equal(result.status,503,"a missing ACK must report failure");
+ assert.equal(f.asset.size,1,"deleting R2 here would corrupt a committed media reference");
+ assert.equal(f.media.size,1);
+ const image=await f.hit("image","GET",{query:"?id="+ID+"&channel=public_web&device=mobile"});
+ assert.equal(image.status,200);
+ assert.equal((await image.arrayBuffer()).byteLength,bytes.length);
+});
+
 test("CMS media rejects wrong channel, bad image, published edit and unsafe query",async()=>{
  const f=fixture();
  const bytes=Buffer.from(WEBP,"base64");
