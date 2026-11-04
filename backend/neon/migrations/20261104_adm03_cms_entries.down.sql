@@ -6,4 +6,7 @@ DO $check$ BEGIN
 END $check$;
 DROP TABLE fbmn_catalog_private.cms_entry_audit;
 DROP TABLE fbmn_catalog_private.cms_entries;
+ALTER TABLE fbmn_admin.audit_events DROP CONSTRAINT audit_events_action_check;
+ALTER TABLE fbmn_admin.audit_events ADD CONSTRAINT audit_events_action_check
+ CHECK(action IN ('session.read','channels.read','publish.check','pricing.check'));
 COMMIT;
