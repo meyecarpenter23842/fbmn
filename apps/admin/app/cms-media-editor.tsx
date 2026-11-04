@@ -1,6 +1,6 @@
 "use client";
 import {useCallback,useEffect,useRef,useState} from "react";
-import type {MutableRefObject} from "react";
+
 import AdminToast from "./admin-toast";
 
 type CmsChannel="public_web"|"dealer_app"|"consumer_app";
@@ -67,9 +67,9 @@ function CmsPrivateImage({id,channel,device,stamp}:{id:string;channel:CmsChannel
  return url?<img className="cms-media-image" src={url} alt={"Ảnh "+CHANNEL_NAMES[channel]+" "+device}/>:
   <span className="cms-media-placeholder">Ảnh chưa tải được</span>;
 }
-export default function CmsMediaEditor({id,revision,channels,saveBusy,operationLock,onRevision,onBusyChange}:{
+export default function CmsMediaEditor({id,revision,channels,saveBusy,acquireLock,releaseLock,onRevision,onBusyChange}:{
  id:string|null;revision:number;channels:CmsChannel[];
- saveBusy:boolean;operationLock:MutableRefObject<boolean>;
+ saveBusy:boolean;acquireLock:()=>boolean;releaseLock:()=>void;
  onRevision:(revision:number)=>void;onBusyChange:(busy:boolean)=>void;
 }){
  const [items,setItems]=useState<Media[]>([]);
@@ -90,8 +90,7 @@ export default function CmsMediaEditor({id,revision,channels,saveBusy,operationL
   return()=>window.clearTimeout(handle);
  },[refresh]);
  const upload=async(channel:CmsChannel,device:CmsDevice,file:File|undefined)=>{
-  if(!id||!file||busy||saveBusy||operationLock.current)return;
-  operationLock.current=true;
+  if(!id||!file||busy||saveBusy||!acquireLock())return;
   setBusy(true);onBusyChange(true);setError("");setMessage("");
   try{
    const image=await convertToWebP(file,device==="mobile"?1100:2000);
@@ -117,7 +116,7 @@ export default function CmsMediaEditor({id,revision,channels,saveBusy,operationL
   }finally{
    const node=fileInputs.current[channel+":"+device];
    if(node)node.value="";
-   operationLock.current=false;
+   releaseLock();
    setBusy(false);onBusyChange(false);
   }
  };
