@@ -101,7 +101,7 @@ export default function CmsMediaEditor({id,revision,channels,onRevision,onBusyCh
     body:image
    });
    const data=(await res.json().catch(()=>({}))) as {data?:{revision:number};error?:{code:string}};
-   if(!res.ok||!Number.isSafeInteger(data.data?.revision))
+   if(!res.ok||typeof data.data?.revision!=="number"||!Number.isSafeInteger(data.data.revision))
     throw Error(res.status===409?"Nội dung đã thay đổi. Tải lại bản nháp trước khi thay ảnh.":
      "Không tải được ảnh lên R2. "+(data.error?.code||""));
    onRevision(data.data!.revision);
