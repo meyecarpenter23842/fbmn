@@ -73,14 +73,14 @@ async function cmsApi<T>(action="",body?:object):Promise<T>{
  return result.data;
 }
 
-function CmsEditor({item,kind,onSaved,dirty}:{item:CmsItem|null;kind:CmsKind;onSaved:()=>void;dirty:MutableRefObject<boolean>}){
+function CmsEditor({item,kind,onSaved,dirtyRef}:{item:CmsItem|null;kind:CmsKind;onSaved:()=>void;dirtyRef:MutableRefObject<boolean>}){
  const close=useProductModalClose();
  const [draft,setDraft]=useState<Draft>(()=>item?fromItem(item):blank(kind));
  const [busy,setBusy]=useState(false);
  const [error,setError]=useState("");
  const [toastId,setToastId]=useState(0);
  const set=<K extends keyof Draft>(key:K,value:Draft[K])=>{
-  dirty.current=true;setDraft(prev=>({...prev,[key]:value}));
+  dirtyRef.current=true;setDraft(prev=>({...prev,[key]:value}));
  };
  const submit=async(e:FormEvent<HTMLFormElement>)=>{
   e.preventDefault();if(busy)return;
@@ -96,7 +96,7 @@ function CmsEditor({item,kind,onSaved,dirty}:{item:CmsItem|null;kind:CmsKind;onS
    await cmsApi(item?"update":"create",{
     ...data,...(item?{id:item.id,expectedRevision:item.revision}:{})
    });
-   dirty.current=false;
+   dirtyRef.current=false;
    onSaved();
    close();
   }catch(ex){
@@ -182,8 +182,8 @@ export default function CmsManager({mode,owner}:{
  const [loading,setLoading]=useState(false);
  const [busy,setBusy]=useState(false);
  const [editing,setEditing]=useState<CmsItem|null|undefined>(undefined);
- const editorDirty=useRef(false);
- const openEditor=(item:CmsItem|null)=>{editorDirty.current=false;setEditing(item);};
+ const editorDirtyRef=useRef(false);
+ const openEditor=(item:CmsItem|null)=>{editorDirtyRef.current=false;setEditing(item);};
  const [message,setMessage]=useState("");
  const [error,setError]=useState("");
  const [toastId,setToastId]=useState(0);
@@ -194,7 +194,7 @@ export default function CmsManager({mode,owner}:{
   catch(e){setError(e instanceof Error?e.message:"Không tải được CMS.");setToastId(v=>v+1);}
   finally{setLoading(false);}
  },[owner]);
- useEffect(()=>{void refresh();},[refresh]);
+ useEffect(()=>{const task=window.setTimeout(()=>{void refresh();},0);return()=>window.clearTimeout(task);},[refresh]);
  const belongs=(item:CmsItem)=>mode==="marketing"?
   ["banner","popup"].includes(item.kind):["article","promotion"].includes(item.kind);
  const visible=items.filter(belongs);
@@ -253,8 +253,8 @@ export default function CmsManager({mode,owner}:{
    Chưa có dữ liệu thực thì Website tiếp tục giữ trạng thái hiện tại.</p>
   {editing!==undefined&&<ProductModal title={editing?"Sửa "+LABELS[editing.kind]:"Thêm nội dung"}
    onClose={()=>setEditing(undefined)} wide locked={busy}
-   beforeClose={()=>!editorDirty.current || window.confirm("Nội dung chưa lưu. Anh có muốn đóng mà không lưu?")}>
-   <CmsEditor item={editing} kind={editing?.kind||kind} dirty={editorDirty}
+   beforeClose={()=>!editorDirtyRef.current || window.confirm("Nội dung chưa lưu. Anh có muốn đóng mà không lưu?")}>
+   <CmsEditor item={editing} kind={editing?.kind||kind} dirtyRef={editorDirtyRef}
     onSaved={()=>{notify(editing?"Đã lưu nội dung.":"Đã tạo bản nháp.");void refresh();}}/>
   </ProductModal>}
  </div>;
