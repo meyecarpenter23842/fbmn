@@ -1,3 +1,4 @@
+const MAX_PUBLIC_PRODUCTS = 10000;
 const GROUPS = new Set(["school_notebook", "student_notebook", "memo_book", "stationery"]);
 const IDENTIFIER = /^[a-z0-9][a-z0-9_-]*$/i;
 const EMPTY_CONTENT = { company: null, articles: [], promotions: [], dealerInformation: null };
@@ -57,7 +58,7 @@ function copySpecifications(specs) {
  */
 export function projectPublicCatalog(raw) {
   guard(object(raw) && Array.isArray(raw.categories) && Array.isArray(raw.products));
-  guard(raw.categories.length <= 2000 && raw.products.length <= 10000);
+  guard(raw.categories.length <= 2000 && raw.products.length <= MAX_PUBLIC_PRODUCTS);
   const categories = raw.categories.map(c => {
     guard(object(c) && GROUPS.has(c.group) && Number.isSafeInteger(c.sortOrder));
     return {
@@ -151,7 +152,7 @@ const QUERY_KEYS = {
 };
 function integerParam(input, defaultValue, max) {
   if (input === null) return defaultValue;
-  if (!/^[1-9]\d{0,3}$/.test(input)) return null;
+  if (!/^[1-9]\d{0,4}$/.test(input)) return null;
   const value = Number(input);
   return value <= max ? value : null;
 }
@@ -165,7 +166,7 @@ function validQuery(url) {
     }
   }
   if (url.pathname === "/v1/public/products" || url.pathname === "/v1/public/catalog") {
-    return integerParam(url.searchParams.get("page"), 1, 1000) !== null &&
+    return integerParam(url.searchParams.get("page"), 1, MAX_PUBLIC_PRODUCTS) !== null &&
       integerParam(url.searchParams.get("limit"), 20, 1000) !== null;
   }
   return true;
@@ -234,7 +235,7 @@ export function createPublicApi({ getPublicCatalog, getPublicContent, allowedOri
         }
         const slug = url.searchParams.get("slug");
         const categoryId = url.searchParams.get("categoryId");
-        const page = integerParam(url.searchParams.get("page"), 1, 1000);
+        const page = integerParam(url.searchParams.get("page"), 1, MAX_PUBLIC_PRODUCTS);
         const limit = integerParam(url.searchParams.get("limit"), 20, 1000);
         const items = catalog.products.filter(p =>
           (!slug || p.slug === slug || p.legacySlugs?.includes(slug)) &&

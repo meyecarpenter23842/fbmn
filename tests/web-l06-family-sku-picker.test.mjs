@@ -130,6 +130,31 @@ test("L06 public SSR catalog retries oversized media pages without losing any pr
   assert.equal(catalog.products[24].variants[0].sku,"S0024");
 });
 
+test("L06 Worker accepts page 1001 when five-product fallback covers 5001 SKUs",async()=>{
+  const categories=[{id:"cat",slug:"cat",name:"Tập vở",group:"stationery",sortOrder:1}];
+  const products=Array.from({length:5001},(_,i)=>({
+    id:"product-"+i,categoryId:"cat",slug:"product-"+i,name:"Approved product "+i,
+    priceLabel:"Liên hệ báo giá",
+    variants:[{sku:"SKU"+i,name:"Approved SKU",price:null,specifications:{}}],
+    media:[],
+  }));
+  const api=createPublicApi({
+    getPublicCatalog:async()=>({categories,products}),
+    getPublicContent:async()=>({company:null,articles:[],promotions:[],dealerInformation:null}),
+  });
+  const last=await api.fetch(new Request("https://public.example.com/v1/public/catalog?page=1001&limit=5"));
+  assert.equal(last.status,200,"the 1001st five-item page must not fail HTTP query validation");
+  const data=await last.json();
+  assert.equal(data.pagination.totalPages,1001);
+  assert.equal(data.pagination.page,1001);
+  assert.equal(data.data.products.length,1);
+  assert.equal(data.data.products[0].variants[0].sku,"SKU5000");
+  const single=await api.fetch(new Request("https://public.example.com/v1/public/catalog?page=5001&limit=1"));
+  assert.equal(single.status,200,"a one-product page can reach the end of the supported catalogue");
+  const outOfRange=await api.fetch(new Request("https://public.example.com/v1/public/catalog?page=10001&limit=1"));
+  assert.equal(outOfRange.status,400,"the HTTP page number must remain bounded");
+});
+
 test("L06 same name without Admin family assignment does not auto-merge",async()=>{
   const skuRows=["0110","0114"].map(sku=>({
     sku_cong_ty:sku,name:"Song Natural",paper_size:"A5",product_spec:{},
