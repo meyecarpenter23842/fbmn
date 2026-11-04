@@ -33,18 +33,6 @@ export default async function ProductPage({ params }: Props) {
     return src?[{src,alt:media.alt,position:media.position,sku:media.sku}]:[];
   });
   const recommendations=relatedProducts(catalog,product);
-  const suggested=recommendations.items.map(item=>{
-    // A family card may use a shared published image or its first company's SKU.
-    // Never borrow a photo assigned exclusively to another SKU.
-    const firstCode=item.variants[0]?.sku;
-    const media=item.media.find(m=>m.sku===undefined||m.sku===firstCode);
-    const src=media?getPublishedProductImageUrl(media.r2Key,process.env.NEXT_PUBLIC_MEDIA_BASE_URL):null;
-    const first=item.variants[0];
-    const spec=first?.specifications;
-    const detail=item.variants.length>1?item.variants.length+" mã sản phẩm":
-      [spec?.pageCount!==undefined?spec.pageCount+" trang":null,spec?.ruling, spec?.paperSize].filter(Boolean).join(" · ");
-    return {id:item.id,slug:item.slug,name:item.name,detail,src,alt:media?.alt??item.name};
-  });
   return <CatalogShell><div className="catalog-wrap">
     <CatalogBreadcrumb trail={[
       { label: "Sản phẩm", href: "/san-pham" },
@@ -52,6 +40,6 @@ export default async function ProductPage({ params }: Props) {
       { label: product.name },
     ]}/>
     <CatalogueProductOptions product={product} photos={images}/>
-    <CatalogueRelatedProducts items={suggested} title={recommendations.title}/>
+    <CatalogueRelatedProducts items={recommendations.items}/>
   </div></CatalogShell>;
 }
