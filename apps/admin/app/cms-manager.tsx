@@ -246,7 +246,9 @@ function CmsEditor({item,kind,onSaved,onSavingChange,dirtyRef}:{item:CmsItem|nul
    <p>Đây là xem trước cấu hình, không phải giao diện Website/App đã xuất bản.</p>
   </section>
   <CmsMediaEditor id={savedRecord?.id??null} revision={savedRecord?.revision??0}
-   saveBusy={busy} operationLock={operationLock}
+   saveBusy={busy}
+   acquireLock={()=>{if(operationLock.current)return false;operationLock.current=true;return true;}}
+   releaseLock={()=>{operationLock.current=false;}}
    channels={savedRecord?.channel_targets??[]}
    onRevision={next=>setSavedRecord(prev=>prev?{...prev,revision:next}:prev)}
    onBusyChange={value=>{setMediaBusy(value);onSavingChange(value||busy);}}/>
