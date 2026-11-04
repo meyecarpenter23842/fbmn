@@ -85,7 +85,7 @@ export function createAdminApi({ verifyToken, loadActor, listChannels, recordAud
         return error(403, "forbidden", corsOrigin);
       }
       if (action === "cms.manage") {
-        return handleCms({request,actor:{...actor,subject},db:catalogueDb});
+        return handleCms({request,actor:{...actor,subject},db:catalogueDb,r2:catalogueR2});
       }
       if (action === "pricing.private") {
         if (url.pathname === "/v1/admin/pricing/managed" || url.pathname.startsWith("/v1/admin/pricing/managed/")) {
