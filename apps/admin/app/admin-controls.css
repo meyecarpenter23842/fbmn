@@ -45,6 +45,32 @@
   flex: none;
 }
 
+/* Semantic variants are owned by the shared UI contract, including CMS buttons. */
+:is(.fb-admin,.fb-product-modal) .fb-ui-button--primary {
+ background:var(--fb-ui-primary);color:#fff;border:1px solid var(--fb-ui-primary);
+ cursor:pointer;font-weight:650;
+}
+:is(.fb-admin,.fb-product-modal) .fb-ui-button--primary:hover:not(:disabled) {
+ background:var(--fb-ui-primary-hover);border-color:var(--fb-ui-primary-hover);
+ box-shadow:0 3px 9px rgb(67 16 120 / 12%);
+}
+:is(.fb-admin,.fb-product-modal) .fb-ui-button--secondary {
+ background:#fff;color:var(--fb-ui-primary-strong);
+ border:1px solid var(--fb-ui-table-header-border);cursor:pointer;
+}
+:is(.fb-admin,.fb-product-modal) .fb-ui-button--secondary:hover:not(:disabled) {
+ background:var(--fb-ui-primary-subtle);border-color:var(--fb-ui-primary);
+}
+:is(.fb-admin,.fb-product-modal) :is(.fb-ui-button--primary,.fb-ui-button--secondary):active:not(:disabled) {
+ transform:translateY(1px);box-shadow:inset 0 1px 3px rgb(32 24 70 / 14%);
+}
+:is(.fb-admin,.fb-product-modal) :is(.fb-ui-button--primary,.fb-ui-button--secondary):disabled {
+ opacity:.56;cursor:not-allowed;box-shadow:none;
+}
+:is(.fb-admin,.fb-product-modal) :is(.fb-ui-button--primary,.fb-ui-button--secondary)[aria-busy="true"] {
+ cursor:progress;
+}
+
 /* Native file inputs, checkboxes, radio buttons and color/range controls
    are deliberately excluded from the text-field contract. */
 :is(.fb-admin,.fb-product-modal) :is(
