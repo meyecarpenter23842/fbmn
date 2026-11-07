@@ -1,10 +1,12 @@
 "use client";
 
-import {useCallback,useEffect,useRef,useState} from "react";
+import {useCallback,useEffect,useId,useRef,useState} from "react";
 import type {FormEvent,MutableRefObject} from "react";
-import ProductModal,{useProductModalClose} from "./product-modal";
+import ProductModal from "./product-modal";
 import AdminToast from "./admin-toast";
-import CmsMediaEditor from "./cms-media-editor";
+import CmsMediaEditor,{cmsMediaKey,uploadCmsImage} from "./cms-media-editor";
+import type {CmsChannel as ImageChannel,CmsDevice,CmsPendingImages} from "./cms-media-editor";
+import CmsVisualPreview from "./cms-visual-preview";
 import {CMS_SLOTS} from "./cms-placement-options";
 
 type CmsKind = "banner"|"popup"|"article"|"promotion";
@@ -86,47 +88,47 @@ async function cmsApi<T>(action="",body?:object):Promise<T>{
  return result.data;
 }
 
-function CmsEditor({item,kind,onSaved,onSavingChange,dirtyRef}:{item:CmsItem|null;kind:CmsKind;onSaved:()=>void;onSavingChange:(saving:boolean)=>void;dirtyRef:MutableRefObject<boolean>}){
- const close=useProductModalClose();
+function CmsEditor({item,kind,onSaved,onSavingChange,dirtyRef,step,onStep,formId}:{
+ item:CmsItem|null;kind:CmsKind;onSaved:()=>void;onSavingChange:(saving:boolean)=>void;
+ dirtyRef:MutableRefObject<boolean>;step:number;onStep:(step:number)=>void;formId:string;
+}){
  const [draft,setDraft]=useState<Draft>(()=>item?fromItem(item):blank(kind));
- const [busy,setBusy]=useState(false);
- const [mediaBusy,setMediaBusy]=useState(false);
  const [savedRecord,setSavedRecord]=useState<CmsItem|null>(item);
- const operationLock=useRef(false);
+ const [pendingImages,setPendingImages]=useState<CmsPendingImages>({});
+ const [busy,setBusy]=useState(false);
  const [error,setError]=useState("");
  const [toastId,setToastId]=useState(0);
+ const [previewChannel,setPreviewChannel]=useState<CmsChannel>("public_web");
+ const [previewDevice,setPreviewDevice]=useState<CmsDevice>("desktop");
+ const contentDirty=useRef(false),operationLock=useRef(false);
+ const previewUrls=useRef<Set<string>>(new Set());
+ useEffect(()=>{
+  const owned=previewUrls.current;
+  return ()=>{for(const url of owned)URL.revokeObjectURL(url);owned.clear();};
+ },[]);
  const set=<K extends keyof Draft>(key:K,value:Draft[K])=>{
-  dirtyRef.current=true;setDraft(prev=>({...prev,[key]:value}));
+  contentDirty.current=true;dirtyRef.current=true;
+  setDraft(prev=>({...prev,[key]:value}));
  };
- const submit=async(e:FormEvent<HTMLFormElement>)=>{
-  e.preventDefault();if(busy||mediaBusy||operationLock.current)return;
-  operationLock.current=true;
-  setBusy(true);onSavingChange(true);setError("");
-  try{
-   const startsAt=draft.startsAt?new Date(draft.startsAt).toISOString():null;
-   const endsAt=draft.endsAt?new Date(draft.endsAt).toISOString():null;
-   const data={
-    ...draft,startsAt,endsAt,ctaUrl:draft.ctaUrl.trim()||null,
-    title:draft.title.trim(),summary:draft.summary.trim(),sourceRef:draft.sourceRef.trim(),
-    paragraphs:draft.paragraphs.trim()?draft.paragraphs.trim().split(/\n\s*\n/).map(s=>s.trim()):[]
-   };
-   const result=await cmsApi<{item:CmsItem}>(savedRecord?"update":"create",{
-    ...data,...(savedRecord?{id:savedRecord.id,expectedRevision:savedRecord.revision}:{})
-   });
-   setSavedRecord(result.item);
-   dirtyRef.current=false;
-   onSaved();
-  }catch(ex){
-   setError(ex instanceof Error?ex.message:"Không lưu được nội dung.");
-   setToastId(v=>v+1);
-  }finally{
-   operationLock.current=false;
-   setBusy(false);onSavingChange(mediaBusy);
-  }
- };
- const canChangeKind=!savedRecord;
- const toggleChannel=(ch:CmsChannel,checked:boolean)=>{
+ const stageImage=(channel:ImageChannel,device:CmsDevice,file:File)=>{
+  if(busy||operationLock.current)return;
+  const key=cmsMediaKey(channel,device),url=URL.createObjectURL(file);
+  previewUrls.current.add(url);
+  const prior=pendingImages[key];
+  if(prior){URL.revokeObjectURL(prior.url);previewUrls.current.delete(prior.url);}
   dirtyRef.current=true;
+  setPendingImages(prev=>({...prev,[key]:{file,url}}));
+ };
+ const toggleChannel=(ch:CmsChannel,checked:boolean)=>{
+  if(!checked){
+   for(const device of ["desktop","mobile"] as CmsDevice[]){
+    const key=cmsMediaKey(ch,device),pending=pendingImages[key];
+    if(pending){URL.revokeObjectURL(pending.url);previewUrls.current.delete(pending.url);}
+   }
+   setPendingImages(prev=>Object.fromEntries(
+    Object.entries(prev).filter(([key])=>!key.startsWith(ch+":"))));
+  }
+  contentDirty.current=true;dirtyRef.current=true;
   setDraft(prev=>{
    const targets=checked?[...prev.channelTargets,ch]:prev.channelTargets.filter(v=>v!==ch);
    const placements={...prev.placements};
@@ -134,132 +136,198 @@ function CmsEditor({item,kind,onSaved,onSavingChange,dirtyRef}:{item:CmsItem|nul
    return {...prev,channelTargets:targets,placements};
   });
  };
- return <form className="cms-editor" onSubmit={e=>void submit(e)}>
+ const submit=async(event:FormEvent<HTMLFormElement>)=>{
+  event.preventDefault();
+  if(busy||operationLock.current)return;
+  operationLock.current=true;
+  setBusy(true);onSavingChange(true);setError("");
+  try{
+   if(draft.title.trim().length<2 || !/^[a-z0-9]+(-[a-z0-9]+)*$/.test(draft.slug)){
+    onStep(0);throw Error("Nhập tiêu đề tối thiểu 2 ký tự và đường dẫn chỉ gồm chữ thường, số, dấu gạch ngang.");
+   }
+   if(["article","promotion"].includes(draft.kind)&&!draft.paragraphs.trim()){
+    onStep(0);throw Error("Tin tức và khuyến mãi cần có nội dung chi tiết.");
+   }
+   if(draft.endsAt&&draft.startsAt&&new Date(draft.endsAt)<new Date(draft.startsAt)){
+    onStep(1);throw Error("Ngày kết thúc phải sau ngày bắt đầu.");
+   }
+   let current=savedRecord;
+   if(!current||contentDirty.current){
+    const data={
+     ...draft,title:draft.title.trim(),summary:draft.summary.trim(),sourceRef:draft.sourceRef.trim(),
+     startsAt:draft.startsAt?new Date(draft.startsAt).toISOString():null,
+     endsAt:draft.endsAt?new Date(draft.endsAt).toISOString():null,
+     ctaUrl:draft.ctaUrl.trim()||null,
+     paragraphs:draft.paragraphs.trim()?
+      draft.paragraphs.trim().split(/\n\s*\n/).map(p=>p.trim()):[]
+    };
+    const result=await cmsApi<{item:CmsItem}>(current?"update":"create",{
+     ...data,...(current?{id:current.id,expectedRevision:current.revision}:{})
+    });
+    current=result.item;setSavedRecord(current);
+    contentDirty.current=false;
+   }
+   const files=Object.entries(pendingImages);
+   let count=0;
+   for(const [key,pending] of files){
+    const [ch,device]=key.split(":") as [CmsChannel,CmsDevice];
+    if(!draft.channelTargets.includes(ch))continue;
+    const revision=await uploadCmsImage(current.id,current.revision,ch,device,pending.file);
+    current={...current,revision};setSavedRecord(current);
+    count+=1;
+    setPendingImages(prev=>{
+     const next={...prev};delete next[key];return next;
+    });
+    // Preserve the selected preview until the saved R2 image can be loaded.
+    URL.revokeObjectURL(pending.url);previewUrls.current.delete(pending.url);
+   }
+   dirtyRef.current=false;
+   onSaved();
+   onStep(2);
+  }catch(ex){
+   setError(ex instanceof Error?ex.message:"Không lưu được bản nháp hoặc ảnh.");
+   setToastId(v=>v+1);
+   dirtyRef.current=true;
+  }finally{
+   operationLock.current=false;
+   setBusy(false);onSavingChange(false);
+  }
+ };
+ const canChangeKind=!savedRecord;
+ const activePreviewChannel=draft.channelTargets.includes(previewChannel)?
+  previewChannel:draft.channelTargets[0]??"public_web";
+ const STEPS=["Nội dung","Vị trí & lịch","Ảnh & xem trước"];
+ return <form id={formId} className="cms-editor cms-wizard" onSubmit={e=>void submit(e)} noValidate>
   <AdminToast variant="error" message={error} notificationId={toastId} onClose={()=>setError("")}/>
-  <div className="cms-form-grid">
-   <label>Loại nội dung
-    <select value={draft.kind} disabled={!canChangeKind||busy||mediaBusy}
-     onChange={e=>{
-      set("kind",e.target.value as CmsKind);
-      set("placements",{});
-     }}>
-     {([kind==="banner"||kind==="popup"?"banner":"article",
-       kind==="banner"||kind==="popup"?"popup":"promotion"] as CmsKind[])
-      .map(k=><option key={k} value={k}>{LABELS[k]}</option>)}
-    </select>
-   </label>
-   <label>Đường dẫn (slug)
-    <input required type="text" value={draft.slug} disabled={!canChangeKind||busy}
-     pattern="[a-z0-9]+(-[a-z0-9]+)*" maxLength={100} onChange={e=>set("slug",e.target.value)}
-     placeholder="ten-noi-dung"/>
-   </label>
-   <label className="cms-wide">Tiêu đề
-    <input required value={draft.title} maxLength={160} minLength={2}
-     disabled={busy} onChange={e=>set("title",e.target.value)}/>
-   </label>
-   <label className="cms-wide">Mô tả ngắn
-    <textarea rows={2} maxLength={400} value={draft.summary}
-     disabled={busy} onChange={e=>set("summary",e.target.value)}/>
-   </label>
-   <label className="cms-wide">Nội dung chi tiết
-    <textarea rows={5} value={draft.paragraphs} disabled={busy}
-     onChange={e=>set("paragraphs",e.target.value)}
-     placeholder="Mỗi đoạn văn cách nhau một dòng trống; không nhập HTML"/>
-   </label>
-   <label className="cms-wide">Liên kết CTA (https:// hoặc đường dẫn trong Website)
-    <input type="text" value={draft.ctaUrl} disabled={busy}
-     onChange={e=>set("ctaUrl",e.target.value)} placeholder="/san-pham"/>
-   </label>
-   <fieldset className="cms-channels cms-wide" disabled={busy}>
-    <legend>Kênh hiển thị (chọn nhiều)</legend>
-    {CHANNELS.map(ch=><label key={ch.code}>
-     <input type="checkbox" checked={draft.channelTargets.includes(ch.code)}
-      onChange={e=>toggleChannel(ch.code,e.target.checked)}/>
-     {ch.label}
-    </label>)}
-   </fieldset>
-   <fieldset className="cms-placement-grid cms-wide">
-    <legend>Vị trí xuất hiện theo từng kênh</legend>
-    <p>Chọn chính xác trang và vùng hiển thị. App có bố cục riêng, không ép theo desktop Website.</p>
-    {draft.channelTargets.length===0?<p>Chọn kênh ở trên để cấu hình vị trí.</p>:
-     draft.channelTargets.map(ch=><label key={ch}>
-      <span>{CHANNELS.find(c=>c.code===ch)?.label}</span>
-      <select value={draft.placements[ch]||""} disabled={busy||mediaBusy}
-       onChange={e=>{
-        const next={...draft.placements};
-        if(e.target.value)next[ch]=e.target.value;else delete next[ch];
-        set("placements",next);
-       }}>
-       <option value="">Chọn vị trí (có thể lưu nháp trước)</option>
-       {CMS_SLOTS[draft.kind][ch].map(slot=><option key={slot.value} value={slot.value}>{slot.label}</option>)}
-      </select>
-      {CMS_SLOTS[draft.kind][ch].filter(slot=>slot.value===draft.placements[ch]).map(slot=>
-       <small key={slot.value}>{slot.description}</small>)}
-     </label>)}
-   </fieldset>
-   {draft.kind==="popup"&&<fieldset className="cms-popup-frequency cms-wide">
-    <legend>Popup quảng bá khi khách truy cập</legend>
-    <p>Đây là popup khuyến mãi trên Website/App, không phải cửa sổ sửa trong Admin.</p>
+  <nav className="cms-wizard-tabs" role="tablist" aria-label="Các bước tạo nội dung">
+   {STEPS.map((label,index)=><button type="button" key={label} role="tab"
+    aria-selected={step===index} aria-controls={formId+"-step-"+index}
+    id={formId+"-tab-"+index} onClick={()=>onStep(index)} disabled={busy}>
+    <span>{index+1}</span>{label}
+   </button>)}
+  </nav>
+  <section id={formId+"-step-"+step} role="tabpanel"
+   aria-labelledby={formId+"-tab-"+step} className="cms-wizard-panel">
+   {step===0&&<>
+    <div className="cms-wizard-intro"><strong>Thông tin nội dung</strong>
+     <p>Nhập nội dung trước; có thể chuyển bước và chọn ảnh trước khi lưu.</p>
+    </div>
     <div className="cms-form-grid">
-     <label>Chờ sau khi mở trang (giây)
-      <input type="number" min={0} max={120} value={draft.popupDelaySeconds}
-       disabled={busy||mediaBusy} onChange={e=>set("popupDelaySeconds",Number(e.target.value))}/>
+     <label>Loại nội dung
+      <select value={draft.kind} disabled={!canChangeKind||busy}
+       onChange={e=>{set("kind",e.target.value as CmsKind);set("placements",{});}}>
+       {([kind==="banner"||kind==="popup"?"banner":"article",
+        kind==="banner"||kind==="popup"?"popup":"promotion"] as CmsKind[])
+        .map(k=><option key={k} value={k}>{LABELS[k]}</option>)}
+      </select>
      </label>
-     <label>Tối đa mỗi phiên
-      <input type="number" min={1} max={20} value={draft.popupMaxPerSession}
-       disabled={busy||mediaBusy} onChange={e=>set("popupMaxPerSession",Number(e.target.value))}/>
+     <label>Đường dẫn (slug)
+      <input value={draft.slug} disabled={!canChangeKind||busy} required
+       pattern="[a-z0-9]+(-[a-z0-9]+)*" maxLength={100}
+       onChange={e=>set("slug",e.target.value)} placeholder="ten-noi-dung"/>
      </label>
-     <label>Chờ sau khi đóng (phút)
-      <input type="number" min={0} max={43200} value={draft.popupCooldownMinutes}
-       disabled={busy||mediaBusy} onChange={e=>set("popupCooldownMinutes",Number(e.target.value))}/>
+     <label className="cms-wide">Tiêu đề
+      <input value={draft.title} maxLength={160} minLength={2} required disabled={busy}
+       onChange={e=>set("title",e.target.value)}/>
+     </label>
+     <label className="cms-wide">Mô tả ngắn
+      <textarea rows={2} maxLength={400} value={draft.summary} disabled={busy}
+       onChange={e=>set("summary",e.target.value)}/>
+     </label>
+     <label className="cms-wide">Nội dung chi tiết
+      <textarea rows={5} value={draft.paragraphs} disabled={busy}
+       onChange={e=>set("paragraphs",e.target.value)}
+       placeholder="Mỗi đoạn cách nhau một dòng trống; không dùng HTML"/>
+     </label>
+     <label className="cms-wide">Liên kết khi bấm (https:// hoặc đường dẫn Website)
+      <input type="text" value={draft.ctaUrl} disabled={busy}
+       onChange={e=>set("ctaUrl",e.target.value)} placeholder="/san-pham"/>
      </label>
     </div>
-   </fieldset>}
-   <label>Bắt đầu hiển thị
-    <input type="datetime-local" value={draft.startsAt} disabled={busy}
-     onChange={e=>set("startsAt",e.target.value)}/>
-   </label>
-   <label>Kết thúc hiển thị
-    <input type="datetime-local" value={draft.endsAt} disabled={busy}
-     onChange={e=>set("endsAt",e.target.value)}/>
-   </label>
-   <label>Thứ tự sắp xếp
-    <input type="number" min={0} max={10000} value={draft.sortOrder}
-     disabled={busy} onChange={e=>set("sortOrder",Number(e.target.value))}/>
-   </label>
-   <label className="cms-wide">Nguồn xác minh nội dung
-    <input maxLength={500} value={draft.sourceRef} disabled={busy}
-     onChange={e=>set("sourceRef",e.target.value)}
-     placeholder="Tên tài liệu / thông tin được Owner phê duyệt"/>
-   </label>
-  </div>
-  <section className="cms-live-preview cms-wide" aria-label="Xem trước nội dung">
-   <strong>Xem trước cấu hình · Chưa công khai</strong>
-   <div className="cms-live-preview-content">
-    <h3>{draft.title||"Tiêu đề nội dung"}</h3>
-    <p>{draft.summary||"Mô tả tại vị trí được chọn"}</p>
-    <small>{draft.channelTargets.length?draft.channelTargets.map(ch=>
-     (CHANNELS.find(c=>c.code===ch)?.label||ch)+" · "+
-     (CMS_SLOTS[draft.kind][ch].find(slot=>slot.value===draft.placements[ch])?.label||"Chưa đặt vị trí")
-    ).join(" | "):"Chưa chọn kênh"}</small>
-   </div>
-   <p>Đây là xem trước cấu hình, không phải giao diện Website/App đã xuất bản.</p>
+   </>}
+   {step===1&&<>
+    <div className="cms-wizard-intro"><strong>Trang, vị trí và thời gian hiển thị</strong>
+     <p>Chọn kênh trước, sau đó chỉ định vị trí riêng; Web và App không bị ép cùng bố cục.</p>
+    </div>
+    <div className="cms-form-grid">
+     <fieldset className="cms-channels cms-wide" disabled={busy}>
+      <legend>Kênh hiển thị</legend>
+      {CHANNELS.map(ch=><label key={ch.code}>
+       <input type="checkbox" checked={draft.channelTargets.includes(ch.code)}
+        onChange={e=>toggleChannel(ch.code,e.target.checked)}/>{ch.label}
+      </label>)}
+     </fieldset>
+     <fieldset className="cms-placement-grid cms-wide">
+      <legend>Vị trí theo từng kênh</legend>
+      {draft.channelTargets.length===0?<p>Chọn kênh để hiện vị trí tương ứng.</p>:
+       draft.channelTargets.map(ch=><label key={ch}>
+        <span>{CHANNELS.find(x=>x.code===ch)?.label}</span>
+        <select value={draft.placements[ch]||""} disabled={busy}
+         onChange={e=>{
+          const placements={...draft.placements};
+          if(e.target.value)placements[ch]=e.target.value;else delete placements[ch];
+          set("placements",placements);
+         }}>
+         <option value="">Chọn nơi hiển thị (có thể lưu nháp trước)</option>
+         {CMS_SLOTS[draft.kind][ch].map(slot=>
+          <option key={slot.value} value={slot.value}>{slot.label}</option>)}
+        </select>
+        {CMS_SLOTS[draft.kind][ch].filter(slot=>slot.value===draft.placements[ch]).map(slot=>
+         <small key={slot.value}>{slot.description}</small>)}
+       </label>)}
+     </fieldset>
+     {draft.kind==="popup"&&<fieldset className="cms-popup-frequency cms-wide">
+      <legend>Popup quảng bá cho khách truy cập</legend>
+      <p>Không phải popup thêm/sửa trong Admin. Chỉ có hiệu lực khi Website/App tích hợp CMS.</p>
+      <div className="cms-form-grid">
+       <label>Chờ sau khi vào trang (giây)
+        <input type="number" min={0} max={120} value={draft.popupDelaySeconds}
+         disabled={busy} onChange={e=>set("popupDelaySeconds",Number(e.target.value))}/>
+       </label>
+       <label>Tối đa mỗi phiên
+        <input type="number" min={1} max={20} value={draft.popupMaxPerSession}
+         disabled={busy} onChange={e=>set("popupMaxPerSession",Number(e.target.value))}/>
+       </label>
+       <label>Chờ sau khi đóng (phút)
+        <input type="number" min={0} max={43200} value={draft.popupCooldownMinutes}
+         disabled={busy} onChange={e=>set("popupCooldownMinutes",Number(e.target.value))}/>
+       </label>
+      </div>
+     </fieldset>}
+     <label>Bắt đầu hiển thị
+      <input type="datetime-local" value={draft.startsAt} disabled={busy}
+       onChange={e=>set("startsAt",e.target.value)}/>
+     </label>
+     <label>Kết thúc hiển thị
+      <input type="datetime-local" value={draft.endsAt} disabled={busy}
+       onChange={e=>set("endsAt",e.target.value)}/>
+     </label>
+     <label>Thứ tự sắp xếp
+      <input type="number" min={0} max={10000} value={draft.sortOrder}
+       disabled={busy} onChange={e=>set("sortOrder",Number(e.target.value))}/>
+     </label>
+     <label className="cms-wide">Nguồn xác minh nội dung
+      <input maxLength={500} value={draft.sourceRef} disabled={busy}
+       onChange={e=>set("sourceRef",e.target.value)}
+       placeholder="Tài liệu / thông tin đã được Owner kiểm tra"/>
+     </label>
+    </div>
+   </>}
+   {step===2&&<>
+    <div className="cms-wizard-intro"><strong>Chọn ảnh và kiểm tra bố cục</strong>
+     <p>Ảnh hiện ngay trong bản xem trước. Bấm Lưu mới tải ảnh vào R2.</p>
+    </div>
+    <CmsMediaEditor recordId={savedRecord?.id??null} revision={savedRecord?.revision??0}
+     channels={draft.channelTargets} pending={pendingImages} onStage={stageImage} disabled={busy}/>
+    <CmsVisualPreview kind={draft.kind} title={draft.title} summary={draft.summary}
+     ctaUrl={draft.ctaUrl} channelTargets={draft.channelTargets} placements={draft.placements}
+     recordId={savedRecord?.id??null} revision={savedRecord?.revision??0}
+     pending={pendingImages} channel={activePreviewChannel} device={previewDevice}
+     onChannel={setPreviewChannel} onDevice={setPreviewDevice}/>
+   </>}
   </section>
-  <CmsMediaEditor id={savedRecord?.id??null} revision={savedRecord?.revision??0}
-   saveBusy={busy}
-   acquireLock={()=>{if(operationLock.current)return false;operationLock.current=true;return true;}}
-   releaseLock={()=>{operationLock.current=false;}}
-   channels={savedRecord?.channel_targets??[]}
-   onRevision={next=>setSavedRecord(prev=>prev?{...prev,revision:next}:prev)}
-   onBusyChange={value=>{setMediaBusy(value);onSavingChange(value||busy);}}/>
-  <p className="cms-help">Lưu bản nháp trước, sau đó chọn ảnh ngay tại đây.
-   Chỉ xuất bản khi Website/App thực sự kết nối nội dung CMS.</p>
-  <div className="cms-actions">
-   <button type="button" className="fb-ui-button fb-ui-button--secondary" disabled={busy||mediaBusy} onClick={close}>Đóng</button>
-   <button type="submit" className="fb-ui-button fb-ui-button--primary" disabled={busy||mediaBusy} aria-busy={busy}>
-    {busy?"Đang lưu…":savedRecord?"Lưu thay đổi":"Lưu bản nháp"}
-   </button>
-  </div>
+  <p className="cms-wizard-footnote">Chỉ lưu bản nháp trong Admin. Xuất bản sẽ được mở khi
+   Website/App nhận CMS thật; không có thay đổi nào tự hiện trên trang công khai.</p>
  </form>;
 }
 export default function CmsManager({mode,owner}:{
