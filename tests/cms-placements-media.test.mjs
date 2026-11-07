@@ -148,7 +148,7 @@ test("CMS wizard stages image before creating record and uploads serially on Sav
  assert.match(editor,/await uploadCmsImage\(current\.id,current\.revision/);
  assert.match(editor,/current=\{\.\.\.current,revision\}/);
  assert.match(editor,/dirtyRef\.current=false/);
- assert.match(editor,/Bản nháp/);
+ assert.match(editor,/bản nháp/i);
  assert.match(media,/channels\.length===0/);
  assert.match(media,/onStage\(ch,device,file\)/);
  assert.match(media,/pending\[key\]/);
