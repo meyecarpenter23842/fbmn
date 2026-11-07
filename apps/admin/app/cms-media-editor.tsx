@@ -26,8 +26,10 @@ async function convertToWebP(file:File,longest:number){
   if(Math.min(bitmap.width,bitmap.height)<64)throw Error("Ảnh cần có mỗi chiều tối thiểu 64 px.");
   const ratio=Math.min(1,longest/Math.max(bitmap.width,bitmap.height));
   const canvas=document.createElement("canvas");
-  canvas.width=Math.max(64,Math.round(bitmap.width*ratio));
-  canvas.height=Math.max(64,Math.round(bitmap.height*ratio));
+  const width=Math.round(bitmap.width*ratio),height=Math.round(bitmap.height*ratio);
+  if(width<64||height<64)throw Error("Ảnh quá dài hoặc quá hẹp cho thiết bị này. Chọn ảnh có tỷ lệ phù hợp để không bị méo.");
+  canvas.width=width;
+  canvas.height=height;
   const ctx=canvas.getContext("2d");
   if(!ctx)throw Error("Trình duyệt không hỗ trợ xử lý ảnh.");
   ctx.drawImage(bitmap,0,0,canvas.width,canvas.height);
