@@ -155,12 +155,13 @@ test("CMS wizard stages image before creating record and uploads serially on Sav
  assert.match(media,/saveBusy|recordId/);
  assert.match(media,/convertToWebP/);
  assert.match(media,/image\/webp/);
- assert.match(modal,/footer\?:\(close:\(\)=>void\)=>ReactNode/);
+ assert.match(modal,/footer\?:ReactNode/);
  assert.match(modal,/className="fb-product-modal-footer"/);
  assert.match(editor,/role="tablist"/);
  assert.match(editor,/role="tabpanel"/);
- assert.match(editor,/footer=\{requestClose=>/);
- assert.match(editor,/form=\{editorFormId\}/);
+ assert.match(editor,/useProductModalClose\(\)/);
+ assert.match(editor,/footer=\{<CmsModalFooter/);
+ assert.match(editor,/form=\{formId\}/);
  assert.match(style,/\.cms-wizard-tabs\{position:sticky;top:0/);
  assert.doesNotMatch(media,/Lưu bản nháp trước để kích hoạt/);
 });
