@@ -168,13 +168,11 @@ function CmsEditor({item,kind,onSaved,onSavingChange,dirtyRef,step,onStep,formId
     contentDirty.current=false;
    }
    const files=Object.entries(pendingImages);
-   let count=0;
    for(const [key,pending] of files){
     const [ch,device]=key.split(":") as [CmsChannel,CmsDevice];
     if(!draft.channelTargets.includes(ch))continue;
     const revision=await uploadCmsImage(current.id,current.revision,ch,device,pending.file);
     current={...current,revision};setSavedRecord(current);
-    count+=1;
     setPendingImages(prev=>{
      const next={...prev};delete next[key];return next;
     });
@@ -341,12 +339,15 @@ export default function CmsManager({mode,owner}:{
  const [loadError,setLoadError]=useState("");
  const [busy,setBusy]=useState(false);
  const [editorSaving,setEditorSaving]=useState(false);
+ const [editorStep,setEditorStep]=useState(0);
+ const editorFormId=useId();
  const [editing,setEditing]=useState<CmsItem|null|undefined>(undefined);
  const editorDirtyRef=useRef(false);
  const [message,setMessage]=useState("");
  const openEditor=async(item:CmsSummary|null)=>{
   if(opening)return;
   editorDirtyRef.current=false;
+  setEditorStep(0);
   if(!item){setEditing(null);return;}
   setOpening(true);
   try{
@@ -438,11 +439,27 @@ export default function CmsManager({mode,owner}:{
   <p className="cms-help">Đã lưu nháp và có ảnh chưa đồng nghĩa đã xuất bản lên Website.
    Chỉ bật nút xuất bản sau khi public API và giao diện Web/App thực sự được kết nối, kiểm thử.</p>
   {editing!==undefined&&<ProductModal title={editing?"Sửa "+LABELS[editing.kind]:"Thêm nội dung"}
-   onClose={()=>setEditing(undefined)} wide locked={busy||editorSaving}
-   beforeClose={()=>!editorDirtyRef.current || window.confirm("Nội dung chưa lưu. Anh có muốn đóng mà không lưu?")}>
+   onClose={()=>{setEditing(undefined);void refresh();}} wide locked={busy||editorSaving}
+   beforeClose={()=>!editorDirtyRef.current || window.confirm("Nội dung hoặc ảnh chưa lưu. Đóng mà không lưu?")}
+   footer={requestClose=><div className="cms-wizard-footer">
+    <span className="cms-wizard-progress">Bước {editorStep+1}/3</span>
+    <div className="cms-wizard-footer-actions">
+     {editorStep>0&&<button type="button" className="fb-ui-button fb-ui-button--secondary"
+      disabled={editorSaving} onClick={()=>setEditorStep(v=>Math.max(0,v-1))}>Quay lại</button>}
+     <button type="button" className="fb-ui-button fb-ui-button--secondary"
+      disabled={editorSaving} onClick={requestClose}>Đóng</button>
+     <button type="submit" form={editorFormId} className={"fb-ui-button "+
+      (editorStep===2?"fb-ui-button--primary":"fb-ui-button--secondary")}
+      aria-busy={editorSaving} disabled={editorSaving}>
+      {editorSaving?"Đang lưu…":"Lưu bản nháp & ảnh"}
+     </button>
+     {editorStep<2&&<button type="button" className="fb-ui-button fb-ui-button--primary"
+      disabled={editorSaving} onClick={()=>setEditorStep(v=>Math.min(2,v+1))}>Tiếp tục</button>}
+    </div>
+   </div>}>
    <CmsEditor item={editing} kind={editing?.kind||kind} dirtyRef={editorDirtyRef}
-    onSavingChange={setEditorSaving}
-    onSaved={()=>{notify(editing?"Đã lưu nội dung.":"Đã tạo bản nháp.");
+    onSavingChange={setEditorSaving} step={editorStep} onStep={setEditorStep} formId={editorFormId}
+    onSaved={()=>{notify("Đã lưu bản nháp và ảnh đã chọn.");
      if(editing===null&&page!==1)setPage(1);else void refresh();}}/>
   </ProductModal>}
  </div>;
