@@ -394,6 +394,27 @@
 }
 
 
+/* Shared tab variant, inherits global 36px desktop / 44px mobile controls. */
+:is(.fb-admin,.fb-product-modal) .fb-ui-tab {
+ display:inline-flex;align-items:center;justify-content:center;gap:8px;
+ background:transparent;border-color:transparent;color:var(--fb-ui-muted,#667085);
+ font-size:var(--fb-control-font-size,13px);font-weight:650;
+ min-width:0;white-space:normal;cursor:pointer;
+}
+:is(.fb-admin,.fb-product-modal) .fb-ui-tab[aria-selected="true"] {
+ background:var(--fb-ui-primary-subtle,#f4edfa);
+ border-color:var(--fb-ui-table-header-border,#e5d7f1);
+ color:var(--fb-ui-primary-strong,#431078);
+}
+:is(.fb-admin,.fb-product-modal) .fb-ui-tab:hover:not(:disabled) {
+ background:var(--fb-ui-primary-subtle,#f4edfa);
+}
+:is(.fb-admin,.fb-product-modal) .fb-ui-tab .fb-ui-step-number {
+ display:grid;place-items:center;flex:none;
+ width:22px;height:22px;border:1px solid currentColor;border-radius:50%;
+ font-size:12px;line-height:1;
+}
+
 /* Shared modal footer lives OUTSIDE the scroll body; existing modals opt in. */
 .fb-product-modal-footer {
  flex-shrink:0;min-height:60px;display:flex;align-items:center;
