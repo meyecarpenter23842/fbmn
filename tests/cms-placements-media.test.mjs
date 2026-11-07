@@ -134,16 +134,46 @@ test("CMS private migration never exposes R2 keys to public roles",()=>{
  assert.match(route,/image\/webp/);
 });
 
-test("CMS modal prevents overlapping text save and image upload, including pre-conversion",()=>{
+test("CMS wizard stages image before creating record and uploads serially on Save",()=>{
  const editor=readFileSync("apps/admin/app/cms-manager.tsx","utf8");
- const upload=readFileSync("apps/admin/app/cms-media-editor.tsx","utf8");
- assert.match(editor,/if\(busy\|\|mediaBusy\|\|operationLock\.current\)return/);
- assert.match(editor,/operationLock\.current=true/);
- assert.match(editor,/saveBusy=\{busy\}/);
- assert.match(editor,/acquireLock=\{\(\)=>/);
- assert.match(editor,/releaseLock=\{\(\)=>/);
- assert.match(upload,/if\(!id\|\|!file\|\|busy\|\|saveBusy\|\|!acquireLock\(\)\)return/);
- assert.match(upload,/releaseLock\(\)/);
- assert.match(upload,/disabled=\{busy\|\|saveBusy\}/);
- assert.match(editor,/onSavingChange\(value\|\|busy\)/);
+ const media=readFileSync("apps/admin/app/cms-media-editor.tsx","utf8");
+ const modal=readFileSync("apps/admin/app/product-modal.tsx","utf8");
+ const style=readFileSync("apps/admin/app/cms-manager.css","utf8");
+ assert.match(editor,/const \[pendingImages,setPendingImages\]=useState<CmsPendingImages>\(\{\}\)/);
+ assert.match(editor,/URL\.createObjectURL\(file\)/);
+ assert.match(editor,/if\(busy\|\|operationLock\.current\)return/);
+ assert.match(editor,/const result=await cmsApi/);
+ assert.match(editor,/const files=Object\.entries\(pendingImages\)/);
+ assert.match(editor,/for\(const \[key,pending\] of files\)/);
+ assert.match(editor,/await uploadCmsImage\(current\.id,current\.revision/);
+ assert.match(editor,/current=\{\.\.\.current,revision\}/);
+ assert.match(editor,/dirtyRef\.current=false/);
+ assert.match(editor,/Bản nháp/);
+ assert.match(media,/channels\.length===0/);
+ assert.match(media,/onStage\(ch,device,file\)/);
+ assert.match(media,/pending\[key\]/);
+ assert.match(media,/saveBusy|recordId/);
+ assert.match(media,/convertToWebP/);
+ assert.match(media,/image\/webp/);
+ assert.match(modal,/footer\?:\(close:\(\)=>void\)=>ReactNode/);
+ assert.match(modal,/className="fb-product-modal-footer"/);
+ assert.match(editor,/role="tablist"/);
+ assert.match(editor,/role="tabpanel"/);
+ assert.match(editor,/footer=\{requestClose=>/);
+ assert.match(editor,/form=\{editorFormId\}/);
+ assert.match(style,/\.cms-wizard-tabs\{position:sticky;top:0/);
+ assert.doesNotMatch(media,/Lưu bản nháp trước để kích hoạt/);
+});
+test("CMS preview shows selected or saved R2 assets and distinct layouts per device/placement",()=>{
+ const preview=readFileSync("apps/admin/app/cms-visual-preview.tsx","utf8");
+ const media=readFileSync("apps/admin/app/cms-media-editor.tsx","utf8");
+ assert.match(preview,/cmsMediaKey\(current,device\)/);
+ assert.match(preview,/CmsImagePreview/);
+ assert.match(preview,/slot==="home\.after_products"/);
+ assert.match(preview,/slot==="category\.header"/);
+ assert.match(preview,/cms-simulation-popup-backdrop/);
+ assert.match(preview,/cms-simulation--mobile/);
+ assert.match(preview,/Chưa chọn vị trí/);
+ assert.match(preview,/Mô phỏng vị trí/);
+ assert.match(media,/URL\.revokeObjectURL/);
 });
