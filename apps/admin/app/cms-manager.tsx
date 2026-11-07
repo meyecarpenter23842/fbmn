@@ -199,9 +199,9 @@ function CmsEditor({item,kind,onSaved,onSavingChange,dirtyRef,step,onStep,formId
   <AdminToast variant="error" message={error} notificationId={toastId} onClose={()=>setError("")}/>
   <nav className="cms-wizard-tabs" role="tablist" aria-label="Các bước tạo nội dung">
    {STEPS.map((label,index)=><button type="button" key={label} role="tab"
-    aria-selected={step===index} aria-controls={formId+"-step-"+index}
+    className="fb-ui-button fb-ui-tab" aria-selected={step===index} aria-controls={formId+"-step-"+index}
     id={formId+"-tab-"+index} onClick={()=>onStep(index)} disabled={busy}>
-    <span>{index+1}</span>{label}
+    <span className="fb-ui-step-number">{index+1}</span>{label}
    </button>)}
   </nav>
   <section id={formId+"-step-"+step} role="tabpanel"
