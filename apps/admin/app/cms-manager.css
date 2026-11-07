@@ -50,15 +50,6 @@
 .cms-placement-grid label{display:flex;flex-direction:column;gap:7px;min-width:0;font-weight:650}
 .cms-placement-grid label select{min-width:0;width:100%}
 .cms-placement-grid label small{color:var(--fb-ui-muted,#667085);font-weight:400}
-.cms-live-preview{margin:16px 0;border:1px solid var(--fb-ui-border,#e4e7ef);
- border-radius:12px;background:var(--fb-ui-surface,#fff);padding:16px}
-.cms-live-preview>strong{font-weight:700}
-.cms-live-preview-content{background:var(--fb-ui-primary-subtle,#f4edfa);
- border-radius:10px;padding:12px 14px;margin:12px 0;overflow-wrap:anywhere}
-.cms-live-preview-content h3{font-size:15px;line-height:1.4;margin:0 0 8px}
-.cms-live-preview-content p{line-height:1.45;margin:0 0 8px}
-.cms-live-preview-content small{color:var(--fb-ui-primary-strong,#431078)}
-.cms-live-preview>p{color:var(--fb-ui-muted,#667085);font-size:12px;margin:0}
 .cms-media-panel{margin:18px 0;padding:14px;border:1px solid var(--fb-ui-border,#e4e7ef);
  border-radius:12px;background:var(--fb-ui-surface,#fff)}
 .cms-section-heading>strong{font-size:14px;font-weight:700}
@@ -85,4 +76,106 @@
  .cms-media-grid{grid-template-columns:minmax(0,1fr)}
  .cms-error-state .fb-ui-button{margin:8px 0 0}
  .cms-media-canvas--mobile{max-height:280px}
+}
+
+/* L07: short step-based CMS wizard; modal's actual footer is shared and outside scroll. */
+.fb-product-modal-content:has(.cms-wizard){padding:0;}
+.cms-wizard{min-width:0;color:var(--fb-ui-ink,#20223b);}
+.cms-wizard-tabs{position:sticky;top:0;z-index:3;display:grid;
+ grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;
+ padding:10px 16px;border-bottom:1px solid var(--fb-ui-border,#e4e7ef);
+ background:var(--fb-ui-surface,#fff);}
+.cms-wizard-tabs button{min-width:0;display:flex;align-items:center;justify-content:center;gap:8px;
+ border:1px solid transparent;border-radius:var(--fb-control-radius,9px);
+ background:transparent;color:var(--fb-ui-muted,#667085);font-size:13px;font-weight:650;
+ cursor:pointer;min-height:36px;transition:background-color 190ms,border-color 190ms,color 190ms;}
+.cms-wizard-tabs button[aria-selected="true"]{border-color:var(--fb-ui-table-header-border,#e5d7f1);
+ background:var(--fb-ui-primary-subtle,#f4edfa);color:var(--fb-ui-primary-strong,#431078);}
+.cms-wizard-tabs button:hover:not(:disabled){background:var(--fb-ui-primary-subtle,#f4edfa);}
+.cms-wizard-tabs button span{width:22px;height:22px;display:grid;place-items:center;
+ flex:none;border:1px solid currentColor;border-radius:50%;font-size:12px;}
+.cms-wizard-panel{padding:18px 20px 14px;min-height:300px;}
+.cms-wizard-intro{margin-bottom:18px;}
+.cms-wizard-intro strong{font-size:15px;color:var(--fb-ui-ink,#20223b);}
+.cms-wizard-intro p{font-size:13px;line-height:1.5;color:var(--fb-ui-muted,#667085);margin:6px 0 0;}
+.cms-wizard-footnote{margin:0;padding:0 20px 14px;font-size:12px;line-height:1.5;
+ color:var(--fb-ui-muted,#667085);}
+.cms-wizard-footer{display:flex;align-items:center;justify-content:space-between;gap:12px;
+ width:100%;min-width:0;}
+.cms-wizard-progress{white-space:nowrap;font-size:12px;color:var(--fb-ui-muted,#667085);}
+.cms-wizard-footer-actions{display:flex;flex-wrap:wrap;align-items:center;justify-content:flex-end;gap:8px;}
+.cms-wizard-footer-actions button{white-space:nowrap;}
+/* CMS preview is a transparent layout simulation, not a fabricated live screenshot. */
+.cms-real-preview{margin:14px 0 4px;padding:16px;border:1px solid var(--fb-ui-border,#e4e7ef);
+ border-radius:12px;background:var(--fb-ui-surface,#fff);}
+.cms-preview-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;}
+.cms-preview-toolbar>div:first-child{display:flex;flex-direction:column;gap:4px;}
+.cms-preview-toolbar strong{font-size:14px;}
+.cms-preview-toolbar small{font-size:12px;color:var(--fb-ui-muted,#667085);}
+.cms-preview-controls{display:flex;flex-wrap:wrap;align-items:center;gap:9px;}
+.cms-preview-controls select{min-width:140px;max-width:240px;min-height:40px;
+ border:1px solid var(--fb-ui-border,#e4e7ef);border-radius:var(--fb-control-radius,9px);
+ background:#fff;padding:0 12px;color:var(--fb-ui-ink,#20223b);font:inherit;}
+.cms-device-toggle{display:inline-flex;gap:4px;align-items:center;}
+.cms-device-toggle button[aria-pressed="true"]{background:var(--fb-ui-primary-subtle,#f4edfa);
+ border-color:var(--fb-ui-primary,#6d249e);color:var(--fb-ui-primary-strong,#431078);}
+.cms-simulation-viewport{display:flex;justify-content:center;align-items:start;
+ overflow-x:auto;padding:18px;background:var(--fb-ui-canvas,#f7f8fc);
+ border:1px solid var(--fb-ui-border,#e4e7ef);border-radius:11px;margin-top:12px;}
+.cms-simulation{overflow:hidden;width:100%;max-width:980px;min-height:210px;
+ background:#fff;border:1px solid #dedee6;border-radius:9px;box-shadow:0 6px 24px rgba(24,25,50,.07);}
+.cms-simulation--mobile,.cms-simulation--app{width:min(360px,100%);max-width:360px;}
+.cms-simulation--mobile{border-radius:20px;}
+.cms-simulation-header{display:flex;align-items:center;justify-content:space-between;gap:8px;
+ padding:12px 16px;border-bottom:1px solid #e7e7ec;background:#fff;font-size:12px;}
+.cms-simulation-header strong{color:var(--fb-ui-primary-strong,#431078);font-size:13px;}
+.cms-simulation-header span{color:var(--fb-ui-muted,#667085);font-size:11px;}
+.cms-simulation--mobile .cms-simulation-header{flex-direction:column;align-items:flex-start;gap:3px;}
+.cms-simulation-banner{margin:12px;background:#fff;border:1px solid #e8e6ef;border-radius:9px;overflow:hidden;}
+.cms-simulation-image{display:grid;place-items:center;position:relative;min-height:100px;
+ max-height:340px;aspect-ratio:16/7;background:#f7f7fa;overflow:hidden;}
+.cms-simulation--mobile .cms-simulation-image{aspect-ratio:4/5;max-height:320px;}
+.cms-simulation-image .cms-media-image{height:100%;width:100%;object-fit:contain;}
+.cms-simulation-caption{padding:12px 14px;overflow-wrap:anywhere;}
+.cms-simulation-caption strong{display:block;font-size:15px;line-height:1.4;}
+.cms-simulation-caption p{margin:6px 0;font-size:12px;line-height:1.5;color:#555b6a;}
+.cms-simulation-link{display:inline-block;margin-top:8px;padding:8px 12px;background:#6d249e;
+ color:#fff;border-radius:8px;font-weight:600;font-size:12px;}
+.cms-simulation-story{display:grid;grid-template-columns:minmax(110px,1fr) minmax(0,1.6fr);
+ gap:0;margin:12px;border:1px solid #e8e6ef;border-radius:9px;overflow:hidden;}
+.cms-simulation-story .cms-simulation-image{aspect-ratio:4/3;max-height:none;}
+.cms-simulation--mobile .cms-simulation-story{grid-template-columns:1fr;}
+.cms-simulation-category{padding:14px 16px;font-weight:750;font-size:15px;}
+.cms-simulation-skeleton{display:flex;align-items:center;flex-wrap:wrap;gap:8px;
+ padding:14px;margin:10px 12px;background:#f9f9fb;border:1px solid #eeeef1;border-radius:9px;}
+.cms-simulation-skeleton div{font-size:12px;font-weight:700;flex-basis:100%;}
+.cms-simulation-skeleton span{flex:1;min-width:50px;height:38px;background:#e9eaf0;border-radius:7px;}
+.cms-simulation-footer-placeholder{padding:22px 14px;text-align:center;font-size:12px;
+ border-top:1px solid #eee;color:#848796;}
+.cms-simulation-popup-backdrop{display:grid;place-items:center;min-height:350px;
+ padding:22px;background:rgba(22,19,50,.5);}
+.cms-simulation-popup{width:min(100%,510px);background:#fff;border-radius:12px;overflow:hidden;
+ box-shadow:0 14px 45px rgba(12,12,30,.3);}
+.cms-simulation-popup .cms-simulation-banner{margin:0;border:0;border-radius:0;}
+.cms-simulation-popup-top{display:flex;justify-content:space-between;padding:10px 14px;
+ border-bottom:1px solid #eee;color:#333;font-size:12px;}
+.cms-preview-disclaimer{margin:10px 0 0;color:var(--fb-ui-muted,#667085);
+ line-height:1.5;font-size:12px;}
+@media(max-width:780px){
+ .cms-wizard-tabs{padding:8px 10px;gap:2px;}
+ .cms-wizard-tabs button{min-height:44px;gap:5px;font-size:12px;}
+ .cms-wizard-tabs button span{height:20px;width:20px;font-size:11px;}
+ .cms-wizard-panel{padding:14px 12px;min-height:240px;}
+ .cms-wizard-footnote{padding:0 12px 12px;}
+ .cms-wizard-footer{flex-wrap:wrap;gap:6px;}
+ .cms-wizard-progress{flex-basis:100%;}
+ .cms-wizard-footer-actions{width:100%;justify-content:space-between;gap:5px;}
+ .cms-wizard-footer-actions button{padding-left:8px;padding-right:8px;}
+ .cms-real-preview{padding:12px;}
+ .cms-preview-controls{width:100%;}
+ .cms-preview-controls select{flex:1;min-width:120px;}
+ .cms-simulation-viewport{padding:10px;}
+}
+@media(prefers-reduced-motion:reduce){
+ .cms-wizard-tabs button{transition:none;}
 }
