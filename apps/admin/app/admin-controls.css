@@ -394,6 +394,17 @@
 }
 
 
+/* Shared modal footer lives OUTSIDE the scroll body; existing modals opt in. */
+.fb-product-modal-footer {
+ flex-shrink:0;min-height:60px;display:flex;align-items:center;
+ padding:10px 16px;background:var(--fb-ui-surface,#fff);
+ border-top:1px solid var(--fb-ui-border,#e4e7ef);
+ box-shadow:0 -3px 10px rgba(32,24,70,.03);
+}
+@media(max-width:780px){
+ .fb-product-modal-footer{padding:10px 12px;min-height:64px;}
+}
+
 /* Shared catalogue multi-select bar and safe 3-channel preview. */
 .fb-bulk-selection-bar {
   display:flex;align-items:center;gap:10px;flex-wrap:wrap;
