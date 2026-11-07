@@ -7,7 +7,7 @@ const ModalCloseContext=createContext<()=>void>(()=>{});
 export function useProductModalClose(){return useContext(ModalCloseContext);}
 
 export default function ProductModal({title,onClose,beforeClose,children,footer,wide=false,locked=false}:{
-  title:string;onClose:()=>void;beforeClose?:()=>boolean;children:ReactNode;footer?:(close:()=>void)=>ReactNode;wide?:boolean;locked?:boolean
+  title:string;onClose:()=>void;beforeClose?:()=>boolean;children:ReactNode;footer?:ReactNode;wide?:boolean;locked?:boolean
 }){
   const titleId=useId();
   const dialog=useRef<HTMLDivElement>(null);
@@ -61,7 +61,7 @@ export default function ProductModal({title,onClose,beforeClose,children,footer,
       </header>
       <ModalCloseContext.Provider value={requestClose}>
         <div className="fb-product-modal-content">{children}</div>
-        {footer&&<footer className="fb-product-modal-footer">{footer(requestClose)}</footer>}
+        {footer&&<footer className="fb-product-modal-footer">{footer}</footer>}
         <div className="fb-product-modal-toast-stack" aria-label="Thông báo thao tác"/>
       </ModalCloseContext.Provider>
     </div>
