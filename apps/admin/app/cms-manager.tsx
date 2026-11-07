@@ -2,7 +2,7 @@
 
 import {useCallback,useEffect,useId,useRef,useState} from "react";
 import type {FormEvent,MutableRefObject} from "react";
-import ProductModal from "./product-modal";
+import ProductModal,{useProductModalClose} from "./product-modal";
 import AdminToast from "./admin-toast";
 import CmsMediaEditor,{cmsMediaKey,uploadCmsImage} from "./cms-media-editor";
 import type {CmsChannel as ImageChannel,CmsDevice,CmsPendingImages} from "./cms-media-editor";
@@ -328,6 +328,27 @@ function CmsEditor({item,kind,onSaved,onSavingChange,dirtyRef,step,onStep,formId
    Website/App nhận CMS thật; không có thay đổi nào tự hiện trên trang công khai.</p>
  </form>;
 }
+function CmsModalFooter({step,onStep,saving,formId}:{
+ step:number;onStep:(step:number)=>void;saving:boolean;formId:string
+}){
+ const close=useProductModalClose();
+ return <div className="cms-wizard-footer">
+  <span className="cms-wizard-progress">Bước {step+1}/3</span>
+  <div className="cms-wizard-footer-actions">
+   {step>0&&<button type="button" className="fb-ui-button fb-ui-button--secondary"
+    disabled={saving} onClick={()=>onStep(Math.max(0,step-1))}>Quay lại</button>}
+   <button type="button" className="fb-ui-button fb-ui-button--secondary"
+    disabled={saving} onClick={close}>Đóng</button>
+   <button type="submit" form={formId} className={"fb-ui-button "+
+    (step===2?"fb-ui-button--primary":"fb-ui-button--secondary")}
+    aria-busy={saving} disabled={saving}>
+    {saving?"Đang lưu…":"Lưu bản nháp & ảnh"}
+   </button>
+   {step<2&&<button type="button" className="fb-ui-button fb-ui-button--primary"
+    disabled={saving} onClick={()=>onStep(Math.min(2,step+1))}>Tiếp tục</button>}
+  </div>
+ </div>;
+}
 export default function CmsManager({mode,owner}:{
  mode:"marketing"|"editorial";owner:boolean
 }){
@@ -441,22 +462,8 @@ export default function CmsManager({mode,owner}:{
   {editing!==undefined&&<ProductModal title={editing?"Sửa "+LABELS[editing.kind]:"Thêm nội dung"}
    onClose={()=>{setEditing(undefined);void refresh();}} wide locked={busy||editorSaving}
    beforeClose={()=>!editorDirtyRef.current || window.confirm("Nội dung hoặc ảnh chưa lưu. Đóng mà không lưu?")}
-   footer={requestClose=><div className="cms-wizard-footer">
-    <span className="cms-wizard-progress">Bước {editorStep+1}/3</span>
-    <div className="cms-wizard-footer-actions">
-     {editorStep>0&&<button type="button" className="fb-ui-button fb-ui-button--secondary"
-      disabled={editorSaving} onClick={()=>setEditorStep(v=>Math.max(0,v-1))}>Quay lại</button>}
-     <button type="button" className="fb-ui-button fb-ui-button--secondary"
-      disabled={editorSaving} onClick={requestClose}>Đóng</button>
-     <button type="submit" form={editorFormId} className={"fb-ui-button "+
-      (editorStep===2?"fb-ui-button--primary":"fb-ui-button--secondary")}
-      aria-busy={editorSaving} disabled={editorSaving}>
-      {editorSaving?"Đang lưu…":"Lưu bản nháp & ảnh"}
-     </button>
-     {editorStep<2&&<button type="button" className="fb-ui-button fb-ui-button--primary"
-      disabled={editorSaving} onClick={()=>setEditorStep(v=>Math.min(2,v+1))}>Tiếp tục</button>}
-    </div>
-   </div>}>
+   footer={<CmsModalFooter step={editorStep} onStep={setEditorStep}
+    saving={editorSaving} formId={editorFormId}/>}>
    <CmsEditor item={editing} kind={editing?.kind||kind} dirtyRef={editorDirtyRef}
     onSavingChange={setEditorSaving} step={editorStep} onStep={setEditorStep} formId={editorFormId}
     onSaved={()=>{notify("Đã lưu bản nháp và ảnh đã chọn.");
