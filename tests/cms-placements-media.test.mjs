@@ -178,3 +178,27 @@ test("CMS preview shows selected or saved R2 assets and distinct layouts per dev
  assert.match(preview,/Mô phỏng vị trí/);
  assert.match(media,/URL\.revokeObjectURL/);
 });
+
+test("CMS mobile upload thumbnail fits full portrait instead of clipping its lower content",()=>{
+ const css=readFileSync("apps/admin/app/cms-manager.css","utf8");
+ const thumb=css.match(/\.cms-media-canvas--mobile\{([^}]+)\}/)?.[1]??"";
+ const base=css.match(/\.cms-media-canvas\{([^}]+)\}/)?.[1]??"";
+ const image=css.match(/\.cms-media-image\{([^}]+)\}/)?.[1]??"";
+ const slot=css.match(/\.cms-media-slot\{([^}]+)\}/)?.[1]??"";
+ assert.match(thumb,/width:min\(100%,98px\)/);
+ assert.match(thumb,/height:120px/);
+ assert.doesNotMatch(thumb,/max-height|object-fit:cover/);
+ assert.match(base,/position:relative/);
+ assert.match(base,/overflow:hidden/);
+ assert.match(image,/position:absolute/);
+ assert.match(image,/inset:0/);
+ assert.match(image,/width:100%;height:100%/);
+ assert.match(image,/object-fit:contain/);
+ assert.match(image,/object-position:center center/);
+ assert.match(slot,/display:grid/);
+ assert.match(slot,/grid-template-rows:auto 120px/);
+ assert.doesNotMatch(css,/\.cms-media-canvas--mobile\{aspect-ratio:4\/5;max-height/);
+ const source=readFileSync("apps/admin/app/cms-media-editor.tsx","utf8");
+ assert.match(source,/cms-media-canvas--mobile/);
+ assert.match(source,/CmsImagePreview/);
+});
