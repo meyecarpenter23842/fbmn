@@ -3,7 +3,7 @@ import { CatalogShell, CatalogBreadcrumb, CatalogListing, EmptyState } from "@/c
 import { getPublicCatalog } from "@/lib/catalog/adapter";
 import { getCategoryBySlug, parseCatalogFilters, GROUP_LABELS } from "@/lib/catalog/query";
 import { toAllowedParams, type RawSearchParams } from "@/lib/catalog/route";
-import {getPublicCms} from "@/lib/content/cms";
+import {getOptionalPublicCms} from "@/lib/content/cms";
 import {CmsBannerSlot} from "@/components/cms-web-content";
 
 export const dynamic = "force-dynamic";
@@ -19,7 +19,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 export default async function CategoryPage({ params, searchParams }: Props) {
-  const [catalog, { slug }, raw, cms] = await Promise.all([getPublicCatalog(), params, searchParams, getPublicCms()]);
+  const [catalog, { slug }, raw, cms] = await Promise.all([getPublicCatalog(), params, searchParams, getOptionalPublicCms()]);
   const category = getCategoryBySlug(catalog, slug);
   if (!category) return <CatalogShell><div className="catalog-wrap">
     <CatalogBreadcrumb trail={[{ label: "Sản phẩm", href: "/san-pham" }, { label: "Danh mục" }]}/>
