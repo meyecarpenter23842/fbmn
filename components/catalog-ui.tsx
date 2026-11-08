@@ -50,7 +50,7 @@ export function ProductCard({ product, glass = false }: { product: PublicProduct
     </div>
   </Link>;
   return glass
-    ? <GlassCard hover className="fb-song-related-card">{content}</GlassCard>
+    ? <GlassCard hover linkCard className="fb-song-related-card">{content}</GlassCard>
     : <article className="catalog-product">{content}</article>;
 }
 
