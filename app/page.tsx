@@ -15,6 +15,7 @@ import {CmsBannerSlot,CmsFeaturedSlot} from "@/components/cms-web-content";
 export const dynamic="force-dynamic";
 export default async function HomePage() {
   const cms=await getOptionalPublicCms();
+  const hasCmsHero=cms.some(item=>item.kind==="banner"&&item.slot==="home.hero");
   return (
     <>
       <SiteHeader />
@@ -32,8 +33,9 @@ export default async function HomePage() {
               </div>
               <a className="ref-cta" href="#categories">Xem sản phẩm <Icon name="arrow" size={19}/></a>
             </div>
-            <div className="ref-hero__visual" aria-label="Bố cục minh họa tập vở Futurebook">
+            <div className={"ref-hero__visual"+(hasCmsHero?" ref-hero__visual--cms":"")} aria-label={hasCmsHero?"Banner Futurebook đã công bố":"Bố cục minh họa tập vở Futurebook"}>
               <div className="ref-hero__rays" aria-hidden="true" />
+              {hasCmsHero?<CmsBannerSlot items={cms} slot="home.hero"/>:<>
               <VerifiedMediaImage asset={approvedSiteMedia.heroBanner} priority
                 className="ref-hero__official-image"
                 sizes="(max-width: 800px) 100vw, 55vw"
@@ -47,9 +49,9 @@ export default async function HomePage() {
                   </div>
                 )}
               />
-              <CmsBannerSlot items={cms} slot="home.hero"/>
               <p className="ref-hero__handwriting" aria-hidden="true">Vở đẹp<br/>cho hành trình<br/>tri thức!</p>
               <div className="ref-hero__dots" aria-hidden="true"><i/><i/><i/><i/></div>
+              </>}
             </div>
           </Container>
         </section>
