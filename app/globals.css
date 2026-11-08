@@ -41,6 +41,7 @@
   --fb-glass-ink: #241331;
   --fb-glass-muted: #62576c;
   --fb-glass-backdrop-gradient: radial-gradient(ellipse at 12% 18%, rgba(132, 65, 195, .30), transparent 49%), radial-gradient(ellipse at 91% 39%, rgba(189, 112, 237, .47), transparent 53%), radial-gradient(ellipse at 44% 91%, rgba(252, 204, 229, .48), transparent 58%), linear-gradient(120deg, #f3e7fc, #e7d1f6 56%, #fcf4ff);
+  --fb-glass-backdrop-overlay: linear-gradient(120deg, rgba(249, 244, 255, .70), rgba(249, 243, 255, .48) 54%, rgba(252, 248, 255, .70));
   --fb-motion-glass-card: 200ms;
   --fb-motion-glass-lift: -3px;
 }
