@@ -14,13 +14,14 @@
 .fb-song-detail {
   display: grid;
   grid-template-columns: minmax(0, 53%) minmax(0, 1fr);
-  align-items: start;
+ align-items: stretch;
   gap: clamp(16px, 2.2vw, 28px);
   margin: 12px 0 28px;
 }
 
 .fb-song-gallery {
   display: grid;
+  align-content: start;
   gap: 12px;
 }
 
@@ -100,8 +101,15 @@
   font-size: var(--fb-control-font-size);
 }
 
+.fb-song-info {
+  display: flex;
+  flex-direction: column;
+}
+
 .fb-song-options {
-  display: grid;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
   gap: 13px;
   margin-top: 16px;
 }
@@ -143,6 +151,7 @@
 }
 
 .fb-song-summary {
+  margin-top: auto;
   display: flex;
   align-items: center;
   flex-wrap: wrap;
