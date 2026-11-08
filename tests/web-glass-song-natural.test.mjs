@@ -23,7 +23,7 @@ test("G03 stays on the approved Song Natural slug, preserves public data, media 
     "getProductBySlug(catalog, slug)","getPublicCatalog()",
     "getPublishedProductImageUrl(media.r2Key,process.env.NEXT_PUBLIC_MEDIA_BASE_URL)",
     "const recommendations=relatedProducts(catalog,product)",
-    "generateMetadata",'<GlassPageBackdrop className="fb-glass-song-page" decorativeReadPath="/api/decorative-background">',
+    "generateMetadata",'<GlassPageBackdrop className="fb-glass-song-page" decorativeReadPath={publicDecorativeBackground.songNatural ?? undefined}>',
     '<CatalogueProductOptions product={product} photos={images} glass={glass}/>',
     '<CatalogueRelatedProducts items={recommendations.items} glass={glass}/>'
   ])assert.ok(page.includes(fragment),fragment);
