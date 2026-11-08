@@ -9,12 +9,12 @@ import { GlassCard } from "@/components/glass-ui";
 import { previewProducts } from "@/lib/ui-preview";
 import { VerifiedMediaImage } from "@/components/verified-media-image";
 import { approvedSiteMedia } from "@/lib/media/approved-site-media";
-import {getPublicCms} from "@/lib/content/cms";
+import {getOptionalPublicCms} from "@/lib/content/cms";
 import {CmsBannerSlot,CmsFeaturedSlot} from "@/components/cms-web-content";
 
 export const dynamic="force-dynamic";
 export default async function HomePage() {
-  const cms=await getPublicCms();
+  const cms=await getOptionalPublicCms();
   return (
     <>
       <SiteHeader />
