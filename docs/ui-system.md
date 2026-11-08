@@ -1,5 +1,7 @@
 # Futurebook Miền Nam — chuẩn giao diện WEB mới 28/10/2026
 
+> **Cập nhật visual mới 08/11/2026:** [Website Premium Purple Glass V2](web-component-design-system.md) là chuẩn hiện hành cho vật liệu card, surface, glass header/button/chip/motion và lớp ảnh nền decorative R2. Các mô tả **nền đặc, card trắng, radius/shadow cũ** trong tài liệu lịch sử này chỉ còn là tham chiếu trước V2; không dùng để phủ quyết glassmorphism chủ đạo. Bố cục/navigation/khả năng responsive đã được duyệt và quyết định **không có bottom navigation mobile** vẫn giữ nguyên. Không thay chức năng, API, SKU hoặc dữ liệu.
+
 ## Quyết định thay thế mẫu cũ
 
 Chủ dự án xác nhận ảnh tổng hợp **desktop (laptop) + mobile (điện thoại)** gửi mới ngày 28/10/2026 là mẫu tham chiếu mới, THAY THẾ mẫu dùng cho WEB PR01–03. Bản tham chiếu người dùng: 1448×1086 JPEG, SHA-256:
