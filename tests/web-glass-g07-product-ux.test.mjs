@@ -115,6 +115,23 @@ test("G07: sticky quote appears only offscreen, retains company SKU and real con
   assert.doesNotMatch(css, /bottom-navigation|bottom-dock|\.fb-glass-button\s*\{/);
 });
 
+test("G07: zoom dialog respects 280ms opening, 220ms closing and reduced motion with Escape",()=>{
+  const tokens=read("app/globals.css");
+  assert.match(tokens, /--fb-motion-dialog-open:\s*280ms/);
+  assert.match(tokens, /--fb-motion-dialog-close:\s*220ms/);
+  assert.match(css, /\.fb-song-zoom-dialog\s*\{[^}]*opacity:\s*0;[^}]*transition:[^}]*var\(--fb-motion-dialog-close\)/);
+  assert.match(css, /\.fb-song-zoom-dialog\[open\]\s*\{[^}]*opacity:\s*1;[^}]*var\(--fb-motion-dialog-open\)/);
+  assert.match(css, /\.fb-song-zoom-dialog::backdrop\s*\{[^}]*var\(--fb-motion-dialog-close\)/);
+  assert.match(css, /\.fb-song-zoom-dialog\[open\]::backdrop\s*\{[^}]*var\(--fb-motion-dialog-open\)/);
+  assert.match(css, /@starting-style\s*\{[\s\S]*?\.fb-song-zoom-dialog\[open\]/);
+  assert.match(css, /overlay var\(--fb-motion-dialog-close\) allow-discrete/);
+  assert.match(css, /display var\(--fb-motion-dialog-close\) allow-discrete/);
+  assert.match(css, /@media \(prefers-reduced-motion: reduce\)\s*\{[\s\S]*?\.fb-song-zoom-dialog::backdrop\s*\{[^}]*transition:\s*none/);
+  assert.match(gallery, /zoomRef\.current\?\.close\(\)/);
+  assert.match(gallery, /zoomRef\.current\?\.showModal\(\)/);
+  assert.doesNotMatch(gallery, /onCancel=.*preventDefault|onKeyDown=/);
+});
+
 test("G07: style ownership and source-backed content remain unchanged",()=>{
   assert.doesNotMatch(stripComments(css), /\.catalogue-|\.catalog-|\.fb-glass-card\s*\{|\.fb-glass-chip\s*\{/);
   assert.doesNotMatch(detail, /fetch\(|localStorage|sessionStorage|NET_PRICE|R2_SECRET/);
