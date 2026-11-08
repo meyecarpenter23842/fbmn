@@ -15,6 +15,8 @@ const SQL = Object.freeze({
   p5Media: "SELECT sku_cong_ty,asset_id,media_role,sort_order FROM fbmn_public.v_p5_visible_media WHERE (sku_cong_ty,sort_order,asset_id)>($1::text,$2::integer,$3::text) ORDER BY sku_cong_ty,sort_order,asset_id LIMIT 1000",
   p5ImageKey: "SELECT r2_key FROM fbmn_public.v_p5_image_assets WHERE asset_id=$1 LIMIT 1",
   dealer: "SELECT title,paragraphs,contact_instructions FROM fbmn_public.v_dealer_information LIMIT 2",
+  cmsEntries: "SELECT id,kind,slug,title,summary,paragraphs,cta_url,slot,sort_order,published_at,starts_at,ends_at,popup_delay_seconds,popup_cooldown_minutes,popup_max_per_session,has_desktop,has_mobile FROM fbmn_public.v_cms_web_entries ORDER BY sort_order,published_at,id LIMIT 501",
+  cmsImageKey: "SELECT r2_key FROM fbmn_public.v_cms_web_images WHERE id=$1 AND device=$2 LIMIT 1",
 });
 function rows(value, max) {
   if (!Array.isArray(value) || value.length > max) throw new Error("Invalid SQL read result");
@@ -221,6 +223,29 @@ export function createReadModel(query,{enableP5=false}={}) {
         products.push(...fresh.products);
       }
       return {categories,products};
+    },
+    async getPublicCms() {
+      const entries=await execute("cmsEntries",500);
+      return entries.map(row=>({
+       id:String(row.id),kind:String(row.kind),slug:String(row.slug),
+       title:String(row.title),summary:String(row.summary),
+       paragraphs:row.paragraphs,ctaUrl:row.cta_url,
+       slot:String(row.slot),sortOrder:Number(row.sort_order),
+       publishedAt:asDate(row.published_at),
+       startsAt:row.starts_at==null?null:asDate(row.starts_at),
+       endsAt:row.ends_at==null?null:asDate(row.ends_at),
+       popupDelaySeconds:Number(row.popup_delay_seconds),
+       popupCooldownMinutes:Number(row.popup_cooldown_minutes),
+       popupMaxPerSession:Number(row.popup_max_per_session),
+       hasDesktop:row.has_desktop===true,hasMobile:row.has_mobile===true,
+      }));
+    },
+    async getPublicCmsImageKey(id,device){
+      if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)||
+          !["desktop","mobile"].includes(device))return null;
+      const entries=rows(await query(SQL.cmsImageKey,[id,device]),1);
+      return entries.length===1&&/^cms\/[0-9a-f-]{36}\/public_web\/(desktop|mobile)\/[0-9a-f-]{36}\.webp$/i.test(String(entries[0].r2_key))
+       ?String(entries[0].r2_key):null;
     },
     async getPublicContent() {
       const [articles,promotions,companies,dealers] = await Promise.all([
