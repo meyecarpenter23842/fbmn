@@ -143,17 +143,20 @@ test("G04R Website proxy rejects invalid origins, redirects, bad MIME and oversi
   }
 });
 
-test("G04R keeps CSS fallback, confines opt-in to Song Natural, and never hardcodes public R2 URLs", () => {
+test("G05 reuses the approved G04R read path site-wide without leaking R2 URLs", () => {
   const read = p => readFileSync(new URL("../" + p, import.meta.url), "utf8");
   const page = read("app/san-pham/[slug]/page.tsx");
   const component = read("components/glass-ui.tsx");
   const css = read("app/glass-foundation.css");
   const worker = read("backend/public-api/staging-worker.mjs");
   const route = read("app/api/decorative-background/route.ts");
-  assert.match(page, /decorativeReadPath=\{publicDecorativeBackground\.songNatural \?\? undefined\}/);
+  const layout = read("app/layout.tsx");
+  assert.match(layout, /decorativeReadPath=\{publicDecorativeBackground\.website \?\? undefined\}/);
+  assert.doesNotMatch(page, /decorativeReadPath=|GlassPageBackdrop/);
   const config = read("lib/media/decorative-background.ts");
   assert.match(config, /songNatural: "\/api\/decorative-background"/);
-  assert.match(page, /import \{ publicDecorativeBackground \} from "@\/lib\/media\/decorative-background"/);
+  assert.match(layout, /import \{ publicDecorativeBackground \} from "@\/lib\/media\/decorative-background"/);
+  assert.match(config, /website: "\/api\/decorative-background"/);
   assert.match(component, /decorativeReadPath === "\/api\/decorative-background"/);
   assert.match(css, /var\(--fb-glass-decorative-image\),\s*var\(--fb-glass-backdrop-gradient\)/);
   assert.match(worker, /const DECORATIVE_KEY = "banners\/G04\/backdrop-v1\.webp"/);
