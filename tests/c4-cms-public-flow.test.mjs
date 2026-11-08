@@ -199,3 +199,12 @@ test("C4 optional Website CMS outages cannot break product catalogue or Home",()
  assert.match(api,/const items=await getPublicCms\(\)/);
  assert.match(api,/cms_unavailable/);
 });
+
+test("C4 Admin proxy forwards authenticated CMS capability and rejects query parameters",()=>{
+ const relay=read("apps/admin/app/api/cms/[[...path]]/route.ts");
+ assert.match(relay,/GET_ACTIONS=new Set\(\["","entry","assets","image","capability"\]\)/);
+ assert.match(relay,/action==="capability"\?new Set\(\):new Set\(\["mode","page"\]\)/);
+ assert.match(relay,/Authorization:token/);
+ assert.match(relay,/\/v1\/admin\/cms/);
+ assert.doesNotMatch(relay,/NEXT_PUBLIC.*TOKEN/);
+});
