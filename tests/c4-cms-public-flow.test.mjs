@@ -190,7 +190,9 @@ test("C4 optional Website CMS outages cannot break product catalogue or Home",()
  assert.match(cms,/catch\{/);
  assert.match(home,/await getOptionalPublicCms\(\)/);
  assert.match(category,/getOptionalPublicCms\(\)/);
- assert.match(editorial,/await getOptionalPublicCms\(\)/);
+ assert.match(editorial,/await getPublicCms\(\)/);
+ assert.match(editorial,/catch\{/);
+ assert.match(editorial,/return base;/);
  assert.match(api,/const items=await getPublicCms\(\)/);
  assert.match(api,/cms_unavailable/);
 });
