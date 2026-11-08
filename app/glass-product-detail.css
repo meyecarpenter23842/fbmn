@@ -1,215 +1,326 @@
 /*
- * G03 — Song Natural pilot only. The wrapper is rendered for the approved
- * /san-pham/sku-3ac08ff247847c1e77bfccb0e806ed29 route.
- * Never restyle legacy .catalog-* outside .fb-glass-song-page, Admin, or Dai Viet.
- * All real product media stay neutral/untinted; decorative R2 backdrop is G04.
+ * Song Natural glass pilot: layout and content ONLY.
+ * Design tokens: app/globals.css; glass surfaces/chips/buttons/motion:
+ * app/glass-foundation.css; legacy catalogue: app/catalog.css.
+ *
+ * SINGLE STYLE OWNER: every .fb-song-* selector below is exclusive to the
+ * glass JSX. Never decorate .fb-glass-chip, .fb-glass-card, .catalogue-*,
+ * .catalog-*, or legacy controls here. No override selectors, no !important.
  */
 .fb-glass-song-page {
-  padding: 0 0 32px;
-  overflow: hidden;
+  padding-bottom: 32px;
 }
 
-.fb-glass-song-page::before {
-  content: "";
+.fb-song-detail {
+  display: grid;
+  grid-template-columns: minmax(0, 44%) minmax(0, 1fr);
+  align-items: start;
+  gap: clamp(24px, 3.4vw, 44px);
+  margin: 14px 0 34px;
+}
+
+.fb-song-gallery {
+  display: grid;
+  gap: 12px;
+}
+
+.fb-song-main-photo {
+  height: clamp(270px, 31vw, 390px);
+}
+
+.fb-song-gallery-photo {
   position: absolute;
   inset: 0;
-  background:
-    radial-gradient(ellipse at 4% 14%, rgba(208, 179, 241, .34), transparent 46%),
-    radial-gradient(ellipse at 96% 66%, rgba(227, 202, 248, .28), transparent 48%);
-  pointer-events: none;
-  z-index: 0;
 }
 
-.fb-glass-song-page > .catalog-wrap {
-  position: relative;
-  z-index: 1;
+.fb-song-gallery-thumbs {
+  display: flex;
+  gap: 9px;
+  flex-wrap: wrap;
 }
 
-.fb-glass-song-page .catalog-breadcrumb {
-  color: var(--fb-glass-muted);
-}
-
-.fb-glass-song-page .catalog-detail {
-  align-items: start;
-}
-
-/* Gallery glass shell, but image pixels remain on a neutral white frame. */
-.fb-glass-song-page .fb-glass-song-gallery {
-  padding: clamp(12px, 2vw, 20px);
-  min-width: 0;
-}
-
-.fb-glass-song-page .catalog-detail__image.fb-glass-media-frame {
+.fb-song-gallery-thumb {
+  display: grid;
+  place-items: center;
+  flex: 0 0 60px;
+  width: 60px;
+  height: 60px;
+  padding: 3px;
+  overflow: hidden;
+  border: 1px solid var(--fb-glass-border-fallback);
+  border-radius: var(--fb-control-radius);
   background: #fff;
-  border-color: var(--fb-glass-border-fallback);
-  border-radius: var(--fb-glass-panel-radius);
+  cursor: pointer;
+  transition:
+    border-color var(--fb-motion-button) var(--fb-easing-open),
+    box-shadow var(--fb-motion-button) var(--fb-easing-open);
 }
 
-.fb-glass-song-page .catalogue-gallery-thumbs {
-  gap: 10px;
-  margin-top: 14px;
-}
-
-.fb-glass-song-page .catalogue-gallery-thumb {
-  background: rgba(255,255,255,.88);
-  border-color: var(--fb-glass-border-fallback);
-  border-radius: 12px;
-}
-
-.fb-glass-song-page .catalogue-gallery-thumb[aria-pressed="true"] {
+.fb-song-gallery-thumb[aria-pressed="true"] {
   border-color: var(--color-primary);
-  box-shadow: 0 0 0 2px rgba(109,36,158,.14);
+  box-shadow: 0 0 0 2px rgba(109, 36, 158, .18);
 }
 
-/* Product info inherits the shared GlassPanel: no new data or layout. */
-.fb-glass-song-page .fb-glass-song-info {
-  min-width: 0;
-  padding: clamp(18px, 2.7vw, 30px);
+.fb-song-gallery-thumb:focus-visible {
+  outline: 3px solid var(--color-primary);
+  outline-offset: 3px;
 }
 
-.fb-glass-song-page .fb-glass-song-info h1 {
+.fb-song-gallery-thumb-image {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.fb-song-title {
   color: var(--color-primary-strong);
+  font-size: clamp(28px, 3vw, 42px);
+  font-weight: 850;
+  letter-spacing: -.035em;
+  line-height: 1.15;
+  margin: 0 0 9px;
 }
 
-.fb-glass-song-page .catalog-detail__description,
-.fb-glass-song-page .catalog-detail__count {
+.fb-song-description {
+  color: var(--fb-glass-muted);
+  font-size: 15px;
+  line-height: 1.7;
+}
+
+.fb-song-count {
+  color: var(--fb-glass-muted);
+  font-size: var(--fb-control-font-size);
+}
+
+.fb-song-options {
+  display: grid;
+  gap: 13px;
+  margin-top: 16px;
+}
+
+.fb-song-facets {
+  display: flex;
+  align-items: end;
+  flex-wrap: wrap;
+  gap: 12px 18px;
+}
+
+.fb-song-fieldset {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.fb-song-fieldset legend {
+  color: var(--fb-glass-ink);
+  font-size: var(--fb-control-font-size);
+  font-weight: 800;
+  margin-bottom: 8px;
+}
+
+.fb-song-facet-choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+/* The grid owns only columns/gaps. GlassChip owns ALL chip geometry and states. */
+.fb-song-sku-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.fb-song-summary {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid var(--fb-glass-border);
+  border-radius: 13px;
+  background: rgba(255, 255, 255, .26);
+  color: var(--fb-glass-ink);
+  font-size: var(--fb-control-font-size);
+  line-height: 1.45;
+}
+
+.fb-song-summary-label {
+  white-space: nowrap;
+  font-weight: 700;
+}
+
+.fb-song-summary-code {
+  white-space: nowrap;
+  border-radius: 999px;
+  padding: 4px 8px;
+  color: var(--color-primary-strong);
+  background: rgba(109, 36, 158, .10);
+}
+
+.fb-song-summary-name {
+  min-width: 0;
+  flex: 1 1 130px;
+  overflow-wrap: anywhere;
+}
+
+.fb-song-quote {
+  margin-inline-start: auto;
+  white-space: nowrap;
+}
+
+.fb-song-details {
+  padding: 10px 12px;
+  border: 1px solid var(--fb-glass-border);
+  border-radius: var(--fb-control-radius);
+  background: rgba(255, 255, 255, .2);
+  color: var(--fb-glass-ink);
+  font-size: var(--fb-control-font-size);
+}
+
+.fb-song-details summary {
+  cursor: pointer;
+  font-weight: 750;
+  line-height: 1.5;
+  outline-offset: 3px;
+}
+
+.fb-song-details dl {
+  display: grid;
+  gap: 8px;
+  margin: 12px 0 2px;
+}
+
+.fb-song-details dl > div {
+  display: grid;
+  grid-template-columns: minmax(0, 38%) minmax(0, 1fr);
+  gap: 12px;
+}
+
+.fb-song-details dt {
   color: var(--fb-glass-muted);
 }
 
-.fb-glass-song-page .catalogue-option-group legend {
-  color: var(--fb-glass-ink);
-  font-weight: 800;
+.fb-song-details dd {
+  min-width: 0;
+  margin: 0;
+  font-weight: 700;
+  overflow-wrap: anywhere;
 }
 
-.fb-glass-song-page .catalogue-option-choices .fb-glass-chip {
-  height: auto;
-  min-height: var(--fb-control-height-compact);
-  border-radius: 999px;
-  border-color: var(--fb-glass-border-fallback);
-  color: var(--fb-glass-ink);
-  background-color: var(--fb-glass-surface-fallback);
-  box-shadow: 0 2px 10px rgba(63,25,98,.06);
+.fb-song-price {
+  color: var(--color-accent-deep);
+  font-size: 21px;
+  font-weight: 900;
+  margin: 18px 0;
 }
 
-.fb-glass-song-page .catalogue-option-choices .fb-glass-chip[aria-pressed="true"] {
-  background: var(--color-primary);
-  border-color: var(--color-primary);
-  color: #fff;
-  box-shadow: var(--fb-glass-shadow);
-}
-
-.fb-glass-song-page .catalogue-facets__reset.fb-glass-button {
-  height: auto;
-  min-height: var(--fb-control-height-compact);
-  background: var(--fb-glass-surface-strong);
-  border-color: var(--fb-glass-border-fallback);
-  color: var(--color-primary-strong);
-  box-shadow: none;
-}
-
-/* Entire SKU tile is a true GlassChip; keep code/label and accessible pressed state. */
-.fb-glass-song-page .catalogue-variant-option.fb-glass-chip {
-  width: 100%;
-  height: auto;
-  min-height: 52px;
-  padding: 8px 12px;
-  justify-content: flex-start;
-  text-align: left;
-  border-radius: 16px;
-  background: var(--fb-glass-surface-fallback);
-  border-color: var(--fb-glass-border-fallback);
-  color: var(--fb-glass-ink);
-}
-
-.fb-glass-song-page .catalogue-variant-option.fb-glass-chip[aria-pressed="true"] {
-  background: var(--color-primary);
-  border-color: var(--color-primary);
-  color: #fff;
-  box-shadow: 0 4px 13px rgba(63,25,98,.2);
-}
-
-.fb-glass-song-page .catalogue-variant-option.fb-glass-chip[aria-pressed="true"] svg,
-.fb-glass-song-page .catalogue-variant-option.fb-glass-chip[aria-pressed="true"] .catalogue-variant-option__name {
-  color: #fff;
-}
-
-.fb-glass-song-page .catalogue-variant-option.fb-glass-chip[aria-pressed="true"] .catalogue-variant-option__code {
-  color: #fff;
-  background: rgba(255,255,255,.19);
-}
-
-.fb-glass-song-page .catalogue-variant-option.fb-glass-chip[aria-pressed="true"] .catalogue-variant-option__mark {
-  border-color: rgba(255,255,255,.78);
-  background: rgba(255,255,255,.22);
-}
-
-.fb-glass-song-page .catalogue-selected-summary {
-  border-radius: 16px;
-  background: var(--fb-glass-surface-strong);
-  border-color: var(--fb-glass-border-fallback);
-  padding: 12px;
-  color: var(--fb-glass-ink);
-}
-
-.fb-glass-song-page .catalogue-selected-summary__action.fb-glass-button {
-  min-height: var(--fb-control-height-compact);
-  color: #fff;
-  background: linear-gradient(115deg, var(--color-primary), var(--color-primary-strong));
-  border-color: transparent;
-  box-shadow: var(--fb-glass-shadow);
-}
-
-.fb-glass-song-page .catalogue-extra-details {
-  border-radius: 14px;
-  border-color: var(--fb-glass-border-fallback);
-  background: var(--fb-glass-surface-strong);
-}
-
-/* Related cards reuse existing ProductCard content/links; only surface changes. */
-.fb-glass-song-page .fb-glass-song-related {
+.fb-song-related {
   margin: 4px 0 24px;
-  padding: clamp(16px,2vw,24px);
-  border-color: var(--fb-glass-border-fallback);
 }
 
-.fb-glass-song-page .catalogue-related__grid .fb-glass-song-related-card {
-  padding: 0;
+.fb-song-related-header {
+  margin-bottom: 16px;
+}
+
+.fb-song-related-header h2 {
+  margin: 0;
+  color: var(--color-primary-strong);
+  font-size: clamp(18px, 2vw, 23px);
+  font-weight: 850;
+  letter-spacing: -.02em;
+}
+
+.fb-song-related-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  min-width: 0;
+}
+
+.fb-song-related-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.fb-song-related-image {
+  display: block;
+  position: relative;
+  min-height: 200px;
   overflow: hidden;
   border-radius: var(--fb-glass-panel-radius);
-  background: var(--fb-glass-surface-strong);
-  border-color: var(--fb-glass-border-fallback);
-  box-shadow: var(--fb-glass-shadow);
-}
-
-.fb-glass-song-page .fb-glass-song-related-card .catalog-product__image {
   background: #fff;
 }
 
-@media (max-width: 780px) {
-  .fb-glass-song-page .catalogue-option-choices .fb-glass-chip,
-  .fb-glass-song-page .catalogue-facets__reset.fb-glass-button,
-  .fb-glass-song-page .catalogue-selected-summary__action.fb-glass-button {
-    min-height: var(--fb-control-height-touch);
+.fb-song-related-body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 9px;
+  min-width: 0;
+}
+
+.fb-song-related-body h3 {
+  color: var(--fb-glass-ink);
+  font-size: 15px;
+  font-weight: 800;
+  margin: 0;
+}
+
+.fb-song-related-body p {
+  color: var(--fb-glass-muted);
+  font-size: 12px;
+  margin: 0;
+}
+
+.fb-song-related-price {
+  color: var(--color-accent-deep);
+  font-size: 14px;
+  margin-top: auto;
+}
+
+.fb-song-related-link {
+  width: 100%;
+}
+
+@media (max-width: 1100px) {
+  .fb-song-related-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
-  .fb-glass-song-page .catalogue-variant-option.fb-glass-chip {
-    min-height: 52px;
+  .fb-song-related-grid > .fb-song-related-card:nth-child(n+10) {
+    display: none;
   }
 }
 
 @media (max-width: 700px) {
-  .fb-glass-song-page .fb-glass-song-gallery,
-  .fb-glass-song-page .fb-glass-song-info {
-    padding: 16px;
+  .fb-song-detail {
+    grid-template-columns: 1fr;
+    gap: 16px;
   }
 
-  .fb-glass-song-page .fb-glass-song-related {
-    padding: 16px;
+  .fb-song-related-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 9px;
+  }
+
+  .fb-song-related-grid > .fb-song-related-card:nth-child(n+7) {
+    display: none;
+  }
+}
+
+@media (max-width: 420px) {
+  .fb-song-quote {
+    flex-basis: 100%;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .fb-glass-song-page .catalogue-gallery-thumb {
+  .fb-song-gallery-thumb {
     transition: none;
   }
 }
