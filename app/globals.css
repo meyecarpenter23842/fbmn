@@ -27,10 +27,10 @@
   /* G01 — Website-only Premium Purple Glass foundation. Single source of visual tokens.
      This is opt-in; legacy .ref-* / .catalog-* selectors keep their current appearance. */
   --fb-glass-page: #f7f3fc;
-  --fb-glass-surface: rgba(255, 255, 255, .68);
-  --fb-glass-surface-strong: rgba(255, 255, 255, .82);
+  --fb-glass-surface: rgba(255, 255, 255, .50);
+  --fb-glass-surface-strong: rgba(255, 255, 255, .66);
   --fb-glass-surface-fallback: rgba(255, 255, 255, .94);
-  --fb-glass-border: rgba(255, 255, 255, .65);
+  --fb-glass-border: rgba(255, 255, 255, .78);
   --fb-glass-border-fallback: rgba(96, 47, 137, .17);
   --fb-glass-blur: 20px;
   --fb-glass-blur-mobile: 12px;
@@ -40,7 +40,7 @@
   --fb-glass-shadow-hover: 0 19px 42px rgba(63, 25, 98, .17), 0 5px 12px rgba(63, 25, 98, .07);
   --fb-glass-ink: #241331;
   --fb-glass-muted: #62576c;
-  --fb-glass-backdrop-gradient: radial-gradient(ellipse at 85% 12%, rgba(209, 182, 243, .56), transparent 48%), linear-gradient(135deg, #f7f3fc, #ede3f9 52%, #faf7ff);
+  --fb-glass-backdrop-gradient: radial-gradient(ellipse at 12% 18%, rgba(132, 65, 195, .30), transparent 49%), radial-gradient(ellipse at 91% 39%, rgba(189, 112, 237, .47), transparent 53%), radial-gradient(ellipse at 44% 91%, rgba(252, 204, 229, .48), transparent 58%), linear-gradient(120deg, #f3e7fc, #e7d1f6 56%, #fcf4ff);
   --fb-motion-glass-card: 200ms;
   --fb-motion-glass-lift: -3px;
 }
