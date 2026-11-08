@@ -38,7 +38,7 @@ test("OpenAPI declares the four allowlisted public versioned endpoints", () => {
   const doc = JSON.parse(readFileSync(new URL("../backend/public-api/openapi.json", import.meta.url), "utf8"));
   assert.equal(doc.openapi, "3.1.0");
   assert.deepEqual(Object.keys(doc.paths).sort(), [
-    "/v1/public/catalog", "/v1/public/categories", "/v1/public/content", "/v1/public/products",
+    "/v1/public/catalog", "/v1/public/categories", "/v1/public/cms", "/v1/public/content", "/v1/public/products",
   ]);
   for (const item of Object.values(doc.paths)) {
     assert.ok(item.get.responses["200"]);
