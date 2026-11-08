@@ -13,6 +13,7 @@ const media=read("apps/admin/app/cms-media-editor.tsx");
 
 test("C2 new drafts belong to Website; legacy Web/App record retains exact App targets",()=>{
  assert.deepEqual(websiteDraftTargets(),["public_web"]);
+ assert.deepEqual(websiteDraftTargets([]),["public_web"]);
  const existing=["dealer_app","public_web","consumer_app"];
  const next=websiteDraftTargets(existing);
  assert.deepEqual(next,existing);
@@ -45,6 +46,16 @@ test("C2 page adapter paginates only Website across mixed backend pages, no miss
  assert.equal(second.items.length,13);
  assert.equal(second.hasNext,false);
  assert.ok(calls.length<=6);
+});
+test("C2 keeps untargeted historical drafts recoverable but excludes App-only content",async()=>{
+ const mixed=[
+  {id:"app-only",channel_targets:["dealer_app"]},
+  {id:"untargeted-legacy",channel_targets:[]},
+  {id:"website",channel_targets:["public_web"]}
+ ];
+ const page=await websiteCmsPage(1,async n=>({page:n,hasNext:false,items:mixed}));
+ assert.deepEqual(page.items.map(x=>x.id),["untargeted-legacy","website"]);
+ assert.equal(page.hasNext,false);
 });
 test("C2 page adapter fails visibly on invalid backend pages and preserves honest empty state",async()=>{
  const empty=await websiteCmsPage(1,async page=>({
@@ -82,6 +93,8 @@ test("C2 Website editor removes all App channel checkboxes and uses only Website
 
 test("C2 protects legacy mixed-channel records and keeps publication fail-closed",()=>{
  assert.match(manager,/Bản ghi cũ còn liên kết App/);
+ assert.match(manager,/Bản nháp cũ chưa gắn kênh/);
+ assert.match(manager,/contentDirty=useRef\(item\?\.channel_targets\.length===0\)/);
  assert.match(manager,/item\.channel_targets\.some\(ch=>ch!=="public_web"\)/);
  assert.match(manager,/cmsWebsiteSlotLabel\(item\.kind,item\.placements\?\.public_web\|\|""\)/);
  assert.match(manager,/websiteCmsPage<CmsSummary>\(page/);
