@@ -170,12 +170,15 @@ test("C4 rejects expired popups after their delay, re-fetches and animates nativ
  assert.match(popup,/const published=latest\.find\(item=>item\.id===candidate\.id&&/);
  assert.match(popup,/matches\(item,path\)&&canOpen\(item,Date\.now\(\)\)/);
  assert.match(popup,/if\(!latest\|\|controller\.signal\.aborted\)return/);
+ assert.match(popup,/function CmsPopupSession\(\{path\}:\{path:string\}\)/);
+ assert.match(popup,/return <CmsPopupSession key=\{path\} path=\{path\}\/>/);
  assert.match(popup,/element\.classList\.add\("is-closing"\)/);
  assert.match(popup,/setTimeout\(\(\)=>\{\s*element\.close\(\)/);
  assert.match(popup,/reduce\?0:220/);
  assert.match(css,/\.cms-web-popup-dialog\[open\]:not\(\.is-closing\)/);
  assert.match(css,/--fb-motion-dialog-open,280ms/);
  assert.match(css,/--fb-motion-dialog-close,220ms/);
+ assert.match(css,/\.cms-web-popup-heading button\{[^}]*width:var\(--fb-control-height-touch,44px\)/s);
  assert.match(css,/@media\(prefers-reduced-motion:reduce\)/);
  assert.match(css,/animation:none!important/);
 });
