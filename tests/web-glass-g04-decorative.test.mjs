@@ -50,7 +50,9 @@ test("G04 GlassPageBackdrop uses its own validated banner media opt-in", () => {
   assert.match(ui, /"--fb-glass-decorative-image"/);
   assert.doesNotMatch(ui, /NEXT_PUBLIC_MEDIA_BASE_URL|r2\.dev|http:\/\/|R2_SECRET/);
   assert.match(ui, /decorativeReadPath === "\/api\/decorative-background"/);
-  assert.match(page, /<GlassPageBackdrop className="fb-glass-song-page" decorativeReadPath=\{publicDecorativeBackground\.songNatural \?\? undefined\}>/);
+  assert.match(layout, /<GlassPageBackdrop className="fb-glass-site"/);
+  assert.match(layout, /decorativeReadPath=\{publicDecorativeBackground\.website \?\? undefined\}/);
+  assert.doesNotMatch(page, /decorativeReadPath=|GlassPageBackdrop/);
   assert.doesNotMatch(page, /decorativeMedia=|publicMediaOrigin=/);
 });
 
