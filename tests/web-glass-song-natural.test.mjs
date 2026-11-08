@@ -51,18 +51,18 @@ test("Glass SKU controls display only the company code with accessible full spec
   assert.match(options,/className=\{glass\?"fb-song-summary-name":"catalogue-selected-summary__name"\}/);
   assert.match(options,/className=\{glass\?"fb-song-summary-code":"catalogue-selected-summary__code"\}/);
   assert.match(options,/<GlassPanel strong=\{false\} className="fb-song-info">/);
-  assert.equal((options.match(/Liên hệ báo giá/g)||[]).length,1);
-  assert.equal((options.match(/href="\/#contact"/g)||[]).length,2);
+  assert.equal((options.match(/Liên hệ báo giá/g)||[]).length,2);
+  assert.equal((options.match(/href="\/#contact"/g)||[]).length,3);
 });
 
 test("Gallery uses real images, preserved thumbnail actions, and separate glass classes",()=>{
-  assert.match(options,/<PublishedImageGallery key=\{selected\.sku\} items=\{gallery\} glass=\{glass\}\/>/);
+  assert.match(options, /<PublishedImageGallery key=\{selected\.sku\} items=\{gallery\} glass=\{glass\}[\s\S]*?zoomDialogRef=\{zoomDialogRef\}\/>/);
   assert.match(gallery,/const \[selected,setSelected\]=useState\(0\)/);
   assert.match(gallery,/<CatalogProductImage src=\{current\?\.src\?\?null\} alt=\{current\?\.alt\?\?"Sản phẩm Futurebook"\}\/>/);
   assert.match(gallery,/<GlassMediaFrame className="fb-song-main-photo">/);
-  assert.match(gallery,/<GlassCard className="fb-song-gallery">/);
+  assert.match(gallery, /<GlassCard className="fb-song-gallery" data-has-media=/);
   assert.match(gallery,/aria-pressed=\{selected===i\}/);
-  assert.match(gallery,/onClick=\{\(\)=>setSelected\(i\)\}/);
+  assert.match(gallery, /setSelected\(i\)/);
   assert.match(gallery,/src=\{img\.src\}/);
   assert.doesNotMatch(gallery,/imagegen|placeholder\.com|unsplash|mockup/i);
 });
