@@ -281,7 +281,17 @@
   .ref-header { width: calc(100% - 18px); margin-top: 8px; border-radius: 20px; }
   .ref-header__inner { border-radius: 20px 20px 0 0; padding-inline: 10px; }
   .ref-navigation { border-radius: 0 0 20px 20px; background: var(--fb-glass-surface-fallback); }
-  .ref-navigation__link--active { color: white; }
+  .ref-navigation__inner { gap: 4px; }
+  .ref-navigation__link { color: var(--fb-glass-ink); background: transparent; }
+  .ref-navigation__catalog {
+    color: #fff;
+    background: linear-gradient(115deg, var(--color-primary), var(--color-primary-strong));
+    border-color: transparent;
+  }
+  .ref-navigation__link--active {
+    color: #fff;
+    background: linear-gradient(115deg, var(--color-primary), var(--color-primary-strong));
+  }
   .ref-hero { padding-top: 12px; }
   .ref-hero__inner { border-radius: 22px; }
   .ref-hero__copy { padding: 20px 18px 12px; }
@@ -290,5 +300,5 @@
   .ref-trust > div { min-height: 88px; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .ref-product-card.ui-card, .ref-cta { transition: none; transform: none; }
+  .fb-glass-home-product, .ref-cta { transition: none; transform: none; }
 }
