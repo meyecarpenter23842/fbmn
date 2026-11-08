@@ -55,11 +55,11 @@ test("G06 preserves real SKU selection, photos, and conversion CTA", () => {
   assert.match(options, /const \[sku,setSku\]=useState\(product\.variants\[0\]\.sku\)/);
   assert.match(options, /<VariantChoice key=\{variant\.sku\} glass=\{glass\}/);
   assert.match(options, /aria-live="polite" aria-atomic="true"/);
-  assert.match(options, /<PublishedImageGallery key=\{selected\.sku\} items=\{gallery\} glass=\{glass\}[\s\S]*?zoomDialogRef=\{zoomDialogRef\}\/>/);
+  assert.match(options, /<PublishedImageGallery key=\{selected\.sku\} items=\{gallery\} glass=\{glass\}[\s\S]*?zoomDialogRef=\{zoomDialogRef\}[\s\S]*?onActiveIndexChange=\{setPhotoIndex\}\/>/);
   assert.match(options, /<GlassButtonLink ref=\{primaryQuoteRef\} href="\/#contact" pill className="fb-song-quote">/);
   assert.match(gallery, /<CatalogProductImage src=\{current\?\.src\?\?null\}/);
-  assert.match(gallery, /aria-pressed=\{selected===i\}/);
-  assert.match(gallery, /setSelected\(i\)/);
+  assert.match(gallery, /aria-pressed=\{active===i\}/);
+  assert.match(gallery, /choose\(i\)/);
   assert.doesNotMatch(css, /\.fb-song-sku(?=[\s:.{>])/);
 });
 
