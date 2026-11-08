@@ -130,6 +130,7 @@
     background-color var(--fb-motion-button) var(--fb-easing-open),
     border-color var(--fb-motion-button) var(--fb-easing-open),
     box-shadow var(--fb-motion-button) var(--fb-easing-open),
+    filter var(--fb-motion-button) var(--fb-easing-open),
     transform var(--fb-motion-button) var(--fb-easing-open);
 }
 
