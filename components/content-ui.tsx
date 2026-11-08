@@ -24,12 +24,10 @@ export function ContentBreadcrumb({ items }: {
   </nav>;
 }
 
-export function PageHeading({ eyebrow, title, intro }: { eyebrow: string; title: string; intro: string }) {
-  return <header className="content-heading">
-    <p className="content-eyebrow">{eyebrow}</p>
-    <h1>{title}</h1>
-    <p>{intro}</p>
-  </header>;
+export function PageHeading({ title }: { eyebrow: string; title: string; intro: string }) {
+  // The breadcrumb and actual page content establish visible hierarchy.
+  // Preserve an H1 for screen readers without a redundant billboard title.
+  return <h1 className="sr-only">{title}</h1>;
 }
 
 export function WaitingForApproval({ title, children }: { title: string; children: ReactNode }) {
