@@ -21,13 +21,14 @@ test("category navigation has one source across desktop and mobile", () => {
   assert.match(css, /overflow-x:\s*auto/);
 });
 
-test("category tiles are borderless and do not recreate pastel cards", () => {
+test("G05 category tiles use approved translucent glass, never hardcoded pastel cards", () => {
   const css = read("app/category-navigation.css");
   const match = css.match(/\.category-nav__link\s*\{([^}]*)\}/);
   assert.ok(match);
-  assert.match(match[1], /background:\s*transparent/);
-  assert.match(match[1], /border:\s*0/);
-  assert.match(match[1], /border-radius:\s*0/);
+  assert.match(match[1], /background:\s*var\(--fb-glass-surface-layer\)/);
+  assert.match(match[1], /border:\s*1px solid var\(--fb-glass-border\)/);
+  assert.match(match[1], /border-radius:\s*20px/);
+  assert.match(match[1], /backdrop-filter:\s*blur\(var\(--fb-glass-ui-blur\)\)/);
   assert.doesNotMatch(css, /background:\s*#f6f3fa|border:\s*1px solid #f2ebf6/);
   assert.match(css, /:focus-visible/);
   assert.match(css, /@media \(prefers-reduced-motion:\s*reduce\)/);
