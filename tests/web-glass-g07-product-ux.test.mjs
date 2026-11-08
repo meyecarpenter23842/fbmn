@@ -20,11 +20,11 @@ test("G07: one accessible full-card link, no nested links, redundant detail acti
   assert.equal((block.match(/<Link\b/g)||[]).length,1);
   assert.equal((block.match(/<GlassButtonLink\b/g)||[]).length,0);
   assert.doesNotMatch(block, /Xem chi tiết|onClick=\{/);
-  assert.match(block, /<GlassCard hover className="fb-song-related-card">/);
+  assert.match(block, /<GlassCard hover linkCard className="fb-song-related-card">/);
   assert.match(block, /<article className="catalog-product">/);
   assert.match(block, /getPublishedProductImageUrl\(media.r2Key, process.env.NEXT_PUBLIC_MEDIA_BASE_URL\)/);
   assert.match(related, /items\.map\(product=><ProductCard key=\{product\.id\} product=\{product\} glass=\{glass\}\/>\)/);
-  assert.match(css, /\.fb-song-related-hit:focus-visible\s*\{[^}]*outline:\s*3px solid/);
+  assert.match(core, /\.fb-glass-card--link > a:focus-visible\s*\{[^}]*outline:\s*3px solid/);
   assert.match(listingCss, /\.catalog-product__hit:focus-visible\s*\{[^}]*outline:\s*3px solid/);
 });
 
@@ -42,16 +42,23 @@ test("G07: compact published-image preview and SKU controls precede large galler
   assert.match(detail, /const \[sku,setSku\]=useState\(product\.variants\[0\]\.sku\)/);
   assert.match(detail, /const gallery=photosForSku\(photos,selected\.sku\)/);
   assert.match(detail, /className="fb-song-overview-preview"/);
-  assert.match(detail, /src=\{gallery\[0\]\?\.src\?\?null\}/);
+  assert.match(detail, /src=\{gallery\[photoIndex\]\?\.src\?\?gallery\[0\]\?\.src\?\?null\}/);
   assert.match(detail, /disabled=\{gallery.length===0\}/);
   assert.match(detail, /zoomDialogRef=\{zoomDialogRef\}/);
+  assert.match(detail, /activeIndex=\{photoIndex\}/);
+  assert.match(detail, /onActiveIndexChange=\{setPhotoIndex\}/);
+  assert.match(detail, /const selectSku=\(nextSku:string\)=>\{setSku\(nextSku\);setPhotoIndex\(0\);\}/);
+  assert.match(gallery, /const active=activeIndex\?\?selected/);
+  assert.match(core, /\.fb-glass-card--link\s*\{\s*padding:\s*0/);
+  assert.match(core, /\.fb-glass-card--link > a\s*\{[^}]*padding:\s*clamp/);
+  assert.doesNotMatch(css, /\.fb-song-related-card:focus-within/);
   assert.match(css, /\.fb-song-info\s*\{\s*order:\s*0/);
   assert.match(css, /\.fb-song-gallery\s*\{\s*order:\s*1/);
   assert.match(css, /\.fb-song-overview\s*\{[^}]*grid-template-columns:\s*104px minmax\(0,1fr\)/);
   assert.match(css, /\.fb-song-overview-preview\s*\{[^}]*height:\s*124px/);
   assert.match(css, /\.fb-song-sku-grid\s*\{[^}]*grid-template-columns:\s*repeat\(auto-fit, minmax\(65px, 1fr\)\)/);
   assert.match(detail, /choices\.map\(variant=><VariantChoice key=\{variant\.sku\}/);
-  assert.match(detail, /onClick=\{\(\)=>setSku\(variant\.sku\)\}/);
+  assert.match(detail, /onClick=\{\(\)=>selectSku\(variant\.sku\)\}/);
   assert.match(detail, /aria-live="polite" aria-atomic="true"/);
 });
 
@@ -61,8 +68,8 @@ test("G07: one native zoom dialog, working thumbnails, Escape/focus handled by b
   assert.match(gallery, /zoomRef\.current\?\.showModal\(\)/);
   assert.match(gallery, /zoomRef\.current\?\.close\(\)/);
   assert.match(gallery, /onClick=\{openZoom\}/);
-  assert.match(gallery, /aria-pressed=\{selected===i\}/);
-  assert.match(gallery, /setSelected\(i\)/);
+  assert.match(gallery, /aria-pressed=\{active===i\}/);
+  assert.match(gallery, /choose\(i\)/);
   assert.match(gallery, /current\?\.src\?\?null/);
   assert.match(css, /\.fb-song-zoom-dialog::backdrop/);
   assert.doesNotMatch(gallery, /document\.addEventListener|window\.addEventListener|onKeyDown/);
