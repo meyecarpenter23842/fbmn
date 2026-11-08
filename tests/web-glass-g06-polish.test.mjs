@@ -24,14 +24,14 @@ test("G06 visual polish gives the approved real gallery more width and a balance
   assert.match(css, /\.fb-song-overview-preview\s*\{[^}]*height:\s*124px/);
 });
 
-test("G06 suggestions become a keyboard-reachable horizontal showcase, not hidden products", () => {
+test("G07.2 suggestions use visible responsive grid, without horizontal scrolling", () => {
   const block = css.match(/\.fb-song-related-grid\s*\{([^}]*)\}/)?.[1];
   assert.ok(block);
-  assert.match(block, /grid-auto-flow:\s*column/);
-  assert.match(block, /grid-auto-columns:\s*minmax\(220px/);
-  assert.match(block, /overflow-x:\s*auto/);
-  assert.match(block, /scroll-snap-type:\s*x proximity/);
-  assert.match(css, /\.fb-song-related-grid\s*>\s*\*\s*\{[^}]*scroll-snap-align:\s*start/);
+  assert.match(block, /grid-template-columns:\s*repeat\(4, minmax\(0, 1fr\)\)/);
+  assert.doesNotMatch(block, /grid-auto-flow|grid-auto-columns/);
+  assert.doesNotMatch(block, /overflow-x|scroll-snap|scrollbar-width/);
+  assert.match(css, /@media \(max-width: 700px\)[\s\S]*?\.fb-song-related-grid\s*\{[^}]*grid-template-columns:\s*1fr/);
+  assert.match(css, /\.fb-song-related-grid\s*>\s*\*\s*\{[^}]*min-width:\s*0/);
   assert.doesNotMatch(css, /\.fb-song-related-grid\s*>\s*\.fb-song-related-card:nth-child/);
   assert.doesNotMatch(css, /\.fb-song-related-grid\s*\{[^}]*display:\s*none/);
   assert.match(related, /items\.map\(product=><ProductCard key=\{product\.id\} product=\{product\} glass=\{glass\}\/>\)/);
@@ -70,5 +70,6 @@ test("G06 responsive cards and motion remain within the existing single style ow
     assert.equal((body.match(/\{/g)||[]).length, (body.match(/\}/g)||[]).length, name + " CSS brace balance");
   }
   assert.doesNotMatch(stripComments(css), /\.catalogue-|\.catalog-|\.fb-glass-card\s*\{|\.fb-glass-chip\s*\{/);
-  assert.match(css, /\.fb-song-related-grid\s*\{[\s\S]*?scrollbar-width:\s*thin/);
+  const suggestionGrid = css.match(/\.fb-song-related-grid\s*\{([^}]*)\}/)?.[1] ?? "";
+  assert.doesNotMatch(suggestionGrid, /scrollbar-width|scroll-snap/);
 });

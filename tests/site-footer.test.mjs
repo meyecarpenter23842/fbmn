@@ -21,8 +21,8 @@ test("all website shells share one structured footer", () => {
 
 test("footer logo always smaller than menu/header logo", () => {
   const styles = read("app/site-footer.css");
-  assert.match(styles, /\.site-footer__logo\s*\{[^}]*width:\s*158px/s);
-  assert.match(styles, /\.site-footer__logo\s*\{\s*width:\s*125px/);
+  assert.match(styles, /\.site-footer__logo\s*\{[^}]*width:\s*140px/s);
+  assert.match(styles, /\.site-footer__logo\s*\{\s*width:\s*134px/);
   const headerStyles = read("app/rebaseline.css");
   assert.match(headerStyles, /\.ref-brand__official-image\s*\{[^}]*width:\s*min\(213px/s);
   assert.match(headerStyles, /width:\s*clamp\(145px/);
@@ -36,7 +36,7 @@ test("contact reference is sourced and not misrepresented as official business r
   assert.match(fanpageContactReference.source, /Fanpage/);
   assert.ok(!("hours" in fanpageContactReference));
   const footer = read("components/site-footer.tsx");
-  assert.match(footer, /Nguồn tham khảo: Fanpage/);
+  assert.match(footer, /Liên hệ tham khảo từ Fanpage/);
   const contact = read("app/lien-he/page.tsx");
   assert.match(contact, /đang được đối chiếu/);
 });

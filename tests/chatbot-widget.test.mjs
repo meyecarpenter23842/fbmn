@@ -37,9 +37,11 @@ test("demo is fully local, doesn't invent backend access or leak user messages",
   assert.equal(getDemoChatbotReply("Liên hệ").href,"/lien-he");
   assert.match(getDemoChatbotReply("Một câu hỏi chưa có dữ liệu").text, /demo/);
 });
-test("app invitation remains positioned above the small chat launcher", () => {
+test("app invitation anchors near the header, away from chatbot touch targets", () => {
   const styles=read("app/app-download.css");
-  assert.match(styles, /bottom:\s*86px/);
+  assert.match(styles, /\.app-download\s*\{[^}]*top:\s*116px/);
+  assert.match(styles, /@media \(max-width: 800px\)[\s\S]*?\.app-download\s*\{[^}]*top:\s*calc\(78px \+ env\(safe-area-inset-top\)\)/);
+  assert.doesNotMatch(styles, /bottom:\s*86px/);
 });
 
 test("chat input stays focusable while typing and the popup fits short screens", () => {
@@ -47,6 +49,6 @@ test("chat input stays focusable while typing and the popup fits short screens",
   const downloadCss = read("app/app-download.css");
   assert.match(widget, /readOnly=\{typing\}/);
   assert.doesNotMatch(widget, /onChange=\{event => setDraft\(event.target.value\)\}\s+disabled=\{typing\}/);
-  assert.match(downloadCss, /max-height: calc\(100dvh - 98px\)/);
-  assert.match(downloadCss, /max-height: calc\(100dvh - 92px - env\(safe-area-inset-bottom\)\)/);
+  assert.match(downloadCss, /max-height: calc\(100dvh - 132px\)/);
+  assert.match(downloadCss, /max-height: calc\(100dvh - 94px - env\(safe-area-inset-top\)\)/);
 });

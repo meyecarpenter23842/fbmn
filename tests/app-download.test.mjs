@@ -45,7 +45,13 @@ test("menu action and popup are global, dismissible and have recognized brand ma
   assert.match(ui, /platform="ios"/);
   assert.match(ui, /platform="android"/);
   assert.match(ui, /Simple Icons/);
+  assert.match(ui, /"CH Play"/);
+  assert.match(ui, /aria-label="Google Play"/);
+  assert.doesNotMatch(ui, /M18\.4395 5\.5586/);
+  assert.match(ui, /app-download--closing/);
+  assert.match(css, /app-download-enter var\(--fb-motion-dialog-open\)/);
+  assert.match(css, /app-download-exit var\(--fb-motion-dialog-close\)/);
   assert.match(css, /prefers-reduced-motion/);
-  assert.match(css, /z-index:\s*100/);
+  assert.match(css, /z-index:\s*110/);
   assert.doesNotMatch(ui, /href="https:\/\/(?:apps\.apple\.com|play\.google\.com)/);
 });

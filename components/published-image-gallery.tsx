@@ -34,8 +34,8 @@ export default function PublishedImageGallery({items,glass=false,zoomDialogRef,a
     : <div className="catalog-detail__image">{photo}</div>;
   const content=<>
     {mainImage}
-    {glass&&items.length>0&&<p className="fb-song-gallery-caption">Chọn ảnh để xem lớn</p>}
-    {items.length>(glass?0:1)&&<div className={glass?"fb-song-gallery-thumbs":"catalogue-gallery-thumbs"}
+    {glass&&items.length>1&&<p className="fb-song-gallery-caption">Chọn ảnh để xem lớn</p>}
+    {items.length>1&&<div className={glass?"fb-song-gallery-thumbs":"catalogue-gallery-thumbs"}
       role="group" aria-label="Các mẫu ảnh sản phẩm">
       {items.map((img,i)=><button key={img.src} type="button"
         aria-label={"Xem mẫu ảnh "+(i+1)}
@@ -68,6 +68,6 @@ export default function PublishedImageGallery({items,glass=false,zoomDialogRef,a
     </dialog>}
   </>;
   return glass
-    ? <GlassCard className="fb-song-gallery" data-has-media={items.length>0?"true":"false"}>{content}</GlassCard>
+    ? <GlassCard className="fb-song-gallery" data-has-media={items.length>0?"true":"false"} data-has-multiple={items.length>1?"true":"false"}>{content}</GlassCard>
     : <div className="catalogue-image-gallery">{content}</div>;
 }
