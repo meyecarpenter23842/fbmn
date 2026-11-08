@@ -2,14 +2,21 @@ import { contentStore } from "./data";
 import { toPublicContent } from "./public";
 import type { PublicContent } from "./schema";
 import { fetchPublicContent } from "../public-api/client";
-import {cmsEnabled,getOptionalPublicCms} from "./cms";
+import {cmsEnabled,getPublicCms} from "./cms";
 
 /** Server-side only; opt-in after Worker staging tests and security approval. */
 export async function getPublicContent(): Promise<PublicContent> {
   if (process.env.FBMN_PUBLIC_API_ENABLED === "true") {
     const base=await fetchPublicContent(process.env.FBMN_PUBLIC_API_BASE_URL ?? "");
     if(!cmsEnabled())return base;
-    const entries=await getOptionalPublicCms();
+    let entries;
+    try{entries=await getPublicCms();}
+    catch{
+      // Preserve previously approved content during a transient CMS outage.
+      // An empty successful CMS snapshot still correctly removes hidden items.
+      console.error("[Futurebook CMS] editorial read temporarily unavailable");
+      return base;
+    }
     return {
      ...base,
      articles:entries.filter(entry=>entry.kind==="article").map(entry=>({
