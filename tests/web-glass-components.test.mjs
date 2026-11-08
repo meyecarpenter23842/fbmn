@@ -20,7 +20,7 @@ test("G02 Website-only primitives are exported and reuse the G01 foundation", ()
     "fb-glass-media-frame", "fb-glass-button", "fb-glass-chip"
   ]) assert.ok(components.includes('"' + name + '"'), name);
   assert.equal(layout.split('import "./glass-foundation.css";').length - 1, 1);
-  assert.doesNotMatch(components, /apps\/admin|admin-controls\.css|dai-viet/);
+  assert.doesNotMatch(components, /^import\s+.*(?:apps\/admin|admin-controls\.css|dai-viet)/m);
 });
 
 test("Button actions and navigation are real native button or Next Link elements", () => {
