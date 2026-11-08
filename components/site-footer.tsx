@@ -15,8 +15,7 @@ export function SiteFooter() {
               width={300} height={84} className="site-footer__logo" sizes="(max-width: 700px) 125px, 158px"
             />
           </Link>
-          <p>Tập vở, sổ và văn phòng phẩm Futurebook.</p>
-          <p>Thông tin sản phẩm, hình ảnh và chính sách bán hàng được cập nhật sau khi kiểm tra nguồn.</p>
+          <p>Tập vở, sổ và văn phòng phẩm Futurebook Miền Nam.</p>
           <FooterSocialLinks />
         </section>
         <nav aria-label="Khám phá Futurebook" className="site-footer__links">
@@ -39,12 +38,12 @@ export function SiteFooter() {
             <div><span className="site-footer__field">Email</span><a href={contact.emailHref}>{contact.email}</a></div>
             <div><span className="site-footer__field">Địa chỉ</span><span>{contact.address}</span></div>
           </address>
-          <p className="site-footer__source">Nguồn tham khảo: Fanpage Futurebook Miền Nam. Số điện thoại đang được đối chiếu; giờ làm việc chưa được xác nhận.</p>
+          <p className="site-footer__source">Liên hệ tham khảo từ Fanpage; số điện thoại đang đối chiếu, giờ làm việc chưa xác nhận.</p>
         </section>
       </div>
       <div className="site-footer__bottom">
         <small>© 2026 Futurebook Miền Nam</small>
-        <small>Thông tin giá và chương trình chỉ công bố khi đã được duyệt.</small>
+        <small>Giá và chương trình chỉ hiển thị sau khi được duyệt.</small>
       </div>
     </div>
   </footer>;
