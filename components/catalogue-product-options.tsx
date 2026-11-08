@@ -45,6 +45,8 @@ export default function CatalogueProductOptions({product,photos,glass=false}:{
   product:PublicProduct;photos:ProductPhoto[];glass?:boolean;
 }){
   const [sku,setSku]=useState(product.variants[0].sku);
+  const [photoIndex,setPhotoIndex]=useState(0);
+  const selectSku=(nextSku:string)=>{setSku(nextSku);setPhotoIndex(0);};
   const [audience,setAudience]=useState("");
   const [format,setFormat]=useState("");
   const zoomDialogRef=useRef<HTMLDialogElement>(null);
@@ -68,7 +70,7 @@ export default function CatalogueProductOptions({product,photos,glass=false}:{
   const gallery=photosForSku(photos,selected.sku).map(({src,alt})=>({src,alt}));
   const selectFacet=(facet:"audience"|"format",value:string)=>{
     const next=moveVariantFacet(product.variants,selected,facet,value,audience,format);
-    setAudience(next.audience);setFormat(next.format);setSku(next.sku);
+    setAudience(next.audience);setFormat(next.format);selectSku(next.sku);
   };
   const selectedName=shortVariantLabel(selected);
   const selectedAudience=variantAudience(selected);
@@ -89,8 +91,8 @@ export default function CatalogueProductOptions({product,photos,glass=false}:{
         onClick={()=>zoomDialogRef.current?.showModal()}
         disabled={gallery.length===0}
         aria-label="Phóng to ảnh sản phẩm đang chọn">
-        <CatalogProductImage src={gallery[0]?.src??null}
-          alt={gallery[0]?.alt??product.name} className="catalog-image-compact"/>
+        <CatalogProductImage src={gallery[photoIndex]?.src??gallery[0]?.src??null}
+          alt={gallery[photoIndex]?.alt??gallery[0]?.alt??product.name} className="catalog-image-compact"/>
       </button>}
       <div className={glass?"fb-song-overview-copy":undefined}>
         <p className={glass?"fb-song-overline":"catalog-overline"}>SẢN PHẨM FUTUREBOOK</p>
@@ -132,7 +134,7 @@ export default function CatalogueProductOptions({product,photos,glass=false}:{
         <div className={glass?"fb-song-sku-grid":"catalogue-variant-options"}>
           {choices.map(variant=><VariantChoice key={variant.sku} glass={glass}
             variant={variant} active={selected.sku===variant.sku}
-            onClick={()=>setSku(variant.sku)}/>)}
+            onClick={()=>selectSku(variant.sku)}/>)}
         </div>
       </fieldset>
       <div className={glass?"fb-song-summary":"catalogue-selected-summary"}
@@ -171,7 +173,8 @@ export default function CatalogueProductOptions({product,photos,glass=false}:{
   return <>
     <div className={glass?"fb-song-detail":"catalog-detail"}>
       <PublishedImageGallery key={selected.sku} items={gallery} glass={glass}
-        zoomDialogRef={zoomDialogRef}/>
+        zoomDialogRef={zoomDialogRef} activeIndex={photoIndex}
+        onActiveIndexChange={setPhotoIndex}/>
       {glass
         ? <GlassPanel strong={false} className="fb-song-info">{info}</GlassPanel>
         : <div className="catalog-detail__info">{info}</div>}
