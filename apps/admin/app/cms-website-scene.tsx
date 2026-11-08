@@ -105,7 +105,12 @@ export default function CmsWebsiteScene({kind,slot,title,summary,ctaUrl,image,de
       {slot==="home.hero"&&slotView("Banner đề xuất trong vùng Hero")}
      </div>
     </section>
-    <div className="cms-site-categories">Danh mục Futurebook</div>
+    <section className="cms-site-categories" aria-label="Dải danh mục theo Website">
+     <div className="cms-site-category-tiles">
+      {["Vở A4","Vở B5","Vở kẻ ngang","Vở góc phố","Vở bìa bồi","Văn phòng phẩm"]
+       .map(label=><span key={label}>{label}</span>)}
+     </div>
+    </section>
     <section className="cms-site-featured">
      <h2>Sản phẩm nổi bật</h2>
      <ProductContext/>
