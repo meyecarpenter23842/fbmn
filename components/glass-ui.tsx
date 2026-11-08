@@ -25,6 +25,8 @@ type DecorativeBackdropOptions = {
   decorativeMedia?: ApprovedMedia | null;
   /** Public HTTPS media origin provided by an already-published configuration. */
   publicMediaOrigin?: string;
+  /** Controlled same-origin route for this Owner-approved G04 asset. */
+  decorativeReadPath?: "/api/decorative-background";
 };
 
 /** No approved public configuration => existing lavender gradient, without image requests. */
@@ -32,12 +34,17 @@ export function GlassPageBackdrop({
   className,
   decorativeMedia = null,
   publicMediaOrigin,
+  decorativeReadPath,
   style,
   ...rest
 }: ComponentPropsWithoutRef<"div"> & DecorativeBackdropOptions) {
-  const url = decorativeMedia?.kind === "banner"
-    ? getApprovedMediaUrl(decorativeMedia, publicMediaOrigin)
-    : null;
+  // No arbitrary user-supplied URLs: only the fixed, server-allowlisted route
+  // or previously approved public media metadata can enable background fetch.
+  const url = decorativeReadPath === "/api/decorative-background"
+    ? decorativeReadPath
+    : decorativeMedia?.kind === "banner"
+      ? getApprovedMediaUrl(decorativeMedia, publicMediaOrigin)
+      : null;
   const backdropStyle = url
     ? ({ ...style, "--fb-glass-decorative-image": `url("${url}")` } as CSSProperties)
     : style;
