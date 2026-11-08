@@ -1,30 +1,36 @@
-# G03 — Song Natural Premium Purple Glass UI (Website-only)
+# G03 — Song Natural Glass UI: một nguồn style, không chồng CSS
 
-**Mẫu nghiệm thu đầu tiên:** `/san-pham/sku-3ac08ff247847c1e77bfccb0e806ed29` (Song Natural).
-**Nguồn chuẩn:** [UI Contract chung](futurebook-ui-contract.md), [Website Glass UI V2](web-component-design-system.md), [G01](web-glass-g01-audit.md), [G02](web-glass-g02-components.md).
+**Địa chỉ UAT:** `/san-pham/sku-3ac08ff247847c1e77bfccb0e806ed29`.
+**Giới hạn:** Website Futurebook, không chạm Admin, API, data, giá NET, SKU, ảnh, routing, SEO hay backend.
 
-## Phạm vi thay đổi
+## Sửa tận gốc sau UAT Owner 08/11/2026
 
-- Route `app/san-pham/[slug]/page.tsx` dùng cờ **duy nhất theo slug mẫu** để bật GlassPageBackdrop, truyền chế độ kính cho SKU/gallery/related cards. Các trang sản phẩm còn lại giữ kiểu hiển thị hiện tại; SEO, đường dẫn, dữ liệu đều dùng như trước.
-- `components/catalogue-product-options.tsx` giữ nguyên `useState`, `availableVariantFacets`, `visibleVariants`, `moveVariantFacet`, `photosForSku`, reset bộ lọc, mã SKU và hiển thị giá bán lẻ có điều kiện; dùng `GlassChip` và `GlassPanel` chỉ trên trang mẫu. `GlassButtonLink` giữ nguyên `href="/#contact"` và nhãn `Liên hệ báo giá`.
-- `components/published-image-gallery.tsx` giữ ảnh thật, thumbnails, `aria-pressed`, click và `key={selected.sku}`; ảnh bìa nằm trên `GlassMediaFrame` trắng trung tính, không bị kính nhuộm màu.
-- `components/catalog-ui.tsx` giữ `ProductCard` và liên kết/ảnh/data như trước; thêm opt-in `glass=false` để related cards hiển thị bằng `GlassCard` khi vào Song Natural.
-- `components/catalogue-related-products.tsx` giữ danh sách gợi ý và thứ tự theo hàm recommendations cũ; thêm panel kính khi bật cờ.
-- CSS nằm ở `app/glass-product-detail.css`, load sau `glass-foundation.css`. Mọi selector layout chính đều gắn `.fb-glass-song-page` để không thay Admin, Đại Việt hay trang sản phẩm khác.
+Ảnh UAT đầu tiên bộc lộ card SKU cao 52px, text trong card quá dài và surface quá đục. Nguyên nhân là G03 áp đồng thời lớp `catalogue-variant-option` (CSS cũ) và `fb-glass-chip`, rồi dùng selector tăng độ ưu tiên trong `app/glass-product-detail.css` để đè kích thước, màu, shadow và radius. CI khi đó chưa kiểm tra CSS giao thoa.
 
-## Visual target
+**Nguyên tắc sửa:** class kính và class catalogue cũ **không cùng xuất hiện trên một element điều khiển**. Bỏ toàn bộ selector kiểu `.fb-glass-song-page .catalogue-*`, `.catalogue-variant-option.fb-glass-chip` và mọi override `fb-glass-chip` cấp trang; không dùng `!important`.
 
-| Vùng | Trình bày | Bảo vệ |
+| Vùng | Nguồn style duy nhất | Nội dung |
 |---|---|---|
-| Background | Gradient lavender layer (R2 decorative cấu hình ở G04) | Không URL giả, không asset SKU giả |
-| Gallery | Card glass 24px, inner photo frame trắng 20px, thumbnail active có border tím | Giữ đúng ảnh, ALT, gallery click |
-| Product info | GlassPanel mạnh, bóng nhẹ, typography rõ | Giữ tên/mô tả/số lượng SKU/quy cách |
-| Facet & SKU | Chip glass/pill; selected tím rõ, touch target >=44px | Giữ logic audience/format/SKU/pressed |
-| CTA | Primary gradient tím pill | Vẫn dẫn tới `/#contact`; không thay business |
-| Related | GlassPanel + GlassCard hover theo token 200ms | Giữ cùng `ProductCard`, public image/URL |
+| Tokens | `app/globals.css` | Tím brand, kính 50%/66%, gradient lavender nhiều lớp, blur, bóng, 36px/44px |
+| GlassChip/Button/Card/Panel, states | `app/glass-foundation.css` | Dimension, radius, fill/border/shadow, motion, hover/focus/selected, reduced motion |
+| Bố cục trang mẫu | `app/glass-product-detail.css` | Chỉ class riêng `.fb-song-*`: grid gallery/thông tin, thumbnail, typography, fieldset, 4 cột SKU, summary, related grid và responsive |
+| Catalogue cũ | `app/catalog.css` | Giữ UI các trang sản phẩm chưa rollout; không style element `.fb-song-*` |
+| Business / ảnh / CTA | `components/catalogue-product-options.tsx`, `published-image-gallery.tsx`, `catalog-ui.tsx` | Giữ nguồn dữ liệu và handlers gốc, chuyển class theo `glass` |
 
-## Nghiệm thu / release gate
+**Chip SKU glass:** chỉ hiển thị mã gốc (`0110`, `0114`, `M439`...), không icon, không text quy cách. `GlassChip` giữ `aria-label` gồm mã + quy cách, `aria-pressed` đúng state, 36px desktop/44px mobile. **Không có CSS `.fb-song-sku`** để ghi đè geometry. Grid 4 cột, các quy cách hiện trong summary đang chọn.
 
-- PR ở repo phụ, CI quality / Next.js build / TypeScript / tests / lint, Codex review sạch rồi squash merge.
-- **Chưa deploy production hoặc migration**, không thay Admin. Screenshot UAT thực tế 1440, 1280, 768, 390, 360px trên build được triển khai để Owner duyệt trước khi rollout G04–G05; không gọi mockup hoặc screenshot production cũ là ảnh nghiệm thu G03.
-- Trước nghiệm thu: kiểm từng nhóm Học sinh/Sinh viên, A4/A5 và mọi mã SKU có thật, gallery với ảnh thiếu, CTA, related links, no horizontal overflow, focus, reduced-motion, FPS không giật; không tự tạo ảnh / dữ liệu nếu thiếu.
+**Gallery:** `GlassCard` + frame trắng trung tính; khung ảnh, thumbnail dùng class `.fb-song-*` riêng, không trộn `.catalogue-*`. Đổi SKU vẫn remount gallery, src/alt từ media public R2 đã duyệt.
+
+**Sản phẩm liên quan:** `ProductCard` tiếp tục dùng cùng logic ảnh, liên kết, giá/nhãn công khai. Nhánh glass dùng `GlassCard` + `GlassButtonLink` không mang class `.catalog-product`/ `.catalog-button`; nhánh legacy giữ nguyên.
+
+**Độ trong:** chỉnh **tại token dùng chung**, không override per-page; kính sáng alpha .50 và lớp mạnh alpha .66, gradient sau kính có sắc độ sâu hơn. Không bịa decorative URL R2 (G04 mới kiểm public background config), ảnh bìa không bị lọc màu.
+
+## Chặn tái phát
+
+- `tests/web-glass-song-natural.test.mjs` so sánh **tập class CSS** của file G03 với CSS legacy/G01-G02; nếu trùng tên class, test fail.
+- Test kiểm mặt chữ SKU chỉ là `{variant.sku}`, thông số vẫn nằm trong nhãn aria/summary; kích thước chip chỉ khai báo tại G02, không khai báo tại G03.
+- Test giữ logic chọn nhóm/khổ/SKU, ảnh, liên hệ `/#contact`, recommendations, điều kiện giá bán lẻ.
+- CI lint/typecheck/393+ tests/build, Codex sạch, squash merge repo phụ → local → fast-forward repo chính.
+- Screenshot thật desktop/mobile sau Owner cho phép deploy; **không gọi đã nghiệm thu visual khi chưa test trên trình duyệt**.
+
+**Admin giữ nguyên hoàn toàn. Không migration. Không tự deploy production.**
