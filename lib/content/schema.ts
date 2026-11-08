@@ -65,6 +65,7 @@ export interface PublicArticle {
   summary: string;
   paragraphs: string[];
   publishedAt: string;
+  slot?: "news.list" | "home.news_featured";
 }
 export interface PublicPromotion {
   slug: string;
@@ -72,6 +73,7 @@ export interface PublicPromotion {
   summary: string;
   detail: string;
   endsAt: string;
+  slot?: "promotions.list" | "home.promotion_featured";
 }
 export interface PublicDealerInformation {
   title: string;
