@@ -78,3 +78,14 @@ Header bảng dữ liệu: có độ tương phản đủ đọc, **tím nhạt 
 - Bảng đang áp dụng: Owner được sửa mức giá và nhập Excel trực tiếp; thay đổi giá được ghi nhận/audit và có hiệu lực nội bộ ngay khi lưu. **Không đồng nghĩa xuất bản ra Website/App**.
 - Muốn đổi phạm vi kênh hoặc khách của bảng đang áp dụng: **Ngừng áp dụng** trước rồi sửa và Áp dụng lại, để không vô tình chuyển giá riêng sang kênh công khai.
 - Mọi thao tác vẫn kiểm quyền Owner, nguồn giá/VAT, mã SKU giữ 0 đầu, kỳ giá không chồng lấn, revision, Excel preview và audit. Trạng thái “approved” cũ trong database mang nghĩa **Đang áp dụng nội bộ**; không tự bật API giá công khai.
+
+## 6. Website visual V2 — Owner 08/11/2026 (bắt buộc)
+**Chỉ cho Website Futurebook, không áp dụng cho Admin hoặc storefront khác.** [Website Premium Glass V2](web-component-design-system.md) thay thế các quy tắc **visual surface/card** cũ của Website; chuẩn chung về nghiệp vụ, layout đã duyệt, geometry control, toast và motion trong tài liệu này vẫn giữ.
+
+- **Glassmorphism là phong cách chủ đạo**, không chỉ là điểm nhấn: lớp ảnh nền decorative (Cloudflare R2 khi có public config hợp lệ) -> overlay dễ đọc -> glass header/panel/cards/chips/buttons -> nội dung/ảnh SKU thật. Nếu thiếu URL nền, dùng gradient fallback; không hardcode địa chỉ R2.
+- Website glass card radius **20–28px**, translucent surface, border kính sáng, bóng mềm và blur kiểm soát. Đây là **ngoại lệ visual Website** so với card trắng 12–14px cũ; không thay đổi radius controls thông thường **8–10px**, field **40px**, button thường **36px desktop/44px mobile**, font control tối thiểu **13px**.
+- **Website CTA và SKU chip** có thể bo pill 999px theo ảnh tham chiếu; CTA đỏ đã được Owner duyệt ở vị trí hiện hành giữ nguyên, CTA sản phẩm có thể dùng tím. Không mang ngoại lệ radius này vào UI Admin.
+- Button **180–200ms**; menu **180–220ms**; card hover nâng nhẹ **2–4px**, không scale giật hoặc animation blur liên tục. Popup/drawer/toast vẫn giữ timing bắt buộc đang có.
+- Glass header, gallery frame, product info, SKU selector, related-product cards, dealer banner, footer phải dùng chung tokens và primitives. Overlay kính không làm sai màu ảnh sản phẩm; text trên background ảnh phải đạt WCAG AA. Có fallback không hỗ trợ backdrop-filter và giảm motion cho thiết bị cần thiết.
+- UI-only: **không đổi** dữ liệu, SKU, API, database, quy trình mua/báo giá, routing, SEO, auth, quyền, logic variant/ảnh. Background R2 qua config/endpoint public hiện hữu nếu có; **không tự tạo migration/API** chỉ để đạt UI tham chiếu.
+- Trình tự visual rollout tại [roadmap duy nhất](roadmap.md); kiểm trang Song Natural trước. Ảnh mockup do Owner gửi chỉ là style reference, không dùng làm nguồn ảnh sản phẩm hoặc bằng chứng UAT.
