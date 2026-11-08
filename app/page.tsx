@@ -9,8 +9,12 @@ import { GlassCard } from "@/components/glass-ui";
 import { previewProducts } from "@/lib/ui-preview";
 import { VerifiedMediaImage } from "@/components/verified-media-image";
 import { approvedSiteMedia } from "@/lib/media/approved-site-media";
+import {getPublicCms} from "@/lib/content/cms";
+import {CmsBannerSlot,CmsFeaturedSlot} from "@/components/cms-web-content";
 
-export default function HomePage() {
+export const dynamic="force-dynamic";
+export default async function HomePage() {
+  const cms=await getPublicCms();
   return (
     <>
       <SiteHeader />
@@ -43,6 +47,7 @@ export default function HomePage() {
                   </div>
                 )}
               />
+              <CmsBannerSlot items={cms} slot="home.hero"/>
               <p className="ref-hero__handwriting" aria-hidden="true">Vở đẹp<br/>cho hành trình<br/>tri thức!</p>
               <div className="ref-hero__dots" aria-hidden="true"><i/><i/><i/><i/></div>
             </div>
@@ -81,6 +86,9 @@ export default function HomePage() {
           </section>
           <p className="ref-preview-note">* Hình tập vở, thẻ sản phẩm và thứ tự hiển thị chỉ là mẫu UI, không phải catalogue, bảng giá hoặc sản phẩm bán chạy đã xác minh.</p>
 
+          <CmsBannerSlot items={cms} slot="home.after_products"/>
+          <CmsFeaturedSlot items={cms} slot="home.news_featured"/>
+          <CmsFeaturedSlot items={cms} slot="home.promotion_featured"/>
           <section className="ref-promos" aria-label="Khám phá nhóm sản phẩm">
             <div className="ref-promo ref-promo--a4">
               <div><h2>Vở A4</h2><p>Không gian học tập và làm việc</p><a href="#categories">Xem danh mục <Icon name="arrow" size={16}/></a></div>
