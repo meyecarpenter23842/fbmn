@@ -45,7 +45,11 @@ test("P0B route feedback, gallery fades and compositor-only loading support redu
  assert.ok(catalog.includes('fb-web-gallery-enter'));
  assert.ok(content.includes('fb-web-content-enter'));
  assert.ok(!catalog.includes('background-position: 160% 0'));
- assert.ok(source("components/published-image-gallery.tsx").includes('className="catalogue-gallery-photo"'));
+ const gallery=source("components/published-image-gallery.tsx");
+ assert.ok(gallery.includes('glass?"fb-song-gallery-photo":"catalogue-gallery-photo"'));
+ const glass=source("app/glass-product-detail.css");
+ assert.match(glass,/fb-song-gallery-enter/);
+ assert.match(glass,/@media \(prefers-reduced-motion: reduce\)[\s\S]*\.fb-song-gallery-photo \{\s*animation: none/);
 });
 
 test("P0 lightweight route fallbacks and gallery controls preserve accessibility", () => {
