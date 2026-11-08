@@ -278,13 +278,33 @@
 .fb-song-related-card {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  min-width: 0;
+}
+
+/* One focusable link fills the glass card: all surfaces navigate to product. */
+.fb-song-related-hit {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+  color: inherit;
+  text-decoration: none;
+  border-radius: inherit;
+}
+.fb-song-related-hit:focus-visible {
+  outline: 3px solid var(--color-primary);
+  outline-offset: 4px;
+}
+.fb-song-related-card:focus-within {
+  border-color: var(--color-primary);
 }
 
 .fb-song-related-image {
   display: block;
   position: relative;
-  min-height: 200px;
+  height: 160px;
+  min-height: 0;
   overflow: hidden;
   border-radius: var(--fb-glass-panel-radius);
   background: #fff;
@@ -294,15 +314,19 @@
   display: flex;
   flex: 1;
   flex-direction: column;
-  gap: 9px;
+  gap: 6px;
   min-width: 0;
 }
 
 .fb-song-related-body h3 {
   color: var(--fb-glass-ink);
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 800;
   margin: 0;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
 }
 
 .fb-song-related-body p {
@@ -317,8 +341,86 @@
   margin-top: auto;
 }
 
-.fb-song-related-link {
+/* G07: the redundant "Xem chi tiết" button was removed entirely. */
+
+
+/* The overview contains the verified cover preview only on mobile. */
+.fb-song-overview {
+  min-width: 0;
+}
+.fb-song-overview-preview {
+  display: none;
+}
+.fb-song-overview-copy {
+  min-width: 0;
+}
+
+/* Main product image is a real action; browser-native dialog handles Escape,
+ * focus containment and return focus without inventing any product image. */
+.fb-song-gallery-open {
+  display: block;
+  position: relative;
   width: 100%;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  background: white;
+  cursor: zoom-in;
+}
+.fb-song-gallery-open:focus-visible {
+  outline: 3px solid var(--color-primary);
+  outline-offset: -5px;
+}
+.fb-song-gallery-open:disabled {
+  cursor: default;
+}
+.fb-song-gallery-caption {
+  display: none;
+}
+.fb-song-zoom-dialog {
+  position: fixed;
+  width: min(92vw, 860px);
+  max-width: 92vw;
+  height: min(88dvh, 820px);
+  max-height: 88dvh;
+  padding: 14px;
+  border: 1px solid var(--fb-glass-border);
+  border-radius: 22px;
+  background: #fff;
+  box-shadow: 0 24px 70px rgba(30, 13, 55, .35);
+  color: var(--fb-glass-ink);
+}
+.fb-song-zoom-dialog::backdrop {
+  background: rgba(23, 11, 38, .72);
+}
+.fb-song-zoom-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--fb-control-height-touch);
+  padding: 0 16px;
+  margin-bottom: 8px;
+  border: 1px solid var(--fb-glass-stroke);
+  border-radius: var(--fb-control-radius);
+  color: var(--color-primary-strong);
+  background: #f6edfc;
+  font-size: var(--fb-control-font-size);
+  font-weight: 750;
+  cursor: pointer;
+}
+.fb-song-zoom-close:focus-visible {
+  outline: 3px solid var(--color-primary);
+  outline-offset: 2px;
+}
+.fb-song-zoom-frame {
+  position: relative;
+  height: calc(100% - 60px);
+  overflow: hidden;
+  border-radius: 14px;
+  background: white;
+}
+.fb-song-mobile-cta {
+  display: none;
 }
 
 @media (max-width: 1100px) and (min-width: 701px) {
@@ -328,19 +430,113 @@
 }
 
 @media (max-width: 700px) {
+  .fb-glass-song-page { padding-bottom: 110px; }
+  /* SKU first, with a compact verified-photo preview beside the product name.
+     The full gallery follows controls instead of forcing an initial long scroll. */
   .fb-song-detail {
-    grid-template-columns: 1fr;
-    gap: 16px;
-  }
-
-  .fb-song-main-photo {
-    height: clamp(290px, 90vw, 430px);
-  }
-
-  .fb-song-related-grid {
-    grid-auto-columns: minmax(215px, 77%);
+    display: flex;
+    flex-direction: column;
     gap: 12px;
   }
+  .fb-song-info { order: 0; }
+  .fb-song-gallery { order: 1; }
+  .fb-song-overview {
+    display: grid;
+    grid-template-columns: 104px minmax(0,1fr);
+    align-items: center;
+    gap: 12px;
+  }
+  .fb-song-overview-preview {
+    display: block;
+    position: relative;
+    width: 104px;
+    height: 124px;
+    padding: 0;
+    overflow: hidden;
+    border: 1px solid var(--fb-glass-border-fallback);
+    border-radius: 14px;
+    background: white;
+    cursor: zoom-in;
+  }
+  .fb-song-overview-preview:focus-visible {
+    outline: 3px solid var(--color-primary);
+    outline-offset: 3px;
+  }
+  .fb-song-overview-preview:disabled { cursor: default; }
+  .fb-song-overview .catalog-overline { font-size: 10px; margin-bottom: 5px; }
+  .fb-song-overview .fb-song-title { font-size: clamp(23px, 6vw, 29px); margin-bottom: 6px; }
+  .fb-song-overview .fb-song-description {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
+    font-size: 12px;
+    line-height: 1.45;
+    margin: 0 0 5px;
+  }
+  .fb-song-overview .fb-song-count { margin: 0; }
+  .fb-song-options { flex: none; gap: 10px; margin-top: 12px; }
+  .fb-song-facets { gap: 8px 12px; }
+  .fb-song-fieldset legend { margin-bottom: 5px; }
+  .fb-song-sku-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(65px, 1fr));
+    gap: 7px;
+  }
+  .fb-song-summary { margin-top: 2px; }
+  /* Mobile gallery is a small verified-thumbnail ribbon; tapping a thumb
+     opens the same native zoom dialog as the compact overview. */
+  .fb-song-gallery[data-has-media="false"] { display: none; }
+  .fb-song-main-photo { display: none; }
+  .fb-song-gallery-caption {
+    display: block;
+    color: var(--fb-glass-muted);
+    font-size: 12px;
+    margin: 0;
+  }
+  .fb-song-gallery-thumbs { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 4px; }
+  .fb-song-related-grid {
+    grid-auto-columns: minmax(226px, 77%);
+    gap: 12px;
+  }
+  .fb-song-related-hit {
+    display: grid;
+    grid-template-columns: minmax(85px, 36%) minmax(0,1fr);
+    align-items: center;
+    gap: 10px;
+  }
+  .fb-song-related-image {
+    width: 100%;
+    height: 108px;
+    min-height: 0;
+  }
+  .fb-song-related-body { gap: 5px; }
+  .fb-song-related-price { font-size: 12px; margin-top: 0; }
+  /* Single contextual action, never a navigation dock. */
+  .fb-song-mobile-cta {
+    position: fixed;
+    z-index: 30;
+    bottom: max(10px, env(safe-area-inset-bottom));
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    width: min(440px, calc(100% - 20px));
+    min-height: 60px;
+    padding: 8px 10px 8px 15px;
+    border: 1px solid var(--fb-glass-border);
+    border-radius: 18px;
+    background: rgba(252, 247, 255, .94);
+    box-shadow: 0 9px 25px rgba(65, 25, 100, .19);
+    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(12px);
+    color: var(--fb-glass-ink);
+    font-size: var(--fb-control-font-size);
+  }
+  .fb-song-mobile-cta > span { min-width: 0; white-space: nowrap; }
+  .fb-song-mobile-cta .fb-glass-button { min-height: var(--fb-control-height-touch); white-space: nowrap; }
 }
 
 @media (max-width: 420px) {
