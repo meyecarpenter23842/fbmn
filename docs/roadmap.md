@@ -3,6 +3,27 @@
 **Chốt ngày:** 01/11/2026 (quyết định mới cho module sản phẩm; giữ lịch sử nguồn 29/10). **Chủ sở hữu scope:** Futurebook Miền Nam.  
 **Đây là tài liệu kế hoạch DUY NHẤT.** GitHub [issue #1](https://github.com/alibaba240185/fbmn/issues/1) chỉ là **mục lục/trạng thái**, không là một kế hoạch thứ hai. Các issue thực thi phải dẫn về đây. `docs/admin-console-roadmap.md` được giữ như tài liệu tham khảo kỹ thuật, không còn roadmap độc lập.
 
+## 0. Ưu tiên thiết kế mới 08/11/2026 — Website Premium Glass UI V2 (UI-only)
+
+Owner chốt hai ảnh tham chiếu Premium Purple Glass: **glassmorphism trong suốt là phong cách chính** trên lớp ảnh nền trang trí có thể cấu hình từ R2. Đây là cập nhật UI/UX **nằm trong roadmap duy nhất**, không mở roadmap/issue trùng. Nguồn quy tắc: [UI Contract chung](futurebook-ui-contract.md), [Website Design System V2](web-component-design-system.md), [Website AGENTS](../app/AGENTS.md).
+
+**Phạm vi giữ nguyên:** toàn bộ SKU, family, dữ liệu công khai, API, database, phân quyền, nội dung, navigation, SEO, luồng báo giá và chức năng đang hoạt động. Không tự thêm module hay triển khai production; không sử dụng ảnh bìa AI/mockup làm ảnh sản phẩm.
+
+| Lô | Công việc UI | Đầu ra nghiệm thu |
+|---|---|---|
+| **G01 — Foundation** | Audit CSS/component hiện hữu; tokens glass, màu, shadow, border, radius, typography, motion; document contract | Một nguồn tokens và style nhất quán, không chồng chéo với Admin; không đổi layout hoặc nghiệp vụ |
+| **G02 — Shared primitives** | Glass backdrop/header/card/panel/button/chip; gallery style, state hover/active/focus/disabled/loading/error | Primitives tái sử dụng, không nhân bản CSS hoặc bỏ chức năng |
+| **G03 — Song Natural** | Áp V2 vào trang §/san-pham/sku-3ac08ff247847c1e77bfccb0e806ed29§: gallery trái/info phải, selector, CTA, related cards | Chuyển SKU/ảnh/quy cách/CTA đúng dữ liệu; UAT screenshot desktop/mobile thực tế |
+| **G04 — R2 decorative background** | Lớp ảnh nền riêng, overlay và fallback; lấy URL từ cấu hình public/media **nếu hệ thống hiện có hỗ trợ** | Có ảnh thì glass hiển thị trên nền; thiếu ảnh vẫn đẹp; không hardcode URL, không tự đổi DB/API |
+| **G05 — Website rollout** | Dùng primitives V2 cho trang chủ, danh mục, liên hệ/đại lý, banner và footer | Cùng một hệ thống kính mờ, giữ nav/content/CTA và responsive hiện tại |
+| **G06 — QA & performance** | Test viewport 1440/1280/768/390/360, prefers-reduced-motion, contrast, keyboard, Web Vitals, gallery/SKU/CTA | Lint/typecheck/test/build, CI và Codex sạch; ảnh nghiệm thu thật; không chậm/giật, không overflow |
+
+**Thứ tự PR:** PR tài liệu V2 (quy tắc/roadmap) → G01 → G02 → G03 và Owner nghiệm thu trang mẫu → G04 (phụ thuộc URL nền đã xác minh) → G05 → G06. Mỗi PR có scope độc lập, CI xanh và Codex review sạch mới squash merge repo phát triển. Đồng bộ local rồi fast-forward repo chính theo quy trình. Deploy production chỉ khi Owner cho phép.
+
+**Điểm phân biệt:** Lô G04 không có nghĩa đã tồn tại API cấu hình background. Nếu chưa hỗ trợ, chỉ làm CSS fallback và ghi blocker/tách phạm vi cấu hình để Owner quyết định; không phá nguyên tắc UI-only.
+
+--- 
+
 ## 1. Mục tiêu và hiện trạng đã xác minh
 
 **Mục tiêu:** Một Web Admin và một bộ backend trung tâm cho Website công khai, App Đại lý/NPP và App Người tiêu dùng (End-user); iOS/Android sẽ làm **frontend native thật sau**, không xây lại logic nghiệp vụ hoặc database cho từng nền tảng.
