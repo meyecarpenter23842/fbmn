@@ -29,7 +29,13 @@ test("P0 product cards and main nav stop automatic dynamic RSC prefetch storms",
   for (const file of ["components/catalog-ui.tsx", "components/category-navigation.tsx"])
     assert.match(source(file), /prefetch=\{false\}/, file);
   const list = source("components/catalog-ui.tsx");
-  assert.ok((list.match(/prefetch=\{false\}/g) || []).length >= 5);
+  // G07 has one full-card link instead of image/title/button links: fewer
+  // prefetch flags are correct, and every remaining route disables prefetch.
+  const card=list.slice(list.indexOf("export function ProductCard("),list.indexOf("export function formatRetail"));
+  assert.equal((card.match(/<Link\b/g)||[]).length,1);
+  assert.equal((card.match(/prefetch=\{false\}/g)||[]).length,1);
+  assert.doesNotMatch(card,/Xem chi tiết|<GlassButtonLink/);
+  assert.ok((list.match(/prefetch=\{false\}/g)||[]).length>=3);
 });
 
 test("P0B route feedback, gallery fades and compositor-only loading support reduced motion", () => {

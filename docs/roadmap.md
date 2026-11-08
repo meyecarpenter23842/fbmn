@@ -17,6 +17,7 @@ Owner chốt hai ảnh tham chiếu Premium Purple Glass: **glassmorphism trong 
 | **G04 — R2 decorative background** | Lớp ảnh nền riêng, overlay và fallback; lấy URL từ cấu hình public/media **nếu hệ thống hiện có hỗ trợ** | Có ảnh thì glass hiển thị trên nền; thiếu ảnh vẫn đẹp; không hardcode URL, không tự đổi DB/API |
 | **G05 — Website rollout** | Dùng primitives V2 cho trang chủ, danh mục, liên hệ/đại lý, banner và footer | Cùng một hệ thống kính mờ, giữ nav/content/CTA và responsive hiện tại |
 | **G06 — QA & performance** | Test viewport 1440/1280/768/390/360, prefers-reduced-motion, contrast, keyboard, Web Vitals, gallery/SKU/CTA | Lint/typecheck/test/build, CI và Codex sạch; ảnh nghiệm thu thật; không chậm/giật, không overflow |
+| **G07 — Product UX theo lệnh Owner** | Một thẻ sản phẩm = một liên kết; desktop card dọc gọn, mobile catalogue card ngang; mobile chi tiết đưa ảnh nhỏ + SKU lên trước gallery, ảnh thật phóng to và CTA chỉ xuất hiện khi nút chính khuất màn | Không mất SKU/ảnh/CTA, không đổi backend/SEO hay giá; 1 branch/PR, CI và Codex sạch, đồng bộ một lần; deploy khi Owner cho phép |
 
 **Thứ tự PR:** PR tài liệu V2 (quy tắc/roadmap) → G01 → G02 → G03 và Owner nghiệm thu trang mẫu → G04 (phụ thuộc URL nền đã xác minh) → G05 → G06. Mỗi PR có scope độc lập, CI xanh và Codex review sạch mới squash merge repo phát triển. Đồng bộ local rồi fast-forward repo chính theo quy trình. Deploy production chỉ khi Owner cho phép.
 

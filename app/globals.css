@@ -21,6 +21,8 @@
   --fb-control-radius: 9px;
   --fb-motion-button: 190ms;
   --fb-motion-menu: 200ms;
+  --fb-motion-dialog-open: 280ms;
+  --fb-motion-dialog-close: 220ms;
   --fb-motion-skeleton: 1300ms;
   --fb-easing-open: cubic-bezier(.22, 1, .36, 1);
   --fb-easing-close: cubic-bezier(.4, 0, 1, 1);

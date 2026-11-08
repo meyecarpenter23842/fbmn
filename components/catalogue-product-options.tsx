@@ -1,11 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import {useState} from "react";
+import {useEffect,useRef,useState} from "react";
 import type {PublicProduct} from "@/lib/catalog/schema";
 import {availableVariantFacets,moveVariantFacet,variantAudience,variantPaperFormat,
   visibleVariants,shortVariantLabel,photosForSku,type ProductPhoto} from "@/lib/catalog/selection";
 import PublishedImageGallery from "./published-image-gallery";
+import {CatalogProductImage} from "./catalog-product-image";
 import {GlassPanel,GlassChip,GlassButton,GlassButtonLink} from "./glass-ui";
 
 function BookIcon(){return <svg aria-hidden="true" viewBox="0 0 24 24" fill="none"
@@ -44,8 +45,24 @@ export default function CatalogueProductOptions({product,photos,glass=false}:{
   product:PublicProduct;photos:ProductPhoto[];glass?:boolean;
 }){
   const [sku,setSku]=useState(product.variants[0].sku);
+  const [photoIndex,setPhotoIndex]=useState(0);
+  const selectSku=(nextSku:string)=>{setSku(nextSku);setPhotoIndex(0);};
   const [audience,setAudience]=useState("");
   const [format,setFormat]=useState("");
+  const zoomDialogRef=useRef<HTMLDialogElement>(null);
+  const primaryQuoteRef=useRef<HTMLAnchorElement>(null);
+  const [showMobileQuote,setShowMobileQuote]=useState(false);
+  // Show the quick CTA only when the primary one is outside the viewport.
+  useEffect(()=>{
+    if(!glass||typeof IntersectionObserver==="undefined")return;
+    const target=primaryQuoteRef.current;
+    if(!target)return;
+    const observer=new IntersectionObserver(([entry])=>{
+      setShowMobileQuote(!entry.isIntersecting);
+    },{threshold:.3});
+    observer.observe(target);
+    return ()=>observer.disconnect();
+  },[glass]);
   const selected=product.variants.find(v=>v.sku===sku)??product.variants[0];
   const facets=availableVariantFacets(product.variants);
   // Keep all real company codes reachable, including codes with incomplete facet data.
@@ -53,7 +70,7 @@ export default function CatalogueProductOptions({product,photos,glass=false}:{
   const gallery=photosForSku(photos,selected.sku).map(({src,alt})=>({src,alt}));
   const selectFacet=(facet:"audience"|"format",value:string)=>{
     const next=moveVariantFacet(product.variants,selected,facet,value,audience,format);
-    setAudience(next.audience);setFormat(next.format);setSku(next.sku);
+    setAudience(next.audience);setFormat(next.format);selectSku(next.sku);
   };
   const selectedName=shortVariantLabel(selected);
   const selectedAudience=variantAudience(selected);
@@ -69,10 +86,21 @@ export default function CatalogueProductOptions({product,photos,glass=false}:{
     extraInfo.push({label:"Đơn vị/thùng",value:String(specs.packaging.unitsPerCarton)});
 
   const info=<>
-    <p className="catalog-overline">SẢN PHẨM FUTUREBOOK</p>
-    <h1 className={glass?"fb-song-title":undefined}>{product.name}</h1>
-    {product.description&&<p className={glass?"fb-song-description":"catalog-detail__description"}>{product.description}</p>}
-    <p className={glass?"fb-song-count":"catalog-detail__count"}>{product.variants.length} mã sản phẩm</p>
+    <div className={glass?"fb-song-overview":undefined}>
+      {glass&&<button type="button" className="fb-song-overview-preview"
+        onClick={()=>zoomDialogRef.current?.showModal()}
+        disabled={gallery.length===0}
+        aria-label="Phóng to ảnh sản phẩm đang chọn">
+        <CatalogProductImage src={gallery[photoIndex]?.src??gallery[0]?.src??null}
+          alt={gallery[photoIndex]?.alt??gallery[0]?.alt??product.name} className="catalog-image-compact"/>
+      </button>}
+      <div className={glass?"fb-song-overview-copy":undefined}>
+        <p className={glass?"fb-song-overline":"catalog-overline"}>SẢN PHẨM FUTUREBOOK</p>
+        <h1 className={glass?"fb-song-title":undefined}>{product.name}</h1>
+        {product.description&&<p className={glass?"fb-song-description":"catalog-detail__description"}>{product.description}</p>}
+        <p className={glass?"fb-song-count":"catalog-detail__count"}>{product.variants.length} mã sản phẩm</p>
+      </div>
+    </div>
     <div className={glass?"fb-song-options":"catalogue-options"}>
       {(facets.audiences.length>0||facets.formats.length>0)&&
         <div className={glass?"fb-song-facets":"catalogue-facets"}>
@@ -106,7 +134,7 @@ export default function CatalogueProductOptions({product,photos,glass=false}:{
         <div className={glass?"fb-song-sku-grid":"catalogue-variant-options"}>
           {choices.map(variant=><VariantChoice key={variant.sku} glass={glass}
             variant={variant} active={selected.sku===variant.sku}
-            onClick={()=>setSku(variant.sku)}/>)}
+            onClick={()=>selectSku(variant.sku)}/>)}
         </div>
       </fieldset>
       <div className={glass?"fb-song-summary":"catalogue-selected-summary"}
@@ -123,7 +151,7 @@ export default function CatalogueProductOptions({product,photos,glass=false}:{
         {selectedAudience&&<span>{selectedAudience}</span>}
         {selectedFormat&&<span>{selectedFormat}</span>}
         {glass
-          ? <GlassButtonLink href="/#contact" pill className="fb-song-quote">
+          ? <GlassButtonLink ref={primaryQuoteRef} href="/#contact" pill className="fb-song-quote">
               {quoteLabel}
             </GlassButtonLink>
           : <Link href="/#contact" className="catalog-button catalogue-selected-summary__action">
@@ -142,10 +170,18 @@ export default function CatalogueProductOptions({product,photos,glass=false}:{
     </div>
   </>;
 
-  return <div className={glass?"fb-song-detail":"catalog-detail"}>
-    <PublishedImageGallery key={selected.sku} items={gallery} glass={glass}/>
-    {glass
-      ? <GlassPanel strong={false} className="fb-song-info">{info}</GlassPanel>
-      : <div className="catalog-detail__info">{info}</div>}
-  </div>;
+  return <>
+    <div className={glass?"fb-song-detail":"catalog-detail"}>
+      <PublishedImageGallery key={selected.sku} items={gallery} glass={glass}
+        zoomDialogRef={zoomDialogRef} activeIndex={photoIndex}
+        onActiveIndexChange={setPhotoIndex}/>
+      {glass
+        ? <GlassPanel strong={false} className="fb-song-info">{info}</GlassPanel>
+        : <div className="catalog-detail__info">{info}</div>}
+    </div>
+    {glass&&showMobileQuote&&<div className="fb-song-mobile-cta">
+      <span>Mã <strong>{selected.sku}</strong></span>
+      <GlassButtonLink href="/#contact" pill>Liên hệ báo giá</GlassButtonLink>
+    </div>}
+  </>;
 }
