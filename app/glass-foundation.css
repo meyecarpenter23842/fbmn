@@ -1,0 +1,86 @@
+/*
+ * G01 — Premium Purple Glass foundation for Futurebook Website ONLY.
+ * Opt-in utility classes; no legacy selector overrides, Admin imports or R2 URLs.
+ * G02 will wrap these classes in shared React primitives; G03/G05 will adopt them.
+ */
+
+.fb-glass-page {
+  background-color: var(--fb-glass-page);
+  color: var(--fb-glass-ink);
+}
+
+.fb-glass-backdrop {
+  position: relative;
+  isolation: isolate;
+  background: var(--fb-glass-backdrop-gradient);
+}
+
+.fb-glass-surface {
+  color: var(--fb-glass-ink);
+  background-color: var(--fb-glass-surface-fallback);
+  border: 1px solid var(--fb-glass-border-fallback);
+  box-shadow: var(--fb-glass-shadow);
+}
+
+.fb-glass-surface--strong {
+  background-color: var(--fb-glass-surface-fallback);
+}
+
+.fb-glass-card {
+  border-radius: var(--fb-glass-card-radius);
+}
+
+.fb-glass-panel {
+  border-radius: var(--fb-glass-panel-radius);
+}
+
+/* Only opt-in cards get motion; never animate the backdrop blur or layout size. */
+.fb-glass-motion-card {
+  transition:
+    transform var(--fb-motion-glass-card) var(--fb-easing-open),
+    box-shadow var(--fb-motion-glass-card) var(--fb-easing-open),
+    border-color var(--fb-motion-glass-card) var(--fb-easing-open);
+}
+
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .fb-glass-motion-card:hover:not(:disabled):not([aria-disabled="true"]) {
+    transform: translateY(var(--fb-motion-glass-lift));
+    box-shadow: var(--fb-glass-shadow-hover);
+  }
+}
+
+.fb-glass-motion-card:focus-visible {
+  outline: 3px solid var(--color-primary);
+  outline-offset: 3px;
+}
+
+@supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .fb-glass-surface {
+    background-color: var(--fb-glass-surface);
+    border-color: var(--fb-glass-border);
+    -webkit-backdrop-filter: blur(var(--fb-glass-blur));
+    backdrop-filter: blur(var(--fb-glass-blur));
+  }
+
+  /* Denser glass for text-heavy product details when the backdrop is complex. */
+  .fb-glass-surface--strong {
+    background-color: var(--fb-glass-surface-strong);
+  }
+}
+
+@media (max-width: 780px) {
+  @supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+    .fb-glass-surface {
+      -webkit-backdrop-filter: blur(var(--fb-glass-blur-mobile));
+      backdrop-filter: blur(var(--fb-glass-blur-mobile));
+    }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fb-glass-motion-card {
+    transition: none;
+    transform: none;
+  }
+
+}

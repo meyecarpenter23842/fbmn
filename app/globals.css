@@ -24,6 +24,25 @@
   --fb-motion-skeleton: 1300ms;
   --fb-easing-open: cubic-bezier(.22, 1, .36, 1);
   --fb-easing-close: cubic-bezier(.4, 0, 1, 1);
+  /* G01 — Website-only Premium Purple Glass foundation. Single source of visual tokens.
+     This is opt-in; legacy .ref-* / .catalog-* selectors keep their current appearance. */
+  --fb-glass-page: #f7f3fc;
+  --fb-glass-surface: rgba(255, 255, 255, .68);
+  --fb-glass-surface-strong: rgba(255, 255, 255, .82);
+  --fb-glass-surface-fallback: rgba(255, 255, 255, .94);
+  --fb-glass-border: rgba(255, 255, 255, .65);
+  --fb-glass-border-fallback: rgba(96, 47, 137, .17);
+  --fb-glass-blur: 20px;
+  --fb-glass-blur-mobile: 12px;
+  --fb-glass-card-radius: 24px;
+  --fb-glass-panel-radius: 20px;
+  --fb-glass-shadow: 0 14px 32px rgba(63, 25, 98, .12), 0 2px 8px rgba(63, 25, 98, .05);
+  --fb-glass-shadow-hover: 0 19px 42px rgba(63, 25, 98, .17), 0 5px 12px rgba(63, 25, 98, .07);
+  --fb-glass-ink: #241331;
+  --fb-glass-muted: #62576c;
+  --fb-glass-backdrop-gradient: radial-gradient(ellipse at 85% 12%, rgba(209, 182, 243, .56), transparent 48%), linear-gradient(135deg, #f7f3fc, #ede3f9 52%, #faf7ff);
+  --fb-motion-glass-card: 200ms;
+  --fb-motion-glass-lift: -3px;
 }
 * { box-sizing: border-box; }
 html { scroll-behavior: smooth; }
