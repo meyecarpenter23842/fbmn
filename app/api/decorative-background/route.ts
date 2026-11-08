@@ -23,7 +23,7 @@ export async function GET(request: Request) {
         !base.hostname || base.hostname === "localhost" ||
         base.hostname.endsWith(".r2.dev") || base.hostname.endsWith(".internal") ||
         base.hostname.endsWith(".invalid") ||
-        /^(127\\.|10\\.|192\\.168\\.|169\\.254\\.|0\\.)/.test(base.hostname)) {
+        /^(127\.|10\.|192\.168\.|169\.254\.|0\.)/.test(base.hostname)) {
       throw new Error("Invalid public API origin");
     }
     origin = base.origin;
@@ -42,7 +42,7 @@ export async function GET(request: Request) {
     if (response.status !== 200 ||
         response.headers.get("content-type")?.split(";")[0] !== "image/webp" ||
         !response.body || (length !== null &&
-          (!/^\\d+$/.test(length) || Number(length) < 16 || Number(length) > MAX_BYTES))) {
+          (!/^\d+$/.test(length) || Number(length) < 16 || Number(length) > MAX_BYTES))) {
       await response.body?.cancel();
       return failure(response.status === 404 ? 404 : 503);
     }
