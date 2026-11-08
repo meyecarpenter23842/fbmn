@@ -1,4 +1,5 @@
-import type { ComponentProps, ComponentPropsWithoutRef } from "react";
+import type { ComponentProps, ComponentPropsWithoutRef, CSSProperties } from "react";
+import { getApprovedMediaUrl, type ApprovedMedia } from "@/lib/media/r2";
 import Link from "next/link";
 
 /**
@@ -19,11 +20,33 @@ type MotionOptions = {
   hover?: boolean;
 };
 
+type DecorativeBackdropOptions = {
+  /** Explicitly selected, approved public R2 banner. Never use a raw R2 key or URL. */
+  decorativeMedia?: ApprovedMedia | null;
+  /** Public HTTPS media origin provided by an already-published configuration. */
+  publicMediaOrigin?: string;
+};
+
+/** No approved public configuration => existing lavender gradient, without image requests. */
 export function GlassPageBackdrop({
   className,
+  decorativeMedia = null,
+  publicMediaOrigin,
+  style,
   ...rest
-}: ComponentPropsWithoutRef<"div">) {
-  return <div {...rest} className={classes("fb-glass-page", "fb-glass-backdrop", className)} />;
+}: ComponentPropsWithoutRef<"div"> & DecorativeBackdropOptions) {
+  const url = decorativeMedia?.kind === "banner"
+    ? getApprovedMediaUrl(decorativeMedia, publicMediaOrigin)
+    : null;
+  const backdropStyle = url
+    ? ({ ...style, "--fb-glass-decorative-image": `url("${url}")` } as CSSProperties)
+    : style;
+  return <div
+    {...rest}
+    style={backdropStyle}
+    data-decorative={url ? "true" : undefined}
+    className={classes("fb-glass-page", "fb-glass-backdrop", className)}
+  />;
 }
 
 export function GlassHeader({

@@ -15,6 +15,21 @@
   background: var(--fb-glass-backdrop-gradient);
 }
 
+/* G04: image and veil are opt-in, on the same component-owned surface.
+ * Missing/unavailable images reveal the lavender gradient underneath.
+ * Keep this a CSS background: decorative only, no alt/DOM image or layout shift.
+ */
+.fb-glass-backdrop[data-decorative="true"] {
+  background-image:
+    var(--fb-glass-backdrop-overlay),
+    var(--fb-glass-decorative-image),
+    var(--fb-glass-backdrop-gradient);
+  background-position: center;
+  background-size: cover;
+  background-repeat: no-repeat;
+  background-attachment: scroll;
+}
+
 .fb-glass-surface {
   color: var(--fb-glass-ink);
   background-color: var(--fb-glass-surface-fallback);
