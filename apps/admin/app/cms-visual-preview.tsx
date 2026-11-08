@@ -2,6 +2,7 @@
 import {CmsImagePreview,cmsMediaKey} from "./cms-media-editor";
 import type {CmsChannel,CmsDevice,CmsPendingImages} from "./cms-media-editor";
 import {CMS_SLOTS} from "./cms-placement-options";
+import CmsWebsiteScene from "./cms-website-scene";
 import type {CmsKind} from "./cms-placement-options";
 
 const CHANNEL_LABELS:Record<CmsChannel,string>={
@@ -54,7 +55,12 @@ export default function CmsVisualPreview({kind,title,summary,ctaUrl,channelTarge
     </div>
    </div>
   </div>
-  <div className="cms-simulation-viewport">
+  {webOnly?
+   <div className="cms-simulation-viewport">
+    <CmsWebsiteScene kind={kind} slot={slot} title={title} summary={summary}
+     ctaUrl={ctaUrl} image={image} device={device}/>
+   </div>:
+   <div className="cms-simulation-viewport">
    <div className={"cms-simulation "+(device==="mobile"?"cms-simulation--mobile":"cms-simulation--desktop")+
     (isApp?" cms-simulation--app":"")} role="img"
     aria-label={"Bố cục minh họa "+CHANNEL_LABELS[current]+" "+label}>
@@ -79,8 +85,8 @@ export default function CmsVisualPreview({kind,title,summary,ctaUrl,channelTarge
     {["home.hero","home.banner","home.after_products","category.header"].includes(slot)&&
       <div className="cms-simulation-footer-placeholder">Nội dung tiếp theo của trang</div>}
    </div>
-  </div>
-  <p className="cms-preview-disclaimer">Mô phỏng vị trí theo contract và ảnh vừa chọn; chưa phải ảnh chụp trang đang chạy.
+  </div>}
+  <p className="cms-preview-disclaimer">Bố cục đối chiếu mã nguồn Website và ảnh thực tế đang chọn; không phải ảnh chụp live hoặc renderer CMS đã triển khai.
    Nội dung chỉ xuất hiện công khai sau khi kết nối API và giao diện nhận CMS.</p>
  </section>;
 }
