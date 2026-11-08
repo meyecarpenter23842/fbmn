@@ -50,7 +50,7 @@ test("G04 GlassPageBackdrop uses its own validated banner media opt-in", () => {
   assert.match(ui, /"--fb-glass-decorative-image"/);
   assert.doesNotMatch(ui, /NEXT_PUBLIC_MEDIA_BASE_URL|r2\.dev|http:\/\/|R2_SECRET/);
   assert.match(ui, /decorativeReadPath === "\/api\/decorative-background"/);
-  assert.match(page, /<GlassPageBackdrop className="fb-glass-song-page" decorativeReadPath="\/api\/decorative-background">/);
+  assert.match(page, /<GlassPageBackdrop className="fb-glass-song-page" decorativeReadPath=\{publicDecorativeBackground\.songNatural \?\? undefined\}>/);
   assert.doesNotMatch(page, /decorativeMedia=|publicMediaOrigin=/);
 });
 
@@ -73,7 +73,7 @@ test("G04 keeps the gradient as a background layer when image missing or 404", (
   assert.doesNotMatch(foundation, /background-attachment:\s*fixed|transition[^;]*backdrop-filter/);
 });
 
-test("G04 changes no API, Admin, data, URL, SEO or product gallery contract", () => {
+test("G04R preserves catalogue API, Admin, product data, SEO and gallery", () => {
   assert.match(layout, /import "\.\/glass-foundation\.css";/);
   assert.match(page, /getPublicCatalog\(\)/);
   assert.match(page, /getPublishedProductImageUrl\(media\.r2Key,process\.env\.NEXT_PUBLIC_MEDIA_BASE_URL\)/);
