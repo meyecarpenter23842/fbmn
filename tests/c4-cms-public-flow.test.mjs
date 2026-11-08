@@ -92,7 +92,8 @@ test("C4 SQL migration filters drafts, approvals, future/expired, withdrawals, c
   "c.placements->>'public_web'","m.mime_type='image/webp'",
   "security_barrier=true","GRANT SELECT","TO fbmn_public_reader",
  ])assert.ok(sql.includes(piece),piece);
- assert.doesNotMatch(sql,/GRANT\s+SELECT\s+ON\s+fbmn_catalog_private/i);
+ const statements=sql.split("\n").filter(line=>!line.trim().startsWith("--")).join("\n");
+ assert.doesNotMatch(statements,/GRANT\s+SELECT\s+ON\s+fbmn_catalog_private/i);
  assert.match(sql,/JOIN fbmn_public\.v_cms_web_entries/);
  const rollback=read("backend/neon/migrations/20261108_c4_cms_public_views.down.sql");
  assert.match(rollback,/rollback_confirmed/);
