@@ -90,7 +90,7 @@ export default function CatalogueProductOptions({product,photos,glass=false}:{
         disabled={gallery.length===0}
         aria-label="Phóng to ảnh sản phẩm đang chọn">
         <CatalogProductImage src={gallery[0]?.src??null}
-          alt={gallery[0]?.alt??product.name}/>
+          alt={gallery[0]?.alt??product.name} className="catalog-image-compact"/>
       </button>}
       <div className={glass?"fb-song-overview-copy":undefined}>
         <p className="catalog-overline">SẢN PHẨM FUTUREBOOK</p>
