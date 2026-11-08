@@ -27,21 +27,21 @@
   /* G01 — Website-only Premium Purple Glass foundation. Single source of visual tokens.
      This is opt-in; legacy .ref-* / .catalog-* selectors keep their current appearance. */
   --fb-glass-page: #f7f3fc;
-  --fb-glass-surface: rgba(255, 255, 255, .50);
-  --fb-glass-surface-strong: rgba(255, 255, 255, .66);
+  --fb-glass-surface: rgba(255, 255, 255, .48);
+  --fb-glass-surface-strong: rgba(255, 255, 255, .64);
   --fb-glass-surface-fallback: rgba(255, 255, 255, .94);
-  --fb-glass-border: rgba(255, 255, 255, .78);
+  --fb-glass-border: rgba(255, 255, 255, .84);
   --fb-glass-border-fallback: rgba(96, 47, 137, .17);
   --fb-glass-blur: 20px;
   --fb-glass-blur-mobile: 12px;
   --fb-glass-card-radius: 24px;
   --fb-glass-panel-radius: 20px;
-  --fb-glass-shadow: 0 14px 32px rgba(63, 25, 98, .12), 0 2px 8px rgba(63, 25, 98, .05);
+  --fb-glass-shadow: inset 0 1px 0 rgba(255, 255, 255, .66), 0 16px 34px rgba(63, 25, 98, .13), 0 3px 9px rgba(63, 25, 98, .045);
   --fb-glass-shadow-hover: 0 19px 42px rgba(63, 25, 98, .17), 0 5px 12px rgba(63, 25, 98, .07);
   --fb-glass-ink: #241331;
   --fb-glass-muted: #62576c;
   --fb-glass-backdrop-gradient: radial-gradient(ellipse at 93% 14%, rgba(176, 211, 150, .26), transparent 38%), radial-gradient(ellipse at 12% 18%, rgba(132, 65, 195, .27), transparent 49%), radial-gradient(ellipse at 86% 61%, rgba(189, 112, 237, .34), transparent 53%), radial-gradient(ellipse at 44% 91%, rgba(252, 204, 229, .42), transparent 58%), linear-gradient(120deg, #f4edfc, #eee1f7 56%, #faf7f4);
-  --fb-glass-backdrop-overlay: linear-gradient(120deg, rgba(249, 244, 255, .70), rgba(249, 243, 255, .48) 54%, rgba(252, 248, 255, .70));
+  --fb-glass-backdrop-overlay: linear-gradient(120deg, rgba(249, 244, 255, .46), rgba(249, 243, 255, .28) 54%, rgba(252, 248, 255, .49));
   /* G05: all Website skins consume these shared visual materials.
      The fully opaque defaults remain legible without backdrop-filter. */
   --fb-glass-surface-layer: var(--fb-glass-surface-fallback);
