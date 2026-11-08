@@ -44,8 +44,8 @@ test("Glass SKU controls display only the company code with accessible full spec
     "visibleVariants(product.variants,audience,format)",
     "photosForSku(photos,selected.sku)",
     "moveVariantFacet(product.variants,selected,facet,value,audience,format)",
-    "setAudience(next.audience);setFormat(next.format);setSku(next.sku);",
-    "onClick={()=>setSku(variant.sku)}",
+    "setAudience(next.audience);setFormat(next.format);selectSku(next.sku);",
+    "onClick={()=>selectSku(variant.sku)}",
     'selected.price?.kind==="retail"'
   ])assert.ok(options.includes(logic),logic);
   assert.match(options,/className=\{glass\?"fb-song-summary-name":"catalogue-selected-summary__name"\}/);
@@ -56,13 +56,13 @@ test("Glass SKU controls display only the company code with accessible full spec
 });
 
 test("Gallery uses real images, preserved thumbnail actions, and separate glass classes",()=>{
-  assert.match(options, /<PublishedImageGallery key=\{selected\.sku\} items=\{gallery\} glass=\{glass\}[\s\S]*?zoomDialogRef=\{zoomDialogRef\}\/>/);
+  assert.match(options, /<PublishedImageGallery key=\{selected\.sku\} items=\{gallery\} glass=\{glass\}[\s\S]*?zoomDialogRef=\{zoomDialogRef\}[\s\S]*?onActiveIndexChange=\{setPhotoIndex\}\/>/);
   assert.match(gallery,/const \[selected,setSelected\]=useState\(0\)/);
   assert.match(gallery,/<CatalogProductImage src=\{current\?\.src\?\?null\} alt=\{current\?\.alt\?\?"Sản phẩm Futurebook"\}\/>/);
   assert.match(gallery,/<GlassMediaFrame className="fb-song-main-photo">/);
   assert.match(gallery, /<GlassCard className="fb-song-gallery" data-has-media=/);
-  assert.match(gallery,/aria-pressed=\{selected===i\}/);
-  assert.match(gallery, /setSelected\(i\)/);
+  assert.match(gallery,/aria-pressed=\{active===i\}/);
+  assert.match(gallery, /choose\(i\)/);
   assert.match(gallery,/src=\{img\.src\}/);
   assert.doesNotMatch(gallery,/imagegen|placeholder\.com|unsplash|mockup/i);
 });
@@ -71,7 +71,7 @@ test("Related products keep source-backed links and exclusively styled glass car
   assert.match(related,/if\(items\.length===0\)return null/);
   assert.match(related,/items\.map\(product=><ProductCard key=\{product\.id\} product=\{product\} glass=\{glass\}\/>\)/);
   assert.match(card,/export function ProductCard\(\{ product, glass = false \}/);
-  assert.match(card,/<GlassCard hover className="fb-song-related-card">/);
+  assert.match(card,/<GlassCard hover linkCard className="fb-song-related-card">/);
   assert.match(card,/: <article className="catalog-product">/);
   assert.match(card,/getPublishedProductImageUrl\(media\.r2Key, process\.env\.NEXT_PUBLIC_MEDIA_BASE_URL\)/);
   assert.match(card,/const href = "\/san-pham\/" \+ encodeURIComponent\(product\.slug\)/);
