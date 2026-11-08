@@ -13,7 +13,10 @@ test("C1 groups existing Website CMS screens underneath one channel heading",()=
   assert.match(page,/\{key:"content",label:"Tin tức & Khuyến mãi",icon:"file"\}/);
   assert.match(page,/<span>Website Futurebook<\/span>/);
   assert.match(page,/aria-controls="website-navigation" aria-expanded=\{websiteMenuExpanded\}/);
-  assert.match(page,/\{websiteMenuExpanded&&<div id="website-navigation" className="side-submenu">/);
+  assert.match(page,/id="website-navigation" className=\{\s*"side-submenu-motion"/);
+  assert.match(page,/aria-hidden=\{!websiteMenuExpanded\} inert=\{!websiteMenuExpanded\}/);
+  assert.match(page,/aria-hidden=\{!productMenuExpanded\} inert=\{!productMenuExpanded\}/);
+  assert.doesNotMatch(page,/\{websiteMenuExpanded&&<div/);
   assert.match(page,/websiteSections\.map\(item=>/);
   assert.doesNotMatch(page,/menu\.filter\(item=>\["pricing","banners","content"\]\.includes\(item\.key\)\)/);
   assert.match(page,/menu\.filter\(item=>item\.key==="pricing"\)/);
@@ -39,6 +42,9 @@ test("C1 maintains accessible active states and shared mobile control dimensions
   assert.match(page,/onClick=\{\(\)=>navigate\(item\.key\)\}/);
   assert.match(navCss,/\.side-sub-link\{[^}]*font-size:13px/s);
   assert.match(navCss,/@media\(max-width:780px\)\{\.side-group-heading,\.side-sub-link\{min-height:44px\}\}/);
-  assert.match(navCss,/@media\(prefers-reduced-motion:reduce\)/);
+  assert.match(navCss,/\.side-submenu-motion\{display:grid;grid-template-rows:0fr;opacity:0;overflow:hidden/);
+  assert.match(navCss,/\.side-submenu-motion\.is-expanded\{grid-template-rows:1fr;opacity:1\}/);
+  assert.match(navCss,/--fb-motion-menu,200ms/);
+  assert.match(navCss,/@media\(prefers-reduced-motion:reduce\)[^\n]*side-submenu-motion/);
   assert.doesNotMatch(page,/setChannelTargets|setSelectedChannel/);
 });
