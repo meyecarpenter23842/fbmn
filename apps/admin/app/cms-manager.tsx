@@ -7,7 +7,10 @@ import AdminToast from "./admin-toast";
 import CmsMediaEditor,{cmsMediaKey,uploadCmsImage} from "./cms-media-editor";
 import type {CmsChannel as ImageChannel,CmsDevice,CmsPendingImages} from "./cms-media-editor";
 import CmsVisualPreview from "./cms-visual-preview";
-import {CMS_SLOTS} from "./cms-placement-options";
+import CmsWebsitePlacement,{cmsWebsiteSlotLabel} from "./cms-website-placement";
+import {websiteDraftTargets,withWebsitePlacement} from "./cms-website-policy";
+import {websiteCmsPage} from "./cms-website-list";
+import type {CmsSourcePage} from "./cms-website-list";
 
 type CmsKind = "banner"|"popup"|"article"|"promotion";
 type CmsStatus = "draft"|"published"|"hidden";
@@ -30,11 +33,6 @@ type Draft = {
 const LABELS:Record<CmsKind,string>={
  banner:"Banner",popup:"Popup",article:"Tin tức",promotion:"Khuyến mãi"
 };
-const CHANNELS:{code:CmsChannel;label:string}[]=[
- {code:"public_web",label:"Website"},
- {code:"dealer_app",label:"App đại lý"},
- {code:"consumer_app",label:"App người tiêu dùng"}
-];
 function localDate(value:string|null){
  if(!value)return "";
  const d=new Date(value);
@@ -44,13 +42,13 @@ function localDate(value:string|null){
 }
 function blank(kind:CmsKind):Draft {
  return {kind,slug:"",title:"",summary:"",paragraphs:"",ctaUrl:"",
-  channelTargets:[],sortOrder:0,startsAt:"",endsAt:"",sourceRef:"",
+  channelTargets:websiteDraftTargets(),sortOrder:0,startsAt:"",endsAt:"",sourceRef:"",
   placements:{},popupDelaySeconds:3,popupCooldownMinutes:1440,popupMaxPerSession:1};
 }
 function fromItem(item:CmsItem):Draft {
  return {kind:item.kind,slug:item.slug,title:item.title,summary:item.summary,
   paragraphs:item.paragraphs.join("\n\n"),ctaUrl:item.cta_url||"",
-  channelTargets:item.channel_targets,sortOrder:item.sort_order,
+  channelTargets:websiteDraftTargets(item.channel_targets),sortOrder:item.sort_order,
   startsAt:localDate(item.starts_at),endsAt:localDate(item.ends_at),
   sourceRef:item.source_ref,placements:item.placements||{},
   popupDelaySeconds:item.popup_delay_seconds??3,popupCooldownMinutes:item.popup_cooldown_minutes??1440,
@@ -58,7 +56,7 @@ function fromItem(item:CmsItem):Draft {
 }
 function errorLabel(status:number,code?:string){
  if(code==="cms_worker_not_deployed"||status===404)return "Worker CMS chưa được triển khai. API chưa sẵn sàng; đây không phải danh sách trống.";
- if(code==="surface_unavailable")return "Nội dung mới chỉ có trong Admin. Chưa thể xuất bản vì Website/App chưa kết nối CMS.";
+ if(code==="surface_unavailable")return "Nội dung mới chỉ có trong Admin. Website chưa kết nối CMS để xuất bản.";
  if(code==="placements_required")return "Chọn vị trí cụ thể cho tất cả kênh trước khi xuất bản.";
  if(code==="media_required")return "Banner/popup cần ảnh desktop và mobile trước khi xuất bản.";
  if(status===401)return "Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại.";
@@ -98,9 +96,8 @@ function CmsEditor({item,kind,onSaved,onSavingChange,dirtyRef,step,onStep,formId
  const [busy,setBusy]=useState(false);
  const [error,setError]=useState("");
  const [toastId,setToastId]=useState(0);
- const [previewChannel,setPreviewChannel]=useState<CmsChannel>("public_web");
  const [previewDevice,setPreviewDevice]=useState<CmsDevice>("desktop");
- const contentDirty=useRef(false),operationLock=useRef(false);
+ const contentDirty=useRef(item?.channel_targets.length===0),operationLock=useRef(false);
  const previewUrls=useRef<Set<string>>(new Set());
  useEffect(()=>{
   const owned=previewUrls.current;
@@ -119,30 +116,16 @@ function CmsEditor({item,kind,onSaved,onSavingChange,dirtyRef,step,onStep,formId
   dirtyRef.current=true;
   setPendingImages(prev=>({...prev,[key]:{file,url}}));
  };
- const toggleChannel=(ch:CmsChannel,checked:boolean)=>{
-  if(!checked){
-   for(const device of ["desktop","mobile"] as CmsDevice[]){
-    const key=cmsMediaKey(ch,device),pending=pendingImages[key];
-    if(pending){URL.revokeObjectURL(pending.url);previewUrls.current.delete(pending.url);}
-   }
-   setPendingImages(prev=>Object.fromEntries(
-    Object.entries(prev).filter(([key])=>!key.startsWith(ch+":"))));
-  }
-  contentDirty.current=true;dirtyRef.current=true;
-  setDraft(prev=>{
-   const targets=checked?[...prev.channelTargets,ch]:prev.channelTargets.filter(v=>v!==ch);
-   const placements={...prev.placements};
-   if(!checked)delete placements[ch];
-   return {...prev,channelTargets:targets,placements};
-  });
- };
  const submit=async(event:FormEvent<HTMLFormElement>)=>{
   event.preventDefault();
   if(busy||operationLock.current)return;
   operationLock.current=true;
   setBusy(true);onSavingChange(true);setError("");
   try{
-   if(draft.title.trim().length<2 || !/^[a-z0-9]+(-[a-z0-9]+)*$/.test(draft.slug)){
+   if(!draft.channelTargets.includes("public_web")){
+     onStep(1);throw Error("Nội dung này không thuộc Website. Không sửa dữ liệu App trong màn này.");
+    }
+    if(draft.title.trim().length<2 || !/^[a-z0-9]+(-[a-z0-9]+)*$/.test(draft.slug)){
     onStep(0);throw Error("Nhập tiêu đề tối thiểu 2 ký tự và đường dẫn chỉ gồm chữ thường, số, dấu gạch ngang.");
    }
    if(["article","promotion"].includes(draft.kind)&&!draft.paragraphs.trim()){
@@ -192,11 +175,17 @@ function CmsEditor({item,kind,onSaved,onSavingChange,dirtyRef,step,onStep,formId
   }
  };
  const canChangeKind=!savedRecord;
- const activePreviewChannel=draft.channelTargets.includes(previewChannel)?
-  previewChannel:draft.channelTargets[0]??"public_web";
  const STEPS=["Nội dung","Vị trí & lịch","Ảnh & xem trước"];
  return <form id={formId} className="cms-editor cms-wizard" onSubmit={e=>void submit(e)} noValidate>
   <AdminToast variant="error" message={error} notificationId={toastId} onClose={()=>setError("")}/>
+   {item?.channel_targets.length===0&&<p className="cms-help" role="note">
+    Bản nháp cũ chưa gắn kênh. Khi bấm Lưu, bản nháp sẽ được gắn Website Futurebook;
+    vẫn chưa xuất bản công khai.
+   </p>}
+   {item?.channel_targets.some(ch=>ch!=="public_web")&&<p className="cms-help" role="note">
+    Bản ghi cũ còn liên kết App: kênh, vị trí và ảnh App sẽ được giữ nguyên, không chỉnh tại Website.
+    Tiêu đề và nội dung dùng chung; nếu sửa, nội dung ở App đã liên kết cũng thay đổi.
+   </p>}
   <nav className="cms-wizard-tabs" role="tablist" aria-label="Các bước tạo nội dung">
    {STEPS.map((label,index)=><button type="button" key={label} role="tab"
     className="fb-ui-button fb-ui-tab" aria-selected={step===index} aria-controls={formId+"-step-"+index}
@@ -245,38 +234,17 @@ function CmsEditor({item,kind,onSaved,onSavingChange,dirtyRef,step,onStep,formId
    </>}
    {step===1&&<>
     <div className="cms-wizard-intro"><strong>Trang, vị trí và thời gian hiển thị</strong>
-     <p>Chọn kênh trước, sau đó chỉ định vị trí riêng; Web và App không bị ép cùng bố cục.</p>
+     <p>Website Futurebook được chọn sẵn. Chọn trang, vị trí và lịch hiển thị tương ứng.</p>
     </div>
     <div className="cms-form-grid">
-     <fieldset className="cms-channels cms-wide" disabled={busy}>
-      <legend>Kênh hiển thị</legend>
-      {CHANNELS.map(ch=><label key={ch.code}>
-       <input type="checkbox" checked={draft.channelTargets.includes(ch.code)}
-        onChange={e=>toggleChannel(ch.code,e.target.checked)}/>{ch.label}
-      </label>)}
-     </fieldset>
-     <fieldset className="cms-placement-grid cms-wide">
-      <legend>Vị trí theo từng kênh</legend>
-      {draft.channelTargets.length===0?<p>Chọn kênh để hiện vị trí tương ứng.</p>:
-       draft.channelTargets.map(ch=><label key={ch}>
-        <span>{CHANNELS.find(x=>x.code===ch)?.label}</span>
-        <select value={draft.placements[ch]||""} disabled={busy}
-         onChange={e=>{
-          const placements={...draft.placements};
-          if(e.target.value)placements[ch]=e.target.value;else delete placements[ch];
-          set("placements",placements);
-         }}>
-         <option value="">Chọn nơi hiển thị (có thể lưu nháp trước)</option>
-         {CMS_SLOTS[draft.kind][ch].map(slot=>
-          <option key={slot.value} value={slot.value}>{slot.label}</option>)}
-        </select>
-        {CMS_SLOTS[draft.kind][ch].filter(slot=>slot.value===draft.placements[ch]).map(slot=>
-         <small key={slot.value}>{slot.description}</small>)}
-       </label>)}
-     </fieldset>
-     {draft.kind==="popup"&&<fieldset className="cms-popup-frequency cms-wide">
+     <CmsWebsitePlacement kind={draft.kind} value={draft.placements.public_web||""}
+       disabled={busy} onChange={value=>{
+        // Only Website slot is edited; App placements remain unchanged.
+         set("placements",withWebsitePlacement(draft.placements,value));
+       }}/>
+      {draft.kind==="popup"&&<fieldset className="cms-popup-frequency cms-wide">
       <legend>Popup quảng bá cho khách truy cập</legend>
-      <p>Không phải popup thêm/sửa trong Admin. Chỉ có hiệu lực khi Website/App tích hợp CMS.</p>
+      <p>Không phải popup thêm/sửa trong Admin. Chỉ hoạt động trên Website sau khi kết nối CMS và được phép xuất bản.</p>
       <div className="cms-form-grid">
        <label>Chờ sau khi vào trang (giây)
         <input type="number" min={0} max={120} value={draft.popupDelaySeconds}
@@ -313,19 +281,19 @@ function CmsEditor({item,kind,onSaved,onSavingChange,dirtyRef,step,onStep,formId
    </>}
    {step===2&&<>
     <div className="cms-wizard-intro"><strong>Chọn ảnh và kiểm tra bố cục</strong>
-     <p>Ảnh hiện ngay trong bản xem trước. Bấm Lưu mới tải ảnh vào R2.</p>
+     <p>Ảnh Website hiện ngay trong bản xem trước Desktop/Mobile. Bấm Lưu mới tải ảnh vào R2.</p>
     </div>
     <CmsMediaEditor recordId={savedRecord?.id??null} revision={savedRecord?.revision??0}
-     channels={draft.channelTargets} pending={pendingImages} onStage={stageImage} disabled={busy}/>
+     channels={["public_web"]} pending={pendingImages} onStage={stageImage} disabled={busy}/>
     <CmsVisualPreview kind={draft.kind} title={draft.title} summary={draft.summary}
-     ctaUrl={draft.ctaUrl} channelTargets={draft.channelTargets} placements={draft.placements}
-     recordId={savedRecord?.id??null} revision={savedRecord?.revision??0}
-     pending={pendingImages} channel={activePreviewChannel} device={previewDevice}
-     onChannel={setPreviewChannel} onDevice={setPreviewDevice}/>
+     ctaUrl={draft.ctaUrl} channelTargets={["public_web"]} placements={draft.placements}
+      recordId={savedRecord?.id??null} revision={savedRecord?.revision??0}
+      pending={pendingImages} channel="public_web" device={previewDevice} webOnly
+      onDevice={setPreviewDevice}/>
    </>}
   </section>
   <p className="cms-wizard-footnote">Chỉ lưu bản nháp trong Admin. Xuất bản sẽ được mở khi
-   Website/App nhận CMS thật; không có thay đổi nào tự hiện trên trang công khai.</p>
+   Website nhận CMS thật; không có thay đổi nào tự hiện trên trang công khai.</p>
  </form>;
 }
 function CmsModalFooter({step,onStep,saving,formId}:{
@@ -384,10 +352,9 @@ export default function CmsManager({mode,owner}:{
   if(!owner)return;
   setLoading(true);
   try{
-   const v=await cmsApi<{items:CmsSummary[];page:number;hasNext:boolean}>(
-    "?mode="+mode+"&page="+page);
-   if(v.page!==page || !Array.isArray(v.items))throw Error("Danh sách CMS không hợp lệ.");
-   setItems(v.items);setHasNext(v.hasNext===true);setLoadError("");
+   const web=await websiteCmsPage<CmsSummary>(page,backendPage=>
+    cmsApi<CmsSourcePage<CmsSummary>>("?mode="+mode+"&page="+backendPage));
+   setItems(web.items);setHasNext(web.hasNext);setLoadError("");
   }
   catch(e){
    const reason=e instanceof Error?e.message:"Không tải được CMS.";
@@ -403,8 +370,8 @@ export default function CmsManager({mode,owner}:{
  const notify=(text:string,problem=false)=>{if(problem)setError(text);else setMessage(text);setToastId(v=>v+1);};
  const change=async(item:CmsSummary,action:"publish"|"hide")=>{
   if(busy || !window.confirm(action==="publish"?
-    "Xác nhận nguồn nội dung đã được kiểm chứng và cho xuất bản theo các kênh đã chọn?":
-    "Ẩn nội dung này khỏi các kênh đã chọn?"))return;
+    "Xác nhận nguồn nội dung đã được kiểm chứng và cho xuất bản lên Website?":
+    "Ẩn nội dung này khỏi Website?"))return;
   setBusy(true);
   try{
    await cmsApi(action,{id:item.id,expectedRevision:item.revision});
@@ -419,31 +386,33 @@ export default function CmsManager({mode,owner}:{
   <AdminToast message={error||message} variant={error?"error":"success"}
    notificationId={toastId} onClose={()=>{setMessage("");setError("");}}/>
   <div className="page-title cms-heading"><div><h1>{title}</h1>
-   <p>Chọn vị trí và ảnh riêng cho Web/App, desktop/mobile. Lưu nháp không tự xuất bản.</p></div>
+   <p>Chọn vị trí và ảnh Desktop/Mobile riêng cho Website Futurebook. Lưu nháp không tự xuất bản.</p></div>
    <button type="button" className="fb-ui-button fb-ui-button--primary" onClick={()=>void openEditor(null)}>
     Thêm nội dung
    </button>
   </div>
   <div className="cms-table-wrap">
    <table className="cms-table">
-    <thead><tr><th>Tiêu đề</th><th>Loại</th><th>Kênh</th><th>Trạng thái</th><th>Thao tác</th></tr></thead>
+    <thead><tr><th>Tiêu đề</th><th>Loại</th><th>Vị trí Website</th><th>Trạng thái</th><th>Thao tác</th></tr></thead>
     <tbody>
      {loading?<tr><td colSpan={5}>Đang tải nội dung…</td></tr>:
       loadError?<tr><td colSpan={5} role="alert" className="cms-error-state">{loadError} <button type="button" className="fb-ui-button fb-ui-button--secondary" onClick={()=>void refresh()}>Thử lại</button></td></tr>:
-      visible.length===0?<tr><td colSpan={5}>Chưa có nội dung. Chọn Thêm nội dung để tạo bản nháp.</td></tr>:
+      visible.length===0?<tr><td colSpan={5}>Chưa có nội dung Website. Chọn Thêm nội dung để tạo bản nháp.</td></tr>:
       visible.map(item=><tr key={item.id}>
        <td><strong>{item.title}</strong><small>{item.slug}</small></td>
        <td>{LABELS[item.kind]}</td>
-       <td>{item.channel_targets.map(ch=>CHANNELS.find(c=>c.code===ch)?.label).join(", ")||"Chưa chọn"}</td>
+       <td>{cmsWebsiteSlotLabel(item.kind,item.placements?.public_web||"")}</td>
        <td>{item.status==="published"?"Đã xuất bản":item.status==="hidden"?"Đã ẩn":"Bản nháp"}</td>
        <td><div className="cms-row-actions">
         <button type="button" className="fb-ui-button fb-ui-button--secondary"
          disabled={busy||opening||item.status==="published"} onClick={()=>void openEditor(item)}>Sửa</button>
         {item.status==="published"?
-         <button type="button" className="fb-ui-button fb-ui-button--secondary" disabled={busy}
-          onClick={()=>void change(item,"hide")}>Ẩn</button>:
+         <button type="button" className="fb-ui-button fb-ui-button--secondary" disabled={busy||item.channel_targets.some(ch=>ch!=="public_web")}
+           title={item.channel_targets.some(ch=>ch!=="public_web")?
+            "Bản ghi còn liên kết App. Không ẩn đồng loạt từ màn Website.":undefined}
+           onClick={()=>void change(item,"hide")}>Ẩn</button>:
          <button type="button" className="fb-ui-button fb-ui-button--secondary" disabled
-          title="Chưa nối CMS với Website/App, không thể xuất bản">Chờ kết nối Web/App</button>}
+          title="Chưa nối CMS Website với public renderer, không thể xuất bản">Chờ kết nối Website</button>}
        </div></td>
       </tr>)
      }
@@ -458,7 +427,7 @@ export default function CmsManager({mode,owner}:{
     onClick={()=>setPage(v=>v+1)}>Trang sau</button>
   </div>
   <p className="cms-help">Đã lưu nháp và có ảnh chưa đồng nghĩa đã xuất bản lên Website.
-   Chỉ bật nút xuất bản sau khi public API và giao diện Web/App thực sự được kết nối, kiểm thử.</p>
+   Chỉ bật nút xuất bản sau khi public API và Website thực sự được kết nối, kiểm thử.</p>
   {editing!==undefined&&<ProductModal title={editing?"Sửa "+LABELS[editing.kind]:"Thêm nội dung"}
    onClose={()=>{setEditing(undefined);void refresh();}} wide locked={busy||editorSaving}
    beforeClose={()=>!editorDirtyRef.current || window.confirm("Nội dung hoặc ảnh chưa lưu. Đóng mà không lưu?")}
