@@ -57,6 +57,7 @@ export default function CatalogueProductOptions({product,photos,glass=false}:{
   const selectedName=shortVariantLabel(selected);
   const selectedAudience=variantAudience(selected);
   const selectedFormat=variantPaperFormat(selected);
+  const quoteLabel=<>Liên hệ báo giá <span aria-hidden="true">→</span></>;
   const specs=selected.specifications;
   const extraInfo:{label:string;value:string}[]=[];
   if(specs.binding)extraInfo.push({label:"Đóng gáy",value:specs.binding});
@@ -110,8 +111,8 @@ export default function CatalogueProductOptions({product,photos,glass=false}:{
           {selectedAudience&&<span>{selectedAudience}</span>}
           {selectedFormat&&<span>{selectedFormat}</span>}
           {glass
-            ? <GlassButtonLink href="/#contact" pill className="catalogue-selected-summary__action">Liên hệ báo giá <span aria-hidden="true">→</span></GlassButtonLink>
-            : <Link href="/#contact" className="catalog-button catalogue-selected-summary__action">Liên hệ báo giá <span aria-hidden="true">→</span></Link>}
+            ? <GlassButtonLink href="/#contact" pill className="catalogue-selected-summary__action">{quoteLabel}</GlassButtonLink>
+            : <Link href="/#contact" className="catalog-button catalogue-selected-summary__action">{quoteLabel}</Link>}
         </div>
         {extraInfo.length>0&&<details className="catalogue-extra-details">
           <summary>Thông tin thêm</summary>
