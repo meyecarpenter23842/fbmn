@@ -13,7 +13,7 @@ Owner chốt hai ảnh tham chiếu Premium Purple Glass: **glassmorphism trong 
 |---|---|---|
 | **G01 — Foundation** | Audit CSS/component hiện hữu; tokens glass, màu, shadow, border, radius, typography, motion; document contract | Một nguồn tokens và style nhất quán, không chồng chéo với Admin; không đổi layout hoặc nghiệp vụ |
 | **G02 — Shared primitives** | Glass backdrop/header/card/panel/button/chip; gallery style, state hover/active/focus/disabled/loading/error | Primitives tái sử dụng, không nhân bản CSS hoặc bỏ chức năng |
-| **G03 — Song Natural** | Áp V2 vào trang §/san-pham/sku-3ac08ff247847c1e77bfccb0e806ed29§: gallery trái/info phải, selector, CTA, related cards | Chuyển SKU/ảnh/quy cách/CTA đúng dữ liệu; UAT screenshot desktop/mobile thực tế |
+| **G03 — Song Natural** | Áp V2 vào trang `/san-pham/sku-3ac08ff247847c1e77bfccb0e806ed29`: gallery trái/info phải, selector, CTA, related cards | Chuyển SKU/ảnh/quy cách/CTA đúng dữ liệu; UAT screenshot desktop/mobile thực tế |
 | **G04 — R2 decorative background** | Lớp ảnh nền riêng, overlay và fallback; lấy URL từ cấu hình public/media **nếu hệ thống hiện có hỗ trợ** | Có ảnh thì glass hiển thị trên nền; thiếu ảnh vẫn đẹp; không hardcode URL, không tự đổi DB/API |
 | **G05 — Website rollout** | Dùng primitives V2 cho trang chủ, danh mục, liên hệ/đại lý, banner và footer | Cùng một hệ thống kính mờ, giữ nav/content/CTA và responsive hiện tại |
 | **G06 — QA & performance** | Test viewport 1440/1280/768/390/360, prefers-reduced-motion, contrast, keyboard, Web Vitals, gallery/SKU/CTA | Lint/typecheck/test/build, CI và Codex sạch; ảnh nghiệm thu thật; không chậm/giật, không overflow |
