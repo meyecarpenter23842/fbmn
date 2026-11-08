@@ -1,24 +1,24 @@
 /* Shared site footer: desktop four-column, mobile compact stack.
    Official logo is deliberately smaller than header across breakpoints. */
-.site-footer { color: #f5edf9; background: linear-gradient(135deg,#35145c,#54238b 76%,#482071); border-top: 3px solid #d51d54; }
-.site-footer__wrap { width: min(calc(100% - 48px),1200px); margin: 0 auto; padding: 38px 0 15px; }
+.site-footer { color: #f5edf9; background: radial-gradient(ellipse at 95% 8%, rgba(195, 122, 244, .43), transparent 42%), linear-gradient(125deg, #3d195c, #5b2b80 62%, #68348c); border-top: 1px solid rgba(255,255,255,.56);  border-radius: 28px 28px 0 0; width: min(100%, 1360px); margin: 26px auto 0; position: relative; isolation: isolate; overflow: hidden; box-shadow: 0 -10px 35px rgba(56,22,99,.13);}
+.site-footer__wrap { width: min(calc(100% - 48px),1200px); margin: 0 auto; padding: 42px 0 16px;  position: relative; z-index: 1;}
 .site-footer__grid { display: grid; grid-template-columns: minmax(190px,1.65fr) minmax(128px,1fr) minmax(125px,1fr) minmax(220px,1.55fr); column-gap: clamp(16px,3vw,48px); row-gap: 26px; }
-.site-footer__brand-link { display: inline-flex; align-items: center; justify-content: flex-start; border-radius: 9px; background: #fff; padding: 8px 10px; max-width: max-content; }
+.site-footer__brand-link { display: inline-flex; align-items: center; justify-content: flex-start; border-radius: 14px; background: rgba(255,255,255,.94); padding: 8px 10px; max-width: max-content;  border: 1px solid rgba(255,255,255,.86); box-shadow: 0 5px 20px rgba(33, 7, 64, .18);}
 .site-footer__logo { display: block; width: 158px; max-width: 100%; height: auto; object-fit: contain; }
-.site-footer__brand p { font-size: 12px; line-height: 1.65; color: #e7daf2; max-width: 290px; margin: 14px 0 0; }
-.site-footer__brand p + p { margin-top: 7px; color: #cbbbdc; font-size: 11px; }
-.site-footer h2 { color: #fff; font-size: 14px; line-height: 1.4; margin: 3px 0 18px; font-weight: 850; }
+.site-footer__brand p { font-size: 12px; line-height: 1.65; color: #f1e9fa; max-width: 290px; margin: 14px 0 0; }
+.site-footer__brand p + p { margin-top: 7px; color: #e2d4ed; font-size: 11px; }
+.site-footer h2 { color: #fff; font-size: 17px; line-height: 1.4; margin: 3px 0 18px; font-weight: 750;  font-family: var(--fb-glass-display-font);}
 .site-footer__links { display: flex; flex-direction: column; align-items: flex-start; gap: 12px; }
 .site-footer__links h2 { margin-bottom: 3px; }
-.site-footer__links a, .site-footer__contact a { color: #f2e9fa; font-size: 12px; line-height: 1.55; text-decoration: none; }
+.site-footer__links a, .site-footer__contact a { color: #f5eafa; font-size: 13px; line-height: 1.55; text-decoration: none; }
 .site-footer__links a:hover, .site-footer__contact a:hover { color: #fff; text-decoration: underline; text-underline-offset: 3px; }
 .site-footer__contact address { font-size: 12px; line-height: 1.5; font-style: normal; display: grid; gap: 13px; }
 .site-footer__contact address div { display: grid; grid-template-columns: minmax(0,1fr); gap: 3px; }
-.site-footer__field { display: block; color: #d3b7eb; font-size: 10px; font-weight: 750; }
+.site-footer__field { display: block; color: #e5c7fa; font-size: 11px; font-weight: 750; }
 .site-footer__contact address div > span:last-child { overflow-wrap: anywhere; }
-.site-footer__source { font-size: 10px; line-height: 1.55; color: #d9c4ea; margin: 13px 0 0; }
-.site-footer__bottom { margin-top: 28px; padding-top: 15px; border-top: 1px solid rgba(255,255,255,.16); display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
-.site-footer__bottom small { font-size: 10px; line-height: 1.4; color: #d9c4ea; }
+.site-footer__source { font-size: 10px; line-height: 1.55; color: #eadcf6; margin: 13px 0 0; }
+.site-footer__bottom { margin-top: 28px; padding-top: 15px; border-top: 1px solid rgba(255,255,255,.27); display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.site-footer__bottom small { font-size: 10px; line-height: 1.4; color: #e9d9f4; }
 @media (max-width: 970px) {
  .site-footer__grid { grid-template-columns: 1.3fr 1fr 1fr; }
  .site-footer__contact { grid-column: 1 / -1; }
@@ -68,4 +68,23 @@ a.site-footer__social-icon:focus-visible { outline: 3px solid #fff; outline-offs
   .site-footer__social { margin-top: 14px; }
   .site-footer__social-icon { flex-basis: 38px; width: 38px; height: 38px; border-radius: 11px; }
   .site-footer__social-list { gap: 9px; }
+}
+
+
+/* G05: a subtle ornamental arc, decorative only, no interaction or animation. */
+.site-footer::before {
+  content: "";
+  position: absolute;
+  right: -8%;
+  bottom: -150px;
+  width: min(66vw, 760px);
+  height: 230px;
+  border: 2px solid rgba(224, 177, 255, .22);
+  border-radius: 50%;
+  transform: rotate(-8deg);
+  pointer-events: none;
+}
+@media (max-width: 700px) {
+  .site-footer { border-radius: 22px 22px 0 0; margin-top: 20px; }
+  .site-footer h2 { font-size: 15px; }
 }
