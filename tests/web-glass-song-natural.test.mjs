@@ -17,17 +17,18 @@ const primitive=src("components/glass-ui.tsx");
 const clean=s=>s.replace(/\/\*[\s\S]*?\*\//g,"");
 const classSet=s=>new Set([...clean(s).matchAll(/\.([a-zA-Z][a-zA-Z0-9_-]*)/g)].map(m=>m[1]));
 
-test("G03 stays on the approved Song Natural slug, preserves public data, media and SEO",()=>{
+test("G05 extends G03 glass detail to all products, preserving public data and SEO",()=>{
   for(const fragment of [
-    'const glass=slug==="sku-3ac08ff247847c1e77bfccb0e806ed29"',
+    "const glass=true",
     "getProductBySlug(catalog, slug)","getPublicCatalog()",
     "getPublishedProductImageUrl(media.r2Key,process.env.NEXT_PUBLIC_MEDIA_BASE_URL)",
     "const recommendations=relatedProducts(catalog,product)",
-    "generateMetadata",'<GlassPageBackdrop className="fb-glass-song-page" decorativeReadPath={publicDecorativeBackground.songNatural ?? undefined}>',
+    "generateMetadata",'<div className="fb-glass-song-page">',
     '<CatalogueProductOptions product={product} photos={images} glass={glass}/>',
     '<CatalogueRelatedProducts items={recommendations.items} glass={glass}/>'
   ])assert.ok(page.includes(fragment),fragment);
-  assert.match(page,/: content\}<\/CatalogShell>/);
+  assert.match(page, /return <CatalogShell><div className="fb-glass-song-page">\{content\}<\/div><\/CatalogShell>/);
+  assert.match(layout, /<GlassPageBackdrop className="fb-glass-site"/);
 });
 
 test("Glass SKU controls display only the company code with accessible full specifications",()=>{

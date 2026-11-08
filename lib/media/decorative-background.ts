@@ -11,6 +11,9 @@
  */
 export const publicDecorativeBackground: Readonly<{
   songNatural: "/api/decorative-background" | null;
+  /** G05: Owner-approved reuse of the same decorative artwork across Website. */
+  website: "/api/decorative-background" | null;
 }> = {
   songNatural: "/api/decorative-background",
+  website: "/api/decorative-background",
 };

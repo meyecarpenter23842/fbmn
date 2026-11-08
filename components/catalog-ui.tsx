@@ -119,7 +119,7 @@ export function CatalogListing({ data, heading, description, filters, actionPath
         <div className="catalog-results__heading"><h2>Sản phẩm đã xác minh</h2>
           <span>{results.total} sản phẩm</span></div>
         {results.total ? <>
-          <div className="catalog-grid">{results.items.map(product => <ProductCard key={product.id} product={product}/>)}</div>
+          <div className="catalog-grid">{results.items.map(product => <ProductCard key={product.id} product={product} glass/>)}</div>
           {results.pages > 1 && <nav aria-label="Phân trang sản phẩm" className="catalog-pagination">
             {results.page > 1 && <Link href={actionPath + "?" + filtersToParams(filters, results.page - 1)} prefetch={false}>Trang trước</Link>}
             <span>Trang {results.page}/{results.pages}</span>

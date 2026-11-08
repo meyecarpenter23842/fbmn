@@ -40,11 +40,25 @@
   --fb-glass-shadow-hover: 0 19px 42px rgba(63, 25, 98, .17), 0 5px 12px rgba(63, 25, 98, .07);
   --fb-glass-ink: #241331;
   --fb-glass-muted: #62576c;
-  --fb-glass-backdrop-gradient: radial-gradient(ellipse at 12% 18%, rgba(132, 65, 195, .30), transparent 49%), radial-gradient(ellipse at 91% 39%, rgba(189, 112, 237, .47), transparent 53%), radial-gradient(ellipse at 44% 91%, rgba(252, 204, 229, .48), transparent 58%), linear-gradient(120deg, #f3e7fc, #e7d1f6 56%, #fcf4ff);
+  --fb-glass-backdrop-gradient: radial-gradient(ellipse at 93% 14%, rgba(176, 211, 150, .26), transparent 38%), radial-gradient(ellipse at 12% 18%, rgba(132, 65, 195, .27), transparent 49%), radial-gradient(ellipse at 86% 61%, rgba(189, 112, 237, .34), transparent 53%), radial-gradient(ellipse at 44% 91%, rgba(252, 204, 229, .42), transparent 58%), linear-gradient(120deg, #f4edfc, #eee1f7 56%, #faf7f4);
   --fb-glass-backdrop-overlay: linear-gradient(120deg, rgba(249, 244, 255, .70), rgba(249, 243, 255, .48) 54%, rgba(252, 248, 255, .70));
+  /* G05: all Website skins consume these shared visual materials.
+     The fully opaque defaults remain legible without backdrop-filter. */
+  --fb-glass-surface-layer: var(--fb-glass-surface-fallback);
+  --fb-glass-panel-layer: var(--fb-glass-surface-fallback);
+  --fb-glass-display-font: Georgia, "Times New Roman", serif;
+  --fb-glass-stroke: rgba(100, 62, 132, .15);
+  --fb-glass-ui-blur: 16px;
   --fb-motion-glass-card: 200ms;
   --fb-motion-glass-lift: -3px;
 }
+@supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  :root {
+    --fb-glass-surface-layer: var(--fb-glass-surface);
+    --fb-glass-panel-layer: var(--fb-glass-surface-strong);
+  }
+}
+@media (max-width: 780px) { :root { --fb-glass-ui-blur: 9px; } }
 * { box-sizing: border-box; }
 html { scroll-behavior: smooth; }
 body { margin: 0; color: var(--color-ink); background: #fff; font-family: Arial, "Helvetica Neue", sans-serif; -webkit-font-smoothing: antialiased; }

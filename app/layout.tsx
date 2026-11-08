@@ -13,6 +13,8 @@ import "./app-download.css";
 import "./chatbot.css";
 import "./glass-foundation.css";
 import "./glass-product-detail.css";
+import { GlassPageBackdrop } from "@/components/glass-ui";
+import { publicDecorativeBackground } from "@/lib/media/decorative-background";
 import { AppDownloadProvider } from "@/components/app-download";
 import { ChatbotWidget } from "@/components/chatbot-widget";
 
@@ -26,7 +28,14 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
   return (
     <html lang="vi">
-      <body><AppDownloadProvider>{children}<ChatbotWidget /></AppDownloadProvider></body>
+      <body>
+        <AppDownloadProvider>
+          <GlassPageBackdrop className="fb-glass-site"
+            decorativeReadPath={publicDecorativeBackground.website ?? undefined}>
+            {children}<ChatbotWidget />
+          </GlassPageBackdrop>
+        </AppDownloadProvider>
+      </body>
     </html>
   );
 }

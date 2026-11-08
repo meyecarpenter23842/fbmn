@@ -21,7 +21,8 @@ test("new desktop nav has catalogue selector and approved purple theme", () => {
   assert.match(header, /ref-navigation__catalog/);
   assert.match(header, /Khuyến mãi/);
   assert.match(header, /Dành cho đại lý/);
-  assert.match(css, /\.ref-navigation \{ background: linear-gradient/);
+  assert.match(css, /\.ref-navigation \{ background: rgba\(255,255,255,\.12\)/);
+  assert.match(css, /\.ref-navigation__link--active \{[^}]*background: linear-gradient\(115deg, var\(--color-primary\)/);
   assert.match(css, /@media \(max-width: 800px\)/);
   assert.doesNotMatch(css, /ref-bottom-nav|position:\s*fixed/);
 });

@@ -9,6 +9,17 @@
   color: var(--fb-glass-ink);
 }
 
+/* G05 uses ONE decorative surface across the entire Futurebook Website.
+ * Nested route content is transparent; no duplicate 2.14 MB background fetch.
+ * Existing separate Admin and Đại Việt apps never import this stylesheet.
+ */
+.fb-glass-site {
+  min-height: 100vh;
+  width: 100%;
+  overflow-x: clip;
+}
+
+
 .fb-glass-backdrop {
   position: relative;
   isolation: isolate;

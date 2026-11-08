@@ -8,18 +8,22 @@
   flex: 0 0 auto;
   margin-left: auto;
   min-height: var(--fb-control-height-compact);
-  border: 1px solid rgba(255,255,255,.5);
+  border: 1px solid var(--fb-glass-stroke);
   border-radius: var(--fb-control-radius);
   padding: 0 12px;
-  background: rgba(255,255,255,.13);
-  color: #fff;
+  background: rgba(255,255,255,.7);
+  color: var(--color-primary-strong);
   font-size: var(--fb-control-font-size);
   font-weight: 800;
   white-space: nowrap;
   transition: background-color var(--fb-motion-button) var(--fb-easing-open), transform var(--fb-motion-button) var(--fb-easing-open);
 }
 .ref-navigation__download:hover,
-.ref-navigation__download:focus-visible { background: rgba(255,255,255,.23); transform: translateY(-1px); }
+.ref-navigation__download:focus-visible {
+  color: var(--color-primary-strong);
+  background: rgba(255,255,255,.94);
+  transform: translateY(-1px);
+}
 .app-download {
   position: fixed;
   z-index: 100;
@@ -91,8 +95,9 @@ a.app-download__store:hover { background: #f4e9ff; border-color: #b985db; }
     margin: 7px 0 0;
     border-radius: 9px;
     padding: 10px 16px;
-    border-color: rgba(255,255,255,.22);
-    background: rgba(255,255,255,.12);
+    border-color: var(--fb-glass-stroke);
+    background: rgba(255,255,255,.7);
+    color: var(--color-primary-strong);
     font-size: 13px;
   }
   .app-download { right: 12px; bottom: calc(80px + env(safe-area-inset-bottom)); max-height: calc(100dvh - 92px - env(safe-area-inset-bottom)); padding: 15px 14px 12px; }

@@ -4,7 +4,8 @@ import { SiteFooter } from "@/components/site-footer";
 import { CategoryNavigation } from "@/components/category-navigation";
 import { MobileCarousel } from "@/components/mobile-carousel";
 import { NotebookArt } from "@/components/notebook-art";
-import { Card, Container, Icon } from "@/components/ui";
+import { Container, Icon } from "@/components/ui";
+import { GlassCard } from "@/components/glass-ui";
 import { previewProducts } from "@/lib/ui-preview";
 import { VerifiedMediaImage } from "@/components/verified-media-image";
 import { approvedSiteMedia } from "@/lib/media/approved-site-media";
@@ -62,7 +63,7 @@ export default function HomePage() {
             </div>
             <MobileCarousel itemCount={previewProducts.length}>
               {previewProducts.map(product => (
-                <Card className="ref-product-card" key={product.title}>
+                <GlassCard hover className="fb-glass-home-product" key={product.title}>
                   <span className="ref-demo-badge">MẪU GIAO DIỆN</span>
                   <div className="ref-product-card__image"><NotebookArt cover={product.cover} title="FUTUREBOOK"/></div>
                   <div className="ref-product-card__copy">
@@ -74,7 +75,7 @@ export default function HomePage() {
                       <Link href="/lien-he">Xem thông tin</Link>
                     </div>
                   </div>
-                </Card>
+                </GlassCard>
               ))}
             </MobileCarousel>
           </section>
