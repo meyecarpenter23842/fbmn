@@ -11,7 +11,8 @@
 .side-submenu{display:grid;gap:2px;padding:2px 4px 8px 18px;border-left:1px solid rgba(255,255,255,.18);margin-left:21px}
 .side-sub-link{width:100%;display:flex;gap:9px;align-items:center;text-align:left;border:0;
   min-height:37px;padding:8px 12px;border-radius:9px;color:rgba(247,246,255,.85);
-  background:transparent;font-size:12px;font-weight:500}
+  background:transparent;font-size:13px;font-weight:500;line-height:1.35}
+.side-sub-link span{min-width:0;overflow-wrap:break-word}
 .side-sub-link:hover{color:#fff;background:rgba(231,231,255,.14)}
 .side-sub-link.active{color:#fff;font-weight:750;background:rgba(161,151,255,.27);
   box-shadow:inset 3px 0 #b4c8ff}
@@ -60,4 +61,5 @@
   .catalogue-side-index{max-height:290px}
   .catalogue-side-items{min-height:90px}
   .catalogue-side-selected{padding:13px}}
+@media(max-width:780px){.side-group-heading,.side-sub-link{min-height:44px}}
 @media(prefers-reduced-motion:reduce){.side-group-heading .side-menu-caret{transition:none}}
