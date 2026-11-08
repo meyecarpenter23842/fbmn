@@ -175,7 +175,7 @@ test("CMS preview shows selected or saved R2 assets and distinct layouts per dev
  assert.match(preview,/cms-simulation-popup-backdrop/);
  assert.match(preview,/cms-simulation--mobile/);
  assert.match(preview,/Chưa chọn vị trí/);
- assert.match(preview,/Mô phỏng vị trí/);
+ assert.match(preview,/Bố cục đối chiếu mã nguồn Website/);
  assert.match(media,/URL\.revokeObjectURL/);
 });
 
