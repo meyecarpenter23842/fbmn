@@ -64,7 +64,7 @@ test("G05 home, catalogue, editorial and footer share glass styling but retain t
   assert.match(catalogue, /\.catalog-filters\s*\{[^}]*var\(--fb-glass-panel-layer\)/);
   assert.match(content, /\.content-intro-panel\s*\{[^}]*var\(--fb-glass-panel-layer\)/);
   assert.match(categories, /\.category-nav__link\s*\{[^}]*var\(--fb-glass-surface-layer\)/);
-  assert.match(footer, /\.site-footer\s*\{[^}]*linear-gradient\(125deg, #3d195c/);
+  assert.match(footer, /\.site-footer\s*\{[^}]*linear-gradient\(118deg,#391950/);
   assert.match(read("components/site-footer.tsx"), /aria-label="Khám phá Futurebook"/);
 });
 
