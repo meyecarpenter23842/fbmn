@@ -41,7 +41,7 @@ export function ProductCard({ product, glass = false }: { product: PublicProduct
     aria-label={"Xem sản phẩm " + product.name}
     className={glass ? "fb-song-related-hit" : "catalog-product__hit"}>
     <div className={glass ? "fb-song-related-image" : "catalog-product__image"}>
-      <CatalogProductImage src={image} alt={media?.alt ?? product.name}/>
+      <CatalogProductImage src={image} alt={media?.alt ?? product.name} className="catalog-image-compact"/>
     </div>
     <div className={glass ? "fb-song-related-body" : "catalog-product__body"}>
       <h3>{product.name}</h3>
