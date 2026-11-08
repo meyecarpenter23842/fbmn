@@ -19,7 +19,7 @@ concurrency:
 jobs:
   screenshot-qa:
     name: G06 browser QA / five widths / screenshot evidence
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 18
     steps:
       - name: Checkout exact reviewed source
