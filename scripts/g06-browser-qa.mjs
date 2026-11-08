@@ -147,7 +147,7 @@ try {
           if (item.quoteHref !== "/#contact") failures.push("Quote CTA link changed at "+width);
         }
         if (label === "home" && width <= 768) {
-          const toggle = page.getByRole("button",{name:"Mở danh mục điều hướng"});
+          const toggle = page.locator('button[aria-controls="site-navigation"]');
           if (await toggle.count()) {
             await toggle.click();
             item.menuOpened = await toggle.getAttribute("aria-expanded");
@@ -157,6 +157,11 @@ try {
               failures.push("Mobile menu open/Escape failed at "+width);
           } else failures.push("Mobile menu trigger absent at "+width);
         }
+        // Event Timing is asynchronous; sample after the actual SKU/gallery/menu
+        // interactions, not from the pre-interaction page snapshot.
+        await page.waitForTimeout(180);
+        item.vitals = await page.evaluate(() => window.__g06);
+        item.backgroundHttp = images.at(-1) ?? null;
         item.elapsedWithScreenshotMs = Math.round(performance.now()-started);
         observations.push(item);
       } catch (e) {
