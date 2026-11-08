@@ -21,7 +21,11 @@
  transition:filter var(--fb-motion-button,190ms) var(--fb-easing-open,ease)}
 .cms-web-banner-cta:hover,.cms-web-popup-cta:hover{filter:brightness(1.08)}
 .cms-web-banner-cta:focus-visible,.cms-web-popup-cta:focus-visible{outline:2px solid #9c60c8;outline-offset:3px}
-.cms-web-banners--home-hero{position:relative;z-index:3;margin:8px;max-width:100%;overflow:hidden}
+/* CMS Hero replaces the fallback, never sits below the fixed-height notebook art.
+ * Higher specificity overrides rebaseline.css at 800/390 without altering baseline. */
+.ref-hero__visual.ref-hero__visual--cms{min-width:0;min-height:400px;height:auto;display:flex;align-items:center}
+.ref-hero__visual--cms .ref-hero__rays{z-index:0}
+.cms-web-banners--home-hero{position:relative;z-index:3;margin:8px;width:calc(100% - 16px);max-width:100%;min-width:0;overflow:visible}
 .cms-web-banners--home-hero .cms-web-banner{display:block}
 .cms-web-banners--home-hero .cms-web-banner-img{max-height:210px}
 .cms-web-banners--home-hero .cms-web-banner-copy{padding:10px;gap:5px}
@@ -76,7 +80,12 @@
  padding:0 18px;min-height:52px;background:#f6f0fc;border-bottom:1px solid #e7d7f1;z-index:2}
 .cms-web-popup-heading strong{font-size:16px;color:#431078}
 .cms-web-popup-heading button{width:36px;height:36px;border:1px solid #e5d8ec;
- border-radius:9px;background:#fff;font-size:21px;color:#431078;cursor:pointer}
+ border-radius:9px;background:#fff;font-size:21px;color:#431078;cursor:pointer;
+ transition:background-color var(--fb-motion-button,190ms) var(--fb-easing-open,ease),
+  border-color var(--fb-motion-button,190ms) var(--fb-easing-open,ease),
+  transform var(--fb-motion-button,190ms) var(--fb-easing-open,ease)}
+.cms-web-popup-heading button:hover{background:#eadcf7;border-color:#b49acd}
+.cms-web-popup-heading button:active{transform:scale(.96);background:#e3cff4}
 .cms-web-popup-heading button:focus-visible{outline:2px solid #9a69cc;outline-offset:2px}
 .cms-web-popup-body{padding:18px;display:flex;flex-direction:column;gap:12px}
 .cms-web-popup-image{display:grid;place-items:center;background:#f7f1fc;overflow:hidden;border-radius:14px}
@@ -86,6 +95,8 @@
 .cms-web-popup-body p{margin:0;font-size:14px;line-height:1.6;overflow-wrap:anywhere}
 .cms-web-popup-cta{align-self:flex-start}
 @media(max-width:800px){
+ .ref-hero__visual.ref-hero__visual--cms{min-height:0;height:auto;width:min(100%,460px);margin:0 auto;display:block}
+ .cms-web-banners--home-hero{margin:10px 8px;width:calc(100% - 16px)}
  .cms-web-banner{grid-template-columns:1fr}
  .cms-web-banner-copy{padding:15px}
  .cms-web-banner-copy h2{font-size:22px}
@@ -101,7 +112,7 @@
  .cms-web-banner-cta,.cms-web-popup-cta{min-height:var(--fb-control-height-touch,44px)}
 }
 @media(prefers-reduced-motion:reduce){
- .cms-web-banner-cta,.cms-web-popup-cta{transition:none}
+ .cms-web-banner-cta,.cms-web-popup-cta,.cms-web-popup-heading button{transition:none}
  .cms-web-popup-dialog,.cms-web-popup-dialog::backdrop{animation:none!important;transition:none!important}
  .cms-web-popup-dialog::backdrop{backdrop-filter:none}
 }
