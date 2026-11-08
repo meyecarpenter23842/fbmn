@@ -1,4 +1,5 @@
-/* WEB App Download UI: one compact non-blocking popup, shared on all routes. */
+/* G07.2 Website app discovery: contextual frosted glass, not a paper card.
+ * Owner's 36/44px controls, 52/56px header and 280/220ms popup motion. */
 .ref-navigation__download {
   display: inline-flex;
   align-self: center;
@@ -8,102 +9,185 @@
   flex: 0 0 auto;
   margin-left: auto;
   min-height: var(--fb-control-height-compact);
-  border: 1px solid var(--fb-glass-stroke);
-  border-radius: var(--fb-control-radius);
-  padding: 0 12px;
-  background: rgba(255,255,255,.7);
+  padding: 0 13px;
+  border: 1px solid var(--fb-glass-border);
+  border-radius: 10px;
+  background: rgba(255,255,255,.47);
   color: var(--color-primary-strong);
   font-size: var(--fb-control-font-size);
-  font-weight: 800;
+  font-weight: 750;
+  line-height: 1;
   white-space: nowrap;
-  transition: background-color var(--fb-motion-button) var(--fb-easing-open), transform var(--fb-motion-button) var(--fb-easing-open);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  transition: color var(--fb-motion-button) var(--fb-easing-open), background-color var(--fb-motion-button) var(--fb-easing-open), border-color var(--fb-motion-button) var(--fb-easing-open), transform var(--fb-motion-button) var(--fb-easing-open);
 }
-.ref-navigation__download:hover,
-.ref-navigation__download:focus-visible {
+.ref-navigation__download svg { color: var(--color-primary); }
+.ref-navigation__download:hover {
   color: var(--color-primary-strong);
-  background: rgba(255,255,255,.94);
+  background: rgba(255,255,255,.8);
+  border-color: rgba(109,36,158,.3);
   transform: translateY(-1px);
 }
+.ref-navigation__download:focus-visible { outline: 3px solid var(--color-primary); outline-offset: 2px; }
+
 .app-download {
   position: fixed;
-  z-index: 100;
-  bottom: 86px;
+  z-index: 110;
+  top: 116px;
   right: clamp(12px, 3vw, 36px);
-  width: min(370px, calc(100vw - 24px));
-  max-height: calc(100dvh - 98px);
-  overflow-y: auto;
-  padding: 17px 17px 13px;
-  border-radius: 18px;
-  border: 1px solid #e8d9f5;
-  border-top: 3px solid #782db0;
-  color: #291743;
-  background: rgba(255,255,255,.98);
-  box-shadow: 0 16px 46px rgba(47,14,86,.19), 0 2px 8px rgba(47,14,86,.08);
-  animation: app-download-enter 280ms var(--fb-easing-open) both;
+  width: min(358px, calc(100vw - 24px));
+  max-height: calc(100dvh - 132px);
+  overflow: hidden auto;
+  padding: 0;
+  border: 1px solid rgba(255,255,255,.84);
+  border-radius: 20px;
+  color: var(--fb-glass-ink);
+  background: linear-gradient(133deg, rgba(255,255,255,.91), rgba(246,236,252,.83));
+  box-shadow: 0 18px 44px rgba(56,21,88,.19), inset 0 1px 0 rgba(255,255,255,.8);
+  -webkit-backdrop-filter: blur(var(--fb-glass-ui-blur));
+  backdrop-filter: blur(var(--fb-glass-ui-blur));
+  animation: app-download-enter var(--fb-motion-dialog-open) var(--fb-easing-open) both;
 }
-.app-download__head { display: flex; align-items: center; gap: 10px; }
+.app-download--closing {
+  pointer-events: none;
+  animation: app-download-exit var(--fb-motion-dialog-close) var(--fb-easing-close) both;
+}
+.app-download__head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 52px;
+  padding: 7px 12px;
+  border-bottom: 1px solid rgba(109,36,158,.12);
+  border-inline-start: 3px solid var(--color-primary);
+  background: rgba(242,231,250,.56);
+}
 .app-download__glyph {
-  width: 40px; height: 40px; border-radius: 12px; flex: 0 0 40px;
-  display: grid; place-items: center;
-  color: #fff; background: linear-gradient(140deg,#6a279c,#a04ec9);
+  display: grid;
+  place-items: center;
+  flex: 0 0 32px;
+  width: 32px;
+  height: 32px;
+  border: 1px solid rgba(109,36,158,.13);
+  border-radius: 10px;
+  color: var(--color-primary);
+  background: rgba(255,255,255,.76);
 }
-.app-download__heading { display: grid; flex: 1; gap: 4px; min-width: 0; }
-.app-download__heading strong { font-size: 14px; font-weight: 850; line-height: 1.2; }
-.app-download__heading small { color: #786b83; font-size: 11px; line-height: 1.3; }
+.app-download__glyph svg { width: 18px; height: 18px; }
+.app-download__heading { display: grid; flex: 1; gap: 3px; min-width: 0; }
+.app-download__heading strong { color: var(--color-primary-strong); font-size: 16px; line-height: 1.25; font-weight: 750; }
+.app-download__heading small { color: var(--fb-glass-muted); font-size: 11px; line-height: 1.3; }
 .app-download__close {
-  align-self: flex-start; flex: 0 0 auto; display: grid; place-items: center;
-  width: 34px; height: 34px; border: 0; border-radius: 9px;
-  color: #645370; background: #f6f1fb;
+  flex: 0 0 36px;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  color: var(--color-primary-strong);
+  background: rgba(255,255,255,.55);
+  cursor: pointer;
+  transition: background-color var(--fb-motion-button) var(--fb-easing-open), border-color var(--fb-motion-button) var(--fb-easing-open);
 }
-.app-download__close:hover { color: #5b208b; background: #eee0f8; }
-.app-download__stores { display: grid; gap: 8px; margin-top: 15px; }
+.app-download__close:hover { background: rgba(255,255,255,.94); border-color: var(--fb-glass-border); }
+.app-download__close:focus-visible { outline: 3px solid var(--color-primary); outline-offset: 1px; }
+.app-download__stores { display: grid; gap: 8px; padding: 14px 14px 9px; }
 .app-download__store {
-  display: flex; align-items: center; gap: 12px; min-width: 0; min-height: 58px;
-  padding: 9px 11px; border-radius: 12px; border: 1px solid #ebdff4;
-  background: #fdfbff; color: #2c2140; text-decoration: none;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  min-width: 0;
+  min-height: 58px;
+  padding: 9px 12px;
+  border: 1px solid rgba(150,112,180,.18);
+  border-radius: 13px;
+  color: var(--fb-glass-ink);
+  background: rgba(255,255,255,.61);
+  text-decoration: none;
 }
-a.app-download__store { transition: background-color .2s ease, border-color .2s ease; }
-a.app-download__store:hover { background: #f4e9ff; border-color: #b985db; }
+a.app-download__store { transition: background-color var(--fb-motion-button) var(--fb-easing-open), border-color var(--fb-motion-button) var(--fb-easing-open); }
+a.app-download__store:hover { background: rgba(255,255,255,.93); border-color: rgba(109,36,158,.42); }
+a.app-download__store:focus-visible { outline: 3px solid var(--color-primary); outline-offset: 2px; }
 .app-download__store--unavailable { cursor: default; }
-.app-download__store-icon { display: grid; place-items: center; width: 31px; height: 31px; flex: 0 0 31px; }
-.app-download__store-icon--ios { color: #22212a; }
-.app-download__store-icon--android { color: #30b568; }
-.app-download__store-copy { display: grid; flex: 1; gap: 3px; min-width: 0; }
-.app-download__store-copy strong { font-size: 13px; font-weight: 850; }
-.app-download__store-copy small { color: #82738d; font-size: 10px; }
-.app-download__soon {
-  flex: 0 0 auto; border-radius: 99px; padding: 5px 8px;
-  background: #f1e9fa; color: #714795; font-weight: 750; font-size: 10px;
+.app-download__store-icon {
+  display: grid;
+  place-items: center;
+  flex: 0 0 32px;
+  width: 32px;
+  height: 32px;
 }
-.app-download__note { color: #7f738a; font-size: 10px; line-height: 1.5; margin: 12px 2px 0; }
-.app-download__later { display: inline-block; border: 0; background: transparent; color: #6b2c96; font-size: 11px; font-weight: 800; padding: 7px 2px 1px; margin-top: 7px; }
-.app-download__later:hover { text-decoration: underline; }
+.app-download__store-icon--ios { color: #21202b; }
+.app-download__store-icon--android { color: inherit; }
+.app-download__store-icon svg { width: 27px; height: 27px; }
+.app-download__store-copy { display: grid; flex: 1; gap: 3px; min-width: 0; }
+.app-download__store-copy strong { color: #362041; font-size: var(--fb-control-font-size); font-weight: 800; }
+.app-download__store-copy small { color: var(--fb-glass-muted); font-size: 11px; }
+.app-download__soon {
+  flex: 0 0 auto;
+  border-radius: 999px;
+  padding: 5px 8px;
+  color: #6f4789;
+  background: rgba(235,221,246,.78);
+  font-size: 11px;
+  font-weight: 700;
+}
+.app-download__note {
+  margin: 0;
+  padding: 4px 16px 15px;
+  color: var(--fb-glass-muted);
+  font-size: 11px;
+  line-height: 1.55;
+}
+.app-download__later {
+  display: block;
+  margin: 0 14px 12px auto;
+  min-height: var(--fb-control-height-compact);
+  padding: 0 12px;
+  border: 0;
+  border-radius: 9px;
+  color: var(--color-primary-strong);
+  background: rgba(235,221,246,.45);
+  font-size: var(--fb-control-font-size);
+  font-weight: 700;
+  cursor: pointer;
+}
+.app-download__later:hover { background: rgba(235,221,246,.86); }
+.app-download__later:focus-visible { outline: 3px solid var(--color-primary); }
 @keyframes app-download-enter {
-  from { opacity: 0; transform: translateY(12px) scale(.975); }
+  from { opacity: 0; transform: translateY(-8px) scale(.97); }
   to { opacity: 1; transform: translateY(0) scale(1); }
 }
+@keyframes app-download-exit {
+  from { opacity: 1; transform: translateY(0) scale(1); }
+  to { opacity: 0; transform: translateY(-5px) scale(.985); }
+}
 @media (max-width: 1060px) and (min-width: 801px) {
-  .ref-navigation__inner { gap: 4px; }
-  .ref-navigation__download { padding: 0 9px; font-size: 11px; }
+  .ref-navigation__download { padding: 0 10px; }
 }
 @media (max-width: 800px) {
   .ref-navigation__download {
-    align-self: stretch;
-    justify-content: flex-start;
-    width: 100%;
-    min-height: 44px;
+    align-self: flex-start;
+    justify-content: center;
+    width: auto;
+    min-height: var(--fb-control-height-touch);
     margin: 7px 0 0;
-    border-radius: 9px;
-    padding: 10px 16px;
-    border-color: var(--fb-glass-stroke);
-    background: rgba(255,255,255,.7);
-    color: var(--color-primary-strong);
-    font-size: 13px;
+    padding: 0 13px;
+    font-size: var(--fb-control-font-size);
   }
-  .app-download { right: 12px; bottom: calc(80px + env(safe-area-inset-bottom)); max-height: calc(100dvh - 92px - env(safe-area-inset-bottom)); padding: 15px 14px 12px; }
-  .app-download__heading strong { font-size: 13px; }
+  .app-download {
+    top: calc(78px + env(safe-area-inset-top));
+    right: 12px;
+    max-height: calc(100dvh - 94px - env(safe-area-inset-top));
+  }
+  .app-download__head { min-height: 56px; }
+  .app-download__close { flex-basis: 44px; width: 44px; height: 44px; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .app-download { animation: none; }
-  .ref-navigation__download, a.app-download__store { transition: none; }
+  .app-download, .app-download--closing { animation: none; }
+  .ref-navigation__download, .app-download__close,
+  a.app-download__store, .app-download__later { transition: none; }
+  .ref-navigation__download:hover { transform: none; }
 }
