@@ -7,6 +7,7 @@ import CatalogueProductOptions from "@/components/catalogue-product-options";
 import CatalogueRelatedProducts from "@/components/catalogue-related-products";
 import {GlassPageBackdrop} from "@/components/glass-ui";
 import {relatedProducts} from "@/lib/catalog/recommendations";
+import { publicDecorativeBackground } from "@/lib/media/decorative-background";
 
 export const dynamic = "force-dynamic";
 
@@ -46,6 +47,6 @@ export default async function ProductPage({ params }: Props) {
     <CatalogueRelatedProducts items={recommendations.items} glass={glass}/>
   </div>;
   return <CatalogShell>{glass
-    ? <GlassPageBackdrop className="fb-glass-song-page" decorativeReadPath="/api/decorative-background">{content}</GlassPageBackdrop>
+    ? <GlassPageBackdrop className="fb-glass-song-page" decorativeReadPath={publicDecorativeBackground.songNatural ?? undefined}>{content}</GlassPageBackdrop>
     : content}</CatalogShell>;
 }
