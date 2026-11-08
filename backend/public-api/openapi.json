@@ -255,6 +255,53 @@
           }
         }
       }
+    },
+    "/v1/public/cms": {
+      "get": {
+        "operationId": "getPublicCms",
+        "description": "Approved, scheduled public_web CMS only. Never includes internal sources, users, NET or R2 keys.",
+        "responses": {
+          "200": {
+            "description": "Approved Website CMS entries",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "required": [
+                        "items"
+                      ],
+                      "properties": {
+                        "items": {
+                          "type": "array",
+                          "maxItems": 500,
+                          "items": {
+                            "$ref": "#/components/schemas/CmsEntry"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "503": {
+            "$ref": "#/components/responses/Unavailable"
+          }
+        }
+      }
     }
   },
   "components": {
@@ -613,6 +660,104 @@
                 "type": "string"
               }
             }
+          }
+        }
+      },
+      "CmsEntry": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "kind",
+          "slug",
+          "title",
+          "summary",
+          "paragraphs",
+          "ctaUrl",
+          "slot",
+          "sortOrder",
+          "publishedAt",
+          "startsAt",
+          "endsAt",
+          "hasDesktop",
+          "hasMobile",
+          "popupDelaySeconds",
+          "popupCooldownMinutes",
+          "popupMaxPerSession"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "banner",
+              "popup",
+              "article",
+              "promotion"
+            ]
+          },
+          "slug": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "summary": {
+            "type": "string"
+          },
+          "paragraphs": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "ctaUrl": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "slot": {
+            "type": "string"
+          },
+          "sortOrder": {
+            "type": "integer"
+          },
+          "publishedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "startsAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "endsAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "hasDesktop": {
+            "type": "boolean"
+          },
+          "hasMobile": {
+            "type": "boolean"
+          },
+          "popupDelaySeconds": {
+            "type": "integer"
+          },
+          "popupCooldownMinutes": {
+            "type": "integer"
+          },
+          "popupMaxPerSession": {
+            "type": "integer"
           }
         }
       }

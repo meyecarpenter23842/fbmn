@@ -5,7 +5,7 @@ export const dynamic="force-dynamic";
 const PRIVATE={"Cache-Control":"private, no-store","X-Content-Type-Options":"nosniff"};
 const JSON_HEADERS={...PRIVATE,"Content-Type":"application/json; charset=utf-8"};
 const fail=(status:number,code:string)=>Response.json({error:{code}},{status,headers:JSON_HEADERS});
-const GET_ACTIONS=new Set(["","entry","assets","image"]);
+const GET_ACTIONS=new Set(["","entry","assets","image","capability"]);
 const POST_ACTIONS=new Set(["create","update","publish","hide","image-upload"]);
 const MAX_IMAGE=5*1024*1024;
 function baseUrl(){
@@ -26,7 +26,7 @@ async function proxy(request:Request,params:Promise<{path?:string[]}>,method:"GE
  if(method==="GET"){
   const keys=[...url.searchParams.keys()];
   const allowed=action==="entry"||action==="assets"?new Set(["id"]):
-   isImage?new Set(["id","channel","device"]):new Set(["mode","page"]);
+   isImage?new Set(["id","channel","device"]):action==="capability"?new Set():new Set(["mode","page"]);
   if(keys.length!==new Set(keys).size||keys.some(k=>!allowed.has(k)))
    return fail(400,"invalid_query");
  }else{

@@ -72,6 +72,7 @@ export function createAdminStagingWorker({ createDbClient = opts => new Client(o
         recordAudit: ({subject,action,outcome}) => db(async client => { await client.query(AUDIT,[subject,action,outcome]); }),
         catalogueDb: db,
         catalogueR2: env.ADMIN_MEDIA_R2,
+        cmsPublicSurfaceReady: env.ADMIN_CMS_PUBLIC_READY==="true",
       });
       return api.fetch(request);
     }

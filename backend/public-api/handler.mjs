@@ -1,3 +1,4 @@
+import {projectPublicCms} from "./cms-public.mjs";
 const MAX_PUBLIC_PRODUCTS = 10000;
 const GROUPS = new Set(["school_notebook", "student_notebook", "memo_book", "stationery"]);
 const IDENTIFIER = /^[a-z0-9][a-z0-9_-]*$/i;
@@ -143,12 +144,13 @@ export function projectPublicContent(raw) {
   })();
   return { company, articles, promotions, dealerInformation };
 }
-const ROUTES = new Set(["/v1/public/categories", "/v1/public/products", "/v1/public/catalog", "/v1/public/content"]);
+const ROUTES = new Set(["/v1/public/categories", "/v1/public/products", "/v1/public/catalog", "/v1/public/content", "/v1/public/cms"]);
 const QUERY_KEYS = {
   "/v1/public/categories": new Set(["slug"]),
   "/v1/public/products": new Set(["slug", "categoryId", "page", "limit"]),
   "/v1/public/catalog": new Set(["page", "limit"]),
   "/v1/public/content": new Set(),
+  "/v1/public/cms": new Set(),
 };
 function integerParam(input, defaultValue, max) {
   if (input === null) return defaultValue;
@@ -190,7 +192,7 @@ function failure(status, code, origin) {
  * source verification, publication approvals, isolation and DB permissions.
  * Do NOT deploy before the separate data-source, rate-limit and staging gates.
  */
-export function createPublicApi({ getPublicCatalog, getPublicContent, allowedOrigins = [] }) {
+export function createPublicApi({ getPublicCatalog, getPublicContent, getPublicCms, cmsEnabled = false, allowedOrigins = [] }) {
   guard(typeof getPublicCatalog === "function" && typeof getPublicContent === "function");
   guard(Array.isArray(allowedOrigins) && allowedOrigins.every(o => {
     try { const u = new URL(o); return u.protocol === "https:" && u.origin === o; }
@@ -220,6 +222,13 @@ export function createPublicApi({ getPublicCatalog, getPublicContent, allowedOri
       }
       if (!validQuery(url)) return failure(400, "invalid_query", corsOrigin);
       try {
+        if (url.pathname === "/v1/public/cms") {
+          if(!cmsEnabled||typeof getPublicCms!=="function")
+            return failure(503,"cms_unavailable",corsOrigin);
+          const items=projectPublicCms(await getPublicCms());
+          // A hide, published-window change or withdrawal must not persist in an HTTP cache.
+          return response(200,{data:{items}},corsOrigin,"no-store");
+        }
         if (url.pathname === "/v1/public/content") {
           const content = projectPublicContent(await getPublicContent());
           return response(200, { data: content }, corsOrigin, "public, max-age=60");

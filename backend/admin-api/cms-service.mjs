@@ -83,7 +83,7 @@ function errorFor(e) {
  if(e?.message==="surface_unavailable")return fail(409,"surface_unavailable");
  if(e?.message==="revision_conflict"||e?.message==="hide_before_edit"||
     e?.message==="already_published"||e?.message==="already_hidden")return fail(409,e.message);
- if(e?.message==="source_required"||e?.message==="channels_required"||e?.message==="placements_required"||e?.message==="media_required")return fail(400,e.message);
+ if(e?.message==="source_required"||e?.message==="channels_required"||e?.message==="placements_required"||e?.message==="media_required"||e?.message==="ends_at_required")return fail(400,e.message);
  return fail(e?.code==="23505"?409:503,e?.code==="23505"?"slug_conflict":"cms_unavailable");
 }
 // Fetch lightweight summaries in bounded pages; full prose is loaded only on edit.
@@ -138,6 +138,7 @@ async function mutate(db,input,subject,action,publicSurfaceReady=false){
    if(action==="publish"&&old.status==="published")throw Error("already_published");
    if(action==="hide"&&old.status==="hidden")throw Error("already_hidden");
    if(action==="publish" && !old.source_ref.trim())throw Error("source_required");
+   if(action==="publish" && old.kind==="promotion" && !old.ends_at)throw Error("ends_at_required");
    if(action==="publish" && !old.channel_targets.length)throw Error("channels_required");
    if(action==="publish" && !cmsPlacementIsReady(old.kind,old.channel_targets,old.placements))
     throw Error("placements_required");
@@ -185,6 +186,10 @@ export async function handleCms({request,actor,db,r2,publicSurfaceReady=false}){
  if(["assets","image","image-upload"].includes(action))
   return handleCmsMedia({request,db,r2,actor,action});
  if(request.method==="GET"){
+  if(action==="capability"){
+   if(u.search)return fail(400,"invalid_query");
+   return ok({ready:publicSurfaceReady===true,channel:"public_web"});
+  }
   const keys=[...u.searchParams.keys()];
   if(keys.length!==new Set(keys).size)return fail(400,"invalid_query");
   if(action==="entry"){

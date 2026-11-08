@@ -9,8 +9,13 @@ import { GlassCard } from "@/components/glass-ui";
 import { previewProducts } from "@/lib/ui-preview";
 import { VerifiedMediaImage } from "@/components/verified-media-image";
 import { approvedSiteMedia } from "@/lib/media/approved-site-media";
+import {getOptionalPublicCms} from "@/lib/content/cms";
+import {CmsBannerSlot,CmsFeaturedSlot} from "@/components/cms-web-content";
 
-export default function HomePage() {
+export const dynamic="force-dynamic";
+export default async function HomePage() {
+  const cms=await getOptionalPublicCms();
+  const hasCmsHero=cms.some(item=>item.kind==="banner"&&item.slot==="home.hero");
   return (
     <>
       <SiteHeader />
@@ -28,8 +33,9 @@ export default function HomePage() {
               </div>
               <a className="ref-cta" href="#categories">Xem sản phẩm <Icon name="arrow" size={19}/></a>
             </div>
-            <div className="ref-hero__visual" aria-label="Bố cục minh họa tập vở Futurebook">
+            <div className={"ref-hero__visual"+(hasCmsHero?" ref-hero__visual--cms":"")} aria-label={hasCmsHero?"Banner Futurebook đã công bố":"Bố cục minh họa tập vở Futurebook"}>
               <div className="ref-hero__rays" aria-hidden="true" />
+              {hasCmsHero?<CmsBannerSlot items={cms} slot="home.hero"/>:<>
               <VerifiedMediaImage asset={approvedSiteMedia.heroBanner} priority
                 className="ref-hero__official-image"
                 sizes="(max-width: 800px) 100vw, 55vw"
@@ -45,6 +51,7 @@ export default function HomePage() {
               />
               <p className="ref-hero__handwriting" aria-hidden="true">Vở đẹp<br/>cho hành trình<br/>tri thức!</p>
               <div className="ref-hero__dots" aria-hidden="true"><i/><i/><i/><i/></div>
+              </>}
             </div>
           </Container>
         </section>
@@ -81,6 +88,9 @@ export default function HomePage() {
           </section>
           <p className="ref-preview-note">* Hình tập vở, thẻ sản phẩm và thứ tự hiển thị chỉ là mẫu UI, không phải catalogue, bảng giá hoặc sản phẩm bán chạy đã xác minh.</p>
 
+          <CmsBannerSlot items={cms} slot="home.after_products"/>
+          <CmsFeaturedSlot items={cms} slot="home.news_featured"/>
+          <CmsFeaturedSlot items={cms} slot="home.promotion_featured"/>
           <section className="ref-promos" aria-label="Khám phá nhóm sản phẩm">
             <div className="ref-promo ref-promo--a4">
               <div><h2>Vở A4</h2><p>Không gian học tập và làm việc</p><a href="#categories">Xem danh mục <Icon name="arrow" size={16}/></a></div>
