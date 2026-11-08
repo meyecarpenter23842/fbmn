@@ -42,8 +42,12 @@ try {
           matchesReducedMotion: matchMedia("(prefers-reduced-motion: reduce)").matches,
         };
       });
-      if (reduced === "reduce" && values.card !== "0s" && values.card !== "0s, 0s, 0s") {
-        failures.push("Reduced-motion card transition is not disabled: "+values.card);
+      // Chromium reports disabled animations as 0s or an insignificant
+      // 1e-05s. Compare numeric duration with a 2ms tolerance.
+      const duration = Math.max(...(values.card || "0s").split(",")
+        .map(value => parseFloat(value) * (value.includes("ms") ? 0.001 : 1)));
+      if (reduced === "reduce" && duration > 0.002) {
+        failures.push("Reduced-motion card transition exceeds 2ms: "+values.card);
       }
       if (reduced === "no-preference" && (!values.card || values.card === "0s")) {
         failures.push("Normal-motion card transition is missing");
@@ -124,6 +128,18 @@ try {
         if (images.includes(404)) blockers.add("Decorative background GET returned HTTP 404.");
         if (item.brokenImages.length) blockers.add("Some product/brand images are broken.");
         if (label === "song-natural") {
+          // Exercise published initial-SKU gallery BEFORE switching to another
+          // SKU; a variant may legitimately have no verified photos.
+          const thumbs = page.locator(".fb-song-gallery-thumb");
+          item.thumbnailCount = await thumbs.count();
+          if (item.thumbnailCount > 1) {
+            await thumbs.nth(1).click();
+            item.gallerySelected = await thumbs.nth(1).getAttribute("aria-pressed");
+            if (item.gallerySelected !== "true")
+              failures.push("Gallery thumbnail failed at "+width);
+          } else {
+            blockers.add("Initial Song Natural SKU has fewer than two thumbnails to test.");
+          }
           const variants = page.locator(".fb-song-sku");
           item.skuCount = await variants.count();
           if (item.skuCount > 1) {
@@ -135,13 +151,6 @@ try {
             if (item.sku.pressed !== "true" || !item.sku.summary?.includes(sku))
               failures.push("SKU selection "+width+" did not update summary");
           } else failures.push("No selectable SKU at "+width);
-          const thumbs = page.locator(".fb-song-gallery-thumb");
-          item.thumbnailCount = await thumbs.count();
-          if (item.thumbnailCount > 1) {
-            await thumbs.nth(1).click();
-            if (await thumbs.nth(1).getAttribute("aria-pressed") !== "true")
-              failures.push("Gallery thumbnail failed at "+width);
-          }
           item.quoteHref = await page.locator(".fb-song-quote").first()
             .getAttribute("href").catch(() => null);
           if (item.quoteHref !== "/#contact") failures.push("Quote CTA link changed at "+width);
