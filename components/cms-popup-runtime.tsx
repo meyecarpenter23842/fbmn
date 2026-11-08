@@ -25,7 +25,8 @@ function canOpen(item:PublicCmsItem,now:number){
 }
 export default function CmsPopupRuntime(){
  const path=usePathname()||"/";
- const [selected,setSelected]=useState<PublicCmsItem|null>(null);
+ const [show,setShow]=useState<{path:string;item:PublicCmsItem}|null>(null);
+ const selected=show?.path===path?show.item:null;
  const dialog=useRef<HTMLDialogElement>(null);
  const active=useRef<AbortController|null>(null);
  const timer=useRef<ReturnType<typeof setTimeout>|null>(null);
@@ -35,7 +36,7 @@ export default function CmsPopupRuntime(){
    try{localStorage.setItem(key(shown.id,"dismissed"),String(Date.now()));}catch{/* storage optional */}
   }
   dialog.current?.close();
-  setSelected(null);
+  setShow(null);
  };
  useEffect(()=>{
   if(timer.current){clearTimeout(timer.current);timer.current=null;}
@@ -54,7 +55,7 @@ export default function CmsPopupRuntime(){
     if(!candidate||controller.signal.aborted)return;
     timer.current=setTimeout(()=>{
      if(controller.signal.aborted)return;
-     setSelected(candidate);
+     setShow({path,item:candidate});
      try{sessionStorage.setItem(key(candidate.id,"count"),
       String(countFor(candidate.id)+1));}catch{/* session fallback */}
     },Math.max(0,Math.min(120,candidate.popupDelaySeconds))*1000);
