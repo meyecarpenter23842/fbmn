@@ -150,7 +150,10 @@ test("G04R keeps CSS fallback, confines opt-in to Song Natural, and never hardco
   const css = read("app/glass-foundation.css");
   const worker = read("backend/public-api/staging-worker.mjs");
   const route = read("app/api/decorative-background/route.ts");
-  assert.match(page, /decorativeReadPath="\/api\/decorative-background"/);
+  assert.match(page, /decorativeReadPath=\{publicDecorativeBackground\.songNatural \?\? undefined\}/);
+  const config = read("lib/media/decorative-background.ts");
+  assert.match(config, /songNatural: "\/api\/decorative-background"/);
+  assert.match(page, /import \{ publicDecorativeBackground \} from "@\/lib\/media\/decorative-background"/);
   assert.match(component, /decorativeReadPath === "\/api\/decorative-background"/);
   assert.match(css, /var\(--fb-glass-decorative-image\),\s*var\(--fb-glass-backdrop-gradient\)/);
   assert.match(worker, /const DECORATIVE_KEY = "banners\/G04\/backdrop-v1\.webp"/);
