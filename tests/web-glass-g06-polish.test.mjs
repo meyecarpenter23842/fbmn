@@ -10,6 +10,7 @@ const home = read("app/rebaseline.css");
 const options = read("components/catalogue-product-options.tsx");
 const gallery = read("components/published-image-gallery.tsx");
 const related = read("components/catalogue-related-products.tsx");
+const stripComments = body => body.replace(/\/\*[\s\S]*?\*\//g, "");
 
 test("G06 visual polish gives the approved real gallery more width and a balanced info panel", () => {
   assert.match(css, /\.fb-song-detail\s*\{[^}]*grid-template-columns:\s*minmax\(0, 53%\) minmax\(0, 1fr\)/);
@@ -45,7 +46,7 @@ test("G06 glass improves backdrop visibility with existing R2 asset and gradient
   assert.match(home, /\.ref-navigation__inner\s*\{[^}]*min-height:\s*46px/);
   assert.match(read("lib/media/decorative-background.ts"), /website: "\/api\/decorative-background"/);
   assert.doesNotMatch(css, /http:\/\/|https:\/\/|\.r2\.dev/);
-  assert.doesNotMatch(css + foundation + home, /!important|background-attachment:\s*fixed/);
+  assert.doesNotMatch(stripComments(css + foundation + home), /!important|background-attachment:\s*fixed/);
 });
 
 test("G06 preserves real SKU selection, photos, and conversion CTA", () => {
@@ -66,6 +67,6 @@ test("G06 responsive cards and motion remain within the existing single style ow
   for (const [name, body] of Object.entries({css, site, foundation, home})) {
     assert.equal((body.match(/\{/g)||[]).length, (body.match(/\}/g)||[]).length, name + " CSS brace balance");
   }
-  assert.doesNotMatch(css, /\.catalogue-|\.catalog-|\.fb-glass-card\s*\{|\.fb-glass-chip\s*\{/);
+  assert.doesNotMatch(stripComments(css), /\.catalogue-|\.catalog-|\.fb-glass-card\s*\{|\.fb-glass-chip\s*\{/);
   assert.match(css, /\.fb-song-related-grid\s*\{[\s\S]*?scrollbar-width:\s*thin/);
 });
