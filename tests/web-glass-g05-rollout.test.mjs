@@ -87,6 +87,9 @@ test("G05 does not fabricate commerce capabilities, claims, prices or product ph
 test("G05 keeps desktop and mobile controls accessible without layout animation or bottom dock", () => {
   assert.match(homeCss, /\.ref-navigation--open\s*\{[\s\S]*?visibility: visible/);
   assert.match(homeCss, /@media \(max-width: 800px\)/);
+  assert.match(homeCss, /\.ref-navigation__link\s*\{\s*color: var\(--fb-glass-ink\); background: transparent;/);
+  assert.match(homeCss, /\.ref-navigation__catalog\s*\{\s*color: #fff;\s*background: linear-gradient\(115deg, var\(--color-primary\)/);
+  assert.match(homeCss, /\.ref-navigation__link--active\s*\{\s*color: #fff;\s*background: linear-gradient\(115deg, var\(--color-primary\)/);
   assert.match(homeCss, /@media \(prefers-reduced-motion: reduce\)/);
   assert.match(categories, /overflow-x:\s*auto/);
   assert.match(categories, /scroll-snap-type:\s*x mandatory/);
