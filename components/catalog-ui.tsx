@@ -7,7 +7,7 @@ import { getPublishedProductImageUrl } from "@/lib/catalog/product-image";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { CatalogProductImage } from "@/components/catalog-product-image";
-import { GlassCard } from "@/components/glass-ui";
+import { GlassCard, GlassButtonLink } from "@/components/glass-ui";
 
 export function CatalogShell({ children }: { children: ReactNode }) {
   return <>
@@ -35,20 +35,25 @@ export function ProductCard({ product, glass = false }: { product: PublicProduct
       ? formatRetail(product.variants.find(v => v.price)!.price!.amountVnd)
       : "Liên hệ báo giá"
   );
+  const href = "/san-pham/" + encodeURIComponent(product.slug);
   const content = <>
-    <Link className="catalog-product__image" href={"/san-pham/" + encodeURIComponent(product.slug)} prefetch={false}
-      aria-label={"Xem sản phẩm " + product.name}>
+    <Link className={glass ? "fb-song-related-image" : "catalog-product__image"}
+      href={href} prefetch={false} aria-label={"Xem sản phẩm " + product.name}>
       <CatalogProductImage src={image} alt={media?.alt ?? product.name}/>
     </Link>
-    <div className="catalog-product__body">
-      <h3><Link href={"/san-pham/" + encodeURIComponent(product.slug)} prefetch={false}>{product.name}</Link></h3>
+    <div className={glass ? "fb-song-related-body" : "catalog-product__body"}>
+      <h3><Link href={href} prefetch={false}>{product.name}</Link></h3>
       <p>{product.variants.length} quy cách đã xác minh</p>
-      <strong className="catalog-price">{label}</strong>
-      <Link className="catalog-button catalog-button--small" href={"/san-pham/" + encodeURIComponent(product.slug)} prefetch={false}>Xem chi tiết</Link>
+      <strong className={glass ? "fb-song-related-price" : "catalog-price"}>{label}</strong>
+      {glass
+        ? <GlassButtonLink variant="secondary" className="fb-song-related-link"
+            href={href} prefetch={false}>Xem chi tiết</GlassButtonLink>
+        : <Link className="catalog-button catalog-button--small"
+            href={href} prefetch={false}>Xem chi tiết</Link>}
     </div>
   </>;
   return glass
-    ? <GlassCard hover className="catalog-product fb-glass-song-related-card">{content}</GlassCard>
+    ? <GlassCard hover className="fb-song-related-card">{content}</GlassCard>
     : <article className="catalog-product">{content}</article>;
 }
 
