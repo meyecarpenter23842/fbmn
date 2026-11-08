@@ -24,6 +24,37 @@ const observations = [], failures = [], blockers = new Set();
 await mkdir(output, { recursive: true });
 const browser = await chromium.launch({ headless: true });
 try {
+  // Inspect native motion in both normal and reduced-motion media modes.
+  // A single screenshot with animations disabled cannot certify motion quality.
+  for (const reduced of ["no-preference", "reduce"]) {
+    const context = await browser.newContext({
+      viewport: { width: 1440, height: 900 }, reducedMotion: reduced,
+    });
+    const page = await context.newPage();
+    try {
+      await page.goto(origin + "/", {waitUntil:"domcontentloaded",timeout:35000});
+      const values = await page.evaluate(() => {
+        const card = document.querySelector(".fb-glass-motion-card");
+        const nav = document.querySelector(".ref-navigation__link");
+        return {
+          card: card ? getComputedStyle(card).transitionDuration : null,
+          nav: nav ? getComputedStyle(nav).transitionDuration : null,
+          matchesReducedMotion: matchMedia("(prefers-reduced-motion: reduce)").matches,
+        };
+      });
+      if (reduced === "reduce" && values.card !== "0s" && values.card !== "0s, 0s, 0s") {
+        failures.push("Reduced-motion card transition is not disabled: "+values.card);
+      }
+      if (reduced === "no-preference" && (!values.card || values.card === "0s")) {
+        failures.push("Normal-motion card transition is missing");
+      }
+      observations.push({label:"motion-"+reduced,width:1440, ...values});
+    } catch(e) {
+      blockers.add("Motion-mode probe unavailable: "+String(e).slice(0,140));
+    } finally {
+      await context.close();
+    }
+  }
   for (const width of widths) {
     const context = await browser.newContext({
       viewport: { width, height: width > 800 ? 900 : 844 },
