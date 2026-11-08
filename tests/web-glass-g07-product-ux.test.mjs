@@ -132,6 +132,20 @@ test("G07: zoom dialog respects 280ms opening, 220ms closing and reduced motion 
   assert.doesNotMatch(gallery, /onCancel=.*preventDefault|onKeyDown=/);
 });
 
+test("G07 image zoom inherits the shared 52/56px visible popup header",()=>{
+  assert.match(gallery, /<dialog ref=\{zoomRef\} className="fb-song-zoom-dialog"[\s\S]*?aria-labelledby="fb-song-zoom-title"/);
+  assert.match(gallery, /<header className="fb-glass-dialog-header">/);
+  assert.match(gallery, /<h2 id="fb-song-zoom-title" className="fb-glass-dialog-header__title">/);
+  assert.match(gallery, /<GlassButton variant="secondary"[\s\S]*?onClick=\{\(\)=>zoomRef.current\?\.close\(\)\}/);
+  assert.match(core, /\.fb-glass-dialog-header\s*\{[^}]*min-height:\s*52px/);
+  assert.match(core, /\.fb-glass-dialog-header__title\s*\{[^}]*font-size:\s*16px/);
+  assert.match(core, /@media \(max-width: 780px\)[\s\S]*?\.fb-glass-dialog-header\s*\{[^}]*min-height:\s*56px/);
+  assert.match(core, /border-inline-start:\s*3px solid var\(--color-primary\)/);
+  assert.match(core, /background:\s*linear-gradient\(105deg, rgba\(245, 236, 253/);
+  assert.doesNotMatch(css, /\.fb-glass-dialog-header\s*\{/);
+  assert.doesNotMatch(css, /\.fb-song-zoom-close\s*\{/);
+});
+
 test("G07: style ownership and source-backed content remain unchanged",()=>{
   assert.doesNotMatch(stripComments(css), /\.catalogue-|\.catalog-|\.fb-glass-card\s*\{|\.fb-glass-chip\s*\{/);
   assert.doesNotMatch(detail, /fetch\(|localStorage|sessionStorage|NET_PRICE|R2_SECRET/);
