@@ -46,6 +46,10 @@ async function currentPublicCms(signal:AbortSignal):Promise<PublicCmsItem[]|null
 
 export default function CmsPopupRuntime(){
  const path=usePathname()||"/";
+ // Key by route visit: an old popup cannot reappear via Back/Forward with stale state.
+ return <CmsPopupSession key={path} path={path}/>;
+}
+function CmsPopupSession({path}:{path:string}){
  const [show,setShow]=useState<{path:string;item:PublicCmsItem}|null>(null);
  const selected=show?.path===path?show.item:null;
  const dialog=useRef<HTMLDialogElement>(null);
