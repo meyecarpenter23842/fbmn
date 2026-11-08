@@ -84,3 +84,152 @@
   }
 
 }
+
+/*
+ * G02 — opt-in Website primitives. All dimensions, colors, and motion consume G01
+ * tokens; no global button/link/card or Admin selector overrides.
+ */
+.fb-glass-header {
+  position: relative;
+  border-radius: 0;
+}
+
+.fb-glass-card,
+.fb-glass-panel {
+  min-width: 0;
+  padding: clamp(16px, 2vw, 24px);
+}
+
+.fb-glass-media-frame {
+  position: relative;
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--fb-glass-border-fallback);
+  border-radius: var(--fb-glass-panel-radius);
+  background-color: #fff;
+}
+
+.fb-glass-button,
+.fb-glass-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: var(--fb-control-height-compact);
+  padding: 0 16px;
+  font: inherit;
+  font-size: var(--fb-control-font-size);
+  font-weight: 750;
+  line-height: 1.35;
+  text-align: center;
+  text-decoration: none;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition:
+    color var(--fb-motion-button) var(--fb-easing-open),
+    background-color var(--fb-motion-button) var(--fb-easing-open),
+    border-color var(--fb-motion-button) var(--fb-easing-open),
+    box-shadow var(--fb-motion-button) var(--fb-easing-open),
+    transform var(--fb-motion-button) var(--fb-easing-open);
+}
+
+.fb-glass-button {
+  border-radius: var(--fb-control-radius);
+}
+
+.fb-glass-button--pill,
+.fb-glass-chip {
+  border-radius: 999px;
+}
+
+.fb-glass-button--primary {
+  background: linear-gradient(115deg, var(--color-primary), var(--color-primary-strong));
+  color: #fff;
+  box-shadow: var(--fb-glass-shadow);
+}
+
+.fb-glass-button--secondary {
+  color: var(--fb-glass-ink);
+  background-color: var(--fb-glass-surface-fallback);
+  border-color: var(--fb-glass-border-fallback);
+  box-shadow: var(--fb-glass-shadow);
+}
+
+.fb-glass-button--ghost {
+  color: var(--color-primary-strong);
+  background-color: transparent;
+  border-color: var(--fb-glass-border-fallback);
+}
+
+.fb-glass-chip {
+  max-width: 100%;
+  color: var(--fb-glass-ink);
+  background-color: var(--fb-glass-surface-fallback);
+  border-color: var(--fb-glass-border-fallback);
+  box-shadow: 0 2px 8px rgba(63, 25, 98, .06);
+}
+
+.fb-glass-chip[data-selected="true"] {
+  background-color: var(--color-primary);
+  border-color: var(--color-primary);
+  color: #fff;
+  box-shadow: var(--fb-glass-shadow);
+}
+
+.fb-glass-button:focus-visible,
+.fb-glass-chip:focus-visible {
+  outline: 3px solid var(--color-primary);
+  outline-offset: 3px;
+}
+
+.fb-glass-button:disabled,
+.fb-glass-chip:disabled,
+.fb-glass-button[aria-disabled="true"],
+.fb-glass-chip[aria-disabled="true"] {
+  opacity: .55;
+  cursor: not-allowed;
+  box-shadow: none;
+  pointer-events: none;
+}
+
+.fb-glass-button[data-loading="true"] {
+  cursor: progress;
+  opacity: .75;
+}
+
+@supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .fb-glass-button--secondary,
+  .fb-glass-chip:not([data-selected="true"]) {
+    background-color: var(--fb-glass-surface-strong);
+    border-color: var(--fb-glass-border);
+  }
+}
+
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .fb-glass-button:not(:disabled):not([aria-disabled="true"]):hover,
+  .fb-glass-chip:not(:disabled):not([aria-disabled="true"]):hover {
+    box-shadow: var(--fb-glass-shadow-hover);
+  }
+
+  .fb-glass-button--primary:not(:disabled):hover {
+    filter: brightness(1.05);
+  }
+
+  .fb-glass-chip:not(:disabled):hover {
+    border-color: var(--color-primary);
+  }
+}
+
+@media (max-width: 780px) {
+  .fb-glass-button,
+  .fb-glass-chip {
+    min-height: var(--fb-control-height-touch);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fb-glass-button,
+  .fb-glass-chip {
+    transition: none;
+  }
+}
