@@ -19,6 +19,10 @@ type MotionOptions = {
   /** Lift only when fine-pointer hover and reduced motion is not requested. */
   hover?: boolean;
 };
+type LinkCardOptions = {
+  /** Zero outer padding; one inner link owns the complete card hit target. */
+  linkCard?: boolean;
+};
 
 type DecorativeBackdropOptions = {
   /** Explicitly selected, approved public R2 banner. Never use a raw R2 key or URL. */
@@ -70,13 +74,15 @@ export function GlassHeader({
 export function GlassCard({
   strong = false,
   hover = false,
+  linkCard = false,
   className,
   ...rest
-}: ComponentPropsWithoutRef<"article"> & SurfaceOptions & MotionOptions) {
+}: ComponentPropsWithoutRef<"article"> & SurfaceOptions & MotionOptions & LinkCardOptions) {
   return <article {...rest} className={classes(
     "fb-glass-surface", "fb-glass-card",
     strong && "fb-glass-surface--strong",
-    hover && "fb-glass-motion-card", className
+    hover && "fb-glass-motion-card",
+    linkCard && "fb-glass-card--link", className
   )} />;
 }
 
