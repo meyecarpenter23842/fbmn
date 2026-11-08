@@ -1,0 +1,96 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import {readFileSync} from "node:fs";
+
+const read = p => readFileSync(new URL("../"+p,import.meta.url),"utf8");
+const card = read("components/catalog-ui.tsx");
+const detail = read("components/catalogue-product-options.tsx");
+const gallery = read("components/published-image-gallery.tsx");
+const css = read("app/glass-product-detail.css");
+const listingCss = read("app/catalog.css");
+const related = read("components/catalogue-related-products.tsx");
+const core = read("app/glass-foundation.css");
+const stripComments = s => s.replace(/\/\*[\s\S]*?\*\//g, "");
+
+test("G07: one accessible full-card link, no nested links, redundant detail action removed",()=>{
+  const block=card.slice(card.indexOf("export function ProductCard("),card.indexOf("export function formatRetail"));
+  assert.match(block, /const content = <Link href=\{href\} prefetch=\{false\}/);
+  assert.match(block, /aria-label=\{"Xem sản phẩm " \+ product.name\}/);
+  assert.match(block, /className=\{glass \? "fb-song-related-hit" : "catalog-product__hit"\}/);
+  assert.equal((block.match(/<Link\b/g)||[]).length,1);
+  assert.equal((block.match(/<GlassButtonLink\b/g)||[]).length,0);
+  assert.doesNotMatch(block, /Xem chi tiết|onClick=\{/);
+  assert.match(block, /<GlassCard hover className="fb-song-related-card">/);
+  assert.match(block, /<article className="catalog-product">/);
+  assert.match(block, /getPublishedProductImageUrl\(media.r2Key, process.env.NEXT_PUBLIC_MEDIA_BASE_URL\)/);
+  assert.match(related, /items\.map\(product=><ProductCard key=\{product\.id\} product=\{product\} glass=\{glass\}\/>\)/);
+  assert.match(css, /\.fb-song-related-hit:focus-visible\s*\{[^}]*outline:\s*3px solid/);
+  assert.match(listingCss, /\.catalog-product__hit:focus-visible\s*\{[^}]*outline:\s*3px solid/);
+});
+
+test("G07: mobile catalogue stacks compact horizontal cards and preserves all rows",()=>{
+  assert.match(listingCss, /@media \(max-width: 700px\)[\s\S]*?\.catalog-grid\s*\{\s*grid-template-columns:\s*1fr/);
+  assert.match(css, /@media \(max-width: 700px\)[\s\S]*?\.fb-song-related-hit\s*\{[^}]*display:\s*grid;[^}]*grid-template-columns:\s*minmax\(85px, 36%\) minmax\(0,1fr\)/);
+  assert.match(css, /\.fb-song-related-image\s*\{[^}]*height:\s*160px/);
+  assert.match(css, /\.fb-song-related-body h3\s*\{[^}]*-webkit-line-clamp:\s*2/);
+  assert.doesNotMatch(css, /\.fb-song-related-grid\s*>\s*\.fb-song-related-card:nth-child/);
+  assert.match(listingCss, /\.catalog-empty-image\.catalog-image-compact\s*\{/);
+  assert.doesNotMatch(stripComments(css), /!important|background-attachment:\s*fixed/);
+});
+
+test("G07: compact published-image preview and SKU controls precede large gallery on mobile",()=>{
+  assert.match(detail, /const \[sku,setSku\]=useState\(product\.variants\[0\]\.sku\)/);
+  assert.match(detail, /const gallery=photosForSku\(photos,selected\.sku\)/);
+  assert.match(detail, /className="fb-song-overview-preview"/);
+  assert.match(detail, /src=\{gallery\[0\]\?\.src\?\?null\}/);
+  assert.match(detail, /disabled=\{gallery.length===0\}/);
+  assert.match(detail, /zoomDialogRef=\{zoomDialogRef\}/);
+  assert.match(css, /\.fb-song-info\s*\{\s*order:\s*0/);
+  assert.match(css, /\.fb-song-gallery\s*\{\s*order:\s*1/);
+  assert.match(css, /\.fb-song-overview\s*\{[^}]*grid-template-columns:\s*104px minmax\(0,1fr\)/);
+  assert.match(css, /\.fb-song-overview-preview\s*\{[^}]*height:\s*124px/);
+  assert.match(css, /\.fb-song-sku-grid\s*\{[^}]*grid-template-columns:\s*repeat\(auto-fit, minmax\(65px, 1fr\)\)/);
+  assert.match(detail, /choices\.map\(variant=><VariantChoice key=\{variant\.sku\}/);
+  assert.match(detail, /onClick=\{\(\)=>setSku\(variant\.sku\)\}/);
+  assert.match(detail, /aria-live="polite" aria-atomic="true"/);
+});
+
+test("G07: one native zoom dialog, working thumbnails, Escape/focus handled by browser",()=>{
+  assert.match(gallery, /zoomDialogRef\?:RefObject<HTMLDialogElement\|null>/);
+  assert.match(gallery, /<dialog ref=\{zoomRef\} className="fb-song-zoom-dialog"/);
+  assert.match(gallery, /zoomRef\.current\?\.showModal\(\)/);
+  assert.match(gallery, /zoomRef\.current\?\.close\(\)/);
+  assert.match(gallery, /onClick=\{openZoom\}/);
+  assert.match(gallery, /aria-pressed=\{selected===i\}/);
+  assert.match(gallery, /setSelected\(i\)/);
+  assert.match(gallery, /current\?\.src\?\?null/);
+  assert.match(css, /\.fb-song-zoom-dialog::backdrop/);
+  assert.doesNotMatch(gallery, /document\.addEventListener|window\.addEventListener|onKeyDown/);
+  assert.doesNotMatch(gallery, /unsplash|mockup|imagegen|\.r2\.dev/);
+});
+
+test("G07: sticky quote appears only offscreen, retains company SKU and real contact URL",()=>{
+  assert.match(detail, /const \[showMobileQuote,setShowMobileQuote\]=useState\(false\)/);
+  assert.match(detail, /new IntersectionObserver/);
+  assert.match(detail, /setShowMobileQuote\(!entry\.isIntersecting\)/);
+  assert.match(detail, /observer\.disconnect\(\)/);
+  assert.match(detail, /ref=\{primaryQuoteRef\} href="\/#contact"/);
+  assert.match(detail, /glass&&showMobileQuote&&<div className="fb-song-mobile-cta"/);
+  assert.match(detail, /Mã <strong>\{selected\.sku\}<\/strong>/);
+  assert.match(detail, /<GlassButtonLink href="\/#contact" pill>Liên hệ báo giá<\/GlassButtonLink>/);
+  assert.match(css, /\.fb-song-mobile-cta\s*\{\s*display:\s*none/);
+  assert.match(css, /@media \(max-width: 700px\)[\s\S]*?\.fb-song-mobile-cta\s*\{[^}]*position:\s*fixed/);
+  assert.match(css, /env\(safe-area-inset-bottom\)/);
+  assert.match(core, /@media \(max-width: 780px\)/);
+  assert.doesNotMatch(css, /bottom-navigation|bottom-dock|\.fb-glass-button\s*\{/);
+});
+
+test("G07: style ownership and source-backed content remain unchanged",()=>{
+  assert.doesNotMatch(stripComments(css), /\.catalogue-|\.catalog-|\.fb-glass-card\s*\{|\.fb-glass-chip\s*\{/);
+  assert.doesNotMatch(detail, /fetch\(|localStorage|sessionStorage|NET_PRICE|R2_SECRET/);
+  for(const [path,s] of Object.entries({css,listingCss,core})){
+    assert.equal((s.match(/\{/g)||[]).length,(s.match(/\}/g)||[]).length,path+" braces");
+  }
+  assert.match(read("app/san-pham/[slug]/page.tsx"), /getPublicCatalog\(\)/);
+  assert.match(read("app/san-pham/[slug]/page.tsx"), /getProductBySlug\(catalog, slug\)/);
+});
