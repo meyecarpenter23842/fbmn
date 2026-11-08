@@ -133,7 +133,8 @@
   padding: 0;
 }
 .fb-glass-card--link > a {
-  display: block;
+  /* The page-level card owns flex/grid layout; this shared variant owns only
+     hit-area geometry, padding and focus. Never force display:block here. */
   width: 100%;
   min-height: 100%;
   padding: clamp(16px, 2vw, 24px);
