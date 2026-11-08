@@ -7,7 +7,7 @@ import AdminToast from "./admin-toast";
 import CmsMediaEditor,{cmsMediaKey,uploadCmsImage} from "./cms-media-editor";
 import type {CmsChannel as ImageChannel,CmsDevice,CmsPendingImages} from "./cms-media-editor";
 import CmsVisualPreview from "./cms-visual-preview";
-import {CMS_SLOTS} from "./cms-placement-options";
+import CmsWebsitePlacement,{cmsWebsiteSlotLabel} from "./cms-website-placement";
 
 type CmsKind = "banner"|"popup"|"article"|"promotion";
 type CmsStatus = "draft"|"published"|"hidden";
@@ -30,11 +30,6 @@ type Draft = {
 const LABELS:Record<CmsKind,string>={
  banner:"Banner",popup:"Popup",article:"Tin tức",promotion:"Khuyến mãi"
 };
-const CHANNELS:{code:CmsChannel;label:string}[]=[
- {code:"public_web",label:"Website"},
- {code:"dealer_app",label:"App đại lý"},
- {code:"consumer_app",label:"App người tiêu dùng"}
-];
 function localDate(value:string|null){
  if(!value)return "";
  const d=new Date(value);
@@ -44,7 +39,7 @@ function localDate(value:string|null){
 }
 function blank(kind:CmsKind):Draft {
  return {kind,slug:"",title:"",summary:"",paragraphs:"",ctaUrl:"",
-  channelTargets:[],sortOrder:0,startsAt:"",endsAt:"",sourceRef:"",
+  channelTargets:["public_web"],sortOrder:0,startsAt:"",endsAt:"",sourceRef:"",
   placements:{},popupDelaySeconds:3,popupCooldownMinutes:1440,popupMaxPerSession:1};
 }
 function fromItem(item:CmsItem):Draft {
@@ -98,7 +93,6 @@ function CmsEditor({item,kind,onSaved,onSavingChange,dirtyRef,step,onStep,formId
  const [busy,setBusy]=useState(false);
  const [error,setError]=useState("");
  const [toastId,setToastId]=useState(0);
- const [previewChannel,setPreviewChannel]=useState<CmsChannel>("public_web");
  const [previewDevice,setPreviewDevice]=useState<CmsDevice>("desktop");
  const contentDirty=useRef(false),operationLock=useRef(false);
  const previewUrls=useRef<Set<string>>(new Set());
@@ -118,23 +112,6 @@ function CmsEditor({item,kind,onSaved,onSavingChange,dirtyRef,step,onStep,formId
   if(prior){URL.revokeObjectURL(prior.url);previewUrls.current.delete(prior.url);}
   dirtyRef.current=true;
   setPendingImages(prev=>({...prev,[key]:{file,url}}));
- };
- const toggleChannel=(ch:CmsChannel,checked:boolean)=>{
-  if(!checked){
-   for(const device of ["desktop","mobile"] as CmsDevice[]){
-    const key=cmsMediaKey(ch,device),pending=pendingImages[key];
-    if(pending){URL.revokeObjectURL(pending.url);previewUrls.current.delete(pending.url);}
-   }
-   setPendingImages(prev=>Object.fromEntries(
-    Object.entries(prev).filter(([key])=>!key.startsWith(ch+":"))));
-  }
-  contentDirty.current=true;dirtyRef.current=true;
-  setDraft(prev=>{
-   const targets=checked?[...prev.channelTargets,ch]:prev.channelTargets.filter(v=>v!==ch);
-   const placements={...prev.placements};
-   if(!checked)delete placements[ch];
-   return {...prev,channelTargets:targets,placements};
-  });
  };
  const submit=async(event:FormEvent<HTMLFormElement>)=>{
   event.preventDefault();
@@ -192,8 +169,6 @@ function CmsEditor({item,kind,onSaved,onSavingChange,dirtyRef,step,onStep,formId
   }
  };
  const canChangeKind=!savedRecord;
- const activePreviewChannel=draft.channelTargets.includes(previewChannel)?
-  previewChannel:draft.channelTargets[0]??"public_web";
  const STEPS=["Nội dung","Vị trí & lịch","Ảnh & xem trước"];
  return <form id={formId} className="cms-editor cms-wizard" onSubmit={e=>void submit(e)} noValidate>
   <AdminToast variant="error" message={error} notificationId={toastId} onClose={()=>setError("")}/>
