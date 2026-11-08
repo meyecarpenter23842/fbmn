@@ -12,6 +12,7 @@ import "./site-footer.css";
 import "./app-download.css";
 import "./chatbot.css";
 import "./glass-foundation.css";
+import "./glass-product-detail.css";
 import { AppDownloadProvider } from "@/components/app-download";
 import { ChatbotWidget } from "@/components/chatbot-widget";
 

@@ -7,6 +7,7 @@ import { getPublishedProductImageUrl } from "@/lib/catalog/product-image";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { CatalogProductImage } from "@/components/catalog-product-image";
+import { GlassCard } from "@/components/glass-ui";
 
 export function CatalogShell({ children }: { children: ReactNode }) {
   return <>
@@ -26,7 +27,7 @@ export function CatalogBreadcrumb({ trail }: { trail: Array<{ label: string; hre
   </nav>;
 }
 
-export function ProductCard({ product }: { product: PublicProduct }) {
+export function ProductCard({ product, glass = false }: { product: PublicProduct; glass?: boolean }) {
   const media = product.media[0];
   const image = media ? getPublishedProductImageUrl(media.r2Key, process.env.NEXT_PUBLIC_MEDIA_BASE_URL) : null;
   const label = product.priceLabel ?? (
@@ -34,7 +35,7 @@ export function ProductCard({ product }: { product: PublicProduct }) {
       ? formatRetail(product.variants.find(v => v.price)!.price!.amountVnd)
       : "Liên hệ báo giá"
   );
-  return <article className="catalog-product">
+  const content = <>
     <Link className="catalog-product__image" href={"/san-pham/" + encodeURIComponent(product.slug)} prefetch={false}
       aria-label={"Xem sản phẩm " + product.name}>
       <CatalogProductImage src={image} alt={media?.alt ?? product.name}/>
@@ -45,7 +46,10 @@ export function ProductCard({ product }: { product: PublicProduct }) {
       <strong className="catalog-price">{label}</strong>
       <Link className="catalog-button catalog-button--small" href={"/san-pham/" + encodeURIComponent(product.slug)} prefetch={false}>Xem chi tiết</Link>
     </div>
-  </article>;
+  </>;
+  return glass
+    ? <GlassCard hover className="catalog-product fb-glass-song-related-card">{content}</GlassCard>
+    : <article className="catalog-product">{content}</article>;
 }
 
 export function formatRetail(amountVnd: number): string {
