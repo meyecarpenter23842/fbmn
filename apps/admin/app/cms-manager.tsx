@@ -8,7 +8,9 @@ import CmsMediaEditor,{cmsMediaKey,uploadCmsImage} from "./cms-media-editor";
 import type {CmsChannel as ImageChannel,CmsDevice,CmsPendingImages} from "./cms-media-editor";
 import CmsVisualPreview from "./cms-visual-preview";
 import CmsWebsitePlacement,{cmsWebsiteSlotLabel} from "./cms-website-placement";
-import {belongsToWebsite,websiteDraftTargets,withWebsitePlacement} from "./cms-website-policy";
+import {websiteDraftTargets,withWebsitePlacement} from "./cms-website-policy";
+import {websiteCmsPage} from "./cms-website-list";
+import type {CmsSourcePage} from "./cms-website-list";
 
 type CmsKind = "banner"|"popup"|"article"|"promotion";
 type CmsStatus = "draft"|"published"|"hidden";
@@ -346,10 +348,9 @@ export default function CmsManager({mode,owner}:{
   if(!owner)return;
   setLoading(true);
   try{
-   const v=await cmsApi<{items:CmsSummary[];page:number;hasNext:boolean}>(
-    "?mode="+mode+"&page="+page);
-   if(v.page!==page || !Array.isArray(v.items))throw Error("Danh sách CMS không hợp lệ.");
-   setItems(v.items);setHasNext(v.hasNext===true);setLoadError("");
+   const web=await websiteCmsPage<CmsSummary>(page,backendPage=>
+    cmsApi<CmsSourcePage<CmsSummary>>("?mode="+mode+"&page="+backendPage));
+   setItems(web.items);setHasNext(web.hasNext);setLoadError("");
   }
   catch(e){
    const reason=e instanceof Error?e.message:"Không tải được CMS.";
@@ -359,7 +360,7 @@ export default function CmsManager({mode,owner}:{
   finally{setLoading(false);}
  },[owner,mode,page]);
  useEffect(()=>{const task=window.setTimeout(()=>{void refresh();},0);return()=>window.clearTimeout(task);},[refresh]);
- const visible=items.filter(item=>belongsToWebsite(item.channel_targets));
+ const visible=items;
  const kind:CmsKind=mode==="marketing"?"banner":"article";
  const title=mode==="marketing"?"Banner & Popup":"Tin tức & Khuyến mãi";
  const notify=(text:string,problem=false)=>{if(problem)setError(text);else setMessage(text);setToastId(v=>v+1);};
@@ -392,7 +393,7 @@ export default function CmsManager({mode,owner}:{
     <tbody>
      {loading?<tr><td colSpan={5}>Đang tải nội dung…</td></tr>:
       loadError?<tr><td colSpan={5} role="alert" className="cms-error-state">{loadError} <button type="button" className="fb-ui-button fb-ui-button--secondary" onClick={()=>void refresh()}>Thử lại</button></td></tr>:
-      visible.length===0?<tr><td colSpan={5}>Chưa có nội dung Website ở trang này. Chọn Thêm nội dung hoặc chuyển trang để xem tiếp.</td></tr>:
+      visible.length===0?<tr><td colSpan={5}>Chưa có nội dung Website. Chọn Thêm nội dung để tạo bản nháp.</td></tr>:
       visible.map(item=><tr key={item.id}>
        <td><strong>{item.title}</strong><small>{item.slug}</small></td>
        <td>{LABELS[item.kind]}</td>
