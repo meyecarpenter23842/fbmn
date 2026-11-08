@@ -4,7 +4,7 @@
    no longer included after direct mobile staging feedback on 28 Oct 2026. */
 
 .ref-header { background: var(--fb-glass-panel-layer); position: relative; z-index: 30;  width: min(1260px, calc(100% - 32px)); margin: 16px auto 0; border: 1px solid var(--fb-glass-border); border-radius: 26px; box-shadow: var(--fb-glass-shadow); overflow: visible; -webkit-backdrop-filter: blur(var(--fb-glass-ui-blur)); backdrop-filter: blur(var(--fb-glass-ui-blur));}
-.ref-header__inner { display: grid; grid-template-columns: 220px minmax(180px,1fr) auto; align-items: center; gap: 25px; min-height: 76px;  padding-inline: clamp(12px, 2.6vw, 26px); border-radius: 26px 26px 0 0;}
+.ref-header__inner { display: grid; grid-template-columns: 220px minmax(180px,1fr) auto; align-items: center; gap: 25px; min-height: 68px;  padding-inline: clamp(12px, 2.6vw, 26px); border-radius: 26px 26px 0 0;}
 .ref-brand { display: inline-flex; align-items: center; gap: 7px; width: max-content; max-width: 100%; }
 .ref-brand__emblem { display: grid; place-items: center; width: 52px; height: 48px; border-radius: 5px; border: 3px solid #4e1b8f; color: #d30b4b; background: #fff; font-size: 25px; font-weight: 1000; letter-spacing: -3px; box-shadow: inset 0 0 0 2px white, 0 0 0 1px #d10b4a; }
 .ref-brand__img { display: block; width: 100%; height: 100%; object-fit: contain; }
@@ -25,7 +25,7 @@
 .ref-header__mobile-icon { display: none; border: 1px solid var(--fb-glass-border); background: rgba(255,255,255,.42); color: #312044; min-height: 44px; min-width: 40px; padding: 5px;  border-radius: 999px;}
 .ref-header__mobile-icon:disabled { opacity: .7; }
 .ref-navigation { background: rgba(255,255,255,.12); color: var(--fb-glass-ink);  border-top: 1px solid var(--fb-glass-border); border-radius: 0 0 26px 26px;}
-.ref-navigation__inner { display: flex; align-items: stretch; gap: 6px; min-height: 52px;  align-items: center;}
+.ref-navigation__inner { display: flex; align-items: stretch; gap: 6px; min-height: 46px;  align-items: center;}
 .ref-navigation__catalog { display: inline-flex; align-items: center; gap: 12px; padding: 0 18px; min-width: 210px; background: var(--fb-glass-surface-layer); font-size: var(--fb-control-font-size); font-weight: 750; white-space: nowrap; transition: background-color var(--fb-motion-menu) var(--fb-easing-open);  color: var(--color-primary-strong); border: 1px solid var(--fb-glass-border); border-radius: 999px; min-height: 36px; margin: 4px 0; box-shadow: 0 2px 9px rgba(76, 36, 112, .07);}
 .ref-navigation__catalog svg:last-child { margin-left: auto; }
 .ref-navigation__link { display: inline-flex; justify-content: center; align-items: center; min-height: 46px; font-size: var(--fb-control-font-size); font-weight: 700; padding: 0 12px; white-space: nowrap; transition: background-color var(--fb-motion-menu) var(--fb-easing-open), color var(--fb-motion-menu) var(--fb-easing-open);  min-height: 36px; border-radius: 999px; font-weight: 750;}
@@ -50,7 +50,7 @@
 .ref-cta:hover { background: #bd0635;  box-shadow: 0 12px 25px rgba(150, 20, 71, .25);}
 .ref-cta--small { min-height: 36px; padding-inline: 16px; font-size: 12px; }
 .ref-hero__visual { position: relative; min-height: 400px; }
-.ref-hero__rays { position: absolute; inset: 0; opacity: .47; background: repeating-conic-gradient(from 72deg at 46% 90%, #fff8 0deg 8deg, transparent 8deg 24deg); pointer-events: none; }
+.ref-hero__rays { position: absolute; inset: 0; opacity: .28; background: repeating-conic-gradient(from 72deg at 46% 90%, #fff8 0deg 8deg, transparent 8deg 24deg); pointer-events: none; }
 .ref-hero__books { position: relative; height: 100%; min-height: 390px; }
 .ref-hero__books::before { content: ""; position: absolute; bottom: 4%; left: 6%; right: 4%; height: 18%; border-radius: 50%; background: #fff8ff; box-shadow: 0 16px 25px #7f629250; }
 .ref-hero__book.notebook { position: absolute; bottom: 13%; box-shadow: -8px 12px 16px #3a1a5935; border: 3px solid #fff9; }
