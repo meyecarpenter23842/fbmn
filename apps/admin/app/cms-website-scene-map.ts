@@ -26,7 +26,7 @@ export const CMS_WEBSITE_SCENE_SLOTS:Record<string,CmsWebsiteSceneSpec>={
   description:"Sau Sản phẩm nổi bật, trước các khối Vở A4/B5; Website chưa có renderer banner."
  },
  "category.header":{
-  page:"category",path:"/san-pham",anchor:"catalog-breadcrumb → catalog-layout",placementReady:false,
+  page:"category",path:"/danh-muc/[slug]",anchor:"catalog-breadcrumb → catalog-layout",placementReady:false,
   description:"Trang danh mục có breadcrumb và bộ lọc; CMS chưa có điểm chèn trước sản phẩm."
  },
  "home.entry":{
@@ -34,7 +34,7 @@ export const CMS_WEBSITE_SCENE_SLOTS:Record<string,CmsWebsiteSceneSpec>={
   description:"Popup dự kiến phủ trang chủ; runtime giới hạn tần suất chưa hoạt động."
  },
  "category.entry":{
-  page:"category",path:"/san-pham",anchor:"catalog-main overlay",placementReady:false,
+  page:"category",path:"/danh-muc/[slug]",anchor:"catalog-main overlay",placementReady:false,
   description:"Popup dự kiến trên trang danh mục; runtime chưa hoạt động."
  },
  "all.entry":{
