@@ -20,8 +20,8 @@ test("G06 visual polish gives the approved real gallery more width and a balance
   assert.match(css, /\.fb-song-options\s*\{[^}]*flex:\s*1/);
   assert.match(css, /\.fb-song-summary\s*\{[^}]*margin-top:\s*auto/);
   assert.match(css, /\.fb-song-title\s*\{[^}]*font-family:\s*var\(--fb-glass-display-font\)/);
-  assert.match(css, /@media \(max-width: 700px\)[\s\S]*?grid-template-columns:\s*1fr/);
-  assert.match(css, /@media \(max-width: 700px\)[\s\S]*?height:\s*clamp\(290px, 90vw, 430px\)/);
+  assert.match(css, /@media \(max-width: 700px\)[\s\S]*?\.fb-song-detail\s*\{[^}]*display:\s*flex/);
+  assert.match(css, /\.fb-song-overview-preview\s*\{[^}]*height:\s*124px/);
 });
 
 test("G06 suggestions become a keyboard-reachable horizontal showcase, not hidden products", () => {
@@ -55,11 +55,11 @@ test("G06 preserves real SKU selection, photos, and conversion CTA", () => {
   assert.match(options, /const \[sku,setSku\]=useState\(product\.variants\[0\]\.sku\)/);
   assert.match(options, /<VariantChoice key=\{variant\.sku\} glass=\{glass\}/);
   assert.match(options, /aria-live="polite" aria-atomic="true"/);
-  assert.match(options, /<PublishedImageGallery key=\{selected\.sku\} items=\{gallery\} glass=\{glass\}\/>/);
-  assert.match(options, /<GlassButtonLink href="\/#contact" pill className="fb-song-quote">/);
+  assert.match(options, /<PublishedImageGallery key=\{selected\.sku\} items=\{gallery\} glass=\{glass\}[\s\S]*?zoomDialogRef=\{zoomDialogRef\}\/>/);
+  assert.match(options, /<GlassButtonLink ref=\{primaryQuoteRef\} href="\/#contact" pill className="fb-song-quote">/);
   assert.match(gallery, /<CatalogProductImage src=\{current\?\.src\?\?null\}/);
   assert.match(gallery, /aria-pressed=\{selected===i\}/);
-  assert.match(gallery, /onClick=\{\(\)=>setSelected\(i\)\}/);
+  assert.match(gallery, /setSelected\(i\)/);
   assert.doesNotMatch(css, /\.fb-song-sku(?=[\s:.{>])/);
 });
 
