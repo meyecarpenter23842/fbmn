@@ -5,6 +5,7 @@ import { getProductBySlug } from "@/lib/catalog/query";
 import { getPublishedProductImageUrl } from "@/lib/catalog/product-image";
 import CatalogueProductOptions from "@/components/catalogue-product-options";
 import CatalogueRelatedProducts from "@/components/catalogue-related-products";
+import {GlassPageBackdrop} from "@/components/glass-ui";
 import {relatedProducts} from "@/lib/catalog/recommendations";
 
 export const dynamic = "force-dynamic";
@@ -33,13 +34,18 @@ export default async function ProductPage({ params }: Props) {
     return src?[{src,alt:media.alt,position:media.position,sku:media.sku}]:[];
   });
   const recommendations=relatedProducts(catalog,product);
-  return <CatalogShell><div className="catalog-wrap">
+  // G03 is a single-product visual pilot; other product pages keep their approved UI.
+  const glass=slug==="sku-3ac08ff247847c1e77bfccb0e806ed29";
+  const content=<div className="catalog-wrap">
     <CatalogBreadcrumb trail={[
       { label: "Sản phẩm", href: "/san-pham" },
       ...(category && category.id!=="p5-uncategorized" && category.name.toLocaleLowerCase("vi")!=="chưa phân loại" ? [{ label: category.name, href: "/danh-muc/" + encodeURIComponent(category.slug) }] : []),
       { label: product.name },
     ]}/>
-    <CatalogueProductOptions product={product} photos={images}/>
-    <CatalogueRelatedProducts items={recommendations.items}/>
-  </div></CatalogShell>;
+    <CatalogueProductOptions product={product} photos={images} glass={glass}/>
+    <CatalogueRelatedProducts items={recommendations.items} glass={glass}/>
+  </div>;
+  return <CatalogShell>{glass
+    ? <GlassPageBackdrop className="fb-glass-song-page">{content}</GlassPageBackdrop>
+    : content}</CatalogShell>;
 }
