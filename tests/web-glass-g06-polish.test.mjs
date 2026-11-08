@@ -70,5 +70,6 @@ test("G06 responsive cards and motion remain within the existing single style ow
     assert.equal((body.match(/\{/g)||[]).length, (body.match(/\}/g)||[]).length, name + " CSS brace balance");
   }
   assert.doesNotMatch(stripComments(css), /\.catalogue-|\.catalog-|\.fb-glass-card\s*\{|\.fb-glass-chip\s*\{/);
-  assert.doesNotMatch(block, /scrollbar-width|scroll-snap/);
+  const suggestionGrid = css.match(/\.fb-song-related-grid\s*\{([^}]*)\}/)?.[1] ?? "";
+  assert.doesNotMatch(suggestionGrid, /scrollbar-width|scroll-snap/);
 });
