@@ -1,4 +1,3 @@
-import {belongsToWebsite} from "./cms-website-policy";
 import type {CmsChannel} from "./cms-placement-options";
 
 /** C2 adapter for the current private CMS API, whose pages still mix all channels.
@@ -21,7 +20,7 @@ export async function websiteCmsPage<T extends {channel_targets:readonly CmsChan
   if(source.page!==backendPage||!Array.isArray(source.items)||source.items.length>PAGE_SIZE||
      typeof source.hasNext!=="boolean")throw Error("Danh sách CMS không hợp lệ.");
   for(const entry of source.items){
-   if(!belongsToWebsite(entry.channel_targets))continue;
+   if(!entry.channel_targets.includes("public_web"))continue;
    if(found>=skip&&items.length<PAGE_SIZE)items.push(entry);
    found++;
    if(found>skip+PAGE_SIZE)return {items,hasNext:true};
