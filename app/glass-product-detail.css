@@ -1,0 +1,215 @@
+/*
+ * G03 — Song Natural pilot only. The wrapper is rendered for the approved
+ * /san-pham/sku-3ac08ff247847c1e77bfccb0e806ed29 route.
+ * Never restyle legacy .catalog-* outside .fb-glass-song-page, Admin, or Dai Viet.
+ * All real product media stay neutral/untinted; decorative R2 backdrop is G04.
+ */
+.fb-glass-song-page {
+  padding: 0 0 32px;
+  overflow: hidden;
+}
+
+.fb-glass-song-page::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse at 4% 14%, rgba(208, 179, 241, .34), transparent 46%),
+    radial-gradient(ellipse at 96% 66%, rgba(227, 202, 248, .28), transparent 48%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.fb-glass-song-page > .catalog-wrap {
+  position: relative;
+  z-index: 1;
+}
+
+.fb-glass-song-page .catalog-breadcrumb {
+  color: var(--fb-glass-muted);
+}
+
+.fb-glass-song-page .catalog-detail {
+  align-items: start;
+}
+
+/* Gallery glass shell, but image pixels remain on a neutral white frame. */
+.fb-glass-song-page .fb-glass-song-gallery {
+  padding: clamp(12px, 2vw, 20px);
+  min-width: 0;
+}
+
+.fb-glass-song-page .catalog-detail__image.fb-glass-media-frame {
+  background: #fff;
+  border-color: var(--fb-glass-border-fallback);
+  border-radius: var(--fb-glass-panel-radius);
+}
+
+.fb-glass-song-page .catalogue-gallery-thumbs {
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.fb-glass-song-page .catalogue-gallery-thumb {
+  background: rgba(255,255,255,.88);
+  border-color: var(--fb-glass-border-fallback);
+  border-radius: 12px;
+}
+
+.fb-glass-song-page .catalogue-gallery-thumb[aria-pressed="true"] {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px rgba(109,36,158,.14);
+}
+
+/* Product info inherits the shared GlassPanel: no new data or layout. */
+.fb-glass-song-page .fb-glass-song-info {
+  min-width: 0;
+  padding: clamp(18px, 2.7vw, 30px);
+}
+
+.fb-glass-song-page .fb-glass-song-info h1 {
+  color: var(--color-primary-strong);
+}
+
+.fb-glass-song-page .catalog-detail__description,
+.fb-glass-song-page .catalog-detail__count {
+  color: var(--fb-glass-muted);
+}
+
+.fb-glass-song-page .catalogue-option-group legend {
+  color: var(--fb-glass-ink);
+  font-weight: 800;
+}
+
+.fb-glass-song-page .catalogue-option-choices .fb-glass-chip {
+  height: auto;
+  min-height: var(--fb-control-height-compact);
+  border-radius: 999px;
+  border-color: var(--fb-glass-border-fallback);
+  color: var(--fb-glass-ink);
+  background-color: var(--fb-glass-surface-fallback);
+  box-shadow: 0 2px 10px rgba(63,25,98,.06);
+}
+
+.fb-glass-song-page .catalogue-option-choices .fb-glass-chip[aria-pressed="true"] {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: #fff;
+  box-shadow: var(--fb-glass-shadow);
+}
+
+.fb-glass-song-page .catalogue-facets__reset.fb-glass-button {
+  height: auto;
+  min-height: var(--fb-control-height-compact);
+  background: var(--fb-glass-surface-strong);
+  border-color: var(--fb-glass-border-fallback);
+  color: var(--color-primary-strong);
+  box-shadow: none;
+}
+
+/* Entire SKU tile is a true GlassChip; keep code/label and accessible pressed state. */
+.fb-glass-song-page .catalogue-variant-option.fb-glass-chip {
+  width: 100%;
+  height: auto;
+  min-height: 52px;
+  padding: 8px 12px;
+  justify-content: flex-start;
+  text-align: left;
+  border-radius: 16px;
+  background: var(--fb-glass-surface-fallback);
+  border-color: var(--fb-glass-border-fallback);
+  color: var(--fb-glass-ink);
+}
+
+.fb-glass-song-page .catalogue-variant-option.fb-glass-chip[aria-pressed="true"] {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: #fff;
+  box-shadow: 0 4px 13px rgba(63,25,98,.2);
+}
+
+.fb-glass-song-page .catalogue-variant-option.fb-glass-chip[aria-pressed="true"] svg,
+.fb-glass-song-page .catalogue-variant-option.fb-glass-chip[aria-pressed="true"] .catalogue-variant-option__name {
+  color: #fff;
+}
+
+.fb-glass-song-page .catalogue-variant-option.fb-glass-chip[aria-pressed="true"] .catalogue-variant-option__code {
+  color: #fff;
+  background: rgba(255,255,255,.19);
+}
+
+.fb-glass-song-page .catalogue-variant-option.fb-glass-chip[aria-pressed="true"] .catalogue-variant-option__mark {
+  border-color: rgba(255,255,255,.78);
+  background: rgba(255,255,255,.22);
+}
+
+.fb-glass-song-page .catalogue-selected-summary {
+  border-radius: 16px;
+  background: var(--fb-glass-surface-strong);
+  border-color: var(--fb-glass-border-fallback);
+  padding: 12px;
+  color: var(--fb-glass-ink);
+}
+
+.fb-glass-song-page .catalogue-selected-summary__action.fb-glass-button {
+  min-height: var(--fb-control-height-compact);
+  color: #fff;
+  background: linear-gradient(115deg, var(--color-primary), var(--color-primary-strong));
+  border-color: transparent;
+  box-shadow: var(--fb-glass-shadow);
+}
+
+.fb-glass-song-page .catalogue-extra-details {
+  border-radius: 14px;
+  border-color: var(--fb-glass-border-fallback);
+  background: var(--fb-glass-surface-strong);
+}
+
+/* Related cards reuse existing ProductCard content/links; only surface changes. */
+.fb-glass-song-page .fb-glass-song-related {
+  margin: 4px 0 24px;
+  padding: clamp(16px,2vw,24px);
+  border-color: var(--fb-glass-border-fallback);
+}
+
+.fb-glass-song-page .catalogue-related__grid .fb-glass-song-related-card {
+  padding: 0;
+  overflow: hidden;
+  border-radius: var(--fb-glass-panel-radius);
+  background: var(--fb-glass-surface-strong);
+  border-color: var(--fb-glass-border-fallback);
+  box-shadow: var(--fb-glass-shadow);
+}
+
+.fb-glass-song-page .fb-glass-song-related-card .catalog-product__image {
+  background: #fff;
+}
+
+@media (max-width: 780px) {
+  .fb-glass-song-page .catalogue-option-choices .fb-glass-chip,
+  .fb-glass-song-page .catalogue-facets__reset.fb-glass-button,
+  .fb-glass-song-page .catalogue-selected-summary__action.fb-glass-button {
+    min-height: var(--fb-control-height-touch);
+  }
+
+  .fb-glass-song-page .catalogue-variant-option.fb-glass-chip {
+    min-height: 52px;
+  }
+}
+
+@media (max-width: 700px) {
+  .fb-glass-song-page .fb-glass-song-gallery,
+  .fb-glass-song-page .fb-glass-song-info {
+    padding: 16px;
+  }
+
+  .fb-glass-song-page .fb-glass-song-related {
+    padding: 16px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fb-glass-song-page .catalogue-gallery-thumb {
+    transition: none;
+  }
+}
