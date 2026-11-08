@@ -304,7 +304,8 @@ export default function AdminPage() {
               <Glyph name="box" size={20}/><span>Sản phẩm</span>
               <span className="side-menu-caret"><Glyph name="chevron" size={16}/></span>
             </button>
-            {productMenuExpanded&&<div id="product-navigation" className="side-submenu">
+            <div id="product-navigation" className={"side-submenu-motion"+(productMenuExpanded?" is-expanded":"")} aria-hidden={!productMenuExpanded} inert={!productMenuExpanded}>
+              <div className="side-submenu">
               {productSections.map(item=>
                 <button type="button" key={item.key}
                   className={"side-sub-link"+(section===item.key?" active":"")}
@@ -313,7 +314,8 @@ export default function AdminPage() {
                   disabled={authState!=="authorised"||(workspaceOperationBusy&&["media","pricing"].includes(section)&&item.key!==section)}>
                   <Glyph name={item.icon} size={16}/><span>{item.label}</span>
                 </button>)}
-            </div>}
+              </div>
+            </div>
           </div>
           <div className="side-menu-divider" aria-hidden="true"/>
           {menu.filter(item=>item.key==="pricing").map(item=>
@@ -333,7 +335,8 @@ export default function AdminPage() {
               <Glyph name="globe" size={20}/><span>Website Futurebook</span>
               <span className="side-menu-caret"><Glyph name="chevron" size={16}/></span>
             </button>
-            {websiteMenuExpanded&&<div id="website-navigation" className="side-submenu">
+            <div id="website-navigation" className={"side-submenu-motion"+(websiteMenuExpanded?" is-expanded":"")} aria-hidden={!websiteMenuExpanded} inert={!websiteMenuExpanded}>
+              <div className="side-submenu">
               {websiteSections.map(item=>
                 <button type="button" key={item.key}
                   className={"side-sub-link"+(section===item.key?" active":"")}
@@ -342,7 +345,8 @@ export default function AdminPage() {
                   disabled={authState!=="authorised"||(workspaceOperationBusy&&["media","pricing"].includes(section)&&item.key!==section)}>
                   <Glyph name={item.icon} size={16}/><span>{item.label}</span>
                 </button>)}
-            </div>}
+              </div>
+            </div>
           </div>
         </nav>
         <div className="side-footer"><div className="decorative-books" aria-hidden="true"><div/><div/><div/></div><p>Tri thức hôm nay<br/>Kiến tạo ngày mai</p><i/></div>
