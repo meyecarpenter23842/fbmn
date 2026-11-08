@@ -292,13 +292,6 @@
   text-decoration: none;
   border-radius: inherit;
 }
-.fb-song-related-hit:focus-visible {
-  outline: 3px solid var(--color-primary);
-  outline-offset: 4px;
-}
-.fb-song-related-card:focus-within {
-  border-color: var(--color-primary);
-}
 
 .fb-song-related-image {
   display: block;
