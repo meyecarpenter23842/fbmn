@@ -2,14 +2,14 @@ import { contentStore } from "./data";
 import { toPublicContent } from "./public";
 import type { PublicContent } from "./schema";
 import { fetchPublicContent } from "../public-api/client";
-import {cmsEnabled,getPublicCms} from "./cms";
+import {cmsEnabled,getOptionalPublicCms} from "./cms";
 
 /** Server-side only; opt-in after Worker staging tests and security approval. */
 export async function getPublicContent(): Promise<PublicContent> {
   if (process.env.FBMN_PUBLIC_API_ENABLED === "true") {
     const base=await fetchPublicContent(process.env.FBMN_PUBLIC_API_BASE_URL ?? "");
     if(!cmsEnabled())return base;
-    const entries=await getPublicCms();
+    const entries=await getOptionalPublicCms();
     return {
      ...base,
      articles:entries.filter(entry=>entry.kind==="article").map(entry=>({
