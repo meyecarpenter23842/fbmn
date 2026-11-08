@@ -43,6 +43,35 @@
  color:var(--fb-glass-ink,#241331);background:#fff;box-shadow:0 22px 60px rgba(40,14,67,.3);
  overflow-y:auto}
 .cms-web-popup-dialog::backdrop{background:rgba(30,18,51,.55);backdrop-filter:blur(3px)}
+/* Native dialog enters 280ms and stays mounted through 220ms exit.
+ * The UI's animation token names match Futurebook's root motion contract.
+ */
+.cms-web-popup-dialog[open]:not(.is-closing){
+ animation:fb-cms-popup-open var(--fb-motion-dialog-open,280ms)
+  var(--fb-easing-open,cubic-bezier(.22,1,.36,1)) both
+}
+.cms-web-popup-dialog[open]:not(.is-closing)::backdrop{
+ animation:fb-cms-backdrop-open var(--fb-motion-dialog-open,280ms) ease both
+}
+.cms-web-popup-dialog.is-closing{
+ animation:fb-cms-popup-close var(--fb-motion-dialog-close,220ms)
+  var(--fb-easing-close,cubic-bezier(.4,0,1,1)) both;
+ pointer-events:none
+}
+.cms-web-popup-dialog.is-closing::backdrop{
+ animation:fb-cms-backdrop-close var(--fb-motion-dialog-close,220ms) ease both
+}
+@keyframes fb-cms-popup-open{
+ from{opacity:0;transform:translateY(12px) scale(.98)}
+ to{opacity:1;transform:translateY(0) scale(1)}
+}
+@keyframes fb-cms-popup-close{
+ from{opacity:1;transform:translateY(0) scale(1)}
+ to{opacity:0;transform:translateY(7px) scale(.99)}
+}
+@keyframes fb-cms-backdrop-open{from{opacity:0}to{opacity:1}}
+@keyframes fb-cms-backdrop-close{from{opacity:1}to{opacity:0}}
+
 .cms-web-popup-heading{position:sticky;top:0;display:flex;align-items:center;justify-content:space-between;
  padding:0 18px;min-height:52px;background:#f6f0fc;border-bottom:1px solid #e7d7f1;z-index:2}
 .cms-web-popup-heading strong{font-size:16px;color:#431078}
@@ -69,5 +98,6 @@
 }
 @media(prefers-reduced-motion:reduce){
  .cms-web-banner-cta,.cms-web-popup-cta{transition:none}
+ .cms-web-popup-dialog,.cms-web-popup-dialog::backdrop{animation:none!important;transition:none!important}
  .cms-web-popup-dialog::backdrop{backdrop-filter:none}
 }
