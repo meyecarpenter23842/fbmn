@@ -157,3 +157,40 @@ test("C4 Website and Admin remain behind independent release gates",()=>{
  assert.match(proxy,/cache:"no-store"/);
  assert.doesNotMatch(proxy,/R2_SECRET|ADMIN_TOKEN|NEXT_PUBLIC_FB/);
 });
+
+test("C4 rejects expired popups after their delay, re-fetches and animates native dialog",()=>{
+ const popup=read("components/cms-popup-runtime.tsx");
+ const css=read("app/cms-public.css");
+ assert.match(popup,/function withinPublishedWindow\(item:PublicCmsItem,now:number\)/);
+ assert.match(popup,/const published=Date\.parse\(item\.publishedAt\)/);
+ assert.match(popup,/const end=Date\.parse\(item\.endsAt\)/);
+ assert.match(popup,/async function currentPublicCms\(signal:AbortSignal\)/);
+ const refs=[...popup.matchAll(/await currentPublicCms\(controller\.signal\)/g)];
+ assert.equal(refs.length,2,"Fetch on scheduling and again before display");
+ assert.match(popup,/const published=latest\.find\(item=>item\.id===candidate\.id&&/);
+ assert.match(popup,/matches\(item,path\)&&canOpen\(item,Date\.now\(\)\)/);
+ assert.match(popup,/if\(!latest\|\|controller\.signal\.aborted\)return/);
+ assert.match(popup,/element\.classList\.add\("is-closing"\)/);
+ assert.match(popup,/setTimeout\(\(\)=>\{\s*element\.close\(\)/);
+ assert.match(popup,/reduce\?0:220/);
+ assert.match(css,/\.cms-web-popup-dialog\[open\]:not\(\.is-closing\)/);
+ assert.match(css,/--fb-motion-dialog-open,280ms/);
+ assert.match(css,/--fb-motion-dialog-close,220ms/);
+ assert.match(css,/@media\(prefers-reduced-motion:reduce\)/);
+ assert.match(css,/animation:none!important/);
+});
+test("C4 optional Website CMS outages cannot break product catalogue or Home",()=>{
+ const cms=read("lib/content/cms.ts");
+ const home=read("app/page.tsx");
+ const category=read("app/danh-muc/[slug]/page.tsx");
+ const editorial=read("lib/content/adapter.ts");
+ const api=read("app/api/cms/route.ts");
+ assert.match(cms,/async function getOptionalPublicCms\(\):Promise<PublicCmsItem\[\]>/);
+ assert.match(cms,/try\{return await getPublicCms\(\);\}/);
+ assert.match(cms,/catch\{/);
+ assert.match(home,/await getOptionalPublicCms\(\)/);
+ assert.match(category,/getOptionalPublicCms\(\)/);
+ assert.match(editorial,/await getOptionalPublicCms\(\)/);
+ assert.match(api,/const items=await getPublicCms\(\)/);
+ assert.match(api,/cms_unavailable/);
+});
