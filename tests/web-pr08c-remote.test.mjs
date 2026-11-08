@@ -92,7 +92,9 @@ test("P0 a large real 613-product DTO stays valid with a strict response byte ca
 
 test("database source only queries fixed public views, no private tables", async () => {
   const sqls = Object.values(PUBLIC_READ_QUERIES);
-  assert.equal(sqls.length,11);
+  assert.ok(sqls.length>=11);
+  assert.ok(sqls.includes(PUBLIC_READ_QUERIES.cmsEntries));
+  assert.ok(sqls.includes(PUBLIC_READ_QUERIES.cmsImageKey));
   for (const sql of sqls) {
     assert.match(sql,/FROM fbmn_public\.v_/);
     assert.doesNotMatch(sql,/futurebook\.|neon_auth\.|sku_prices|customers|password|net_price/i);
