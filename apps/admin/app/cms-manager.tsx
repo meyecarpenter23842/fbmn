@@ -59,6 +59,7 @@ function errorLabel(status:number,code?:string){
  if(code==="surface_unavailable")return "Nội dung mới chỉ có trong Admin. Website chưa kết nối CMS để xuất bản.";
  if(code==="placements_required")return "Chọn vị trí cụ thể cho tất cả kênh trước khi xuất bản.";
  if(code==="media_required")return "Banner/popup cần ảnh desktop và mobile trước khi xuất bản.";
+ if(code==="ends_at_required")return "Khuyến mãi phải có ngày kết thúc trước khi xuất bản.";
  if(status===401)return "Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại.";
  if(status===403)return "Chỉ Owner được quản lý nội dung Website.";
  if(status===409)return "Nội dung đã thay đổi hoặc trùng đường dẫn. Hãy tải lại danh sách.";
@@ -327,6 +328,15 @@ export default function CmsManager({mode,owner}:{
  const [loading,setLoading]=useState(false);
  const [loadError,setLoadError]=useState("");
  const [busy,setBusy]=useState(false);
+ const [publishReady,setPublishReady]=useState(false);
+ useEffect(()=>{
+  if(!owner)return;
+  let active=true;
+  void cmsApi<{ready:boolean;channel:string}>("capability")
+   .then(result=>{if(active)setPublishReady(result.ready===true&&result.channel==="public_web");})
+   .catch(()=>{if(active)setPublishReady(false);});
+  return ()=>{active=false;};
+ },[owner]);
  const [editorSaving,setEditorSaving]=useState(false);
  const [editorStep,setEditorStep]=useState(0);
  const editorFormId=useId();
@@ -369,7 +379,7 @@ export default function CmsManager({mode,owner}:{
  const title=mode==="marketing"?"Banner & Popup":"Tin tức & Khuyến mãi";
  const notify=(text:string,problem=false)=>{if(problem)setError(text);else setMessage(text);setToastId(v=>v+1);};
  const change=async(item:CmsSummary,action:"publish"|"hide")=>{
-  if(busy || !window.confirm(action==="publish"?
+  if(busy||(action==="publish"&&!publishReady)|| !window.confirm(action==="publish"?
     "Xác nhận nguồn nội dung đã được kiểm chứng và cho xuất bản lên Website?":
     "Ẩn nội dung này khỏi Website?"))return;
   setBusy(true);
@@ -411,8 +421,14 @@ export default function CmsManager({mode,owner}:{
            title={item.channel_targets.some(ch=>ch!=="public_web")?
             "Bản ghi còn liên kết App. Không ẩn đồng loạt từ màn Website.":undefined}
            onClick={()=>void change(item,"hide")}>Ẩn</button>:
-         <button type="button" className="fb-ui-button fb-ui-button--secondary" disabled
-          title="Chưa nối CMS Website với public renderer, không thể xuất bản">Chờ kết nối Website</button>}
+         <button type="button" className="fb-ui-button fb-ui-button--secondary"
+          disabled={!publishReady||busy||item.channel_targets.some(ch=>ch!=="public_web")||
+           !item.channel_targets.includes("public_web")}
+          title={!publishReady?"Website chưa được kích hoạt CMS công khai":
+           item.channel_targets.some(ch=>ch!=="public_web")?
+           "Bản ghi dùng chung App; không thể phát hành đa kênh ở Website":undefined}
+          onClick={()=>void change(item,"publish")}>
+          {publishReady?"Xuất bản":"Chờ kết nối Website"}</button>}
        </div></td>
       </tr>)
      }
@@ -427,7 +443,8 @@ export default function CmsManager({mode,owner}:{
     onClick={()=>setPage(v=>v+1)}>Trang sau</button>
   </div>
   <p className="cms-help">Đã lưu nháp và có ảnh chưa đồng nghĩa đã xuất bản lên Website.
-   Chỉ bật nút xuất bản sau khi public API và Website thực sự được kết nối, kiểm thử.</p>
+   {publishReady?" Chỉ Owner được xuất bản khi đủ nguồn, vị trí, ảnh và lịch hợp lệ.":
+    " Chỉ bật xuất bản sau khi Public Worker, migration và Website đã nghiệm thu, rồi mở capability tại Worker."}</p>
   {editing!==undefined&&<ProductModal title={editing?"Sửa "+LABELS[editing.kind]:"Thêm nội dung"}
    onClose={()=>{setEditing(undefined);void refresh();}} wide locked={busy||editorSaving}
    beforeClose={()=>!editorDirtyRef.current || window.confirm("Nội dung hoặc ảnh chưa lưu. Đóng mà không lưu?")}
