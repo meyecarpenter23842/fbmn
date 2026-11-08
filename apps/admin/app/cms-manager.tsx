@@ -119,7 +119,10 @@ function CmsEditor({item,kind,onSaved,onSavingChange,dirtyRef,step,onStep,formId
   operationLock.current=true;
   setBusy(true);onSavingChange(true);setError("");
   try{
-   if(draft.title.trim().length<2 || !/^[a-z0-9]+(-[a-z0-9]+)*$/.test(draft.slug)){
+   if(!draft.channelTargets.includes("public_web")){
+     onStep(1);throw Error("Nội dung này không thuộc Website. Không sửa dữ liệu App trong màn này.");
+    }
+    if(draft.title.trim().length<2 || !/^[a-z0-9]+(-[a-z0-9]+)*$/.test(draft.slug)){
     onStep(0);throw Error("Nhập tiêu đề tối thiểu 2 ký tự và đường dẫn chỉ gồm chữ thường, số, dấu gạch ngang.");
    }
    if(["article","promotion"].includes(draft.kind)&&!draft.paragraphs.trim()){
@@ -172,6 +175,10 @@ function CmsEditor({item,kind,onSaved,onSavingChange,dirtyRef,step,onStep,formId
  const STEPS=["Nội dung","Vị trí & lịch","Ảnh & xem trước"];
  return <form id={formId} className="cms-editor cms-wizard" onSubmit={e=>void submit(e)} noValidate>
   <AdminToast variant="error" message={error} notificationId={toastId} onClose={()=>setError("")}/>
+   {item?.channel_targets.some(ch=>ch!=="public_web")&&<p className="cms-help" role="note">
+    Bản ghi cũ còn liên kết App: kênh, vị trí và ảnh App sẽ được giữ nguyên, không chỉnh tại Website.
+    Tiêu đề và nội dung dùng chung; nếu sửa, nội dung ở App đã liên kết cũng thay đổi.
+   </p>}
   <nav className="cms-wizard-tabs" role="tablist" aria-label="Các bước tạo nội dung">
    {STEPS.map((label,index)=><button type="button" key={label} role="tab"
     className="fb-ui-button fb-ui-tab" aria-selected={step===index} aria-controls={formId+"-step-"+index}
@@ -220,38 +227,19 @@ function CmsEditor({item,kind,onSaved,onSavingChange,dirtyRef,step,onStep,formId
    </>}
    {step===1&&<>
     <div className="cms-wizard-intro"><strong>Trang, vị trí và thời gian hiển thị</strong>
-     <p>Chọn kênh trước, sau đó chỉ định vị trí riêng; Web và App không bị ép cùng bố cục.</p>
+     <p>Website Futurebook được chọn sẵn. Chọn trang, vị trí và lịch hiển thị tương ứng.</p>
     </div>
     <div className="cms-form-grid">
-     <fieldset className="cms-channels cms-wide" disabled={busy}>
-      <legend>Kênh hiển thị</legend>
-      {CHANNELS.map(ch=><label key={ch.code}>
-       <input type="checkbox" checked={draft.channelTargets.includes(ch.code)}
-        onChange={e=>toggleChannel(ch.code,e.target.checked)}/>{ch.label}
-      </label>)}
-     </fieldset>
-     <fieldset className="cms-placement-grid cms-wide">
-      <legend>Vị trí theo từng kênh</legend>
-      {draft.channelTargets.length===0?<p>Chọn kênh để hiện vị trí tương ứng.</p>:
-       draft.channelTargets.map(ch=><label key={ch}>
-        <span>{CHANNELS.find(x=>x.code===ch)?.label}</span>
-        <select value={draft.placements[ch]||""} disabled={busy}
-         onChange={e=>{
-          const placements={...draft.placements};
-          if(e.target.value)placements[ch]=e.target.value;else delete placements[ch];
-          set("placements",placements);
-         }}>
-         <option value="">Chọn nơi hiển thị (có thể lưu nháp trước)</option>
-         {CMS_SLOTS[draft.kind][ch].map(slot=>
-          <option key={slot.value} value={slot.value}>{slot.label}</option>)}
-        </select>
-        {CMS_SLOTS[draft.kind][ch].filter(slot=>slot.value===draft.placements[ch]).map(slot=>
-         <small key={slot.value}>{slot.description}</small>)}
-       </label>)}
-     </fieldset>
-     {draft.kind==="popup"&&<fieldset className="cms-popup-frequency cms-wide">
+     <CmsWebsitePlacement kind={draft.kind} value={draft.placements.public_web||""}
+       disabled={busy} onChange={value=>{
+        // Only Website slot is edited here. Legacy App placements stay in the payload.
+        const placements={...draft.placements};
+        if(value)placements.public_web=value;else delete placements.public_web;
+        set("placements",placements);
+       }}/>
+      {draft.kind==="popup"&&<fieldset className="cms-popup-frequency cms-wide">
       <legend>Popup quảng bá cho khách truy cập</legend>
-      <p>Không phải popup thêm/sửa trong Admin. Chỉ có hiệu lực khi Website/App tích hợp CMS.</p>
+      <p>Không phải popup thêm/sửa trong Admin. Chỉ hoạt động trên Website sau khi kết nối CMS và được phép xuất bản.</p>
       <div className="cms-form-grid">
        <label>Chờ sau khi vào trang (giây)
         <input type="number" min={0} max={120} value={draft.popupDelaySeconds}
@@ -288,19 +276,19 @@ function CmsEditor({item,kind,onSaved,onSavingChange,dirtyRef,step,onStep,formId
    </>}
    {step===2&&<>
     <div className="cms-wizard-intro"><strong>Chọn ảnh và kiểm tra bố cục</strong>
-     <p>Ảnh hiện ngay trong bản xem trước. Bấm Lưu mới tải ảnh vào R2.</p>
+     <p>Ảnh Website hiện ngay trong bản xem trước Desktop/Mobile. Bấm Lưu mới tải ảnh vào R2.</p>
     </div>
     <CmsMediaEditor recordId={savedRecord?.id??null} revision={savedRecord?.revision??0}
-     channels={draft.channelTargets} pending={pendingImages} onStage={stageImage} disabled={busy}/>
+     channels={["public_web"]} pending={pendingImages} onStage={stageImage} disabled={busy}/>
     <CmsVisualPreview kind={draft.kind} title={draft.title} summary={draft.summary}
-     ctaUrl={draft.ctaUrl} channelTargets={draft.channelTargets} placements={draft.placements}
-     recordId={savedRecord?.id??null} revision={savedRecord?.revision??0}
-     pending={pendingImages} channel={activePreviewChannel} device={previewDevice}
-     onChannel={setPreviewChannel} onDevice={setPreviewDevice}/>
+     ctaUrl={draft.ctaUrl} channelTargets={["public_web"]} placements={draft.placements}
+      recordId={savedRecord?.id??null} revision={savedRecord?.revision??0}
+      pending={pendingImages} channel="public_web" device={previewDevice} webOnly
+      onDevice={setPreviewDevice}/>
    </>}
   </section>
   <p className="cms-wizard-footnote">Chỉ lưu bản nháp trong Admin. Xuất bản sẽ được mở khi
-   Website/App nhận CMS thật; không có thay đổi nào tự hiện trên trang công khai.</p>
+   Website nhận CMS thật; không có thay đổi nào tự hiện trên trang công khai.</p>
  </form>;
 }
 function CmsModalFooter({step,onStep,saving,formId}:{
