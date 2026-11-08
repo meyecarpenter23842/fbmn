@@ -22,6 +22,8 @@ Owner chốt hai ảnh tham chiếu Premium Purple Glass: **glassmorphism trong 
 
 **Điểm phân biệt:** Lô G04 không có nghĩa đã tồn tại API cấu hình background. Nếu chưa hỗ trợ, chỉ làm CSS fallback và ghi blocker/tách phạm vi cấu hình để Owner quyết định; không phá nguyên tắc UI-only.
 
+**G04R — Owner phê duyệt bổ sung ngày 08/11/2026:** sau G04 fallback, Owner đã upload và chỉ định **đúng ảnh** `banners/G04/backdrop-v1.webp`. Lô kết nối độc lập được phép tạo một read-only route allowlist tại Public Worker `PUBLIC_MEDIA_R2` hiện có và same-origin Website proxy, được kích hoạt qua manifest public `lib/media/decorative-background.ts` (có thể tắt về `null`). Đây là ngoại lệ cụ thể do Owner phê duyệt, không phải xây CMS, không thêm DB/schema, không bật public R2, không thay API sản phẩm/Admin. CI xanh + Codex sạch + squash merge repo phụ → đồng bộ repo chính; **Worker rồi Website production chỉ deploy khi Owner cho phép**. Fallback gradient bắt buộc giữ khi ảnh không tải được.
+
 --- 
 
 ## 1. Mục tiêu và hiện trạng đã xác minh
