@@ -292,6 +292,24 @@
     color: #fff;
     background: linear-gradient(115deg, var(--color-primary), var(--color-primary-strong));
   }
+  /* G05 WCAG: hover and keyboard focus must not erase selected gradients. */
+  .ref-navigation__link--active:hover,
+  .ref-navigation__link--active:focus-visible,
+  .ref-navigation__catalog:hover,
+  .ref-navigation__catalog:focus-visible {
+    color: #fff;
+    background: linear-gradient(115deg, var(--color-primary), var(--color-primary-strong));
+  }
+  .ref-navigation__link:not(.ref-navigation__link--active):hover,
+  .ref-navigation__link:not(.ref-navigation__link--active):focus-visible {
+    color: var(--color-primary-strong);
+    background: rgba(115, 55, 163, .11);
+  }
+  .ref-navigation__link--active:focus-visible,
+  .ref-navigation__catalog:focus-visible {
+    outline: 2px solid #fff;
+    outline-offset: -4px;
+  }
   .ref-hero { padding-top: 12px; }
   .ref-hero__inner { border-radius: 22px; }
   .ref-hero__copy { padding: 20px 18px 12px; }
