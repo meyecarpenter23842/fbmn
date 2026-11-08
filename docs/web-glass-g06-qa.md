@@ -56,3 +56,24 @@ Bằng chứng nằm tại `artifacts/g06/` (không commit vào mã nguồn). C�
 | An toàn | Admin, Worker, database, SKU, SEO, chính sách bán hàng giữ nguyên |
 
 **Trạng thái G06:** đang kiểm thử, không thể ghi `đã nghiệm thu UI mẫu` khi chưa có ảnh chụp so sánh, tốc độ và lỗi 404 còn tồn tại. Nếu cần sửa lỗi riêng của Worker/R2, phải có phạm vi và quyền phù hợp; không mở Public Access toàn bucket, không sửa ngầm qua G06 visual-only.
+
+
+## G06.1 — Tinh chỉnh visual theo hai ảnh tham chiếu (theo lệnh Owner)
+
+**Nguồn đánh giá:** artifact G06 `g06-production-browser-evidence` đã xác nhận bằng Chromium: 23 ảnh thật, không tràn ngang trên 1440/1280/768/390/360, gallery 3 thumbnails, SKU `0110` → `0114`, menu Escape và CTA đều hoạt động. **Lượt Chromium cuối trả HTTP 200** cho nền R2 (404 ở lần truy vấn HTTP trước đó là kết quả không ổn định, không xem như blocker thường trực). Lab LCP khoảng 0.8–1.3 giây ở các trang đã lấy mẫu, CLS 0; đây không phải chỉ số Real User Monitoring.
+
+**Visual chênh lệch với mẫu:**
+1. Gallery desktop chiếm khoảng 44% bề ngang, hình thật tương đối nhỏ; mẫu ưu tiên ảnh lớn hơn và card bên phải cao cân đối hơn.
+2. Phần gợi ý hiện xếp lưới nhiều hàng cao, ảnh nhiều SKU chưa có nguồn đã duyệt phải hiển thị placeholder. Mẫu cho nhịp một dải bộ sưu tập; không được thay placeholder bằng bìa minh họa hoặc ẩn SKU.
+3. Overlay trên ảnh nền làm pastel khá mờ, header chiếm nhiều chiều cao; mẫu dùng kính trong, viền sáng, chữ display serif và header thanh mảnh.
+
+**Thay đổi trong PR G06.1:**
+- `app/globals.css`: chỉnh opacity overlay từ `.70/.48/.70` thành `.46/.28/.49`; kính giữ alpha thấp, viền highlight và shadow có sáng cạnh trên. Vẫn dùng chính ảnh R2 G04R và gradient fallback; không có URL/binding mới.
+- `app/glass-product-detail.css`: gallery từ 44% lên 53%, ảnh cao hơn 330–490px, panel thông tin giãn cân theo gallery, font tiêu đề serif, summary SKU nằm dưới; mobile xếp một cột/ảnh tối đa 430px. Mã SKU/ảnh/CTA giữ logic.
+- `app/glass-product-detail.css`: dải gợi ý dùng `overflow-x:auto`, scroll-snap, 4 card desktop/3 tablet/một phần card kế tiếp trên mobile; **không dùng `display:none` ẩn SKU**, vẫn điều hướng keyboard/tab như trước.
+- `app/rebaseline.css`: desktop header thu gọn 76→68px, thanh navigation 52→46px, giảm độ gắt của tia hero, không đổi route, search, nút/cart hay motion.
+- `tests/web-glass-g06-polish.test.mjs`: bảo vệ layout, nguồn media, lựa chọn SKU, reduced-motion, không CSS owner trùng.
+
+**Ranh giới:** không dùng ảnh của mẫu thiết kế làm bìa sản phẩm, không thêm lời chào hàng/chính sách/giá; không đổi API/Admin/DB/SEO/Worker. Không force push, không deploy production nếu chưa được Owner cho phép. G06.1 merge repo phụ rồi Owner **đồng bộ đúng một lần** cả G06 và G06.1 về local và repo chính.
+
+**Chưa thể khẳng định pixel-perfect sau G06.1** cho đến khi có screenshot từ build đã phát hành; ảnh QA trước là baseline của G05. Chủ động so sánh ảnh 1440/1280/768/390/360 sau khi được phép deploy.
