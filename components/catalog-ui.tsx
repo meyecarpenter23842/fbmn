@@ -75,11 +75,9 @@ export function CatalogListing({ data, heading, description, filters, actionPath
 }) {
   const results = searchCatalog(data, filters);
   return <>
-    <div className="catalog-page-heading">
-      <p className="catalog-overline">DANH MỤC FUTUREBOOK</p>
-      <h1>{heading}</h1>
-      <p>{description}</p>
-    </div>
+    {/* Keep the semantic H1 for SEO/accessibility; filters and results
+         are the visible catalogue entry point, not duplicated hero copy. */}
+    <h1 className="sr-only">{heading}</h1>
     <div className="catalog-layout">
       <aside className="catalog-sidebar">
         <form action={actionPath} method="get" className="catalog-filters" role="search" aria-label="Tìm kiếm và lọc sản phẩm">
