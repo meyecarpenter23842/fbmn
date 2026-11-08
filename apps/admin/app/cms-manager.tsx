@@ -53,7 +53,7 @@ function fromItem(item:CmsItem):Draft {
 }
 function errorLabel(status:number,code?:string){
  if(code==="cms_worker_not_deployed"||status===404)return "Worker CMS chưa được triển khai. API chưa sẵn sàng; đây không phải danh sách trống.";
- if(code==="surface_unavailable")return "Nội dung mới chỉ có trong Admin. Chưa thể xuất bản vì Website/App chưa kết nối CMS.";
+ if(code==="surface_unavailable")return "Nội dung mới chỉ có trong Admin. Website chưa kết nối CMS để xuất bản.";
  if(code==="placements_required")return "Chọn vị trí cụ thể cho tất cả kênh trước khi xuất bản.";
  if(code==="media_required")return "Banner/popup cần ảnh desktop và mobile trước khi xuất bản.";
  if(status===401)return "Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại.";
@@ -360,14 +360,14 @@ export default function CmsManager({mode,owner}:{
   finally{setLoading(false);}
  },[owner,mode,page]);
  useEffect(()=>{const task=window.setTimeout(()=>{void refresh();},0);return()=>window.clearTimeout(task);},[refresh]);
- const visible=items;
+ const visible=items.filter(item=>item.channel_targets.includes("public_web"));
  const kind:CmsKind=mode==="marketing"?"banner":"article";
  const title=mode==="marketing"?"Banner & Popup":"Tin tức & Khuyến mãi";
  const notify=(text:string,problem=false)=>{if(problem)setError(text);else setMessage(text);setToastId(v=>v+1);};
  const change=async(item:CmsSummary,action:"publish"|"hide")=>{
   if(busy || !window.confirm(action==="publish"?
-    "Xác nhận nguồn nội dung đã được kiểm chứng và cho xuất bản theo các kênh đã chọn?":
-    "Ẩn nội dung này khỏi các kênh đã chọn?"))return;
+    "Xác nhận nguồn nội dung đã được kiểm chứng và cho xuất bản lên Website?":
+    "Ẩn nội dung này khỏi Website?"))return;
   setBusy(true);
   try{
    await cmsApi(action,{id:item.id,expectedRevision:item.revision});
@@ -382,31 +382,33 @@ export default function CmsManager({mode,owner}:{
   <AdminToast message={error||message} variant={error?"error":"success"}
    notificationId={toastId} onClose={()=>{setMessage("");setError("");}}/>
   <div className="page-title cms-heading"><div><h1>{title}</h1>
-   <p>Chọn vị trí và ảnh riêng cho Web/App, desktop/mobile. Lưu nháp không tự xuất bản.</p></div>
+   <p>Chọn vị trí và ảnh Desktop/Mobile riêng cho Website Futurebook. Lưu nháp không tự xuất bản.</p></div>
    <button type="button" className="fb-ui-button fb-ui-button--primary" onClick={()=>void openEditor(null)}>
     Thêm nội dung
    </button>
   </div>
   <div className="cms-table-wrap">
    <table className="cms-table">
-    <thead><tr><th>Tiêu đề</th><th>Loại</th><th>Kênh</th><th>Trạng thái</th><th>Thao tác</th></tr></thead>
+    <thead><tr><th>Tiêu đề</th><th>Loại</th><th>Vị trí Website</th><th>Trạng thái</th><th>Thao tác</th></tr></thead>
     <tbody>
      {loading?<tr><td colSpan={5}>Đang tải nội dung…</td></tr>:
       loadError?<tr><td colSpan={5} role="alert" className="cms-error-state">{loadError} <button type="button" className="fb-ui-button fb-ui-button--secondary" onClick={()=>void refresh()}>Thử lại</button></td></tr>:
-      visible.length===0?<tr><td colSpan={5}>Chưa có nội dung. Chọn Thêm nội dung để tạo bản nháp.</td></tr>:
+      visible.length===0?<tr><td colSpan={5}>Chưa có nội dung Website ở trang này. Chọn Thêm nội dung hoặc chuyển trang để xem tiếp.</td></tr>:
       visible.map(item=><tr key={item.id}>
        <td><strong>{item.title}</strong><small>{item.slug}</small></td>
        <td>{LABELS[item.kind]}</td>
-       <td>{item.channel_targets.map(ch=>CHANNELS.find(c=>c.code===ch)?.label).join(", ")||"Chưa chọn"}</td>
+       <td>{cmsWebsiteSlotLabel(item.kind,item.placements?.public_web||"")}</td>
        <td>{item.status==="published"?"Đã xuất bản":item.status==="hidden"?"Đã ẩn":"Bản nháp"}</td>
        <td><div className="cms-row-actions">
         <button type="button" className="fb-ui-button fb-ui-button--secondary"
          disabled={busy||opening||item.status==="published"} onClick={()=>void openEditor(item)}>Sửa</button>
         {item.status==="published"?
-         <button type="button" className="fb-ui-button fb-ui-button--secondary" disabled={busy}
-          onClick={()=>void change(item,"hide")}>Ẩn</button>:
+         <button type="button" className="fb-ui-button fb-ui-button--secondary" disabled={busy||item.channel_targets.some(ch=>ch!=="public_web")}
+           title={item.channel_targets.some(ch=>ch!=="public_web")?
+            "Bản ghi còn liên kết App. Không ẩn đồng loạt từ màn Website.":undefined}
+           onClick={()=>void change(item,"hide")}>Ẩn</button>:
          <button type="button" className="fb-ui-button fb-ui-button--secondary" disabled
-          title="Chưa nối CMS với Website/App, không thể xuất bản">Chờ kết nối Web/App</button>}
+          title="Chưa nối CMS Website với public renderer, không thể xuất bản">Chờ kết nối Website</button>}
        </div></td>
       </tr>)
      }
@@ -421,7 +423,7 @@ export default function CmsManager({mode,owner}:{
     onClick={()=>setPage(v=>v+1)}>Trang sau</button>
   </div>
   <p className="cms-help">Đã lưu nháp và có ảnh chưa đồng nghĩa đã xuất bản lên Website.
-   Chỉ bật nút xuất bản sau khi public API và giao diện Web/App thực sự được kết nối, kiểm thử.</p>
+   Chỉ bật nút xuất bản sau khi public API và Website thực sự được kết nối, kiểm thử.</p>
   {editing!==undefined&&<ProductModal title={editing?"Sửa "+LABELS[editing.kind]:"Thêm nội dung"}
    onClose={()=>{setEditing(undefined);void refresh();}} wide locked={busy||editorSaving}
    beforeClose={()=>!editorDirtyRef.current || window.confirm("Nội dung hoặc ảnh chưa lưu. Đóng mà không lưu?")}
