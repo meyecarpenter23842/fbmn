@@ -253,26 +253,16 @@
   letter-spacing: -.02em;
 }
 
-/* Showcase rhythm from Owner references: all verified suggestions remain
- * reachable; horizontal scroll avoids a tall wall of placeholder cards. */
+/* G07.2: conventional grid, never horizontal scrolling. All related
+ * verified products remain visible; compact responsive cards reduce height. */
 .fb-song-related-grid {
   display: grid;
-  grid-auto-flow: column;
-  grid-auto-columns: minmax(220px, calc((100% - 42px) / 4));
-  grid-template-columns: none;
-  gap: 14px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
   min-width: 0;
-  overflow-x: auto;
-  overscroll-behavior-inline: contain;
-  scroll-snap-type: x proximity;
-  scroll-padding-inline: 4px;
-  padding: 3px 4px 15px;
-  scrollbar-width: thin;
-  scrollbar-color: rgba(109, 36, 158, .26) transparent;
 }
 .fb-song-related-grid > * {
   min-width: 0;
-  scroll-snap-align: start;
 }
 
 .fb-song-related-card {
@@ -296,7 +286,7 @@
 .fb-song-related-image {
   display: block;
   position: relative;
-  height: 160px;
+  height: 132px;
   min-height: 0;
   overflow: hidden;
   border-radius: var(--fb-glass-panel-radius);
@@ -442,7 +432,7 @@
 
 @media (max-width: 1100px) and (min-width: 701px) {
   .fb-song-related-grid {
-    grid-auto-columns: minmax(215px, calc((100% - 28px) / 3));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
 
@@ -503,7 +493,12 @@
   .fb-song-summary { margin-top: 2px; }
   /* Mobile gallery is a small verified-thumbnail ribbon; tapping a thumb
      opens the same native zoom dialog as the compact overview. */
+  /* One verified photo is already previewed beside the SKU selector.
+     Keep the dialog in the DOM for zoom, but no second gallery card. */
   .fb-song-gallery[data-has-media="false"] { display: none; }
+  .fb-song-gallery[data-has-multiple="false"][data-has-media="true"] {
+    display: contents;
+  }
   .fb-song-main-photo { display: none; }
   .fb-song-gallery-caption {
     display: block;
@@ -513,8 +508,8 @@
   }
   .fb-song-gallery-thumbs { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 4px; }
   .fb-song-related-grid {
-    grid-auto-columns: minmax(226px, 77%);
-    gap: 12px;
+    grid-template-columns: 1fr;
+    gap: 10px;
   }
   .fb-song-related-hit {
     display: grid;
@@ -524,7 +519,7 @@
   }
   .fb-song-related-image {
     width: 100%;
-    height: 108px;
+    height: 100px;
     min-height: 0;
   }
   .fb-song-related-body { gap: 5px; }
