@@ -1,5 +1,3 @@
-import { NextResponse } from "next/server";
-
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
@@ -47,7 +45,7 @@ export async function GET(request: Request) {
       return failure(response.status === 404 ? 404 : 503);
     }
 
-    return new NextResponse(response.body, {
+    return new Response(response.body, {
       status: 200,
       headers: {
         "Content-Type": "image/webp",
