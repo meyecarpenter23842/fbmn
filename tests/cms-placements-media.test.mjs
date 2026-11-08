@@ -129,7 +129,7 @@ test("CMS private migration never exposes R2 keys to public roles",()=>{
  const route=readFileSync("apps/admin/app/api/cms/[[...path]]/route.ts","utf8");
  assert.match(ui,/CmsMediaEditor/);
  assert.match(ui,/cms-error-state/);
- assert.match(ui,/Chờ kết nối Web\/App/);
+ assert.match(ui,/Chờ kết nối Website/);
  assert.match(route,/cms_worker_not_deployed/);
  assert.match(route,/image\/webp/);
 });
