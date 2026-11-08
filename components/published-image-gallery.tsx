@@ -7,14 +7,18 @@ import {GlassCard,GlassMediaFrame} from "./glass-ui";
 /** Native dialog provides focus containment, Escape dismissal and browser zoom.
  * The mobile overview shares the same ref, not a second gallery state.
  */
-export default function PublishedImageGallery({items,glass=false,zoomDialogRef}:{
+export default function PublishedImageGallery({items,glass=false,zoomDialogRef,activeIndex,onActiveIndexChange}:{
   items:Array<{src:string;alt:string}>;glass?:boolean;
   zoomDialogRef?:RefObject<HTMLDialogElement|null>;
+  activeIndex?:number;
+  onActiveIndexChange?:(index:number)=>void;
 }){
   const [selected,setSelected]=useState(0);
+  const active=activeIndex??selected;
+  const choose=(index:number)=>{setSelected(index);onActiveIndexChange?.(index);};
   const localZoomRef=useRef<HTMLDialogElement>(null);
   const zoomRef=zoomDialogRef??localZoomRef;
-  const current=items[selected]??items[0];
+  const current=items[active]??items[0];
   const openZoom=()=>{if(current?.src&&!zoomRef.current?.open)zoomRef.current?.showModal();};
   const photo=<div className={glass?"fb-song-gallery-photo":"catalogue-gallery-photo"}
     key={current?.src??"empty"}>
@@ -35,8 +39,8 @@ export default function PublishedImageGallery({items,glass=false,zoomDialogRef}:
       role="group" aria-label="Các mẫu ảnh sản phẩm">
       {items.map((img,i)=><button key={img.src} type="button"
         aria-label={"Xem mẫu ảnh "+(i+1)}
-        aria-pressed={selected===i} onClick={()=>{
-          setSelected(i);
+        aria-pressed={active===i} onClick={()=>{
+          choose(i);
           if(glass&&window.matchMedia("(max-width: 700px)").matches&&
               !zoomRef.current?.open)zoomRef.current?.showModal();
         }}
