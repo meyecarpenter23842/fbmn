@@ -7,7 +7,7 @@ import { getPublishedProductImageUrl } from "@/lib/catalog/product-image";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { CatalogProductImage } from "@/components/catalog-product-image";
-import { GlassCard, GlassButtonLink } from "@/components/glass-ui";
+import { GlassCard } from "@/components/glass-ui";
 
 export function CatalogShell({ children }: { children: ReactNode }) {
   return <>
@@ -36,22 +36,19 @@ export function ProductCard({ product, glass = false }: { product: PublicProduct
       : "Liên hệ báo giá"
   );
   const href = "/san-pham/" + encodeURIComponent(product.slug);
-  const content = <>
-    <Link className={glass ? "fb-song-related-image" : "catalog-product__image"}
-      href={href} prefetch={false} aria-label={"Xem sản phẩm " + product.name}>
+  // One navigable link per card; no nested link or redundant detail button.
+  const content = <Link href={href} prefetch={false}
+    aria-label={"Xem sản phẩm " + product.name}
+    className={glass ? "fb-song-related-hit" : "catalog-product__hit"}>
+    <div className={glass ? "fb-song-related-image" : "catalog-product__image"}>
       <CatalogProductImage src={image} alt={media?.alt ?? product.name}/>
-    </Link>
+    </div>
     <div className={glass ? "fb-song-related-body" : "catalog-product__body"}>
-      <h3><Link href={href} prefetch={false}>{product.name}</Link></h3>
+      <h3>{product.name}</h3>
       <p>{product.variants.length} quy cách đã xác minh</p>
       <strong className={glass ? "fb-song-related-price" : "catalog-price"}>{label}</strong>
-      {glass
-        ? <GlassButtonLink variant="secondary" className="fb-song-related-link"
-            href={href} prefetch={false}>Xem chi tiết</GlassButtonLink>
-        : <Link className="catalog-button catalog-button--small"
-            href={href} prefetch={false}>Xem chi tiết</Link>}
     </div>
-  </>;
+  </Link>;
   return glass
     ? <GlassCard hover className="fb-song-related-card">{content}</GlassCard>
     : <article className="catalog-product">{content}</article>;
