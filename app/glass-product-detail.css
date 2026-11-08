@@ -132,10 +132,12 @@
   gap: 7px;
 }
 
-/* The grid owns only columns/gaps. GlassChip owns ALL chip geometry and states. */
+/* Layout owns only wrapping/alignment; GlassChip owns ALL chip geometry and states. */
 .fb-song-sku-grid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  align-items: flex-start;
   gap: 8px;
 }
 
