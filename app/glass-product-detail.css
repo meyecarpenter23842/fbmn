@@ -31,6 +31,12 @@
 .fb-song-gallery-photo {
   position: absolute;
   inset: 0;
+  animation: fb-song-gallery-enter var(--fb-motion-button) var(--fb-easing-open) both;
+}
+
+@keyframes fb-song-gallery-enter {
+  from { opacity: .72; }
+  to { opacity: 1; }
 }
 
 .fb-song-gallery-thumbs {
@@ -322,5 +328,9 @@
 @media (prefers-reduced-motion: reduce) {
   .fb-song-gallery-thumb {
     transition: none;
+  }
+
+  .fb-song-gallery-photo {
+    animation: none;
   }
 }
