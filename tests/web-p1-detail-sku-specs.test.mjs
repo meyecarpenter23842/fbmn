@@ -33,7 +33,7 @@ test("Issue #130 approved B mockup: real code cards, related products, one CTA, 
   assert.match(picker,/const quoteLabel=/);
   assert.equal((picker.match(/href="\/#contact"/g)||[]).length,2);
   assert.match(picker,/selected\.price\?\.kind==="retail"/);
-  assert.match(picker,/extraInfo\.length>0&&<details className="catalogue-extra-details"/);
+  assert.match(picker,/extraInfo\.length>0&&<details className=\{glass\?"fb-song-details":"catalogue-extra-details"\}/);
   assert.match(picker,/specs\.binding/);
   assert.match(picker,/specs\.packaging\?\.unitsPerPack/);
   assert.match(picker,/specs\.packaging\?\.unitsPerCarton/);
