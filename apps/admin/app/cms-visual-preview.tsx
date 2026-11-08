@@ -8,13 +8,13 @@ const CHANNEL_LABELS:Record<CmsChannel,string>={
  public_web:"Website",dealer_app:"App đại lý",consumer_app:"App người tiêu dùng"
 };
 export default function CmsVisualPreview({kind,title,summary,ctaUrl,channelTargets,placements,
- recordId,revision,pending,channel,device,onChannel,onDevice}:{
+ recordId,revision,pending,channel,device,onChannel,onDevice,webOnly=false}:{
  kind:CmsKind;title:string;summary:string;ctaUrl:string;channelTargets:CmsChannel[];
  placements:Partial<Record<CmsChannel,string>>;recordId:string|null;revision:number;
  pending:CmsPendingImages;channel:CmsChannel;device:CmsDevice;
- onChannel:(v:CmsChannel)=>void;onDevice:(v:CmsDevice)=>void;
+ onChannel?:(v:CmsChannel)=>void;onDevice:(v:CmsDevice)=>void;webOnly?:boolean;
 }){
- const current=channelTargets.includes(channel)?channel:channelTargets[0]??"public_web";
+ const current=webOnly?"public_web":channelTargets.includes(channel)?channel:channelTargets[0]??"public_web";
  const slot=placements[current]??"";
  const label=CMS_SLOTS[kind][current].find(x=>x.value===slot)?.label??"Chưa chọn vị trí";
  const file=pending[cmsMediaKey(current,device)];
@@ -38,13 +38,13 @@ export default function CmsVisualPreview({kind,title,summary,ctaUrl,channelTarge
    <div><strong>Xem trước vị trí</strong>
     <small>{label} · {CHANNEL_LABELS[current]}</small></div>
    <div className="cms-preview-controls">
-    <select aria-label="Xem trước kênh" value={current}
-     onChange={e=>onChannel(e.target.value as CmsChannel)}
+    {webOnly?<span className="cms-preview-surface">Website Futurebook</span>:<select aria-label="Xem trước kênh" value={current}
+     onChange={e=>onChannel?.(e.target.value as CmsChannel)}
      disabled={!channelTargets.length}>
      {channelTargets.length?channelTargets.map(ch=>
       <option key={ch} value={ch}>{CHANNEL_LABELS[ch]}</option>):
       <option value="public_web">Chưa chọn kênh</option>}
-    </select>
+    </select>}
     <div className="cms-device-toggle" role="group" aria-label="Chế độ xem trước">
      {(["desktop","mobile"] as CmsDevice[]).map(d=>
       <button type="button" key={d} className="fb-ui-button fb-ui-button--secondary"
@@ -80,7 +80,7 @@ export default function CmsVisualPreview({kind,title,summary,ctaUrl,channelTarge
       <div className="cms-simulation-footer-placeholder">Nội dung tiếp theo của trang</div>}
    </div>
   </div>
-  <p className="cms-preview-disclaimer">Mô phỏng vị trí, tỷ lệ và ảnh vừa chọn; chưa phải ảnh chụp Website/App thực tế.
+  <p className="cms-preview-disclaimer">Mô phỏng vị trí theo contract và ảnh vừa chọn; chưa phải ảnh chụp trang đang chạy.
    Nội dung chỉ xuất hiện công khai sau khi kết nối API và giao diện nhận CMS.</p>
  </section>;
 }
