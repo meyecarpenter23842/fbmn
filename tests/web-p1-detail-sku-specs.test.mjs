@@ -15,8 +15,8 @@ test("Issue #130 approved B mockup: real code cards, related products, one CTA, 
   const picker=read("components/catalogue-product-options.tsx");
   const related=read("components/catalogue-related-products.tsx");
   const css=read("app/catalog.css");
-  assert.match(page,/<CatalogueProductOptions product={product} photos={images}\/>/);
-  assert.match(page,/<CatalogueRelatedProducts items={recommendations.items}\/>/);
+  assert.match(page,/<CatalogueProductOptions product={product} photos={images} glass={glass}\/>/);
+  assert.match(page,/<CatalogueRelatedProducts items={recommendations.items} glass={glass}\/>/);
   assert.doesNotMatch(page,/const suggested=recommendations\.items\.map/);
   assert.doesNotMatch(page,/catalog-variants|catalog-variant-list/);
   assert.match(picker,/const selected=product\.variants\.find/);
@@ -29,6 +29,9 @@ test("Issue #130 approved B mockup: real code cards, related products, one CTA, 
   assert.match(picker,/Mã \{variant\.sku\}/);
   assert.doesNotMatch(picker,/SKU này|>SKU|<select|giá NET|giá đại lý/i);
   assert.equal((picker.match(/Liên hệ báo giá/g)||[]).length,1);
+  // The visual branch selects one CTA component, sharing the exact original quote label and URL.
+  assert.match(picker,/const quoteLabel=/);
+  assert.equal((picker.match(/href="\/#contact"/g)||[]).length,2);
   assert.match(picker,/selected\.price\?\.kind==="retail"/);
   assert.match(picker,/extraInfo\.length>0&&<details className="catalogue-extra-details"/);
   assert.match(picker,/specs\.binding/);
@@ -36,7 +39,7 @@ test("Issue #130 approved B mockup: real code cards, related products, one CTA, 
   assert.match(picker,/specs\.packaging\?\.unitsPerCarton/);
   assert.match(css,/\.catalogue-extra-details summary:focus-visible/);
   assert.match(related,/import \{ProductCard\} from "\.\/catalog-ui"/);
-  assert.match(related,/<ProductCard key={product.id} product={product}\/>/);
+  assert.match(related,/<ProductCard key={product.id} product={product} glass={glass}\/>/);
   assert.match(related,/Sản phẩm gợi ý/);
   assert.doesNotMatch(related,/scrollBy|useRef|"use client"|catalogue-related-card/);
   assert.match(css,/\.catalogue-variant-option\{[^\n]*height:var\(--fb-control-height-compact\)/);
