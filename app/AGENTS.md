@@ -19,6 +19,7 @@
 - Blur chỉ khi hữu ích, có fallback nếu `backdrop-filter` không hỗ trợ; chữ WCAG AA, không nền rối phía sau thông tin quan trọng. Ảnh sản phẩm phải sắc nét, đúng màu.
 - Website mobile **không có bottom dock/navigation**; giữ responsive và các chức năng hiện hành, không dùng hiệu ứng đè CTA/selector/footer.
 - Background URL phải đến từ cấu hình public đã có; nếu thiếu contract API thì báo thiếu và dùng fallback, **không tự sửa schema DB/API**.
+- **Ngoại lệ G04R được Owner duyệt ngày 08/11/2026:** Owner yêu cầu nối chính xác ảnh `fbmn/banners/G04/backdrop-v1.webp` đã upload vào pilot Song Natural qua đường đọc kiểm soát. Được phép mở rộng **đúng một endpoint đọc ảnh** trong Public Worker đang có binding `PUBLIC_MEDIA_R2` và proxy same-origin Website; nguồn kích hoạt bắt buộc là manifest công khai `lib/media/decorative-background.ts` (mặc định `null` khi thu hồi), không gán URL R2 tuỳ ý trong trang. Nếu endpoint thiếu hoặc ảnh lỗi vẫn dùng gradient G04; không tự bật Public Access bucket, không thay DB/schema/giá/SKU/Admin, không coi đây là CMS hoặc quyền tạo endpoint khác. Worker/Website production chỉ deploy khi Owner ra lệnh.
 
 ## Chất lượng và phát hành
 - Thực hiện trang Song Natural trước, chốt UI bằng screenshot desktop/mobile thực (1440, 1280, 768, 390, 360px) và test gallery/SKU/CTA; sau đó rollout các trang khác.
