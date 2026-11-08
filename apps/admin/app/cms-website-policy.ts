@@ -13,6 +13,3 @@ export function withWebsitePlacement(original:CmsChannelPlacements,websiteSlot:s
  else delete result.public_web;
  return result;
 }
-export function belongsToWebsite(targets:readonly CmsChannel[]):boolean{
- return targets.includes("public_web");
-}
