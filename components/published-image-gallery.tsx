@@ -2,7 +2,7 @@
 
 import {useRef,useState,type RefObject} from "react";
 import {CatalogProductImage} from "./catalog-product-image";
-import {GlassCard,GlassMediaFrame} from "./glass-ui";
+import {GlassButton,GlassCard,GlassMediaFrame} from "./glass-ui";
 
 /** Native dialog provides focus containment, Escape dismissal and browser zoom.
  * The mobile overview shares the same ref, not a second gallery state.
@@ -52,9 +52,15 @@ export default function PublishedImageGallery({items,glass=false,zoomDialogRef,a
       </button>)}
     </div>}
     {glass&&<dialog ref={zoomRef} className="fb-song-zoom-dialog"
-      aria-label="Ảnh sản phẩm phóng to">
-      <button type="button" className="fb-song-zoom-close"
-        onClick={()=>zoomRef.current?.close()}>Đóng ảnh ✕</button>
+      aria-labelledby="fb-song-zoom-title">
+      <header className="fb-glass-dialog-header">
+        <h2 id="fb-song-zoom-title" className="fb-glass-dialog-header__title">
+          Ảnh sản phẩm
+        </h2>
+        <GlassButton variant="secondary"
+          aria-label="Đóng ảnh phóng to"
+          onClick={()=>zoomRef.current?.close()}>Đóng ảnh ✕</GlassButton>
+      </header>
       <div className="fb-song-zoom-frame">
         <CatalogProductImage src={current?.src??null}
           alt={current?.alt??"Sản phẩm Futurebook"}/>
