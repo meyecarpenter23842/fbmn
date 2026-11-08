@@ -95,6 +95,22 @@ test("G07: sticky quote appears only offscreen, retains company SKU and real con
   assert.match(css, /\.fb-song-mobile-cta\s*\{\s*display:\s*none/);
   assert.match(css, /@media \(max-width: 700px\)[\s\S]*?\.fb-song-mobile-cta\s*\{[^}]*position:\s*fixed/);
   assert.match(css, /env\(safe-area-inset-bottom\)/);
+
+  // The chatbot is a separate fixed 52px control, 12px from the right edge.
+  // The G07 quote bar must reserve 92px, leaving >=16px between hit targets.
+  const chat = read("app/chatbot.css");
+  assert.match(chat, /\.fb-chat\s*\{[^}]*z-index:\s*120/);
+  assert.match(chat, /@media \(max-width: 700px\)[\s\S]*?\.fb-chat\s*\{[^}]*right:\s*12px/);
+  assert.match(chat, /\.fb-chat__launcher\s*\{[^}]*width:\s*52px/);
+  assert.match(css, /width:\s*min\(440px, calc\(100% - 92px\)\)/);
+  assert.match(css, /left:\s*10px/);
+  assert.match(css, /\.fb-song-mobile-cta > span\s*\{[^}]*text-overflow:\s*ellipsis/);
+  for (const viewport of [360,390]) {
+    const quoteRight=10+Math.min(440,viewport-92);
+    const chatbotLeft=viewport-12-52;
+    assert.ok(chatbotLeft-quoteRight>=16,"float controls overlap at "+viewport);
+  }
+
   assert.match(core, /@media \(max-width: 780px\)/);
   assert.doesNotMatch(css, /bottom-navigation|bottom-dock|\.fb-glass-button\s*\{/);
 });
