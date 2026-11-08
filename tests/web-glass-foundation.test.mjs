@@ -49,8 +49,10 @@ test("Glass surface has safe no-blur fallback, responsive blur, and reduced moti
   assert.match(glass, /backdrop-filter: blur\(var\(--fb-glass-blur\)\)/);
   assert.match(glass, /@media \(max-width: 780px\)/);
   assert.match(glass, /backdrop-filter: blur\(var\(--fb-glass-blur-mobile\)\)/);
-  assert.match(glass, /@media \(hover: hover\) and \(pointer: fine\)/);
+  assert.match(glass, /@media \(hover: hover\) and \(pointer: fine\) and \(prefers-reduced-motion: no-preference\)/);
   assert.match(glass, /@media \(prefers-reduced-motion: reduce\)/);
+  // Regression: a reduced-motion user must never get an instantaneous hover lift.
+  assert.doesNotMatch(glass, /@media \(hover: hover\) and \(pointer: fine\)\s*\{/);
   assert.match(glass, /\.fb-glass-motion-card:focus-visible/);
   assert.doesNotMatch(glass, /transition[^;]*backdrop-filter/);
   assert.doesNotMatch(glass, /https?:\/\/|cloudflarestorage\.com|NEXT_PUBLIC_MEDIA/);
