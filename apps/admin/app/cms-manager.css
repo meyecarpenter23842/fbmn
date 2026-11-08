@@ -116,6 +116,9 @@
 .cms-preview-toolbar strong{font-size:14px;}
 .cms-preview-toolbar small{font-size:12px;color:var(--fb-ui-muted,#667085);}
 .cms-preview-controls{display:flex;flex-wrap:wrap;align-items:center;gap:9px;}
+.cms-preview-surface{font-size:13px;font-weight:650;color:var(--fb-ui-primary-strong,#431078);
+ background:var(--fb-ui-primary-subtle,#f4edfa);border:1px solid var(--fb-ui-border,#e4e7ef);
+ border-radius:var(--fb-control-radius,9px);padding:7px 10px;}
 .cms-preview-controls select{min-width:140px;max-width:240px;min-height:40px;
  border:1px solid var(--fb-ui-border,#e4e7ef);border-radius:var(--fb-control-radius,9px);
  background:#fff;padding:0 12px;color:var(--fb-ui-ink,#20223b);font:inherit;}
