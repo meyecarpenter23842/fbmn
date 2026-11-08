@@ -73,7 +73,8 @@
 .ref-featured__intro p { margin: 0 0 16px; font-size: 12px; color: #413353; line-height: 1.45; }
 .ref-featured .mobile-carousel { min-width: 0; }
 .ref-featured .products-grid { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 9px; overflow: visible; }
-.ref-product-card.ui-card { border: 1px solid var(--fb-glass-border); border-radius: 9px; padding: 10px; min-width: 0; background: var(--fb-glass-panel-layer); display: flex; flex-direction: column; position: relative; box-shadow: 0 2px 8px #4e1d7e0d;  border-radius: 22px; box-shadow: var(--fb-glass-shadow); transition: transform var(--fb-motion-glass-card) var(--fb-easing-open), box-shadow var(--fb-motion-glass-card) var(--fb-easing-open), border-color var(--fb-motion-glass-card) var(--fb-easing-open); -webkit-backdrop-filter: blur(var(--fb-glass-ui-blur)); backdrop-filter: blur(var(--fb-glass-ui-blur));}
+.fb-glass-home-product { display: flex; flex-direction: column; position: relative; min-width: 0; }
+
 .ref-demo-badge { position: absolute; z-index: 2; top: 8px; left: 8px; font-size: 8px; padding: 5px 9px; border-radius: 4px; color: #fff; background: var(--color-primary); font-weight: 900;  border-radius: 999px; font-size: 10px;}
 .ref-product-card__image { width: 100%; min-height: 164px; overflow: hidden; display: grid; place-items: center; background: rgba(255,255,255,.48); border-radius: 5px;  border-radius: 15px;}
 .ref-product-card__image .notebook { transform: scale(.63); }
@@ -269,10 +270,6 @@
 
 /* G05 — motion is opt-in on actual interactive cards, never on background blur. */
 @media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
-  .ref-product-card.ui-card:hover {
-    transform: translateY(var(--fb-motion-glass-lift));
-    box-shadow: var(--fb-glass-shadow-hover);
-  }
   .ref-cta:hover { transform: translateY(-2px); }
   .ref-navigation__link:not(.ref-navigation__link--active):hover,
   .ref-navigation__catalog:hover {
@@ -288,7 +285,7 @@
   .ref-hero { padding-top: 12px; }
   .ref-hero__inner { border-radius: 22px; }
   .ref-hero__copy { padding: 20px 18px 12px; }
-  .ref-featured__intro, .ref-product-card.ui-card, .ref-promo { border-radius: 19px; }
+  .ref-featured__intro, .ref-promo { border-radius: 19px; }
   .ref-product-card__actions a, .ref-product-card__actions button { min-height: var(--fb-control-height-touch); }
   .ref-trust > div { min-height: 88px; }
 }
