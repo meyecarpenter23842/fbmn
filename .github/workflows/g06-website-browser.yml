@@ -1,0 +1,49 @@
+name: G06 Website Browser QA
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "scripts/g06-browser-qa.mjs"
+      - ".github/workflows/g06-website-browser.yml"
+      - "tests/web-g06-browser-contract.test.mjs"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: g06-website-browser-qa
+  cancel-in-progress: true
+
+jobs:
+  screenshot-qa:
+    name: G06 browser QA / five widths / screenshot evidence
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - name: Checkout exact reviewed source
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Setup Node 22
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: "22"
+      - name: Install browser test runner (not added to Website runtime)
+        run: npm install --no-save --no-audit --no-fund playwright@1.56.1
+      - name: Install headless Chromium for screenshot evidence
+        run: npx playwright install --with-deps chromium
+      - name: Screenshot, UX and lab vitals
+        run: node scripts/g06-browser-qa.mjs
+        env:
+          G06_BASE_URL: https://fbmn-web.vercel.app
+          G06_OUTPUT_DIR: artifacts/g06
+      - name: Upload G06 screenshots + metrics, including on failures
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: g06-production-browser-evidence
+          path: artifacts/g06
+          if-no-files-found: warn
+          retention-days: 7
