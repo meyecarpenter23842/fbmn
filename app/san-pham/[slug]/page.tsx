@@ -46,6 +46,6 @@ export default async function ProductPage({ params }: Props) {
     <CatalogueRelatedProducts items={recommendations.items} glass={glass}/>
   </div>;
   return <CatalogShell>{glass
-    ? <GlassPageBackdrop className="fb-glass-song-page">{content}</GlassPageBackdrop>
+    ? <GlassPageBackdrop className="fb-glass-song-page" decorativeReadPath="/api/decorative-background">{content}</GlassPageBackdrop>
     : content}</CatalogShell>;
 }
