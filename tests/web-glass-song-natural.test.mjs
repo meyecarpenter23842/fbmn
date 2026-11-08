@@ -96,7 +96,12 @@ test("Glass detail CSS shares NO class selectors with legacy catalogue or shared
 
 test("SKU geometry and interactive colors come ONLY from GlassChip source, never page overrides",()=>{
   assert.doesNotMatch(clean(css),/\.fb-song-sku(?=[\s:.{>])/);
-  assert.match(css,/\.fb-song-sku-grid\s*\{[^}]*grid-template-columns:\s*repeat\(4/);
+  const skuLayout=clean(css).match(/\.fb-song-sku-grid\s*\{([^}]*)\}/)?.[1];
+  assert.ok(skuLayout,"Song Natural SKU layout exists");
+  assert.match(skuLayout,/display:\s*flex\s*;/);
+  assert.match(skuLayout,/flex-wrap:\s*wrap\s*;/);
+  assert.match(skuLayout,/justify-content:\s*flex-start\s*;/);
+  assert.doesNotMatch(skuLayout,/grid-template-columns|grid-auto-flow|width\s*:|flex-grow|flex-basis|flex\s*:/);
   assert.match(foundation,/min-height: var\(--fb-control-height-compact\)/);
   assert.match(foundation,/@media \(max-width: 780px\)[\s\S]*?min-height: var\(--fb-control-height-touch\)/);
   assert.match(foundation,/\.fb-glass-chip\[data-selected="true"\]/);
