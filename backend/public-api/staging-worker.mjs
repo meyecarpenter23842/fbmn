@@ -2,10 +2,11 @@ import { createPublicApi } from "./handler.mjs";
 import { createReadModel, PUBLIC_READ_QUERIES } from "./read-model.mjs";
 
 const ALLOWED_SQL = new Set(Object.values(PUBLIC_READ_QUERIES));
-const ROUTES = new Set(["/v1/public/categories", "/v1/public/products", "/v1/public/catalog", "/v1/public/content"]);
+const ROUTES = new Set(["/v1/public/categories", "/v1/public/products", "/v1/public/catalog", "/v1/public/content", "/v1/public/cms"]);
 // Owner-approved single decorative image. This Worker binding is in the same
 // Cloudflare account as the private fbmn R2 bucket. Never accept caller keys.
 const DECORATIVE_ROUTE = "/v1/public/decorative-background";
+const CMS_IMAGE_ROUTE="/v1/public/cms/image";
 const DECORATIVE_KEY = "banners/G04/backdrop-v1.webp";
 const error = (status,code) => new Response(JSON.stringify({error:{code,message:"Yêu cầu không thể xử lý."}}),
   {status,headers:{"Content-Type":"application/json; charset=utf-8","Cache-Control":"no-store","X-Content-Type-Options":"nosniff"}});
@@ -39,7 +40,8 @@ export function createStagingWorker({createDbClient}) {
           typeof env.PUBLIC_ALLOWED_ORIGINS !== "string") return error(503,"service_unavailable");
       const url=new URL(request.url);
       const isDecorative=url.pathname===DECORATIVE_ROUTE;
-      const isImage=url.pathname==="/v1/public/image"||isDecorative;
+      const isCmsImage=url.pathname===CMS_IMAGE_ROUTE;
+      const isImage=url.pathname==="/v1/public/image"||isDecorative||isCmsImage;
       // Vercel's image proxy pools many visitors behind a small number of
       // egress IPs. Use a separate bounded per-image budget for public WebP,
       // never spoofable X-Forwarded-For. Other API traffic keeps its old limit.
@@ -48,7 +50,8 @@ export function createStagingWorker({createDbClient}) {
       let rate;
       try {
         const actor=(request.headers.get("CF-Connecting-IP")||"unknown").slice(0,100);
-        const key=isImage?"media:"+actor+":"+(isDecorative?"g04-backdrop":url.searchParams.get("id")?.slice(0,40)):
+        const key=isImage?"media:"+actor+":"+(isDecorative?"g04-backdrop":
+          url.searchParams.get("id")?.slice(0,40)):
           actor+":"+(ROUTES.has(url.pathname)?url.pathname:"other");
         rate=await (isImage?env.IMAGE_RATE_LIMITER:env.RATE_LIMITER).limit({key});
       } catch {
@@ -76,6 +79,27 @@ export function createStagingWorker({createDbClient}) {
             "Cross-Origin-Resource-Policy":"same-origin"
           }});
         }
+        if(isCmsImage){
+          if(env.PUBLIC_CMS_ENABLED!=="true"||request.method!=="GET"||
+             typeof env.PUBLIC_MEDIA_R2?.get!=="function")return error(404,"not_found");
+          const origin=request.headers.get("Origin");
+          if(origin&&!origins.includes(origin))return error(403,"origin_forbidden");
+          if(url.searchParams.size!==2||url.searchParams.getAll("id").length!==1||
+             url.searchParams.getAll("device").length!==1)return error(400,"invalid_query");
+          const id=url.searchParams.get("id")||"",device=url.searchParams.get("device")||"";
+          if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)||
+              !["desktop","mobile"].includes(device))return error(400,"invalid_query");
+          // The SQL view rechecks publication, approval and time at each request.
+          const key=await readModel(env,m=>m.getPublicCmsImageKey(id,device));
+          if(!key)return error(404,"not_found");
+          const object=await env.PUBLIC_MEDIA_R2.get(key);
+          if(!object?.body||object.size<100||object.size>5*1024*1024||
+              object.httpMetadata?.contentType!=="image/webp")return error(404,"not_found");
+          return new Response(object.body,{status:200,headers:{
+            "Content-Type":"image/webp","Cache-Control":"no-store",
+            "X-Content-Type-Options":"nosniff","Cross-Origin-Resource-Policy":"same-origin"
+          }});
+        }
         if(url.pathname==="/v1/public/image"){
           if(request.method!=="GET"||!env.PUBLIC_MEDIA_R2?.get||env.PUBLIC_P5_ENABLED!=="true")
             return error(404,"not_found");
@@ -99,6 +123,8 @@ export function createStagingWorker({createDbClient}) {
         const api=createPublicApi({
           getPublicCatalog:()=>readModel(env,m=>m.getPublicCatalog()),
           getPublicContent:()=>readModel(env,m=>m.getPublicContent()),
+          getPublicCms:()=>readModel(env,m=>m.getPublicCms()),
+          cmsEnabled:env.PUBLIC_CMS_ENABLED==="true",
           allowedOrigins:origins,
         });
         return await api.fetch(request);
