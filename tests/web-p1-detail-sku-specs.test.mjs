@@ -10,7 +10,7 @@ const read=path=>readFileSync(new URL("../"+path,import.meta.url),"utf8");
 const mk=(sku,name,paperSize,pageCount,ruling)=>({
   sku,name,price:null,specifications:{paperSize,pageCount,ruling}
 });
-test("Issue #130 approved B mockup: real code cards, related products, one CTA, shared tokens",()=>{
+test("Issue #130/G07: real code cards, original CTA plus visibility-gated mobile action",()=>{
   const page=read("app/san-pham/[slug]/page.tsx");
   const picker=read("components/catalogue-product-options.tsx");
   const related=read("components/catalogue-related-products.tsx");
@@ -28,10 +28,13 @@ test("Issue #130 approved B mockup: real code cards, related products, one CTA, 
   assert.match(picker,/aria-live="polite"/);
   assert.match(picker,/Mã \{variant\.sku\}/);
   assert.doesNotMatch(picker,/SKU này|>SKU|<select|giá NET|giá đại lý/i);
-  assert.equal((picker.match(/Liên hệ báo giá/g)||[]).length,1);
+  assert.equal((picker.match(/Liên hệ báo giá/g)||[]).length,2);
   // The visual branch selects one CTA component, sharing the exact original quote label and URL.
   assert.match(picker,/const quoteLabel=/);
-  assert.equal((picker.match(/href="\/#contact"/g)||[]).length,2);
+  assert.match(picker,/new IntersectionObserver/);
+  assert.match(picker,/setShowMobileQuote\(!entry\.isIntersecting\)/);
+  assert.match(picker,/glass&&showMobileQuote&&<div className="fb-song-mobile-cta"/);
+  assert.equal((picker.match(/href="\/#contact"/g)||[]).length,3);
   assert.match(picker,/selected\.price\?\.kind==="retail"/);
   assert.match(picker,/extraInfo\.length>0&&<details className=\{glass\?"fb-song-details":"catalogue-extra-details"\}/);
   assert.match(picker,/specs\.binding/);
