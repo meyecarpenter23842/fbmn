@@ -90,6 +90,24 @@ test("G05 keeps desktop and mobile controls accessible without layout animation 
   assert.match(homeCss, /\.ref-navigation__link\s*\{\s*color: var\(--fb-glass-ink\); background: transparent;/);
   assert.match(homeCss, /\.ref-navigation__catalog\s*\{\s*color: #fff;\s*background: linear-gradient\(115deg, var\(--color-primary\)/);
   assert.match(homeCss, /\.ref-navigation__link--active\s*\{\s*color: #fff;\s*background: linear-gradient\(115deg, var\(--color-primary\)/);
+
+  // P1 review: button and selected link must keep WCAG-readable colours on hover/focus.
+  const downloadCss = read("app/app-download.css");
+  const downloadBase = downloadCss.match(/\.ref-navigation__download\s*\{([^}]*)\}/)?.[1];
+  const downloadHover = downloadCss.match(/\.ref-navigation__download:hover,\s*\.ref-navigation__download:focus-visible\s*\{([^}]*)\}/)?.[1];
+  assert.ok(downloadBase && downloadHover);
+  assert.match(downloadBase, /background:\s*rgba\(255,255,255,\.7\)/);
+  assert.match(downloadBase, /color:\s*var\(--color-primary-strong\)/);
+  assert.match(downloadHover, /background:\s*rgba\(255,255,255,\.94\)/);
+  assert.match(downloadHover, /color:\s*var\(--color-primary-strong\)/);
+  const mobileDownload = downloadCss.match(/@media \(max-width: 800px\)\s*\{[\s\S]*?\.ref-navigation__download\s*\{([^}]*)\}/)?.[1];
+  assert.match(mobileDownload || "", /color:\s*var\(--color-primary-strong\)/);
+  const selectedStates = homeCss.match(/\.ref-navigation__link--active:hover,\s*\.ref-navigation__link--active:focus-visible,\s*\.ref-navigation__catalog:hover,\s*\.ref-navigation__catalog:focus-visible\s*\{([^}]*)\}/)?.[1];
+  assert.ok(selectedStates);
+  assert.match(selectedStates, /color:\s*#fff/);
+  assert.match(selectedStates, /background:\s*linear-gradient\(115deg, var\(--color-primary\), var\(--color-primary-strong\)\)/);
+  assert.match(homeCss, /\.ref-navigation__link:not\(\.ref-navigation__link--active\):focus-visible\s*\{[^}]*color:\s*var\(--color-primary-strong\)/);
+
   assert.match(homeCss, /@media \(prefers-reduced-motion: reduce\)/);
   assert.match(categories, /overflow-x:\s*auto/);
   assert.match(categories, /scroll-snap-type:\s*x mandatory/);
