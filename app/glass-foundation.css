@@ -126,6 +126,28 @@
   padding: clamp(16px, 2vw, 24px);
 }
 
+/* G07 interactive-card variant owns the hit target, padding and focus.
+ * Page styles may change layout, never the shared glass perimeter/focus.
+ */
+.fb-glass-card--link {
+  padding: 0;
+}
+.fb-glass-card--link > a {
+  display: block;
+  width: 100%;
+  min-height: 100%;
+  padding: clamp(16px, 2vw, 24px);
+  border-radius: inherit;
+}
+.fb-glass-card--link > a:focus-visible {
+  outline: 3px solid var(--color-primary);
+  outline-offset: 3px;
+}
+.fb-glass-card--link:focus-within {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px rgba(109,36,158,.16), var(--fb-glass-shadow);
+}
+
 .fb-glass-media-frame {
   position: relative;
   min-width: 0;
