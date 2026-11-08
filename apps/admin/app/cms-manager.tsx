@@ -8,6 +8,7 @@ import CmsMediaEditor,{cmsMediaKey,uploadCmsImage} from "./cms-media-editor";
 import type {CmsChannel as ImageChannel,CmsDevice,CmsPendingImages} from "./cms-media-editor";
 import CmsVisualPreview from "./cms-visual-preview";
 import CmsWebsitePlacement,{cmsWebsiteSlotLabel} from "./cms-website-placement";
+import {belongsToWebsite,websiteDraftTargets,withWebsitePlacement} from "./cms-website-policy";
 
 type CmsKind = "banner"|"popup"|"article"|"promotion";
 type CmsStatus = "draft"|"published"|"hidden";
@@ -39,13 +40,13 @@ function localDate(value:string|null){
 }
 function blank(kind:CmsKind):Draft {
  return {kind,slug:"",title:"",summary:"",paragraphs:"",ctaUrl:"",
-  channelTargets:["public_web"],sortOrder:0,startsAt:"",endsAt:"",sourceRef:"",
+  channelTargets:websiteDraftTargets(),sortOrder:0,startsAt:"",endsAt:"",sourceRef:"",
   placements:{},popupDelaySeconds:3,popupCooldownMinutes:1440,popupMaxPerSession:1};
 }
 function fromItem(item:CmsItem):Draft {
  return {kind:item.kind,slug:item.slug,title:item.title,summary:item.summary,
   paragraphs:item.paragraphs.join("\n\n"),ctaUrl:item.cta_url||"",
-  channelTargets:item.channel_targets,sortOrder:item.sort_order,
+  channelTargets:websiteDraftTargets(item.channel_targets),sortOrder:item.sort_order,
   startsAt:localDate(item.starts_at),endsAt:localDate(item.ends_at),
   sourceRef:item.source_ref,placements:item.placements||{},
   popupDelaySeconds:item.popup_delay_seconds??3,popupCooldownMinutes:item.popup_cooldown_minutes??1440,
@@ -232,10 +233,8 @@ function CmsEditor({item,kind,onSaved,onSavingChange,dirtyRef,step,onStep,formId
     <div className="cms-form-grid">
      <CmsWebsitePlacement kind={draft.kind} value={draft.placements.public_web||""}
        disabled={busy} onChange={value=>{
-        // Only Website slot is edited here. Legacy App placements stay in the payload.
-        const placements={...draft.placements};
-        if(value)placements.public_web=value;else delete placements.public_web;
-        set("placements",placements);
+        // Only Website slot is edited; App placements remain unchanged.
+         set("placements",withWebsitePlacement(draft.placements,value));
        }}/>
       {draft.kind==="popup"&&<fieldset className="cms-popup-frequency cms-wide">
       <legend>Popup quảng bá cho khách truy cập</legend>
@@ -360,7 +359,7 @@ export default function CmsManager({mode,owner}:{
   finally{setLoading(false);}
  },[owner,mode,page]);
  useEffect(()=>{const task=window.setTimeout(()=>{void refresh();},0);return()=>window.clearTimeout(task);},[refresh]);
- const visible=items.filter(item=>item.channel_targets.includes("public_web"));
+ const visible=items.filter(item=>belongsToWebsite(item.channel_targets));
  const kind:CmsKind=mode==="marketing"?"banner":"article";
  const title=mode==="marketing"?"Banner & Popup":"Tin tức & Khuyến mãi";
  const notify=(text:string,problem=false)=>{if(problem)setError(text);else setMessage(text);setToastId(v=>v+1);};
