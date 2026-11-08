@@ -81,3 +81,15 @@ export async function getPublicCms():Promise<PublicCmsItem[]>{
  if(!Array.isArray(contents.items)||contents.items.length>500)throw Error("Invalid CMS entries");
  return contents.items.map(item);
 }
+/** Non-critical banner/editorial surfaces must not break the storefront.
+ * Public API routes still call getPublicCms() directly and return 503 on failure.
+ */
+export async function getOptionalPublicCms():Promise<PublicCmsItem[]>{
+ if(!cmsEnabled())return [];
+ try{return await getPublicCms();}
+ catch{
+  // Keep logs free of CMS payload, URLs, identities and private metadata.
+  console.error("[Futurebook CMS] optional public content temporarily unavailable");
+  return [];
+ }
+}
