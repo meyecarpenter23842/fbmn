@@ -155,6 +155,7 @@ test("G04R keeps CSS fallback, confines opt-in to Song Natural, and never hardco
   assert.match(css, /var\(--fb-glass-decorative-image\),\s*var\(--fb-glass-backdrop-gradient\)/);
   assert.match(worker, /const DECORATIVE_KEY = "banners\/G04\/backdrop-v1\.webp"/);
   assert.match(worker, /env\.PUBLIC_MEDIA_R2\.get\(DECORATIVE_KEY\)/);
-  assert.doesNotMatch(route + page + component, /cloudflarestorage\.com|\.r2\.dev|R2_SECRET|R2_ACCESS_KEY/);
+  assert.doesNotMatch(route + page + component, /cloudflarestorage\.com|R2_SECRET|R2_ACCESS_KEY/);
+  assert.match(route, /base\.hostname\.endsWith\("\.r2\.dev"\)/);
   assert.doesNotMatch(worker + route, /getObject\(|listObjects\(|req\.query\.key/);
 });
