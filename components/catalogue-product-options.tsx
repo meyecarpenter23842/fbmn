@@ -93,7 +93,7 @@ export default function CatalogueProductOptions({product,photos,glass=false}:{
           alt={gallery[0]?.alt??product.name} className="catalog-image-compact"/>
       </button>}
       <div className={glass?"fb-song-overview-copy":undefined}>
-        <p className="catalog-overline">SẢN PHẨM FUTUREBOOK</p>
+        <p className={glass?"fb-song-overline":"catalog-overline"}>SẢN PHẨM FUTUREBOOK</p>
         <h1 className={glass?"fb-song-title":undefined}>{product.name}</h1>
         {product.description&&<p className={glass?"fb-song-description":"catalog-detail__description"}>{product.description}</p>}
         <p className={glass?"fb-song-count":"catalog-detail__count"}>{product.variants.length} mã sản phẩm</p>
