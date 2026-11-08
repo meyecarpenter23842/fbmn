@@ -97,7 +97,7 @@ function CmsEditor({item,kind,onSaved,onSavingChange,dirtyRef,step,onStep,formId
  const [error,setError]=useState("");
  const [toastId,setToastId]=useState(0);
  const [previewDevice,setPreviewDevice]=useState<CmsDevice>("desktop");
- const contentDirty=useRef(false),operationLock=useRef(false);
+ const contentDirty=useRef(item?.channel_targets.length===0),operationLock=useRef(false);
  const previewUrls=useRef<Set<string>>(new Set());
  useEffect(()=>{
   const owned=previewUrls.current;
@@ -178,6 +178,10 @@ function CmsEditor({item,kind,onSaved,onSavingChange,dirtyRef,step,onStep,formId
  const STEPS=["Nội dung","Vị trí & lịch","Ảnh & xem trước"];
  return <form id={formId} className="cms-editor cms-wizard" onSubmit={e=>void submit(e)} noValidate>
   <AdminToast variant="error" message={error} notificationId={toastId} onClose={()=>setError("")}/>
+   {item?.channel_targets.length===0&&<p className="cms-help" role="note">
+    Bản nháp cũ chưa gắn kênh. Khi bấm Lưu, bản nháp sẽ được gắn Website Futurebook;
+    vẫn chưa xuất bản công khai.
+   </p>}
    {item?.channel_targets.some(ch=>ch!=="public_web")&&<p className="cms-help" role="note">
     Bản ghi cũ còn liên kết App: kênh, vị trí và ảnh App sẽ được giữ nguyên, không chỉnh tại Website.
     Tiêu đề và nội dung dùng chung; nếu sửa, nội dung ở App đã liên kết cũng thay đổi.
