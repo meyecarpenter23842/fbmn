@@ -158,6 +158,34 @@
   background-color: #fff;
 }
 
+/* Shared Website glass modal header: one style owner for geometry/colour.
+ * 52px desktop, 56px touch; action uses the standard GlassButton primitive.
+ */
+.fb-glass-dialog-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 52px;
+  padding: 8px 14px;
+  border-bottom: 1px solid var(--fb-glass-border-fallback);
+  border-inline-start: 3px solid var(--color-primary);
+  background: linear-gradient(105deg, rgba(245, 236, 253, .98), rgba(255, 255, 255, .92));
+}
+.fb-glass-dialog-header__title {
+  margin: 0;
+  color: var(--color-primary-strong);
+  font-size: 16px;
+  font-weight: 750;
+  line-height: 1.2;
+}
+@media (max-width: 780px) {
+  .fb-glass-dialog-header {
+    min-height: 56px;
+    padding: 6px 12px;
+  }
+}
+
 .fb-glass-button,
 .fb-glass-chip {
   display: inline-flex;
