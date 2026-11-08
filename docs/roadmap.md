@@ -1,6 +1,6 @@
-# FUTUREBOOK MIỀN NAM — ROADMAP DUY NHẤT (v1.2, ưu tiên hoàn thiện Website)
+# FUTUREBOOK MIỀN NAM — ROADMAP DUY NHẤT (v1.3, Website-first, Admin theo kênh)
 
-**Chốt ngày:** 01/11/2026 (quyết định mới cho module sản phẩm; giữ lịch sử nguồn 29/10). **Chủ sở hữu scope:** Futurebook Miền Nam.  
+**Chốt module sản phẩm:** 01/11/2026; **cập nhật IA Admin theo kênh:** 08/11/2026 (giữ lịch sử nguồn 29/10). **Chủ sở hữu scope:** Futurebook Miền Nam.  
 **Đây là tài liệu kế hoạch DUY NHẤT.** GitHub [issue #1](https://github.com/alibaba240185/fbmn/issues/1) chỉ là **mục lục/trạng thái**, không là một kế hoạch thứ hai. Các issue thực thi phải dẫn về đây. `docs/admin-console-roadmap.md` được giữ như tài liệu tham khảo kỹ thuật, không còn roadmap độc lập.
 
 ## 0. Ưu tiên thiết kế mới 08/11/2026 — Website Premium Glass UI V2 (UI-only)
@@ -27,6 +27,44 @@ Owner chốt hai ảnh tham chiếu Premium Purple Glass: **glassmorphism trong 
 **G04R — Owner phê duyệt bổ sung ngày 08/11/2026:** sau G04 fallback, Owner đã upload và chỉ định **đúng ảnh** `banners/G04/backdrop-v1.webp`. Lô kết nối độc lập được phép tạo một read-only route allowlist tại Public Worker `PUBLIC_MEDIA_R2` hiện có và same-origin Website proxy, được kích hoạt qua manifest public `lib/media/decorative-background.ts` (có thể tắt về `null`). Đây là ngoại lệ cụ thể do Owner phê duyệt, không phải xây CMS, không thêm DB/schema, không bật public R2, không thay API sản phẩm/Admin. CI xanh + Codex sạch + squash merge repo phụ → đồng bộ repo chính; **Worker rồi Website production chỉ deploy khi Owner cho phép**. Fallback gradient bắt buộc giữ khi ảnh không tải được.
 
 --- 
+
+## 0.1. QUYẾT ĐỊNH OWNER 08/11/2026 — ADMIN THEO TỪNG KÊNH, CẬP NHẬT ROADMAP TRƯỚC KHI SỬA UI
+
+**Ưu tiên/hiệu lực:** quyết định kiến trúc thông tin (IA) Admin này bổ sung mục 2–4 và thay cách đặt menu CMS chung trong Admin; **không thay** quy tắc SKU/giá, schema, backend dùng chung, Website Glass UI V2 hoặc bố cục Website/App đã duyệt. **Bắt buộc cập nhật roadmap và thông qua PR tài liệu trước mọi PR tái cấu trúc UI.** Theo dõi thực thi CMS ở **[ADM-03 #20](https://github.com/alibaba240185/fbmn/issues/20)**; không tạo issue/roadmap khác trùng nội dung.
+
+**Lý do:** Banner, Popup, Tin tức, Khuyến mãi đang được đặt làm menu chức năng toàn cục rồi chọn Web/App trong màn chi tiết. Điều này gây nhầm vị trí và bố cục vì Website, App Đại lý và App Người tiêu dùng có điều hướng, slot, viewport và trình bày riêng. **Admin phải điều hướng theo kênh hiển thị trước, rồi chọn loại nội dung/vị trí/tab con trong kênh đó.**
+
+### Cấu trúc menu mục tiêu (một Admin, một backend)
+
+| Cấp menu chính | Menu con / vai trò | Trạng thái triển khai |
+|---|---|---|
+| **Dùng chung — Sản phẩm** | SKU, danh mục/nhóm mẫu, ảnh R2, Excel, dữ liệu gốc | Giữ màn/luồng đang có, không nhân bản theo kênh |
+| **Dùng chung — Giá & bảng giá** | Danh sách bảng giá, giá SKU/Excel, chính sách áp dụng theo quyền và kênh | Giữ nghiệp vụ riêng, không đặt menu Giá trong từng Website/App; không lộ NET |
+| **Website Futurebook** | Trang chủ & bố cục; Banner & Popup; Tin tức & Khuyến mãi; Danh mục & hiển thị sản phẩm; Liên hệ & đăng ký đại lý; Cấu hình Website | **Ưu tiên số 1 để triển khai thật**, dùng đúng tên và vị trí của Website live |
+| **App Đại lý/NPP** | Bố cục trang chủ, nội dung/khuyến mãi, hiển thị sản phẩm và chức năng app tương ứng khi có thiết kế/API | Chỉ đưa vào điều hướng khi có chức năng thật; **chưa phải app đã phát hành** |
+| **App Người tiêu dùng** | Bố cục trang chủ, nội dung/khuyến mãi, hiển thị sản phẩm và chức năng app tương ứng khi có thiết kế/API | Chỉ đưa vào điều hướng khi có chức năng thật; **chưa phải app đã phát hành** |
+| **Dùng chung — Khách hàng / Hệ thống** | Khách hàng, quyền, audit, cài đặt toàn hệ thống nếu đã có chức năng tương ứng | Không bịa module mới chỉ để đủ menu |
+
+- **Phạm vi ngữ cảnh:** khi vào `Website Futurebook`, tất cả trang con tự dùng `public_web`; **không yêu cầu chọn Web/App lặp lại** trong mỗi form. Trong App Đại lý/Người tiêu dùng dùng lần lượt `dealer_app`/`consumer_app`. Chỉ có hành động **dùng lại/phân phối sang kênh khác** mới cần chọn nhiều kênh rõ ràng và xác nhận quyền.
+- **Dữ liệu không bị tách:** một kho SKU, pricebooks được bảo vệ, nội dung nguồn/CMS entries, ảnh R2, revision/audit và backend chung. Mỗi kênh có **placement/slot, ảnh responsive, lịch, khả năng hiển thị, nội dung hiển thị và trạng thái xuất bản riêng**; không sao chép bản ghi/đổi SKU âm thầm. Phân quyền kiểm tra ở server, không tin tham số kênh do client tự gửi.
+- **Bố cục/preview theo kênh:** trong từng trang con có tab/khối **Nội dung → Vị trí hiển thị → Xem trước → Lịch & xuất bản** khi thật sự cần, tránh quá nhiều lớp tab. Preview Website phải thể hiện đúng các slot `home.hero`, `home.after_products`, `category.header`, `home.entry`/`category.entry`/`all.entry`, tin tức/khuyến mãi theo [CMS placement contract](cms-placement-contract.md), hỗ trợ **desktop/mobile** và dữ liệu/ảnh đã chọn. Preview là **bản nháp quản trị**, phải dùng contract của giao diện thật và ghi rõ khi chưa tương đương live; không thay thế kiểm tra xuất bản thực tế. App preview theo màn hình/layout native riêng **sau khi có app**; không áp Website desktop lên App.
+- **Giữ runtime và quyền:** chỉ sửa cấu trúc menu/routes/tab/preview Admin theo PR hẹp; không đổi navigation/layout Website, không đổi SKU/giá, không cho nút xuất bản giả hoạt động khi public read-model/renderer chưa sẵn sàng; không làm mất bản nháp, ảnh, phân quyền, liên kết cũ hoặc chức năng quản trị đang chạy. URL Admin cũ cần redirect/compatibility hợp lệ.
+
+### Lộ trình thi hành theo thứ tự (không được gộp mất bước nghiệm thu)
+
+| Bước | Mục tiêu | Tiêu chí hoàn thành / ranh giới |
+|---|---|---|
+| **C0 — Chốt roadmap** | Chỉ sửa **`docs/roadmap.md`** để chuẩn hóa IA, kênh và thứ tự công việc | PR tài liệu được CI + review sạch, squash merge; **chưa sửa Admin/UI/DB/Worker** |
+| **C1 — Sắp xếp navigation Admin** | Menu chung giữ Sản phẩm/Giá; CMS dời vào **Website Futurebook**; chuẩn bị chỗ cho 2 App theo mức sẵn sàng thực tế | Không thay API hay dữ liệu; đường dẫn cũ vẫn dùng được, menu/motion/responsive/accessibility đúng UI Contract; Owner UAT |
+| **C2 — Tái tổ chức CMS Website** | Trang con theo ngôn ngữ live, nhóm slot và tab nhỏ; tạo/sửa, gắn media, lịch, quyền trong ngữ cảnh `public_web` | Một hành trình quản trị nội dung Web dễ hiểu; không lặp dropdown kênh; không phá dữ liệu nhiều kênh cũ |
+| **C3 — Preview thật theo vị trí** | Website desktop/mobile preview banner, popup, tin tức, khuyến mãi tại slot được cấu hình | Ảnh không bị cắt sai; vị trí, kích thước, trạng thái và văn bản khớp contract; không ngụy nhận preview là live |
+| **C4 — CMS → Website E2E** | Kết nối Admin CMS → private API/storage → **public-approved read-model** → renderer Website, refresh không redeploy theo nội dung | Trước tiên xác minh Worker/migration đang dùng; test `draft/published/hidden/scheduled`, lịch/cooldown popup, 401/403, cache, R2 và chặn NET; deploy/migration **chỉ khi Owner duyệt riêng** |
+| **C5 — UAT & bàn giao Website** | Kiểm desktop 1440/1280/768/390/360, Safari/Chrome, chức năng thực trên production/staging đã phê duyệt | CI/Codex, screenshots thực, ảnh/SEO/keyboard/toast/motion, rollback và Owner ký nghiệm thu; phối hợp #9/#12/#13/#24 |
+| **C6 — Mở rộng theo App** | Lặp lại mô hình IA và preview **riêng** cho Dealer/Consumer khi đã có UI/API nghiệp vụ và quyền | Phụ thuộc ADM-04 #40 + quyết định thiết kế từng app; không tạo màn App giả trong C1–C5 |
+
+**Tình trạng làm gốc ngày 08/11/2026 (không phải xác nhận UAT):** G07.2 Website đã merge/deploy tại `a8f76bb` nhưng UAT trực quan còn mở; Admin CMS #20 đã có code CRUD, placement, upload ảnh responsive/preview tại Admin nhưng **chưa xác nhận public CMS renderer và luồng xuất bản hoàn chỉnh**. Khác biệt code/merge/deploy/UAT phải báo riêng. Ưu tiên hoàn tất UAT G07.2/R2 song song với chuẩn bị C1; **không mở C1 trước khi C0 được merge**.
+
+---
 
 ## 1. Mục tiêu và hiện trạng đã xác minh
 
@@ -105,7 +143,7 @@ Owner chốt hai ảnh tham chiếu Premium Purple Glass: **glassmorphism trong 
 | **2 — Dữ liệu sản phẩm** | **ADM-02 [#19](https://github.com/alibaba240185/fbmn/issues/19)** | Master SKU công ty + family/variant display, tên/quy cách/barcode, nguồn, importer XLSX/CSV, metadata ảnh R2, mapping và publish; test chống trùng/không bịa mã, giữ mã `0114` |
 | **3 — Admin catalogue MVP** | **ADM-05 [#41](https://github.com/alibaba240185/fbmn/issues/41)** | Web Admin login + danh mục + popup tạo/sửa SKU + Excel 1 sheet/preview/update/export + nhiều ảnh R2 + bật/tắt hiển thị theo kênh. **Không có hàng đợi rà soát/duyệt sản phẩm trong UI.** Catalogue/media trước, không chờ toàn bộ màn quản trị |
 | **4 — Website sản phẩm thật** | **ADM-02 #19 + WEB CONTENT #9 + VISUAL #24** | Trang catalogue, ảnh, nhóm hiển thị/mẫu bìa/khổ/đường kẻ, tìm kiếm, lọc, chi tiết, thông tin chính thức lấy API thật; nghiệm thu một luồng nhập→publish→web |
-| **5 — Hoàn thiện nội dung website** | **ADM-03 [#20](https://github.com/alibaba240185/fbmn/issues/20)** và phần CMS của **ADM-05 #41** | Banner, popup, menu, nội dung/khuyến mãi, lịch và cấu hình `public_web`; phân kênh nền backend để dùng app native sau |
+| **5 — Hoàn thiện nội dung website** | **ADM-03 [#20](https://github.com/alibaba240185/fbmn/issues/20)** và phần CMS của **ADM-05 #41** | **Theo quyết định 0.1/C1–C4:** menu quản trị theo Website → nội dung/vị trí → preview desktop/mobile → xuất bản E2E; giữ backend chung và chuẩn bị phân kênh cho app native sau |
 | **6 — Nghiệm thu Website** | **QUALITY #12 + VISUAL #24 + RELEASE #13 + CONTACT #9 + INFRA #2** | Desktop/mobile đúng mẫu, ảnh/thông tin thật, contact E2E, SEO/a11y/performance, release/rollback, owner UAT. HTTP 200/CI xanh chưa phải hoàn thiện catalogue |
 | **7 — Mở rộng app sau Website** | **ADM-04 [#40](https://github.com/alibaba240185/fbmn/issues/40)**; các màn Admin nghiệp vụ tương ứng thuộc **ADM-05 #41** | API đại lý/End-user, bảng giá B2B đúng quyền, giỏ/đơn; **frontend iOS/Android native làm về sau**. Không đổi SKU/master data |
 
