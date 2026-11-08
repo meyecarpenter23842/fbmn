@@ -94,6 +94,10 @@
  .cms-web-featured>h2{font-size:21px}
  .cms-web-popup-dialog{width:min(100vw - 22px,510px);border-radius:16px}
  .cms-web-popup-heading{min-height:56px}
+ .cms-web-popup-heading button{
+  width:var(--fb-control-height-touch,44px);height:var(--fb-control-height-touch,44px);
+  min-width:44px;min-height:44px
+ }
  .cms-web-banner-cta,.cms-web-popup-cta{min-height:var(--fb-control-height-touch,44px)}
 }
 @media(prefers-reduced-motion:reduce){
