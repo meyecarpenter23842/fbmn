@@ -510,13 +510,15 @@
     position: fixed;
     z-index: 30;
     bottom: max(10px, env(safe-area-inset-bottom));
-    left: 50%;
-    transform: translateX(-50%);
+    /* Reserve a right-hand lane for the existing 52px chatbot launcher
+       (right:12px), including a >=16px touch gap on 360/390px screens. */
+    left: 10px;
+    transform: none;
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 10px;
-    width: min(440px, calc(100% - 20px));
+    width: min(440px, calc(100% - 92px));
     min-height: 60px;
     padding: 8px 10px 8px 15px;
     border: 1px solid var(--fb-glass-border);
@@ -528,7 +530,7 @@
     color: var(--fb-glass-ink);
     font-size: var(--fb-control-font-size);
   }
-  .fb-song-mobile-cta > span { min-width: 0; white-space: nowrap; }
+  .fb-song-mobile-cta > span { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 }
 
 @media (max-width: 420px) {
