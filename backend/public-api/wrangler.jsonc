@@ -9,7 +9,8 @@
   "vars": {
     "PUBLIC_ALLOWED_ORIGINS": "https://fbmn-web.vercel.app",
     "EXPECTED_DB_ROLE": "fbmn_p5_public_login",
-    "PUBLIC_P5_ENABLED": "true"
+    "PUBLIC_P5_ENABLED": "true",
+    "PUBLIC_CMS_ENABLED": "false"
   },
   "hyperdrive": [
     {
