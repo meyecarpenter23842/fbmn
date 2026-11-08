@@ -11,7 +11,7 @@ import AdminTelemetry from "./admin-telemetry";
 
 type AuthState = "checking" | "anonymous" | "authorised" | "forbidden" | "unavailable";
 type Section = "dashboard" | "products" | "structure" | "pricing" | "import-products" | "new-product" | "media" | "categories" | "banners" | "content" | "customers" | "accounts" | "settings";
-type GlyphName = "home" | "box" | "folder" | "image" | "layers" | "file" | "users" | "user" | "settings" | "search" | "bell" | "chevron" | "plus" | "upload" | "save" | "eye" | "edit" | "copy" | "trash" | "check" | "alert" | "logout" | "grid" | "arrow-left" | "link" | "book" | "sparkle" | "menu" | "close" | "shield" | "filter" | "refresh";
+type GlyphName = "home" | "box" | "folder" | "image" | "layers" | "file" | "users" | "user" | "settings" | "search" | "bell" | "chevron" | "plus" | "upload" | "save" | "eye" | "edit" | "copy" | "trash" | "check" | "alert" | "logout" | "grid" | "arrow-left" | "link" | "book" | "sparkle" | "menu" | "globe" | "close" | "shield" | "filter" | "refresh";
 type SessionData = { role: string; channels: string[] };
 type Channel = { code: string; label: string };
 type LocalImage = { id: number; name: string; url: string; bytes: number };
@@ -49,6 +49,7 @@ function Glyph({ name, size = 20, strokeWidth = 1.85 }: { name: GlyphName; size?
     book:<><path d="M12 6a9 9 0 0 0-9-2v15a9 9 0 0 1 9 2 9 9 0 0 1 9-2V4a9 9 0 0 0-9 2ZM12 6v15"/></>,
     sparkle:<><path d="m12 2 2.5 7.5L22 12l-7.5 2.5L12 22l-2.5-7.5L2 12l7.5-2.5L12 2Z"/></>,
     menu:<path d="M3 6h18M3 12h18M3 18h18"/>,
+    globe:<><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c-3 3-4.5 6-4.5 9s1.5 6 4.5 9M12 3c3 3 4.5 6 4.5 9s-1.5 6-4.5 9"/></>,
     close:<path d="M5 5l14 14M19 5 5 19"/>,
     shield:<><path d="M12 2 4 6v6c0 5 3.5 8.5 8 10 4.5-1.5 8-5 8-10V6l-8-4Z"/><path d="m9 12 2 2 4-4"/></>,
     filter:<><path d="M4 6h16M7 12h10M10 18h4"/></>,
@@ -59,16 +60,17 @@ function Glyph({ name, size = 20, strokeWidth = 1.85 }: { name: GlyphName; size?
 
 const menu: Array<{ key: Section; label: string; icon: GlyphName }> = [
   { key:"dashboard",label:"Tổng quan",icon:"home" },
-  { key:"products",label:"Sản phẩm",icon:"box" },
   { key:"pricing",label:"Giá & bảng giá",icon:"layers" },
-  { key:"banners",label:"Banner & Popup",icon:"image" },
-  { key:"content",label:"Tin tức & Khuyến mãi",icon:"file" },
 ];
 const productSections: Array<{key:Section;label:string;icon:GlyphName}> = [
   {key:"products",label:"Danh sách sản phẩm",icon:"box"},
   {key:"structure",label:"Danh mục & nhóm mẫu",icon:"folder"},
   {key:"media",label:"Thư viện hình ảnh",icon:"image"},
   {key:"import-products",label:"Nhập / cập nhật Excel",icon:"file"},
+];
+const websiteSections: Array<{key:Section;label:string;icon:GlyphName}> = [
+  {key:"banners",label:"Banner & Popup",icon:"image"},
+  {key:"content",label:"Tin tức & Khuyến mãi",icon:"file"},
 ];
 
 function Brand() {
@@ -105,6 +107,7 @@ export default function AdminPage() {
   const [section,setSection] = useState<Section>("products");
   const [menuOpen,setMenuOpen] = useState(false);
   const [productMenuExpanded,setProductMenuExpanded]=useState(true);
+  const [websiteMenuExpanded,setWebsiteMenuExpanded]=useState(true);
   const [workspaceOperationBusy,setWorkspaceOperationBusy]=useState(false);
   const [structureTab,setStructureTab]=useState<"categories"|"families">("categories");
   const [draft,setDraft] = useState<ProductDraft>(blankDraft);
@@ -258,6 +261,8 @@ export default function AdminPage() {
     setSection(to==="new-product"?"products":to);
     if(["products","structure","media","import-products"].includes(to))
       setProductMenuExpanded(true);
+    if(["banners","content"].includes(to))
+      setWebsiteMenuExpanded(true);
     setMenuOpen(false);setNotice("");
   }
   function updateDraft(key:keyof ProductDraft,value:string){
@@ -276,7 +281,7 @@ export default function AdminPage() {
   function removePhoto(id:number){setPhotos(prev=>{const found=prev.find(p=>p.id===id);if(found){URL.revokeObjectURL(found.url);photoUrls.current=photoUrls.current.filter(u=>u!==found.url);}return prev.filter(p=>p.id!==id);});if(selectedPhoto===id)setSelectedPhoto(null);if(coverId===id)setCoverId(null);}
   const activePhoto=photos.find(p=>p.id===selectedPhoto)||photos[0];
   const roleLabel=session?.role?.toUpperCase() || "";
-  const sectionName:Record<Section,string>={dashboard:"Tổng quan",products:"Danh sách sản phẩm",structure:"Danh mục & nhóm mẫu",pricing:"Giá & bảng giá","import-products":"Nhập / cập nhật Excel","new-product":"Thêm sản phẩm",media:"Thư viện hình ảnh",categories:"Danh mục",banners:"Banner & Popup",content:"Nội dung",customers:"Khách hàng",accounts:"Tài khoản",settings:"Cài đặt"};
+  const sectionName:Record<Section,string>={dashboard:"Tổng quan",products:"Danh sách sản phẩm",structure:"Danh mục & nhóm mẫu",pricing:"Giá & bảng giá","import-products":"Nhập / cập nhật Excel","new-product":"Thêm sản phẩm",media:"Thư viện hình ảnh",categories:"Danh mục",banners:"Banner & Popup",content:"Tin tức & Khuyến mãi",customers:"Khách hàng",accounts:"Tài khoản",settings:"Cài đặt"};
   return <div className="admin-app">
     <div className={"workspace "+(authState!=="authorised"?"workspace-locked":"")}>
       <aside className={"sidebar "+(menuOpen?"sidebar-open":"")}>
@@ -299,7 +304,8 @@ export default function AdminPage() {
               <Glyph name="box" size={20}/><span>Sản phẩm</span>
               <span className="side-menu-caret"><Glyph name="chevron" size={16}/></span>
             </button>
-            {productMenuExpanded&&<div id="product-navigation" className="side-submenu">
+            <div id="product-navigation" className={"side-submenu-motion"+(productMenuExpanded?" is-expanded":"")} aria-hidden={!productMenuExpanded} inert={!productMenuExpanded}>
+              <div className="side-submenu">
               {productSections.map(item=>
                 <button type="button" key={item.key}
                   className={"side-sub-link"+(section===item.key?" active":"")}
@@ -308,22 +314,46 @@ export default function AdminPage() {
                   disabled={authState!=="authorised"||(workspaceOperationBusy&&["media","pricing"].includes(section)&&item.key!==section)}>
                   <Glyph name={item.icon} size={16}/><span>{item.label}</span>
                 </button>)}
-            </div>}
+              </div>
+            </div>
           </div>
           <div className="side-menu-divider" aria-hidden="true"/>
-          {menu.filter(item=>["pricing","banners","content"].includes(item.key)).map(item=>
+          {menu.filter(item=>item.key==="pricing").map(item=>
             <button type="button" key={item.key}
               className={"side-link "+(section===item.key?"active":"")}
               aria-current={section===item.key?"page":undefined}
               onClick={()=>navigate(item.key)} disabled={authState!=="authorised"||(workspaceOperationBusy&&["media","pricing"].includes(section)&&item.key!==section)}>
               <Glyph name={item.icon} size={20}/><span>{item.label}</span>
             </button>)}
+          <div className="side-menu-divider" aria-hidden="true"/>
+          <div className="side-group">
+            <button type="button" className={"side-group-heading"+(
+              ["banners","content"].includes(section)?" active":"")}
+              aria-controls="website-navigation" aria-expanded={websiteMenuExpanded}
+              onClick={()=>setWebsiteMenuExpanded(value=>!value)}
+              disabled={authState!=="authorised"}>
+              <Glyph name="globe" size={20}/><span>Website Futurebook</span>
+              <span className="side-menu-caret"><Glyph name="chevron" size={16}/></span>
+            </button>
+            <div id="website-navigation" className={"side-submenu-motion"+(websiteMenuExpanded?" is-expanded":"")} aria-hidden={!websiteMenuExpanded} inert={!websiteMenuExpanded}>
+              <div className="side-submenu">
+              {websiteSections.map(item=>
+                <button type="button" key={item.key}
+                  className={"side-sub-link"+(section===item.key?" active":"")}
+                  aria-current={section===item.key?"page":undefined}
+                  onClick={()=>navigate(item.key)}
+                  disabled={authState!=="authorised"||(workspaceOperationBusy&&["media","pricing"].includes(section)&&item.key!==section)}>
+                  <Glyph name={item.icon} size={16}/><span>{item.label}</span>
+                </button>)}
+              </div>
+            </div>
+          </div>
         </nav>
         <div className="side-footer"><div className="decorative-books" aria-hidden="true"><div/><div/><div/></div><p>Tri thức hôm nay<br/>Kiến tạo ngày mai</p><i/></div>
       </aside>
       <div className="work-area">
         <header className="topbar"><button type="button" className="mobile-menu" onClick={()=>setMenuOpen(v=>!v)} aria-label="Mở menu"><Glyph name="menu"/></button>
-          <div className="breadcrumbs"><Glyph name="home" size={21}/><span className="crumb-sep">›</span><span>{["products","structure","media","import-products"].includes(section)?"Sản phẩm":"Quản trị"}</span><span className="crumb-sep">›</span><b>{sectionName[section]}</b></div>
+          <div className="breadcrumbs"><Glyph name="home" size={21}/><span className="crumb-sep">›</span><span>{["products","structure","media","import-products"].includes(section)?"Sản phẩm":["banners","content"].includes(section)?"Website Futurebook":"Quản trị"}</span><span className="crumb-sep">›</span><b>{sectionName[section]}</b></div>
           <div className="top-actions"><div className="profile-avatar">{name.slice(0,1).toUpperCase()||"F"}</div><div className="profile-text"><b>{name || "Futurebook Admin"}</b><small>{session?roleLabel:"Yêu cầu đăng nhập"}</small></div><button type="button" className="top-icon" onClick={()=>void signOut()} disabled={authState!=="authorised"} title="Đăng xuất"><Glyph name="logout" size={18}/></button></div>
         </header>
         <main className="workspace-main">
