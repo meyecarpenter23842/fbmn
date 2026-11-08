@@ -116,13 +116,14 @@ export default function CmsMediaEditor({recordId,revision,channels,pending,onSta
   },0);
   return()=>{active=false;window.clearTimeout(job);};
  },[recordId,revision]);
- return <section className="cms-media-panel" aria-label="Ảnh theo kênh và thiết bị">
+ const websiteOnly=channels.length===1&&channels[0]==="public_web";
+  return <section className="cms-media-panel" aria-label={websiteOnly?"Ảnh Website Desktop/Mobile":"Ảnh theo kênh và thiết bị"}>
   <AdminToast variant="error" message={error} notificationId={notificationId} onClose={()=>setError("")}/>
   <div className="cms-section-heading">
-   <strong>Ảnh desktop và mobile theo từng kênh</strong>
+   <strong>{websiteOnly?"Ảnh Website: Desktop và Mobile":"Ảnh desktop và mobile theo từng kênh"}</strong>
    <p>Chọn ảnh ngay, không cần lưu nháp trước. Khi bấm Lưu, ảnh sẽ được chuyển sang WebP và lưu vào R2.</p>
   </div>
-  {channels.length===0?<p className="cms-help">Chọn kênh hiển thị ở bước 2 để thêm ảnh.</p>:
+  {channels.length===0?<p className="cms-help">Chọn vị trí hiển thị ở bước 2 để thêm ảnh.</p>:
   <div className="cms-media-grid">
    {channels.flatMap(ch=>(["desktop","mobile"] as CmsDevice[]).map(device=>{
     const key=cmsMediaKey(ch,device);
