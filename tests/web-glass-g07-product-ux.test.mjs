@@ -51,6 +51,13 @@ test("G07: compact published-image preview and SKU controls precede large galler
   assert.match(gallery, /const active=activeIndex\?\?selected/);
   assert.match(core, /\.fb-glass-card--link\s*\{\s*padding:\s*0/);
   assert.match(core, /\.fb-glass-card--link > a\s*\{[^}]*padding:\s*clamp/);
+  // Cascade-aware guard: shared :link variant must NOT override the page's
+  // desktop flex and mobile grid modes with higher-specificity display:block.
+  const sharedHit = stripComments(core).match(/\.fb-glass-card--link > a\s*\{([^}]*)\}/)?.[1];
+  assert.ok(sharedHit);
+  assert.doesNotMatch(sharedHit, /display\s*:/);
+  assert.match(css, /\.fb-song-related-hit\s*\{[^}]*display:\s*flex/);
+  assert.match(css, /@media \(max-width: 700px\)[\s\S]*?\.fb-song-related-hit\s*\{[^}]*display:\s*grid/);
   assert.doesNotMatch(css, /\.fb-song-related-card:focus-within/);
   assert.match(css, /\.fb-song-info\s*\{\s*order:\s*0/);
   assert.match(css, /\.fb-song-gallery\s*\{\s*order:\s*1/);
