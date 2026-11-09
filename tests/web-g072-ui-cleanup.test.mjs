@@ -70,7 +70,7 @@ test("G07.2 footer remains verified and functional, with compact visual hierarch
   assert.match(footer,/<FooterSocialLinks \/>/);
   assert.match(footer,/fanpageContactReference as contact/);
   assert.match(footer,/Liên hệ tham khảo từ Fanpage/);
-  for(const href of ["/gioi-thieu","/san-pham","/tin-tuc","/khuyen-mai","/dai-ly","/lien-he"]){
+  for(const href of ["/san-pham","/gia-cong","/bang-tin","/catalogue","/gioi-thieu","/tin-tuc","/khuyen-mai","/dai-ly","/lien-he#thong-tin-lien-he"]){
     assert.ok(footer.includes('href="'+href+'"'),href);
   }
   assert.match(footerCSS,/\.site-footer__wrap\s*\{[^}]*padding:\s*30px 0 14px/);

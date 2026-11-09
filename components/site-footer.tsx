@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { fanpageContactReference as contact } from "@/lib/content/contact-reference";
 import { FooterSocialLinks } from "@/components/footer-social-links";
+import { AppDownloadMenuButton } from "@/components/app-download";
 
 /** Consistent site-wide footer for Home, Catalog and Editorial pages. */
 export function SiteFooter() {
@@ -20,16 +21,19 @@ export function SiteFooter() {
         </section>
         <nav aria-label="Khám phá Futurebook" className="site-footer__links">
           <h2>Khám phá</h2>
-          <Link href="/gioi-thieu">Giới thiệu</Link>
-          <Link href="/san-pham">Danh mục sản phẩm</Link>
-          <Link href="/tin-tuc">Tin tức</Link>
-          <Link href="/khuyen-mai">Khuyến mãi</Link>
+          <Link href="/san-pham">Sản phẩm</Link>
+          <Link href="/gia-cong">Gia công</Link>
+          <Link href="/bang-tin">Bảng tin</Link>
+          <Link href="/catalogue">Catalogue</Link>
         </nav>
         <nav aria-label="Hỗ trợ khách hàng" className="site-footer__links">
           <h2>Hỗ trợ</h2>
           <Link href="/dai-ly">Dành cho đại lý</Link>
-          <Link href="/lien-he">Liên hệ</Link>
-          <Link href="/san-pham">Tra cứu sản phẩm</Link>
+          <Link href="/lien-he#thong-tin-lien-he">Liên hệ · Báo giá sỉ</Link>
+          <Link href="/gioi-thieu">Giới thiệu</Link>
+          <Link href="/tin-tuc">Tin tức</Link>
+          <Link href="/khuyen-mai">Khuyến mãi</Link>
+          <AppDownloadMenuButton />
         </nav>
         <section className="site-footer__contact" aria-label="Thông tin tham khảo từ Fanpage">
           <h2>Thông tin liên hệ</h2>

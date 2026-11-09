@@ -69,9 +69,10 @@ test("G05 home, catalogue, editorial and footer share glass styling but retain t
 });
 
 test("G05 does not fabricate commerce capabilities, claims, prices or product photos", () => {
-  const navbarLinks=["/gioi-thieu","/san-pham","/khuyen-mai","/dai-ly","/tin-tuc","/lien-he"];
+  const navbarLinks=["/#home","/san-pham","/gia-cong","/bang-tin","/catalogue","/lien-he"];
   for (const href of navbarLinks) assert.ok(header.includes('href: "'+href+'"'), href);
-  assert.match(header, /type="button" disabled title="Giỏ hàng chưa mở"/);
+  assert.doesNotMatch(header, /type="button" disabled title="Giỏ hàng chưa mở"/);
+  assert.match(header, /ref-header__dealer-cta/);
   assert.match(header, /aria-controls="site-navigation"/);
   assert.match(home, /MẪU GIAO DIỆN/);
   assert.match(home, /Liên hệ báo giá/);
@@ -88,7 +89,7 @@ test("G05 keeps desktop and mobile controls accessible without layout animation 
   assert.match(homeCss, /\.ref-navigation--open\s*\{[\s\S]*?visibility: visible/);
   assert.match(homeCss, /@media \(max-width: 800px\)/);
   assert.match(homeCss, /\.ref-navigation__link\s*\{\s*color: var\(--fb-glass-ink\); background: transparent;/);
-  assert.match(homeCss, /\.ref-navigation__catalog\s*\{\s*color: #fff;\s*background: linear-gradient\(115deg, var\(--color-primary\)/);
+  assert.match(homeCss, /\.ref-navigation__dealer-cta-mobile\s*\{\s*display:flex/);
   assert.match(homeCss, /\.ref-navigation__link--active\s*\{\s*color: #fff;\s*background: linear-gradient\(115deg, var\(--color-primary\)/);
 
   // P1 review: button and selected link must keep WCAG-readable colours on hover/focus.

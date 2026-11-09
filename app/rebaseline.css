@@ -17,6 +17,15 @@
 .ref-header__desktop-search button { width: 46px; border: none; border-radius: 0 var(--fb-control-radius) var(--fb-control-radius) 0; color: #fff; background: linear-gradient(125deg, var(--color-primary), var(--color-primary-strong)); transition: background-color var(--fb-motion-button) var(--fb-easing-open); }
 .ref-header__desktop-search button:disabled { opacity: 1; }
 .ref-header__right { display: flex; align-items: center; justify-content: flex-end; gap: 17px; }
+.ref-header__dealer-cta { display:inline-flex;align-items:center;justify-content:center;gap:8px;
+ min-height:var(--fb-control-height-compact);padding:0 15px;border-radius:var(--fb-control-radius);
+ background:linear-gradient(115deg,var(--color-primary),var(--color-primary-strong));
+ border:1px solid rgba(255,255,255,.38);color:#fff;font-weight:750;
+ font-size:var(--fb-control-font-size);text-decoration:none;white-space:nowrap;
+ transition:filter var(--fb-motion-button) var(--fb-easing-open); }
+.ref-header__dealer-cta:hover { filter:brightness(1.08); }
+.ref-header__dealer-cta:focus-visible { outline:3px solid var(--color-primary);outline-offset:3px; }
+.ref-navigation__dealer-cta-mobile { display:none; }
 .ref-header__contact { display: flex; flex-direction: column; line-height: 1.25; color: #3d225b; font-size: 12px; white-space: nowrap; }
 .ref-header__contact small { color: #796f80; font-size: 10px; }
 .ref-header__contact strong { font-size: 12px; }
@@ -25,7 +34,7 @@
 .ref-header__mobile-icon { display: none; border: 1px solid var(--fb-glass-border); background: rgba(255,255,255,.42); color: #312044; min-height: 44px; min-width: 40px; padding: 5px;  border-radius: 999px;}
 .ref-header__mobile-icon:disabled { opacity: .7; }
 .ref-navigation { background: rgba(255,255,255,.12); color: var(--fb-glass-ink);  border-top: 1px solid var(--fb-glass-border); border-radius: 0 0 26px 26px;}
-.ref-navigation__inner { display: flex; align-items: stretch; gap: 6px; min-height: 46px;  align-items: center;}
+.ref-navigation__inner { display: flex; align-items: stretch; justify-content: center; gap: 6px; min-height: 46px;  align-items: center;}
 .ref-navigation__catalog { display: inline-flex; align-items: center; gap: 12px; padding: 0 18px; min-width: 210px; background: var(--fb-glass-surface-layer); font-size: var(--fb-control-font-size); font-weight: 750; white-space: nowrap; transition: background-color var(--fb-motion-menu) var(--fb-easing-open);  color: var(--color-primary-strong); border: 1px solid var(--fb-glass-border); border-radius: 999px; min-height: 36px; margin: 4px 0; box-shadow: 0 2px 9px rgba(76, 36, 112, .07);}
 .ref-navigation__catalog svg:last-child { margin-left: auto; }
 .ref-navigation__link { display: inline-flex; justify-content: center; align-items: center; min-height: 46px; font-size: var(--fb-control-font-size); font-weight: 700; padding: 0 12px; white-space: nowrap; transition: background-color var(--fb-motion-menu) var(--fb-easing-open), color var(--fb-motion-menu) var(--fb-easing-open);  min-height: 36px; border-radius: 999px; font-weight: 750;}
@@ -125,7 +134,7 @@
   .ref-brand__emblem { width: 37px; height: 34px; font-size: 17px; border-width: 2px; }
   .ref-brand__name strong { font-size: 26px; }
   .ref-brand__name small { font-size: 7px; }
-  .ref-header__desktop-search, .ref-header__contact, .ref-header__desktop-action { display: none; }
+  .ref-header__desktop-search, .ref-header__contact, .ref-header__desktop-action, .ref-header__dealer-cta { display: none; }
   .ref-header__right { gap: 0; }
   .ref-header__mobile-icon { display: grid; place-items: center; }
   /* Keep the mobile menu mounted during exit: opacity/transform fade both ways.
@@ -143,7 +152,13 @@
     transition: opacity var(--fb-motion-menu) var(--fb-easing-open),
       transform var(--fb-motion-menu) var(--fb-easing-open), visibility 0s;
   }
-  .ref-navigation__inner { display: flex; flex-direction: column; padding-block: 7px; gap: 0; }
+   .ref-navigation__inner { display: flex; flex-direction: column; align-items: stretch; padding-block: 7px; gap: 0; }
+  .ref-navigation__dealer-cta-mobile { display:flex;align-items:center;gap:9px;
+    min-height:var(--fb-control-height-touch);padding:9px 14px;margin-top:8px;
+    border-top:1px solid rgba(255,255,255,.2);border-radius:var(--fb-control-radius);
+    color:#fff;background:linear-gradient(115deg,var(--color-primary),var(--color-primary-strong));
+    font-size:var(--fb-control-font-size);font-weight:750;text-decoration:none; }
+  .ref-navigation__dealer-cta-mobile:focus-visible { outline:2px solid #fff;outline-offset:-3px; }
   .ref-navigation__catalog, .ref-navigation__link { justify-content: flex-start; min-height: 43px; width: 100%; padding: 10px 16px; font-size: 13px; }
   .ref-navigation__catalog { background: #3c126d; }
   .ref-navigation__catalog svg:last-child { margin-left: 6px; }
