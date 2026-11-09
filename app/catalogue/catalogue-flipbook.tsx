@@ -67,6 +67,7 @@ export default function CatalogueFlipbook(){
  const zoom=useRef<HTMLDialogElement>(null);
  const swipeStart=useRef<number|null>(null);
  const turnTimer=useRef<ReturnType<typeof setTimeout>|null>(null);
+ const zoomCloseTimer=useRef<ReturnType<typeof setTimeout>|null>(null);
  const requestSeq=useRef(0);
  const leaves=useMemo<Leaf[]>(()=>{
   if(!detail)return [];
@@ -82,7 +83,21 @@ export default function CatalogueFlipbook(){
  const displayLabel=mobile?left?.label||"":cover&&start===0?"Bìa":
   (left?.label||"")+(right?" – "+right.label:"");
  const zoomLeaf=leaves[zoomPosition]||right||left;
- const openZoom=(position:number)=>{setZoomPosition(position);zoom.current?.showModal();};
+ const openZoom=(position:number)=>{
+  if(zoom.current?.open)return;
+  setZoomPosition(position);zoom.current?.showModal();
+ };
+ const closeZoom=()=>{
+  if(!zoom.current?.open)return;
+  if(zoomCloseTimer.current)clearTimeout(zoomCloseTimer.current);
+  if(reduceMotion){zoom.current.close();return;}
+  zoom.current.dataset.closing="true";
+  zoomCloseTimer.current=setTimeout(()=>{
+   zoom.current?.close();
+   if(zoom.current)delete zoom.current.dataset.closing;
+   zoomCloseTimer.current=null;
+  },220);
+ };
  useEffect(()=>{
   const m=window.matchMedia("(max-width: 700px)");
   const r=window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -125,7 +140,8 @@ export default function CatalogueFlipbook(){
   })();
   return ()=>{alive=false;requestSeq.current++;};
  },[loadBook]);
- useEffect(()=>()=>{if(turnTimer.current)clearTimeout(turnTimer.current);},[]);
+ useEffect(()=>()=>{if(turnTimer.current)clearTimeout(turnTimer.current);
+  if(zoomCloseTimer.current)clearTimeout(zoomCloseTimer.current);},[]);
  const go=useCallback((position:number)=>{
   if(!detail||!leaves.length)return;
   const next=Math.max(0,Math.min(leaves.length-1,position));
@@ -261,10 +277,11 @@ export default function CatalogueFlipbook(){
       </button>)}
     </div>}
    </div>
-   <dialog ref={zoom} className="fb-catalogue-zoom" aria-label="Xem ảnh trang phóng to">
+   <dialog ref={zoom} className="fb-catalogue-zoom fb-glass-dialog-motion" aria-label="Xem ảnh trang phóng to"
+    onCancel={event=>{if(!reduceMotion){event.preventDefault();closeZoom();}}}>
     <div className="fb-glass-dialog-header"><h2 className="fb-glass-dialog-header__title">{zoomLeaf?.label||"Trang Catalogue"}</h2>
      <button type="button" className="fb-glass-button fb-glass-button--secondary"
-      onClick={()=>zoom.current?.close()}>Đóng ×</button>
+      onClick={closeZoom}>Đóng ×</button>
     </div>
     {zoomLeaf&&<div className="fb-catalogue-zoom-image"><img src={image(zoomLeaf.asset.id)}
       alt={zoomLeaf.label+" "+detail.book.title} width={zoomLeaf.asset.width} height={zoomLeaf.asset.height}/></div>}

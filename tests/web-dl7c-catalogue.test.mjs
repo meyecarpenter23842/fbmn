@@ -126,3 +126,15 @@ test("DL7C only swaps Catalogue tab; no PDF viewer frame, no open R2 key",()=>{
  assert.match(css,/max-width:700px/);
  assert.doesNotMatch(page+ui,/<iframe|PDFViewer|<embed/);
 });
+
+test("DL7C zoom uses shared dialog timing, reduced motion and deferred close",()=>{
+ const ui=readFile("app/catalogue/catalogue-flipbook.tsx");
+ const css=readFile("app/glass-foundation.css");
+ assert.match(ui,/className="fb-catalogue-zoom fb-glass-dialog-motion"/);
+ assert.match(ui,/zoomCloseTimer\.current=setTimeout/);
+ assert.match(ui,/onCancel=\{event=>/);
+ assert.match(css,/\.fb-glass-dialog-motion\[open\]:not\(\[data-closing="true"\]\)/);
+ assert.match(css,/--fb-motion-dialog-open/);
+ assert.match(css,/--fb-motion-dialog-close/);
+ assert.match(css,/prefers-reduced-motion:reduce/);
+});
