@@ -32,7 +32,8 @@ test("Hero CMS is one visual composition with low-motion safe carousel",()=>{
  const css=read("app/cms-public.css");
  assert.match(slot,/slot==="home.hero"/);
  assert.match(slot,/CmsHeroCarousel/);
- assert.match(carousel,/AUTO_ADVANCE_MS=7000/);
+ assert.match(carousel,/intervalMs:7000/);
+ assert.match(carousel,/current\.motion\.intervalMs/);
  assert.match(carousel,/prefers-reduced-motion: reduce/);
  assert.match(carousel,/document\.hidden/);
  assert.match(carousel,/onFocusCapture/);
