@@ -178,3 +178,18 @@ test("C5 settings controls lock during save; inactive slide stays hidden under r
  assert.match(css,/data-effect="slide"\] \.cms-hero-slide\{opacity:0/);
  assert.match(css,/@media\(prefers-reduced-motion:reduce\)/);
 });
+
+test("C5 Hero controls use accessible dot navigation; Admin warns before saving portrait desktop images",()=>{
+ const hero=read("components/cms-hero-carousel.tsx");
+ const css=read("app/cms-public.css");
+ const editor=read("apps/admin/app/cms-slide-editor.tsx");
+ assert.match(hero,/cms-hero-dot/);
+ assert.match(hero,/aria-pressed=\{i===index\}/);
+ assert.doesNotMatch(hero,/aria-label="Ảnh tiếp theo"/);
+ assert.doesNotMatch(hero,/\{index\+1\} \/ \{slides\.length\}/);
+ assert.match(css,/\.cms-hero-controls\{[^}]*left:50%/s);
+ assert.match(css,/\.cms-hero-dot\.is-active span/);
+ assert.match(editor,/stored\.width\/stored\.height<1\.35/);
+ assert.match(editor,/createImageBitmap\(file\)/);
+ assert.match(editor,/cms-image-ratio-warning/);
+});
