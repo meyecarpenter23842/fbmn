@@ -1,7 +1,7 @@
 "use client";
 import {useCallback,useEffect,useRef,useState} from "react";
 import AdminToast from "./admin-toast";
-import ProductModal from "./product-modal";
+import ProductModal,{useProductModalClose} from "./product-modal";
 
 type Book={id:string;title:string;edition:string;state:"draft"|"ready"|"hidden";revision:number;updated_at:string};
 type Asset={id:string;kind:"page"|"cover"|"background_desktop"|"background_mobile";
@@ -13,6 +13,33 @@ type Kind=Asset["kind"];
 const MAX_IMAGE=5*1024*1024;
 const STATUS:Record<Book["state"],string>={draft:"Bản nháp",ready:"Sẵn sàng (chưa lên Web)",hidden:"Đã ẩn"};
 const MIME="image/webp";
+
+/* 30 requests/min is the staging Admin Worker budget for ALL actions.
+ * Limit private image previews to 14/min, leaving room for editing operations.
+ * Lazy intersection + cancellation avoids spending the budget on offscreen pages. */
+const PREVIEW_PER_MINUTE=14;
+const PREVIEW_WINDOW=61000;
+let previewTimes:number[]=[];
+async function claimPreviewSlot(signal:AbortSignal){
+ for(;;){
+  if(signal.aborted)throw Error("cancelled");
+  const now=Date.now();
+  previewTimes=previewTimes.filter(t=>now-t<PREVIEW_WINDOW);
+  if(previewTimes.length<PREVIEW_PER_MINUTE){previewTimes.push(now);return;}
+  const delay=Math.max(100,previewTimes[0]+PREVIEW_WINDOW-now);
+  await new Promise<void>((resolve,reject)=>{
+   const cancel=()=>{clearTimeout(timer);reject(Error("cancelled"));};
+   const timer=setTimeout(()=>{signal.removeEventListener("abort",cancel);resolve();},delay);
+   signal.addEventListener("abort",cancel,{once:true});
+  });
+ }
+}
+function ModalCancel({busy}:{busy:boolean}){
+ const close=useProductModalClose();
+ return <button type="button" className="fb-ui-button fb-ui-button--secondary"
+  disabled={busy} onClick={close}>Hủy</button>;
+}
+
 
 async function token(){
  const response=await fetch("/api/auth/token",{credentials:"same-origin",cache:"no-store"});
@@ -45,24 +72,45 @@ async function requestCatalogue<T>(path="",body?:object,file?:File,headers?:Reco
 }
 function CatalogueImage({id,alt}:{id:string;alt:string}){
  const [url,setUrl]=useState("");
+ const [visible,setVisible]=useState(false);
+ const viewport=useRef<HTMLDivElement>(null);
  useEffect(()=>{
-  let active=true,created="";
+  const element=viewport.current;
+  if(!element)return;
+  if(!("IntersectionObserver" in window)){
+   void Promise.resolve().then(()=>setVisible(true));return;
+  }
+  const observer=new IntersectionObserver(entries=>{
+   if(entries.some(e=>e.isIntersecting)){setVisible(true);observer.disconnect();}
+  },{rootMargin:"120px"});
+  observer.observe(element);
+  return ()=>observer.disconnect();
+ },[]);
+ useEffect(()=>{
+  if(!visible)return;
+  const controller=new AbortController();
+  let created="";
   void (async()=>{
    try{
+    await claimPreviewSlot(controller.signal);
     const jwt=await token();
+    if(controller.signal.aborted)return;
     const r=await fetch("/api/website/catalogue/image?asset="+encodeURIComponent(id),{
-     cache:"no-store",credentials:"same-origin",headers:{Authorization:"Bearer "+jwt,Accept:MIME}
+     cache:"no-store",credentials:"same-origin",signal:controller.signal,
+     headers:{Authorization:"Bearer "+jwt,Accept:MIME}
     });
     if(!r.ok||r.headers.get("content-type")?.split(";")[0]!==MIME)return;
     const blob=await r.blob();
-    if(blob.size>MAX_IMAGE)return;
+    if(blob.size>MAX_IMAGE||controller.signal.aborted)return;
     created=URL.createObjectURL(blob);
-    if(active)setUrl(created);else URL.revokeObjectURL(created);
+    setUrl(created);
    }catch{ /* A private missing image leaves the neutral placeholder. */ }
   })();
-  return ()=>{active=false;if(created)URL.revokeObjectURL(created);};
- },[id]);
- return url?<img src={url} alt={alt} loading="lazy"/>:<span className="dl7b-image-empty">Chưa tải được ảnh</span>;
+  return ()=>{controller.abort();if(created)URL.revokeObjectURL(created);};
+ },[id,visible]);
+ return <div ref={viewport} className="dl7b-asset-preview">
+  {url?<img src={url} alt={alt} loading="lazy"/>:<span className="dl7b-image-empty">Đang chờ ảnh…</span>}
+ </div>;
 }
 const sortAssets=(a:Asset,b:Asset)=>a.sort_order-b.sort_order||a.id.localeCompare(b.id);
 export default function CatalogueBookManager({owner,onBusyChange}:{
@@ -117,7 +165,7 @@ export default function CatalogueBookManager({owner,onBusyChange}:{
  }
  const book=detail?.book,assets=detail?.assets||[];
  const pages=assets.filter(f=>f.kind==="page").sort(sortAssets);
- const visiblePages=pages.slice(pageOffset,pageOffset+24);
+ const visiblePages=pages.slice(pageOffset,pageOffset+12);
  const cover=assets.find(f=>f.kind==="cover");
  const desktop=assets.find(f=>f.kind==="background_desktop");
  const mobile=assets.find(f=>f.kind==="background_mobile");
@@ -214,10 +262,10 @@ export default function CatalogueBookManager({owner,onBusyChange}:{
        <button type="button" className="fb-ui-button fb-ui-button--secondary" aria-label={"Xóa trang "+(i+1)} disabled={!canEdit||busy} onClick={()=>setDeleteFile(p)}>×</button>
       </div>
      </li>;})}</ol>
-     {pages.length>24&&<div className="dl7b-pages-nav">
-      <button type="button" className="fb-ui-button fb-ui-button--secondary" disabled={pageOffset===0} onClick={()=>setPageOffset(v=>Math.max(0,v-24))}>Trang trước</button>
-      <span>Đang xem {pageOffset+1}–{Math.min(pages.length,pageOffset+24)} / {pages.length}</span>
-      <button type="button" className="fb-ui-button fb-ui-button--secondary" disabled={pageOffset+24>=pages.length} onClick={()=>setPageOffset(v=>v+24)}>Trang sau</button>
+     {pages.length>12&&<div className="dl7b-pages-nav">
+      <button type="button" className="fb-ui-button fb-ui-button--secondary" disabled={pageOffset===0} onClick={()=>setPageOffset(v=>Math.max(0,v-12))}>Trang trước</button>
+      <span>Đang xem {pageOffset+1}–{Math.min(pages.length,pageOffset+12)} / {pages.length}</span>
+      <button type="button" className="fb-ui-button fb-ui-button--secondary" disabled={pageOffset+12>=pages.length} onClick={()=>setPageOffset(v=>v+12)}>Trang sau</button>
      </div>}
     </section>
     <section className="surface dl7b-panel">
@@ -242,7 +290,7 @@ export default function CatalogueBookManager({owner,onBusyChange}:{
   </div>}
   {dialog&&<ProductModal title={dialog==="create"?"Tạo bộ Catalogue":"Sửa bộ Catalogue"}
    locked={busy} onClose={()=>setDialog(null)}
-   footer={<><button type="button" className="fb-ui-button fb-ui-button--secondary" disabled={busy} onClick={()=>setDialog(null)}>Hủy</button>
+   footer={<><ModalCancel busy={busy}/>
     <button type="button" className="fb-ui-button fb-ui-button--primary" disabled={busy} onClick={()=>void onSave()}>{busy?"Đang lưu…":"Lưu"}</button></>}>
    <div className="dl7b-fields">
     <label>Tên bộ Catalogue<input type="text" maxLength={120} value={title} onChange={e=>setTitle(e.target.value)} required placeholder="Nhập tên bộ chính thức"/></label>
@@ -252,7 +300,7 @@ export default function CatalogueBookManager({owner,onBusyChange}:{
   </ProductModal>}
   {deleteFile&&book&&<ProductModal title="Xóa ảnh khỏi bộ?" locked={busy}
    onClose={()=>setDeleteFile(null)}
-   footer={<><button type="button" className="fb-ui-button fb-ui-button--secondary" disabled={busy} onClick={()=>setDeleteFile(null)}>Hủy</button>
+   footer={<><ModalCancel busy={busy}/>
     <button type="button" className="fb-ui-button fb-ui-button--primary" disabled={busy} onClick={()=>void (async()=>{
      const ok=await mutate("remove",{id:book.id,revision:book.revision,assetId:deleteFile.id},"Đã xóa ảnh khỏi kho.");
      if(ok)setDeleteFile(null);
