@@ -129,6 +129,6 @@ test("public catalogue stays empty until source approval, not UI mockups", () =>
   assert.match(read("components/catalog-ui.tsx"), /Liên hệ báo giá/);
   assert.match(read("components/catalogue-product-options.tsx"), /selected\.price\?\.kind==="retail"/);
   assert.ok(read("app/page.tsx").includes("<CategoryNavigation categories={categories} />"));
-  assert.ok(read("components/category-navigation.tsx").includes('href={"/san-pham?q="'));
+  assert.ok(read("components/category-navigation.tsx").includes('href={"/danh-muc/" + encodeURIComponent(category.slug)}'));
   assert.match(read("components/site-header.tsx"), /action="\/san-pham" method="get"/);
 });
