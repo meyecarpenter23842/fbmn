@@ -1,0 +1,48 @@
+name: DL2 Production Browser UI QA
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "scripts/dl2-browser-qa.mjs"
+      - ".github/workflows/dl2-production-browser.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dl2-production-browser-ui
+  cancel-in-progress: true
+
+jobs:
+  screenshot-qa:
+    name: DL2 five widths / production product card screenshots
+    runs-on: ubuntu-24.04
+    timeout-minutes: 18
+    steps:
+      - name: Checkout exact test source
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Setup Node 22
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: "22"
+      - name: Install Playwright browser runner (not part of Website runtime)
+        run: npm install --no-save --no-audit --no-fund playwright@1.56.1
+      - name: Install screenshot Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Production browser visual verification
+        run: node scripts/dl2-browser-qa.mjs
+        env:
+          DL2_BASE_URL: https://fbmn-web.vercel.app
+          DL2_OUTPUT_DIR: artifacts/dl2
+      - name: Upload 15 screenshots and measured report even on failures
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: dl2-production-five-widths
+          path: artifacts/dl2
+          if-no-files-found: warn
+          retention-days: 7
