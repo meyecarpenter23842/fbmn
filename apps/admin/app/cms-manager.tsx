@@ -150,7 +150,11 @@ function CmsEditor({item,kind,onSaved,onSavingChange,dirtyRef,step,onStep,formId
     const result=await cmsApi<{item:CmsItem}>(current?"update":"create",{
      ...data,...(current?{id:current.id,expectedRevision:current.revision}:{})
     });
-    current=result.item;setSavedRecord(current);
+    // UPDATE RETURNING * has no joined media flags; preserve existing R2 readiness.
+    current={...result.item,
+     has_desktop:result.item.has_desktop??current?.has_desktop??false,
+     has_mobile:result.item.has_mobile??current?.has_mobile??false};
+    setSavedRecord(current);
     contentDirty.current=false;
    }
    const files=Object.entries(pendingImages);
