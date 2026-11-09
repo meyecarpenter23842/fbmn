@@ -75,12 +75,15 @@ test("C5 migration preserves Slide 1 and gates new slide visibility by publicati
   "v_cms_web_banner_slides","v_cms_web_banner_slide_images",
   "fbmn_public_reader","fbmn_admin_http_staging",
   "CHECK(interval_ms BETWEEN 3000 AND 15000)",
-  "CHECK(duration_ms BETWEEN 300 AND 800)"
+  "CHECK(duration_ms BETWEEN 300 AND 800)",
+  "banner_slide_upload", "banner_slide_settings", "banner_slide_remove",
+  "cms_entry_audit_action_check"
  ])assert.ok(sql.includes(marker),marker);
  assert.doesNotMatch(sql,/DROP TABLE|TRUNCATE fbmn_catalog_private/);
  const down=read("backend/neon/migrations/20261109_c5_banner_slides.down.sql");
  assert.match(down,/rollback_confirmed/);
  assert.match(down,/C5 has stored slide images/);
+ assert.match(down,/C5 audit history exists/);
 });
 test("C5 UI has Add Slide, ordering, motion settings and device safe previews",()=>{
  const editor=read("apps/admin/app/cms-slide-editor.tsx");
@@ -94,6 +97,9 @@ test("C5 UI has Add Slide, ordering, motion settings and device safe previews",(
  assert.match(editor,/slide-remove/);
  assert.match(manager,/uploadCmsSlide/);
  assert.match(manager,/previewSlide=\{previewSlide\}/);
+ assert.match(manager,/slideSettingsDraft/);
+ assert.match(manager,/saveCmsSlideSettings/);
+ assert.match(editor,/onSettingsDraft/);
  assert.match(relay,/slide-image/);
  assert.match(publicImage,/slide===1/);
  assert.match(hero,/item\.slides\?\?\[1\]/);
