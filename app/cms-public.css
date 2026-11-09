@@ -25,12 +25,30 @@
  * Higher specificity overrides rebaseline.css at 800/390 without altering baseline. */
 .ref-hero__visual.ref-hero__visual--cms{min-width:0;min-height:400px;height:auto;display:flex;align-items:center}
 .ref-hero__visual--cms .ref-hero__rays{z-index:0}
-.cms-web-banners--home-hero{position:relative;z-index:3;margin:8px;width:calc(100% - 16px);max-width:100%;min-width:0;overflow:visible}
-.cms-web-banners--home-hero .cms-web-banner{display:block}
-.cms-web-banners--home-hero .cms-web-banner-img{max-height:210px}
-.cms-web-banners--home-hero .cms-web-banner-copy{padding:10px;gap:5px}
-.cms-web-banners--home-hero .cms-web-banner-copy h2{font-size:15px}
-.cms-web-banners--home-hero .cms-web-banner-copy p{font-size:11px}
+/* Home Hero: one integrated visual. Text and CTA remain in ref-hero__copy. */
+.cms-hero-carousel{position:relative;z-index:2;width:100%;min-width:0;min-height:400px;isolation:isolate}
+.cms-hero-stage{position:relative;width:100%;height:clamp(400px,34vw,460px);overflow:hidden}
+.cms-hero-slide{position:absolute;inset:0;z-index:0;display:grid;place-items:center;
+ opacity:0;transform:translate3d(16px,0,0);pointer-events:none;
+ transition:opacity 480ms var(--fb-easing-open,cubic-bezier(.22,1,.36,1)),
+ transform 480ms var(--fb-easing-open,cubic-bezier(.22,1,.36,1))}
+.cms-hero-slide.is-active{opacity:1;transform:translate3d(0,0,0);z-index:1;pointer-events:auto}
+.cms-hero-picture{display:flex;align-items:center;justify-content:center;width:100%;height:100%;
+ padding:22px 5% 44px;box-sizing:border-box;overflow:hidden}
+.cms-hero-image{display:block;width:100%;height:100%;max-height:430px;
+ object-fit:contain;object-position:center;mix-blend-mode:multiply}
+.cms-hero-controls{position:absolute;z-index:3;right:18px;bottom:7px;display:flex;
+ align-items:center;gap:8px;border-radius:12px;padding:3px 6px;
+ color:var(--color-primary-strong,#431078);background:rgba(255,255,255,.65);
+ border:1px solid rgba(255,255,255,.75);backdrop-filter:blur(12px)}
+.cms-hero-controls button{min-width:var(--fb-control-height-compact,36px);
+ width:var(--fb-control-height-compact,36px);height:var(--fb-control-height-compact,36px);
+ padding:0;border:0;border-radius:var(--fb-control-radius,9px);background:transparent;
+ color:inherit;font-size:24px;line-height:1;cursor:pointer;
+ transition:background var(--fb-motion-button,190ms) var(--fb-easing-open,ease)}
+.cms-hero-controls button:hover{background:rgba(109,36,158,.12)}
+.cms-hero-controls button:focus-visible{outline:2px solid #8148b2;outline-offset:2px}
+.cms-hero-controls span{min-width:36px;text-align:center;font-size:13px;font-weight:750}
 .cms-web-featured{margin:20px 0;min-width:0}
 .cms-web-featured>h2{font-family:var(--fb-glass-display-font,Georgia,serif);
  color:var(--color-primary-strong,#431078);font-size:24px}
@@ -96,11 +114,15 @@
 .cms-web-popup-cta{align-self:flex-start}
 @media(max-width:800px){
  .ref-hero__visual.ref-hero__visual--cms{min-height:0;height:auto;width:min(100%,460px);margin:0 auto;display:block}
- .cms-web-banners--home-hero{margin:10px 8px;width:calc(100% - 16px)}
+ .cms-hero-carousel{min-height:0}
+ .cms-hero-stage{height:clamp(225px,55vw,350px)}
+ .cms-hero-picture{padding:8px 5% 44px}
+ .cms-hero-image{max-height:325px}
+ .cms-hero-controls{right:10px;bottom:4px}
+ .cms-hero-controls button{width:var(--fb-control-height-touch,44px);height:var(--fb-control-height-touch,44px)}
  .cms-web-banner{grid-template-columns:1fr}
  .cms-web-banner-copy{padding:15px}
  .cms-web-banner-copy h2{font-size:22px}
- .cms-web-banners--home-hero .cms-web-banner-img{max-height:190px}
  .cms-web-featured-list{grid-template-columns:1fr;gap:12px}
  .cms-web-featured>h2{font-size:21px}
  .cms-web-popup-dialog{width:min(100vw - 22px,510px);border-radius:16px}
@@ -112,6 +134,8 @@
  .cms-web-banner-cta,.cms-web-popup-cta{min-height:var(--fb-control-height-touch,44px)}
 }
 @media(prefers-reduced-motion:reduce){
+ .cms-hero-slide{transition:none!important;transform:none!important}
+ .cms-hero-controls button{transition:none!important}
  .cms-web-banner-cta,.cms-web-popup-cta,.cms-web-popup-heading button{transition:none}
  .cms-web-popup-dialog,.cms-web-popup-dialog::backdrop{animation:none!important;transition:none!important}
  .cms-web-popup-dialog::backdrop{backdrop-filter:none}
