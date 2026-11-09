@@ -37,7 +37,7 @@
   outline: 3px solid var(--color-primary);
   outline-offset: -3px;
 }
-.catalog-product__image { position: relative; min-height: 160px; background: #f9f5fd; display: block; }
+.catalog-product__image { position: relative; min-height: 230px; aspect-ratio: 4 / 5; background: #f9f5fd; display: block; }
 .catalog-empty-image { height: 100%; min-height: 200px; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 12px; padding: 18px; color: #977da8; background: linear-gradient(145deg,#f2e9fa,#fefbff); text-align: center; }
 .catalog-empty-image span { font-size: 47px; line-height: 1; color: #a37abe; }
 .catalog-empty-image small { font-size: 11px; line-height: 1.4; }
@@ -51,6 +51,8 @@
 .catalog-empty-image.catalog-image-compact span { font-size: 29px; }
 .catalog-empty-image.catalog-image-compact small { font-size: 10px; }
 .catalog-real-image { object-fit: contain; padding: 12px; }
+/* DL2: one style owner for published cover images in cards; do not crop paper edges. */
+.catalog-real-image.catalog-image-compact { padding: 5px; }
 .catalog-product__body { padding: 14px; display: flex; flex-direction: column; gap: 9px; flex: 1; }
 .catalog-product__body h3 { font-size: 15px; font-weight: 850; color: #352044; margin: 0; }
 .catalog-product__body p { color: #80738a; font-size: 12px; margin: 0; }
@@ -90,7 +92,7 @@
   .catalog-results__heading h2 { font-size: 18px; }
   /* A single compact, horizontal product card per row on touch screens. */
   .catalog-grid { grid-template-columns: 1fr; gap: 10px; }
-  .catalog-product__image, .catalog-empty-image { min-height: 160px; }
+  .catalog-product__image, .catalog-empty-image { min-height: 170px; }
   .catalog-product__body { padding: 10px; }
   .catalog-product__body h3 { font-size: 12px; }
   .catalog-product__body p { font-size: 10px; }
