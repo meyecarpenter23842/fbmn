@@ -1,0 +1,36 @@
+/* DL4 screen owns composition only; form controls use admin-controls.css */
+.fb-admin .dl4-layout{display:grid;gap:14px;min-width:0}
+.fb-admin .dl4-version{color:#756680;font-size:12px;margin:0}
+.fb-admin .dl4-columns{display:grid;grid-template-columns:minmax(0,1fr) minmax(320px,.8fr);gap:14px;align-items:start}
+.fb-admin .dl4-settings{display:grid;gap:14px;min-width:0}
+.fb-admin .dl4-panel{padding:18px;min-width:0}
+.fb-admin .dl4-panel h2{font-size:17px;color:#3d2251;margin:0 0 8px}
+.fb-admin .dl4-panel p{font-size:13px;color:#706278;line-height:1.5}
+.fb-admin .dl4-toolbar{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin:10px 0;font-size:12px;color:#706278}
+.fb-admin .dl4-field{display:flex;gap:12px;align-items:center;font-size:13px;font-weight:650;margin:12px 0}
+.fb-admin .dl4-field select{min-width:80px;background:#fff;border:1px solid #daccdf;padding:0 10px}
+.fb-admin .dl4-list{list-style:none;display:grid;gap:7px;margin:10px 0 0;padding:0}
+.fb-admin .dl4-item{display:flex;justify-content:space-between;align-items:center;gap:8px;border:1px solid #e3d8e9;background:#fff;border-radius:10px;padding:9px;min-width:0}
+.fb-admin .dl4-item label{display:flex;align-items:center;gap:10px;min-width:0;cursor:pointer}
+.fb-admin .dl4-item input[type=checkbox]{accent-color:var(--fb-ui-primary);width:17px;height:17px;flex:none}
+.fb-admin .dl4-item span{min-width:0;overflow-wrap:anywhere;font-size:13px}
+.fb-admin .dl4-item small{display:block;color:#736580;font-size:11px;margin-top:3px}
+.fb-admin .dl4-arrows{display:flex;gap:5px;align-items:center}
+.fb-admin .dl4-item .dl4-arrows{flex:none}
+.fb-admin .dl4-item .fb-ui-button{width:36px;padding:0}
+.fb-admin .dl4-add{display:flex;flex-wrap:wrap;align-items:end;gap:8px}
+.fb-admin .dl4-add label{font-size:13px;font-weight:650;width:100%}
+.fb-admin .dl4-add input{background:#fff;border:1px solid #daccdf;min-width:0;flex:1 1 160px;padding:0 10px}
+.fb-admin .dl4-error{background:#fff5f5;color:#8a2a29;border:1px solid #edc7c4;border-radius:9px;padding:12px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.fb-admin .dl4-preview{position:sticky;top:18px}
+.fb-admin .dl4-stage{background:#f5effa;border:1px solid #e0d6e9;border-radius:13px;padding:13px;max-width:100%;margin:12px auto}
+.fb-admin .dl4-stage--mobile{max-width:390px}
+.fb-admin .dl4-stage-banner{text-align:center;background:#fff8;border:1px dashed #d6c8e3;padding:20px 8px;border-radius:10px;font-size:12px;color:#6b4e7b}
+.fb-admin .dl4-stage-section{background:#fff;border:1px solid #e6ddef;border-radius:10px;padding:12px;margin:12px 0}
+.fb-admin .dl4-stage-section h3{font-size:14px;margin:0 0 8px}
+.fb-admin .dl4-stage-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}
+.fb-admin .dl4-stage-card{border:1px solid #e6ddef;background:#fcfaff;border-radius:8px;padding:10px;overflow-wrap:anywhere;font-size:12px}
+.fb-admin .dl4-stage-card small{display:block;font-size:10px;color:#786b83;margin-top:5px}
+.fb-admin .dl4-stage--mobile .dl4-stage-grid{grid-template-columns:1fr}
+@media(max-width:1050px){.fb-admin .dl4-columns{grid-template-columns:1fr}.fb-admin .dl4-preview{position:static}}
+@media(max-width:780px){.fb-admin .dl4-panel{padding:12px}.fb-admin .dl4-item .fb-ui-button{width:44px}}
