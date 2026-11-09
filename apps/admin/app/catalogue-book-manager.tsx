@@ -11,7 +11,7 @@ type ListResult={books:Book[];page:number;totalPages:number;total:number};
 type SavedResult={book:Book;asset?:Asset};
 type Kind=Asset["kind"];
 const MAX_IMAGE=5*1024*1024;
-const STATUS:Record<Book["state"],string>={draft:"Bản nháp",ready:"Sẵn sàng (chưa lên Web)",hidden:"Đã ẩn"};
+const STATUS:Record<Book["state"],string>={draft:"Bản nháp",ready:"Sẵn sàng (đã duyệt)",hidden:"Đã ẩn"};
 const MIME="image/webp";
 
 /* 30 requests/min is the staging Admin Worker budget for ALL actions.
@@ -50,13 +50,32 @@ async function token(){
  return body.token;
 }
 function apiError(status:number,code?:string){
- if(status===409)return "Dữ liệu đã đổi hoặc bộ đang khóa. Tải lại rồi thử lại.";
- if(status===403)return "Chỉ Owner có quyền quản lý Catalogue.";
- if(status===422)return "Phải tải ít nhất một trang sách trước khi đánh dấu sẵn sàng.";
- if(status===400||status===413||status===415)return "Ảnh hoặc dữ liệu không hợp lệ. Chỉ nhận WebP tối đa 5 MB.";
+ if(status===409&&code==="ready_locked")return "Bộ đã Sẵn sàng nên ảnh bị khóa. Chọn “Ẩn bộ để sửa ảnh” rồi tải ảnh và xuất bản lại.";
+ if(status===409)return "Dữ liệu đã thay đổi; nhấn Tải lại rồi thử lại.";
+ if(status===403)return "Chỉ Owner được quản lý Catalogue.";
+ if(status===422)return "Phải tải ít nhất một trang trước khi đánh dấu Sẵn sàng.";
+ if(status===413||code==="too_large")return "Ảnh vượt giới hạn dung lượng 5 MB.";
+ if(status===415||code==="invalid_content_type")return "Trình duyệt gửi sai Content-Type ảnh WebP.";
+ if(code==="invalid_image")return "Nội dung WebP không hợp lệ hoặc kích thước ảnh nằm ngoài 64–6000 px.";
+ if(code==="invalid_upload")return "Thông tin upload chưa hợp lệ (400 · invalid_upload). Nhấn Tải lại và thử lần nữa.";
+ if(code==="invalid_query")return "Yêu cầu ảnh sai tham số (400 · invalid_query).";
+ if(status===400)return "Yêu cầu ảnh bị từ chối (400 · "+(code&&/^[a-z0-9_]{1,50}$/.test(code)?code:"unknown")+").";
+ if(status===429)return "API tạm giới hạn thao tác. Vui lòng thử lại sau.";
  if(code==="catalogue_worker_not_deployed")return "Worker DL7B chưa được triển khai.";
  return "Không kết nối được kho Catalogue. Dữ liệu chưa được lưu.";
 }
+/** Validate file contents instead of depending on Windows MIME metadata. */
+async function isWebpFile(file:File):Promise<boolean>{
+ if(file.size<100||file.size>MAX_IMAGE)return false;
+ const header=new Uint8Array(await file.slice(0,32).arrayBuffer());
+ if(header.length<20)return false;
+ const four=(i:number)=>String.fromCharCode(...header.subarray(i,i+4));
+ if(four(0)!=="RIFF"||four(8)!=="WEBP")return false;
+ const data=new DataView(header.buffer,header.byteOffset,header.byteLength);
+ if(data.getUint32(4,true)+8!==file.size)return false;
+ return ["VP8 ","VP8L","VP8X"].includes(four(12));
+}
+
 async function requestCatalogue<T>(path="",body?:object,file?:File,headers?:Record<string,string>):Promise<T>{
  const jwt=await token();
  const r=await fetch("/api/website/catalogue"+path,{
@@ -192,11 +211,18 @@ export default function CatalogueBookManager({owner,onBusyChange}:{
  };
  const upload=async(kind:Kind,file?:File)=>{
   if(!file||!book||busy)return;
-  if(file.type!==MIME||file.size>MAX_IMAGE||file.size<100){
-   alert("Chỉ nhận ảnh WebP hợp lệ, tối đa 5 MB/ảnh.","error");return;
+  if(book.state==="ready"){
+   alert("Bộ đã Sẵn sàng. Chọn “Ẩn bộ để sửa ảnh” trước khi upload.","error");return;
+  }
+  if(file.size<100||file.size>MAX_IMAGE){
+   alert("Tệp cần từ 100 byte đến tối đa 5 MB.","error");return;
   }
   setBusy(true);
   try{
+   if(!(await isWebpFile(file))){
+    alert("File không phải WebP RIFF hợp lệ. Hãy tải lại ảnh .webp gốc, không chỉ đổi đuôi.","error");
+    return;
+   }
    await requestCatalogue<SavedResult>("/upload",undefined,file,{
     "X-Catalogue-Book-Id":book.id,
     "X-Catalogue-Revision":String(book.revision),
@@ -261,12 +287,12 @@ export default function CatalogueBookManager({owner,onBusyChange}:{
         onClick={()=>{setTitle(book.title);setEdition(book.edition);setDialog("edit");}}>Sửa thông tin</button>
        {book.state==="ready"?
         <button type="button" className="fb-ui-button fb-ui-button--secondary" disabled={busy}
-         onClick={()=>void mutate("hide",{id:book.id,revision:book.revision},"Đã ẩn bộ Catalogue.")}>Ẩn bộ</button>:
+         onClick={()=>void mutate("hide",{id:book.id,revision:book.revision},"Đã ẩn bộ Catalogue.")}>Ẩn bộ để sửa ảnh</button>:
         <button type="button" className="fb-ui-button fb-ui-button--primary" disabled={busy||!pages.length}
          onClick={()=>void mutate("ready",{id:book.id,revision:book.revision},"Bộ đã sẵn sàng cho DL7C.")}>Đánh dấu sẵn sàng</button>}
       </div>
      </div>
-     <p>Không chỉnh sửa bộ đã đánh dấu sẵn sàng. Chọn “Ẩn bộ” trước khi cập nhật hình ảnh hoặc thứ tự.</p>
+     <p>{book.state==="ready"?"Bộ đang công khai và bị khóa chỉnh sửa. Chọn Ẩn bộ để sửa ảnh, tải bìa/nền rồi đánh dấu Sẵn sàng lại.":"Có thể cập nhật ảnh khi là bản nháp hoặc đã ẩn. Đánh dấu Sẵn sàng sau khi kiểm tra đủ ảnh."}</p>
     </section>
     <section className="surface dl7b-panel">
      <div className="dl7b-panel-heading"><div><h2>Trang sách</h2><p>{pages.length} / 200 trang · WebP riêng theo bộ</p></div>{fileInput("page","Thêm trang WebP")}</div>
