@@ -38,3 +38,18 @@
 ## Nghiệm thu
 
 Kiểm tra thật tại 1440 / 1280 / 768 / 390 / 360 và Chrome/Safari; so sánh nền ảnh trong suốt & nền sáng; ảnh nhiều slide ở màn hình/kích thước khác nhau; keyboard Tab/Enter, mouse hover, `prefers-reduced-motion`; trường hợp CMS không có dữ liệu; tạo → upload 2 ảnh → thêm nguồn → xuất bản → kiểm tra Website → ẩn → xác minh ảnh/JSON bị thu hồi. **CI xanh không thay thế ảnh UAT trình duyệt.**
+
+## C5 — một Banner, tối đa năm Slide (Owner 09/11/2026)
+
+**Admin:** Website Futurebook → Banner & Popup → Sửa hoặc Thêm Banner → chọn `Trang chủ · Hero` → bước **Ảnh & xem trước**.
+
+1. **Slide 1** dùng cặp ảnh Desktop/Mobile truyền thống: không xóa, không chuyển dữ liệu gốc hoặc thay đường dẫn R2 đang phát hành.
+2. Nhấn **＋ Thêm Slide** để có Slide 2–5. Mỗi Slide có một WebP Desktop và một WebP Mobile. Có thể chọn JPG/PNG/WebP; trình duyệt chuyển sang WebP và tải lên R2 khi **Lưu bản nháp & ảnh**. Xem trước trên chính mô hình Website theo Desktop/Mobile.
+3. **↑/↓** điều chỉnh thứ tự phát, nút **Xóa** xóa cả hai ảnh của Slide mới (cần xác nhận). Không thể xóa Slide 1.
+4. **Thiết lập motion Hero:** Bật/tắt hiệu ứng, tự chuyển, Fade / Slide / Fade + Slide, 3–15 giây/Slide, chuyển động 300–800ms. Bấm **Lưu motion & thứ tự** sau khi bản nháp có ID.
+5. Chỉ xuất bản khi Slide 1 có đủ ảnh Desktop/Mobile và **mọi Slide mới đã lưu** đều có đủ cặp. Trạng thái thiếu ảnh hiển thị trước, API vẫn xác thực Owner/revision và từ chối nếu thiếu.
+6. Muốn thay Slide trong Banner đã xuất bản: **Ẩn → chỉnh ảnh/thứ tự → Lưu → Xuất bản lại**. Nội dung cũ không bị mất khi nâng cấp; nếu muốn không gián đoạn Website, dùng Banner mới rồi xuất bản trước khi ẩn Banner cũ.
+
+**Giới hạn và bảo vệ:** Mỗi Slide là một cụm hình đã dàn trang, **không** phải animation từng sản phẩm/layer riêng. Ảnh R2 private và chỉ xuất qua image proxy với `id + device + slide` 1–5, kiểm lại published/approved/time bằng public SQL view mỗi lần. Banner chưa phát hành và slide thiếu cặp ảnh không hiển thị. Với nhiều Banner cùng Hero, carousel vẫn giới hạn tối đa năm slide đã duyệt mỗi lần render. `prefers-reduced-motion` luôn vô hiệu hóa tự phát và transition.
+
+**Release:** migration C5 tạo bảng riêng `cms_banner_settings` và `cms_banner_slide_media`, không sửa hay xóa `cms_entry_media` hiện hành; Public Worker, Admin Worker, Website và Admin phải cập nhật đồng bộ. C5 không thay SKU, NET, bảng giá, quyền ngoài Owner hay dữ liệu CMS cũ.
