@@ -266,8 +266,9 @@ export default function AdminPage() {
     setSection(to==="new-product"?"products":to);
     if(["products","structure","media","import-products"].includes(to))
       setProductMenuExpanded(true);
-    if(["banners","content","catalogue-books"].includes(to))
+    if(["banners","content"].includes(to))
       setWebsiteMenuExpanded(true);
+    if(to==="catalogue-books")setWebsiteMenuExpanded(true);
     setMenuOpen(false);setNotice("");
   }
   function updateDraft(key:keyof ProductDraft,value:string){
