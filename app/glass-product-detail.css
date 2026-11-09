@@ -286,7 +286,7 @@
 .fb-song-related-image {
   display: block;
   position: relative;
-  height: 132px;
+  height: clamp(216px, 22vw, 270px);
   min-height: 0;
   overflow: hidden;
   border-radius: var(--fb-glass-panel-radius);
@@ -513,13 +513,13 @@
   }
   .fb-song-related-hit {
     display: grid;
-    grid-template-columns: minmax(85px, 36%) minmax(0,1fr);
+    grid-template-columns: minmax(105px, 40%) minmax(0,1fr);
     align-items: center;
     gap: 10px;
   }
   .fb-song-related-image {
     width: 100%;
-    height: 100px;
+    height: clamp(148px, 41vw, 168px);
     min-height: 0;
   }
   .fb-song-related-body { gap: 5px; }
