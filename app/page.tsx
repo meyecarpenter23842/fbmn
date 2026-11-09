@@ -8,6 +8,7 @@ import { NotebookArt } from "@/components/notebook-art";
 import { Container, Icon } from "@/components/ui";
 import { getPublicCatalog } from "@/lib/catalog/adapter";
 import { selectHomeCatalog } from "@/lib/catalog/home";
+import { getPublicHomeLayout } from "@/lib/catalog/home-layout";
 import { HomeProductCard } from "@/components/home-product-card";
 import { VerifiedMediaImage } from "@/components/verified-media-image";
 import { approvedSiteMedia } from "@/lib/media/approved-site-media";
@@ -103,7 +104,9 @@ async function HomePublicCatalogue() {
     </section>;
   }
 
-  const { categories, products } = selectHomeCatalog(catalog);
+  const layout=await getPublicHomeLayout();
+  const { categories, products } = layout.revision===1 && !layout.categoryIds.length && !layout.featuredSkus.length
+    ? selectHomeCatalog(catalog) : selectHomeCatalog(catalog,layout);
   if (!products.length) return <section id="categories" className="ref-categories" aria-label="Trạng thái danh mục">
     <div className="ref-catalog-state" role="status">
       <strong>Danh mục sản phẩm đang được cập nhật</strong>
@@ -112,14 +115,13 @@ async function HomePublicCatalogue() {
     </div>
   </section>;
 
-  return <>
-    <section id="categories" className="ref-categories" aria-label="Danh mục Futurebook đã công khai">
+  const categorySection=<section key="categories" id="categories" className="ref-categories" aria-label="Danh mục Futurebook đã công khai">
       <h2 className="sr-only">Danh mục sản phẩm</h2>
       <CategoryNavigation categories={categories} />
       <div className="ref-categories__all"><Link href="/san-pham">Xem tất cả danh mục</Link></div>
-    </section>
+    </section>;
 
-    <section id="collections" className="ref-featured" aria-labelledby="featured-heading">
+  const productSection=<section key="products" id="collections" className="ref-featured" aria-labelledby="featured-heading">
       <div className="ref-featured__intro" id="about">
         <span className="ref-featured__crown" aria-hidden="true">♛</span>
         <h2 id="featured-heading">Sản phẩm đã công khai</h2>
@@ -131,6 +133,6 @@ async function HomePublicCatalogue() {
       <MobileCarousel itemCount={products.length}>
         {products.map(product => <HomeProductCard key={product.id} product={product}/>)}
       </MobileCarousel>
-    </section>
-  </>;
+    </section>;
+  return <>{layout.sectionOrder.map(section=>section==="categories"?categorySection:productSection)}</>;
 }
