@@ -9,10 +9,17 @@ export async function GET(request:Request){
  if(process.env.FBMN_CMS_PUBLIC_ENABLED!=="true"||
     process.env.FBMN_PUBLIC_API_ENABLED!=="true")return fail(404);
  const url=new URL(request.url);
- if(url.searchParams.size!==2||url.searchParams.getAll("id").length!==1||
-    url.searchParams.getAll("device").length!==1)return fail(400);
+ const keys=[...url.searchParams.keys()];
+ if(keys.length<2||keys.length>3||new Set(keys).size!==keys.length||
+    keys.some(k=>!["id","device","slide"].includes(k))||
+    url.searchParams.getAll("id").length!==1||
+    url.searchParams.getAll("device").length!==1||
+    (url.searchParams.has("slide")&&url.searchParams.getAll("slide").length!==1))return fail(400);
  const id=url.searchParams.get("id")||"",device=url.searchParams.get("device")||"";
- if(!UUID.test(id)||!["desktop","mobile"].includes(device))return fail(400);
+ const slide=url.searchParams.has("slide")?Number(url.searchParams.get("slide")):1;
+ if(!UUID.test(id)||!["desktop","mobile"].includes(device)||
+   !Number.isInteger(slide)||slide<1||slide>5||
+   (url.searchParams.has("slide")&&!/^[1-5]$/.test(url.searchParams.get("slide")||"")))return fail(400);
  let origin;
  try{
   const base=new URL(process.env.FBMN_PUBLIC_API_BASE_URL??"");
@@ -25,7 +32,8 @@ export async function GET(request:Request){
  }catch{return fail(503);}
  try{
   const response=await fetch(origin+"/v1/public/cms/image?id="+encodeURIComponent(id)+
-   "&device="+device,{method:"GET",redirect:"manual",cache:"no-store",
+   "&device="+device+(slide===1?"":"&slide="+slide),
+   {method:"GET",redirect:"manual",cache:"no-store",
    signal:AbortSignal.timeout(7000)});
   if(response.status!==200||response.headers.get("content-type")?.split(";")[0]!=="image/webp"||
      !response.body)return fail(response.status===404?404:503);
