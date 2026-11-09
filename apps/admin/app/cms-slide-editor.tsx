@@ -164,13 +164,13 @@ export default function CmsSlideEditor({recordId,revision,disabled,pending,onSta
      <strong>Slide {slide}{slide===1?" · ảnh chính":""}</strong>
      <div className="cms-slide-actions">
       <button type="button" className="fb-ui-button fb-ui-button--secondary"
-       onClick={()=>onPreviewSlide(slide)} disabled={disabled}
+       onClick={()=>onPreviewSlide(slide)} disabled={disabled||saving}
        aria-pressed={previewSlide===slide}>Xem trước</button>
       <button type="button" className="fb-ui-button fb-ui-button--secondary"
-       onClick={()=>orderMove(slide,-1)} disabled={disabled||settings.slide_order.indexOf(slide)===0}
+       onClick={()=>orderMove(slide,-1)} disabled={disabled||saving||settings.slide_order.indexOf(slide)===0}
        aria-label={"Đưa Slide "+slide+" lên trước"}>↑</button>
       <button type="button" className="fb-ui-button fb-ui-button--secondary"
-       onClick={()=>orderMove(slide,1)} disabled={disabled||settings.slide_order.indexOf(slide)===4}
+       onClick={()=>orderMove(slide,1)} disabled={disabled||saving||settings.slide_order.indexOf(slide)===4}
        aria-label={"Đưa Slide "+slide+" xuống sau"}>↓</button>
       {slide>1&&<button type="button" className="fb-ui-button fb-ui-button--secondary"
        disabled={!canEdit||Boolean(pending[extraKey(slide,"desktop")])||
@@ -193,7 +193,7 @@ export default function CmsSlideEditor({recordId,revision,disabled,pending,onSta
        </div>
        <label className="fb-ui-button fb-ui-button--secondary cms-media-upload">
         <span>{pending[key]?"Đổi ảnh đang chọn":stored?"Thay ảnh":"Chọn ảnh"}</span>
-        <input type="file" accept="image/png,image/jpeg,image/webp" disabled={disabled}
+        <input type="file" accept="image/png,image/jpeg,image/webp" disabled={disabled||saving}
          onChange={event=>{
           const file=event.target.files?.[0];event.currentTarget.value="";
           if(!file)return;
@@ -211,18 +211,18 @@ export default function CmsSlideEditor({recordId,revision,disabled,pending,onSta
    </div>)}
   </div>
   <button type="button" className="fb-ui-button fb-ui-button--secondary cms-slide-add"
-   disabled={disabled||known.size>=5} onClick={add}>＋ Thêm Slide</button>
+   disabled={disabled||saving||known.size>=5} onClick={add}>＋ Thêm Slide</button>
   <fieldset className="cms-motion-settings">
    <legend>Thiết lập motion Hero</legend>
    <div className="cms-motion-switches">
-    <label><input type="checkbox" checked={settings.enabled} disabled={disabled}
+    <label><input type="checkbox" checked={settings.enabled} disabled={disabled||saving}
      onChange={event=>change({enabled:event.target.checked})}/> Bật hiệu ứng</label>
-    <label><input type="checkbox" checked={settings.autoplay} disabled={disabled}
+    <label><input type="checkbox" checked={settings.autoplay} disabled={disabled||saving}
      onChange={event=>change({autoplay:event.target.checked})}/> Tự chuyển Slide</label>
    </div>
    <div className="cms-form-grid">
     <label>Hiệu ứng
-     <select value={settings.effect} disabled={disabled}
+     <select value={settings.effect} disabled={disabled||saving}
       onChange={event=>change({effect:event.target.value as Settings["effect"]})}>
       <option value="fade-slide">Mờ + trượt nhẹ</option>
       <option value="fade">Mờ dần</option>
@@ -230,12 +230,12 @@ export default function CmsSlideEditor({recordId,revision,disabled,pending,onSta
      </select>
     </label>
     <label>Chuyển mỗi (giây)
-     <input type="number" min={3} max={15} step={1} disabled={disabled}
+     <input type="number" min={3} max={15} step={1} disabled={disabled||saving}
       value={settings.interval_ms/1000}
       onChange={event=>change({interval_ms:Number(event.target.value)*1000})}/>
     </label>
     <label>Thời gian hiệu ứng (ms)
-     <input type="number" min={300} max={800} step={20} disabled={disabled}
+     <input type="number" min={300} max={800} step={20} disabled={disabled||saving}
       value={settings.duration_ms}
       onChange={event=>change({duration_ms:Number(event.target.value)})}/>
     </label>
