@@ -2,7 +2,7 @@ import { createPublicApi } from "./handler.mjs";
 import { createReadModel, PUBLIC_READ_QUERIES } from "./read-model.mjs";
 
 const ALLOWED_SQL = new Set(Object.values(PUBLIC_READ_QUERIES));
-const ROUTES = new Set(["/v1/public/categories", "/v1/public/products", "/v1/public/catalog", "/v1/public/content", "/v1/public/cms"]);
+const ROUTES = new Set(["/v1/public/categories", "/v1/public/products", "/v1/public/catalog", "/v1/public/content", "/v1/public/cms", "/v1/public/home-layout"]);
 // Owner-approved single decorative image. This Worker binding is in the same
 // Cloudflare account as the private fbmn R2 bucket. Never accept caller keys.
 const DECORATIVE_ROUTE = "/v1/public/decorative-background";
@@ -132,6 +132,8 @@ export function createStagingWorker({createDbClient}) {
           getPublicCatalog:()=>readModel(env,m=>m.getPublicCatalog()),
           getPublicContent:()=>readModel(env,m=>m.getPublicContent()),
           getPublicCms:()=>readModel(env,m=>m.getPublicCms()),
+          getPublicHomeLayout:()=>readModel(env,m=>m.getPublicHomeLayout()),
+          homeLayoutEnabled:env.PUBLIC_DL4_ENABLED==="true",
           cmsEnabled:env.PUBLIC_CMS_ENABLED==="true",
           allowedOrigins:origins,
         });
