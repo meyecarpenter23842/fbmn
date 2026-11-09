@@ -39,7 +39,7 @@ test("G07.2 suggestions are a conventional grid: 4 desktop, 3 tablet, mobile one
   assert.match(css,/@media \(max-width: 1100px\) and \(min-width: 701px\)[\s\S]*?\.fb-song-related-grid\s*\{[^}]*grid-template-columns:\s*repeat\(3/);
   assert.match(css,/@media \(max-width: 700px\)[\s\S]*?\.fb-song-related-grid\s*\{[^}]*grid-template-columns:\s*1fr/);
   assert.match(css,/@media \(max-width: 700px\)[\s\S]*?\.fb-song-related-hit\s*\{[^}]*display:\s*grid/);
-  assert.match(css,/\.fb-song-related-image\s*\{[^}]*height:\s*132px/);
+  assert.match(css,/\.fb-song-related-image\s*\{[^}]*height:\s*clamp\(216px, 22vw, 270px\)/);
   assert.doesNotMatch(css,/\.fb-song-related-card:nth-child|\.fb-song-related-grid\s*\{[^}]*display:\s*none/);
   assert.match(related,/items\.map\(product=><ProductCard key=\{product\.id\} product=\{product\} glass=\{glass\}\/>\)/);
   assert.match(card,/<GlassCard hover linkCard className="fb-song-related-card">/);
