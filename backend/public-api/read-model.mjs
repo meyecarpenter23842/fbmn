@@ -15,8 +15,11 @@ const SQL = Object.freeze({
   p5Media: "SELECT sku_cong_ty,asset_id,media_role,sort_order FROM fbmn_public.v_p5_visible_media WHERE (sku_cong_ty,sort_order,asset_id)>($1::text,$2::integer,$3::text) ORDER BY sku_cong_ty,sort_order,asset_id LIMIT 1000",
   p5ImageKey: "SELECT r2_key FROM fbmn_public.v_p5_image_assets WHERE asset_id=$1 LIMIT 1",
   dealer: "SELECT title,paragraphs,contact_instructions FROM fbmn_public.v_dealer_information LIMIT 2",
-  cmsEntries: "SELECT id,kind,slug,title,summary,paragraphs,cta_url,slot,sort_order,published_at,starts_at,ends_at,popup_delay_seconds,popup_cooldown_minutes,popup_max_per_session,has_desktop,has_mobile FROM fbmn_public.v_cms_web_entries ORDER BY sort_order,published_at,id LIMIT 501",
+  cmsEntries: "SELECT e.id,kind,slug,title,summary,paragraphs,cta_url,slot,sort_order,published_at,starts_at,ends_at,popup_delay_seconds,popup_cooldown_minutes,popup_max_per_session,has_desktop,has_mobile,"+
+   "(SELECT json_agg(json_build_object('slideNo',s.slide_no,'ordinal',s.ordinal,'enabled',s.enabled,'autoplay',s.autoplay,'effect',s.effect,'intervalMs',s.interval_ms,'durationMs',s.duration_ms) ORDER BY s.ordinal) FROM fbmn_public.v_cms_web_banner_slides s WHERE s.id=e.id) AS hero_slides "+
+   "FROM fbmn_public.v_cms_web_entries e ORDER BY sort_order,published_at,id LIMIT 501",
   cmsImageKey: "SELECT r2_key FROM fbmn_public.v_cms_web_images WHERE id=$1 AND device=$2 LIMIT 1",
+  cmsSlideImageKey: "SELECT r2_key FROM fbmn_public.v_cms_web_banner_slide_images WHERE id=$1 AND device=$2 AND slide_no=$3 LIMIT 1",
 });
 function rows(value, max) {
   if (!Array.isArray(value) || value.length > max) throw new Error("Invalid SQL read result");
@@ -238,12 +241,22 @@ export function createReadModel(query,{enableP5=false}={}) {
        popupCooldownMinutes:Number(row.popup_cooldown_minutes),
        popupMaxPerSession:Number(row.popup_max_per_session),
        hasDesktop:row.has_desktop===true,hasMobile:row.has_mobile===true,
+       ...(Array.isArray(row.hero_slides)&&row.hero_slides.length?{
+        slides:row.hero_slides.map(s=>Number(s.slideNo)),
+        motion:{enabled:row.hero_slides[0].enabled===true,
+         autoplay:row.hero_slides[0].autoplay===true,
+         effect:String(row.hero_slides[0].effect),
+         intervalMs:Number(row.hero_slides[0].intervalMs),
+         durationMs:Number(row.hero_slides[0].durationMs)}
+       }:{})
       }));
     },
-    async getPublicCmsImageKey(id,device){
+    async getPublicCmsImageKey(id,device,slide=1){
       if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)||
-          !["desktop","mobile"].includes(device))return null;
-      const entries=rows(await query(SQL.cmsImageKey,[id,device]),1);
+          !["desktop","mobile"].includes(device)||
+          !Number.isInteger(slide)||slide<1||slide>5)return null;
+      const entries=rows(await query(slide===1?SQL.cmsImageKey:SQL.cmsSlideImageKey,
+       slide===1?[id,device]:[id,device,slide]),1);
       return entries.length===1&&/^cms\/[0-9a-f-]{36}\/public_web\/(desktop|mobile)\/[0-9a-f-]{36}\.webp$/i.test(String(entries[0].r2_key))
        ?String(entries[0].r2_key):null;
     },
