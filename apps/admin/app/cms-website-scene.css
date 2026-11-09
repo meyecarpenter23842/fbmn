@@ -49,6 +49,10 @@
 .cms-site-hero-art{display:flex;flex-direction:column;justify-content:center;
  align-items:stretch;gap:12px;padding:14px;min-width:0;background:rgba(230,214,247,.4)}
 .cms-site-hero-art>span{font-size:10px;font-weight:650;color:#674d80;text-align:center}
+.cms-site-hero-cms-media{position:relative;width:100%;min-height:210px;display:grid;place-items:center;overflow:hidden}
+.cms-site-hero-cms-media .cms-media-image{position:absolute;inset:0;display:block;width:100%;height:100%;object-fit:contain;object-position:center;mix-blend-mode:multiply}
+.cms-site-frame--mobile .cms-site-hero-cms-media{min-height:190px}
+
 .cms-site-categories{padding:16px 0 14px}
 .cms-site-category-tiles{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:9px}
 .cms-site-category-tiles span{display:flex;align-items:center;justify-content:center;

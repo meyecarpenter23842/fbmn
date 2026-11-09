@@ -101,8 +101,9 @@ export default function CmsWebsiteScene({kind,slot,title,summary,ctaUrl,image,de
       <small>Thông tin rõ ràng · Mẫu mã đa dạng · Dành cho đại lý</small>
      </div>
      <div className="cms-site-hero-art">
-      <span>Vùng hình Hero cố định trên Website</span>
-      {slot==="home.hero"&&slotView("Banner đề xuất trong vùng Hero")}
+      {slot==="home.hero"?<div className="cms-site-hero-cms-media" aria-label="Ảnh CMS trong vùng Hero">
+       {image}
+      </div>:<span>Vùng hình Hero cố định trên Website</span>}
      </div>
     </section>
     <section className="cms-site-categories" aria-label="Dải danh mục theo Website">

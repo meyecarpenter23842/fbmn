@@ -11,6 +11,7 @@ import CmsWebsitePlacement,{cmsWebsiteSlotLabel} from "./cms-website-placement";
 import {websiteDraftTargets,withWebsitePlacement} from "./cms-website-policy";
 import {websiteCmsPage} from "./cms-website-list";
 import type {CmsSourcePage} from "./cms-website-list";
+import {cmsPublishIssues,cmsPublishWarnings} from "./cms-publish-readiness";
 
 type CmsKind = "banner"|"popup"|"article"|"promotion";
 type CmsStatus = "draft"|"published"|"hidden";
@@ -20,6 +21,7 @@ type CmsItem = {
  cta_url:string|null;channel_targets:CmsChannel[];sort_order:number;
  starts_at:string|null;ends_at:string|null;source_ref:string;status:CmsStatus;
  revision:number;updated_at:string;placements:Partial<Record<CmsChannel,string>>;
+ has_desktop?:boolean;has_mobile?:boolean;
  popup_delay_seconds:number;popup_cooldown_minutes:number;popup_max_per_session:number;
 };
 type CmsSummary = Omit<CmsItem,"paragraphs"|"cta_url">;
@@ -148,7 +150,11 @@ function CmsEditor({item,kind,onSaved,onSavingChange,dirtyRef,step,onStep,formId
     const result=await cmsApi<{item:CmsItem}>(current?"update":"create",{
      ...data,...(current?{id:current.id,expectedRevision:current.revision}:{})
     });
-    current=result.item;setSavedRecord(current);
+    // UPDATE RETURNING * has no joined media flags; preserve existing R2 readiness.
+    current={...result.item,
+     has_desktop:result.item.has_desktop??current?.has_desktop??false,
+     has_mobile:result.item.has_mobile??current?.has_mobile??false};
+    setSavedRecord(current);
     contentDirty.current=false;
    }
    const files=Object.entries(pendingImages);
@@ -156,7 +162,10 @@ function CmsEditor({item,kind,onSaved,onSavingChange,dirtyRef,step,onStep,formId
     const [ch,device]=key.split(":") as [CmsChannel,CmsDevice];
     if(!draft.channelTargets.includes(ch))continue;
     const revision=await uploadCmsImage(current.id,current.revision,ch,device,pending.file);
-    current={...current,revision};setSavedRecord(current);
+    current={...current,revision,
+     ...(ch==="public_web"&&device==="desktop"?{has_desktop:true}:{}),
+     ...(ch==="public_web"&&device==="mobile"?{has_mobile:true}:{})};
+    setSavedRecord(current);
     setPendingImages(prev=>{
      const next={...prev};delete next[key];return next;
     });
@@ -176,6 +185,16 @@ function CmsEditor({item,kind,onSaved,onSavingChange,dirtyRef,step,onStep,formId
   }
  };
  const canChangeKind=!savedRecord;
+ const publishInput={
+  kind:draft.kind,title:draft.title,slug:draft.slug,summary:draft.summary,
+  cta_url:draft.ctaUrl,source_ref:draft.sourceRef,placements:draft.placements,
+  channel_targets:draft.channelTargets,
+  has_desktop:savedRecord?.has_desktop===true,
+  has_mobile:savedRecord?.has_mobile===true,
+  starts_at:draft.startsAt||null,ends_at:draft.endsAt||null
+ };
+ const preflight=cmsPublishIssues(publishInput);
+ const warnings=cmsPublishWarnings(publishInput);
  const STEPS=["Nội dung","Vị trí & lịch","Ảnh & xem trước"];
  return <form id={formId} className="cms-editor cms-wizard" onSubmit={e=>void submit(e)} noValidate>
   <AdminToast variant="error" message={error} notificationId={toastId} onClose={()=>setError("")}/>
@@ -217,6 +236,14 @@ function CmsEditor({item,kind,onSaved,onSavingChange,dirtyRef,step,onStep,formId
      <label className="cms-wide">Tiêu đề
       <input value={draft.title} maxLength={160} minLength={2} required disabled={busy}
        onChange={e=>set("title",e.target.value)}/>
+     </label>
+     <label className="cms-wide">Nguồn / ghi chú duyệt (bắt buộc khi xuất bản)
+      <input maxLength={500} value={draft.sourceRef} disabled={busy}
+       aria-describedby={formId+"-source-help"} onChange={e=>set("sourceRef",e.target.value)}
+       placeholder="Ví dụ: chiến dịch nội bộ đã được Owner duyệt"/>
+      <small className="cms-field-help" id={formId+"-source-help"}>
+       Ghi tên tài liệu, chiến dịch hoặc ghi chú duyệt có thể đối chiếu. Không bắt buộc là đường dẫn URL.
+      </small>
      </label>
      <label className="cms-wide">Mô tả ngắn
       <textarea rows={2} maxLength={400} value={draft.summary} disabled={busy}
@@ -273,11 +300,6 @@ function CmsEditor({item,kind,onSaved,onSavingChange,dirtyRef,step,onStep,formId
       <input type="number" min={0} max={10000} value={draft.sortOrder}
        disabled={busy} onChange={e=>set("sortOrder",Number(e.target.value))}/>
      </label>
-     <label className="cms-wide">Nguồn xác minh nội dung
-      <input maxLength={500} value={draft.sourceRef} disabled={busy}
-       onChange={e=>set("sourceRef",e.target.value)}
-       placeholder="Tài liệu / thông tin đã được Owner kiểm tra"/>
-     </label>
     </div>
    </>}
    {step===2&&<>
@@ -293,8 +315,21 @@ function CmsEditor({item,kind,onSaved,onSavingChange,dirtyRef,step,onStep,formId
       onDevice={setPreviewDevice}/>
    </>}
   </section>
-  <p className="cms-wizard-footnote">Chỉ lưu bản nháp trong Admin. Xuất bản sẽ được mở khi
-   Website nhận CMS thật; không có thay đổi nào tự hiện trên trang công khai.</p>
+  <div className="cms-publish-preflight" aria-label="Kiểm tra trước khi xuất bản" aria-live="polite">
+   <strong>Kiểm tra trước khi xuất bản</strong>
+   {preflight.length===0?
+    <p className="cms-preflight-ready">Đủ thông tin để gửi yêu cầu xuất bản sau khi lưu bản nháp và ảnh.</p>:
+    <ul>{preflight.map(issue=><li key={issue.code}>
+     <button type="button" className="fb-ui-button fb-ui-button--secondary"
+      disabled={busy} onClick={()=>onStep(issue.step)}>
+      {issue.label} · Bước {issue.step+1}
+     </button>
+    </li>)}</ul>}
+   {warnings.length>0&&<p className="cms-publish-warnings">
+    Gợi ý (không chặn): {warnings.join(" ")}
+   </p>}
+  </div>
+  <p className="cms-wizard-footnote">Lưu bản nháp không xuất bản tự động. Hệ thống kiểm tra lại nguồn, ảnh và quyền trước khi công bố.</p>
  </form>;
 }
 function CmsModalFooter({step,onStep,saving,formId}:{
@@ -332,10 +367,17 @@ export default function CmsManager({mode,owner}:{
  useEffect(()=>{
   if(!owner)return;
   let active=true;
-  void cmsApi<{ready:boolean;channel:string}>("capability")
-   .then(result=>{if(active)setPublishReady(result.ready===true&&result.channel==="public_web");})
-   .catch(()=>{if(active)setPublishReady(false);});
-  return ()=>{active=false;};
+  const check=()=>{
+   void cmsApi<{ready:boolean;channel:string}>("capability")
+    .then(result=>{if(active)setPublishReady(result.ready===true&&result.channel==="public_web");})
+    .catch(()=>{if(active)setPublishReady(false);});
+  };
+  check();
+  const interval=window.setInterval(check,20000);
+  const onVisible=()=>{if(document.visibilityState==="visible")check();};
+  document.addEventListener("visibilitychange",onVisible);
+  return ()=>{active=false;window.clearInterval(interval);
+   document.removeEventListener("visibilitychange",onVisible);};
  },[owner]);
  const [editorSaving,setEditorSaving]=useState(false);
  const [editorStep,setEditorStep]=useState(0);
@@ -412,7 +454,13 @@ export default function CmsManager({mode,owner}:{
        <td><strong>{item.title}</strong><small>{item.slug}</small></td>
        <td>{LABELS[item.kind]}</td>
        <td>{cmsWebsiteSlotLabel(item.kind,item.placements?.public_web||"")}</td>
-       <td>{item.status==="published"?"Đã xuất bản":item.status==="hidden"?"Đã ẩn":"Bản nháp"}</td>
+       <td>{item.status==="published"?"Đã xuất bản":item.status==="hidden"?"Đã ẩn":"Bản nháp"}
+         {item.status!=="published"&&<small className={cmsPublishIssues(item).length?"cms-preflight-missing":"cms-preflight-ready"}>
+          {cmsPublishIssues(item).length?
+           "Còn thiếu: "+cmsPublishIssues(item).map(issue=>issue.label).join(" · "):
+           "Đủ điều kiện nội dung"}
+         </small>}
+        </td>
        <td><div className="cms-row-actions">
         <button type="button" className="fb-ui-button fb-ui-button--secondary"
          disabled={busy||opening||item.status==="published"} onClick={()=>void openEditor(item)}>Sửa</button>
@@ -422,11 +470,12 @@ export default function CmsManager({mode,owner}:{
             "Bản ghi còn liên kết App. Không ẩn đồng loạt từ màn Website.":undefined}
            onClick={()=>void change(item,"hide")}>Ẩn</button>:
          <button type="button" className="fb-ui-button fb-ui-button--secondary"
-          disabled={!publishReady||busy||item.channel_targets.some(ch=>ch!=="public_web")||
+          disabled={!publishReady||busy||cmsPublishIssues(item).length>0||
+           item.channel_targets.some(ch=>ch!=="public_web")||
            !item.channel_targets.includes("public_web")}
-          title={!publishReady?"Website chưa được kích hoạt CMS công khai":
-           item.channel_targets.some(ch=>ch!=="public_web")?
-           "Bản ghi dùng chung App; không thể phát hành đa kênh ở Website":undefined}
+          title={!publishReady?"Đang kiểm tra kết nối CMS với Website":
+           cmsPublishIssues(item).length>0?
+           "Cần bổ sung: "+cmsPublishIssues(item).map(issue=>issue.label).join(" · "):undefined}
           onClick={()=>void change(item,"publish")}>
           {publishReady?"Xuất bản":"Chờ kết nối Website"}</button>}
        </div></td>

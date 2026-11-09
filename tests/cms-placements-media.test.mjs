@@ -146,7 +146,9 @@ test("CMS wizard stages image before creating record and uploads serially on Sav
  assert.match(editor,/const files=Object\.entries\(pendingImages\)/);
  assert.match(editor,/for\(const \[key,pending\] of files\)/);
  assert.match(editor,/await uploadCmsImage\(current\.id,current\.revision/);
- assert.match(editor,/current=\{\.\.\.current,revision\}/);
+ assert.match(editor,/current=\{\.\.\.current,revision,/);
+ assert.match(editor,/has_desktop:true/);
+ assert.match(editor,/has_mobile:true/);
  assert.match(editor,/dirtyRef\.current=false/);
  assert.match(editor,/bản nháp/i);
  assert.match(media,/channels\.length===0/);
