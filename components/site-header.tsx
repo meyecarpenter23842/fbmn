@@ -5,15 +5,13 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { Container, Icon } from "./ui";
-import { AppDownloadMenuButton } from "./app-download";
 
 const desktopNavigation = [
   { label: "Trang chủ", href: "/#home" },
-  { label: "Giới thiệu", href: "/gioi-thieu" },
   { label: "Sản phẩm", href: "/san-pham" },
-  { label: "Khuyến mãi", href: "/khuyen-mai" },
-  { label: "Dành cho đại lý", href: "/dai-ly" },
-  { label: "Tin tức", href: "/tin-tuc" },
+  { label: "Gia công", href: "/gia-cong" },
+  { label: "Bảng tin", href: "/bang-tin" },
+  { label: "Catalogue", href: "/catalogue" },
   { label: "Liên hệ", href: "/lien-he" },
 ] as const;
 
@@ -72,14 +70,15 @@ export function SiteHeader() {
           <button type="submit" aria-label="Tìm sản phẩm"><Icon name="search" size={22}/></button>
         </form>
         <div className="ref-header__right">
-          <div className="ref-header__contact"><small>Thông tin liên hệ</small><strong>Đang cập nhật</strong></div>
-          <button className="ref-header__desktop-action" type="button" disabled title="Tài khoản sẽ mở khi có phân quyền"><Icon name="user" size={24}/><span>Tài khoản</span></button>
-          <button className="ref-header__desktop-action" type="button" disabled title="Giỏ hàng chưa mở"><Icon name="cart" size={24}/><span>Giỏ hàng</span></button>
+          <Link className="ref-header__dealer-cta" href="/lien-he#thong-tin-lien-he"
+            onNavigate={() => beginNavigation("/lien-he")}
+            aria-label="Liên hệ Futurebook để hỏi báo giá sỉ và hợp tác đại lý">
+            Liên hệ đại lý <Icon name="arrow" size={18}/>
+          </Link>
           <button className="ref-header__mobile-icon" type="button"
             aria-label={searchOpen ? "Đóng thông báo tìm kiếm" : "Mở thông báo tìm kiếm"}
             aria-expanded={searchOpen} aria-controls="ref-mobile-search"
             onClick={() => { setSearchOpen(!searchOpen); setMenuOpen(false); }}><Icon name="search" size={23}/></button>
-          <button className="ref-header__mobile-icon" type="button" disabled aria-label="Giỏ hàng chưa mở"><Icon name="cart" size={23}/></button>
           <button className="ref-header__mobile-icon" type="button" ref={menuButton}
             aria-label={menuOpen ? "Đóng danh mục điều hướng" : "Mở danh mục điều hướng"}
             aria-expanded={menuOpen} aria-controls="site-navigation"
@@ -88,16 +87,22 @@ export function SiteHeader() {
       </Container>
       <nav ref={menuPanel} id="site-navigation" className={"ref-navigation" + (menuOpen ? " ref-navigation--open" : "")} aria-label="Điều hướng chính">
         <Container className="ref-navigation__inner">
-          <Link className="ref-navigation__catalog" href="/san-pham" onNavigate={() => beginNavigation("/san-pham")} onClick={() => setMenuOpen(false)}><Icon name="menu" size={17}/> Danh mục sản phẩm <Icon name="down" size={15}/></Link>
           {desktopNavigation.map(item => {
-            const active = item.href === "/#home" ? pathname === "/" : pathname === item.href;
+            const active = item.href === "/#home" ? pathname === "/"
+              : item.href === "/san-pham" ? pathname === "/san-pham" || pathname.startsWith("/san-pham/") || pathname.startsWith("/danh-muc/")
+              : item.href === "/bang-tin" ? pathname === "/bang-tin" || pathname.startsWith("/tin-tuc") || pathname.startsWith("/khuyen-mai")
+              : item.href === "/lien-he" ? pathname === "/lien-he" || pathname === "/dai-ly"
+              : pathname === item.href;
             return <Link className={"ref-navigation__link" + (active ? " ref-navigation__link--active" : "")}
               key={item.label} href={item.href}
               prefetch={item.href === "/san-pham" || item.href === "/#home" ? null : false}
               onNavigate={() => beginNavigation(item.href)} onClick={() => setMenuOpen(false)}
               aria-current={active ? "page" : undefined}>{item.label}</Link>;
           })}
-          <AppDownloadMenuButton onOpen={() => setMenuOpen(false)} />
+          <Link className="ref-navigation__dealer-cta-mobile" href="/lien-he#thong-tin-lien-he"
+            onNavigate={() => beginNavigation("/lien-he")} onClick={() => setMenuOpen(false)}>
+            <Icon name="arrow" size={17}/> Hợp tác đại lý · Báo giá sỉ
+          </Link>
         </Container>
         <span className={"ref-navigation__progress" + (navigating ? " ref-navigation__progress--active" : "")} aria-hidden="true" />
       </nav>
