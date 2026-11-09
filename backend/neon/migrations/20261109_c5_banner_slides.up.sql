@@ -37,6 +37,13 @@ CREATE TABLE fbmn_catalog_private.cms_banner_slide_media (
 );
 CREATE INDEX cms_banner_slide_entry_idx ON fbmn_catalog_private.cms_banner_slide_media(entry_id,slide_no);
 
+-- Existing audit uses a strict action allowlist; extend it transactionally.
+ALTER TABLE fbmn_catalog_private.cms_entry_audit DROP CONSTRAINT cms_entry_audit_action_check;
+ALTER TABLE fbmn_catalog_private.cms_entry_audit
+ ADD CONSTRAINT cms_entry_audit_action_check CHECK (action IN (
+ 'create','update','publish','hide','media_upload',
+ 'banner_slide_upload','banner_slide_settings','banner_slide_remove'));
+
 REVOKE ALL ON fbmn_catalog_private.cms_banner_settings,
  fbmn_catalog_private.cms_banner_slide_media FROM PUBLIC;
 GRANT SELECT,INSERT,UPDATE ON fbmn_catalog_private.cms_banner_settings TO fbmn_admin_http_staging;
