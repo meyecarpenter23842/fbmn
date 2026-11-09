@@ -159,3 +159,22 @@ test("C5 published Banner rejects mutable settings with revision-safe 409",async
  assert.equal((await response.json()).error.code,"hide_before_edit");
  assert.equal(wrote,false);
 });
+
+test("C5 unfinished Hero assets do not block a Banner moved to a different slot",async()=>{
+ const {cmsPublishIssues}=await import("../apps/admin/app/cms-publish-readiness.ts");
+ const item={kind:"banner",title:"Banner Futurebook",slug:"banner-futurebook",
+ source_ref:"Đã duyệt",channel_targets:["public_web"],
+ placements:{public_web:"home.after_products"},has_desktop:true,has_mobile:true,
+ incomplete_slide_count:1};
+ assert.deepEqual(cmsPublishIssues(item).filter(x=>x.code==="slides"),[]);
+ assert.equal(cmsPublishIssues({...item,placements:{public_web:"home.hero"}})
+  .some(x=>x.code==="slides"),true);
+});
+test("C5 settings controls lock during save; inactive slide stays hidden under reduced motion",()=>{
+ const editor=read("apps/admin/app/cms-slide-editor.tsx");
+ const css=read("app/cms-public.css");
+ assert.match(editor,/disabled=\{disabled\|\|saving\}/);
+ assert.match(editor,/disabled=\{disabled\|\|saving\|\|settings\.slide_order/);
+ assert.match(css,/data-effect="slide"\] \.cms-hero-slide\{opacity:0/);
+ assert.match(css,/@media\(prefers-reduced-motion:reduce\)/);
+});
