@@ -41,7 +41,6 @@
 @keyframes fb-dl7c-next{from{transform:rotateY(0)}to{transform:rotateY(-180deg)}}
 @keyframes fb-dl7c-prev{from{transform:rotateY(0)}to{transform:rotateY(180deg)}}
 .fb-catalogue-toolbar{display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap;margin:25px auto 14px}
-.fb-catalogue-toolbar .fb-glass-button{background-color:var(--fb-glass-surface-fallback)}
 .fb-catalogue-status{text-align:center;font-size:13px;color:var(--color-primary-strong);margin:8px}
 .fb-catalogue-share-fallback{display:grid;gap:8px;max-width:540px;margin:12px auto;font-size:13px;font-weight:700}
 .fb-catalogue-share-fallback input{width:100%;min-height:var(--fb-field-height);padding:0 12px;border:1px solid var(--fb-glass-border-fallback);border-radius:var(--fb-control-radius)}
