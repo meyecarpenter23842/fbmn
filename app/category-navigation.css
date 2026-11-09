@@ -130,3 +130,13 @@
   .category-nav__link,
   .category-nav__link::after { transition: none; }
 }
+
+/* DL3 category rail footer belongs to this navigation style owner. */
+.ref-categories__all { display: flex; justify-content: flex-end; padding: 9px 3px 0; }
+.ref-categories__all a {
+  color: var(--color-primary-strong);
+  font-size: var(--fb-control-font-size);
+  font-weight: 800;
+  text-underline-offset: 3px;
+}
+.ref-categories__all a:focus-visible { outline: 3px solid var(--color-primary); outline-offset: 3px; }
