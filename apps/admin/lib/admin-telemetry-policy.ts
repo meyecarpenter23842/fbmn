@@ -4,7 +4,7 @@
  */
 export const ADMIN_TELEMETRY_SECTIONS = [
   "dashboard", "products", "structure", "pricing", "import-products",
-  "new-product", "media", "categories", "banners", "content",
+  "new-product", "media", "categories", "banners", "content", "home-layout",
   "customers", "accounts", "settings"
 ] as const;
 export type AdminTelemetrySection = typeof ADMIN_TELEMETRY_SECTIONS[number];
