@@ -204,3 +204,36 @@
  .cms-publish-preflight li{width:100%}
  .cms-publish-preflight li .fb-ui-button{width:100%;min-height:var(--fb-control-height-touch,44px)}
 }
+
+/* C5 Banner slide set: the CMS editor uses shared Futurebook controls. */
+.cms-slides-editor{margin:16px 0;border:1px solid var(--fb-ui-border,#e4d9eb);
+ border-radius:12px;padding:16px;background:rgba(250,247,253,.68)}
+.cms-slide-items{display:grid;gap:12px;margin:12px 0}
+.cms-slide-item{border:1px solid #e8dcef;border-radius:12px;padding:12px;
+ background:rgba(255,255,255,.9);min-width:0}
+.cms-slide-item-head{display:flex;align-items:center;justify-content:space-between;
+ flex-wrap:wrap;gap:10px;margin-bottom:10px;color:#392056}
+.cms-slide-actions{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.cms-slide-actions button[aria-pressed="true"]{color:#6d249e;border-color:#8654af;
+ background:#f4edfa}
+.cms-slide-item .cms-media-grid{margin:0}
+.cms-slide-add{width:100%;min-height:var(--fb-control-height-compact,36px);
+ border:1px dashed #b89bd0!important;background:rgba(244,237,250,.8)}
+.cms-motion-settings{border:1px solid #e7dbef;border-radius:10px;
+ margin:15px 0 0;padding:12px 14px;min-width:0}
+.cms-motion-settings legend{font-size:14px;font-weight:750;color:#452163;padding:0 7px}
+.cms-motion-settings>small{display:block;margin:10px 0 0;line-height:1.5;color:#70667a}
+.cms-motion-settings>.fb-ui-button{margin-top:12px}
+.cms-motion-switches{display:flex;gap:15px;flex-wrap:wrap;margin:4px 0 14px}
+.cms-motion-switches label{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:650}
+.cms-motion-switches input[type="checkbox"]{width:17px;height:17px;accent-color:#6d249e}
+@media(max-width:780px){
+ .cms-slides-editor{padding:12px}
+ .cms-slide-item{padding:10px}
+ .cms-slide-actions{width:100%}
+ .cms-slide-actions .fb-ui-button{min-height:var(--fb-control-height-touch,44px)}
+ .cms-slide-add{min-height:var(--fb-control-height-touch,44px)}
+}
+@media(prefers-reduced-motion:reduce){
+ .cms-slide-item,.cms-slide-actions button,.cms-motion-settings button{transition:none}
+}
