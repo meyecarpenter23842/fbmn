@@ -49,10 +49,11 @@ test("featured products remain a swipeable keyboard-accessible carousel", () => 
   assert.match(carousel, /aria-label="Trang sản phẩm tiếp theo"/);
 });
 
-test("cart/account stay disabled while authentication and ordering are unfinished", () => {
+test("DL1 mobile header hides dead commerce controls and exposes dealer contact", () => {
   const header = read("components/site-header.tsx");
-  assert.match(header, /type="button" disabled title="Giỏ hàng chưa mở"/);
-  assert.match(header, /Tài khoản sẽ mở khi có phân quyền/);
+  assert.doesNotMatch(header, /type="button" disabled title="Giỏ hàng chưa mở"/);
+  assert.doesNotMatch(header, /Tài khoản sẽ mở khi có phân quyền/);
+  assert.match(header, /ref-navigation__dealer-cta-mobile/);
   assert.match(header, /catalog-header-mobile-q/);
   assert.match(header, /action="\/san-pham" method="get"/);
 });
