@@ -226,7 +226,7 @@ export default function CmsSlideEditor({recordId,revision,disabled,pending,onSta
         <small className="cms-image-ratio-warning" role="note">
          {pending[key]?ratioNotices[key]:
           "Ảnh Desktop đang dọc/hẹp ("+stored?.width+" × "+stored?.height+"). Hero ngang sẽ thu nhỏ sản phẩm; nên thay artwork 16:9."}
-        </small>
+        </small>}
       </div>;
      })}
     </div>}
