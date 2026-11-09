@@ -19,12 +19,12 @@ export function CategoryNavigation({ categories }: { categories: HomeCategory[] 
           prefetch={false}
           aria-label={"Xem danh mục " + category.name}
         >
-          <span className="category-nav__art" aria-hidden="true">
+          <div className="category-nav__art" aria-hidden="true">
             {photo
               ? <CatalogProductImage src={photo} alt={media?.alt ?? category.name}
                   className="catalog-image-compact"/>
               : <span className="category-nav__empty-art">▤</span>}
-          </span>
+          </div>
           <span className="category-nav__copy">
             <strong>{category.name}</strong>
             <small>{category.productCount} sản phẩm</small>
