@@ -27,7 +27,7 @@ CREATE TABLE fbmn_catalog_private.cms_banner_slide_media (
  entry_id uuid NOT NULL REFERENCES fbmn_catalog_private.cms_entries(id) ON DELETE RESTRICT,
  slide_no smallint NOT NULL CHECK(slide_no BETWEEN 2 AND 5),
  device text NOT NULL CHECK(device IN ('desktop','mobile')),
- r2_key text NOT NULL UNIQUE CHECK(r2_key ~ '^cms/[0-9a-f-]{36}/public_web/(desktop|mobile)/[0-9a-f-]{36}\\.webp$'),
+ r2_key text NOT NULL UNIQUE CHECK(r2_key ~ '^cms/[0-9a-f-]{36}/public_web/(desktop|mobile)/[0-9a-f-]{36}\.webp$'),
  width integer NOT NULL CHECK(width BETWEEN 64 AND 6000),
  height integer NOT NULL CHECK(height BETWEEN 64 AND 6000),
  file_sha256 text NOT NULL CHECK(file_sha256 ~ '^[0-9a-f]{64}$'),
@@ -74,7 +74,7 @@ CREATE VIEW fbmn_public.v_cms_web_banner_slide_images WITH (security_barrier=tru
  FROM fbmn_catalog_private.cms_banner_slide_media m
  JOIN fbmn_public.v_cms_web_banner_slides s ON s.id=m.entry_id::text AND s.slide_no=m.slide_no
  WHERE m.device IN ('desktop','mobile')
- AND m.r2_key ~ '^cms/[0-9a-f-]{36}/public_web/(desktop|mobile)/[0-9a-f-]{36}\\.webp$';
+ AND m.r2_key ~ '^cms/[0-9a-f-]{36}/public_web/(desktop|mobile)/[0-9a-f-]{36}\.webp$';
 
 REVOKE ALL ON fbmn_public.v_cms_web_banner_slides,
  fbmn_public.v_cms_web_banner_slide_images FROM PUBLIC;
