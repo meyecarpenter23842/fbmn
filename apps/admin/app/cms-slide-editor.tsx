@@ -6,8 +6,9 @@ import {bearerToken,convertToWebP} from "./cms-media-editor";
 import AdminToast from "./admin-toast";
 
 type SlideAsset={slide_no:number;device:CmsDevice;width:number;height:number;updated_at:string};
-type Settings={enabled:boolean;autoplay:boolean;effect:"fade"|"slide"|"fade-slide";
+export type CmsSlideSettings={enabled:boolean;autoplay:boolean;effect:"fade"|"slide"|"fade-slide";
  interval_ms:number;duration_ms:number;slide_order:number[]};
+type Settings=CmsSlideSettings;
 type SlideResponse={revision:number;settings:Settings;images:SlideAsset[]};
 const DEFAULT:Settings={enabled:true,autoplay:true,effect:"fade-slide",
  interval_ms:7000,duration_ms:480,slide_order:[1,2,3,4,5]};
@@ -25,6 +26,13 @@ async function slidesApi<T>(action:string,method:"GET"|"POST",params?:string,bod
   throw Error(response.status===409?"Dữ liệu đã đổi hoặc Banner đang xuất bản. Tải lại trước khi sửa.":
    "Không lưu được Slide ("+(data.error?.code||response.status)+").");
  return data.data;
+}
+export async function saveCmsSlideSettings(id:string,revision:number,settings:CmsSlideSettings){
+ return slidesApi<{revision:number}>("slide-settings","POST",undefined,{
+  id,expectedRevision:revision,
+  enabled:settings.enabled,autoplay:settings.autoplay,effect:settings.effect,
+  intervalMs:settings.interval_ms,durationMs:settings.duration_ms,order:settings.slide_order
+ });
 }
 export async function uploadCmsSlide(id:string,revision:number,slide:number,device:CmsDevice,file:File){
  if(slide<2||slide>5||!Number.isInteger(slide))throw Error("Số Slide không hợp lệ");
@@ -70,19 +78,21 @@ export function CmsSlideImagePreview({recordId,revision,slide,device,pending}:{
   <span className="cms-media-placeholder">Chưa có ảnh Slide {slide}</span>;
 }
 export default function CmsSlideEditor({recordId,revision,disabled,pending,onStage,
- onRevision,onUpdated,previewSlide,onPreviewSlide}:{
+ onRevision,onUpdated,previewSlide,onPreviewSlide,settingsDraft,onSettingsDraft}:{
  recordId:string|null;revision:number;disabled:boolean;
  pending:CmsPendingImages;
  onStage:(slide:number,device:CmsDevice,file:File)=>void;
  onRevision:(revision:number)=>void;onUpdated:()=>void;
- previewSlide:number;onPreviewSlide:(slide:number)=>void
+ previewSlide:number;onPreviewSlide:(slide:number)=>void;
+ settingsDraft?:CmsSlideSettings|null;onSettingsDraft:(value:CmsSlideSettings|null)=>void
 }){
  const [assets,setAssets]=useState<SlideAsset[]>([]);
  const [added,setAdded]=useState<number[]>([]);
- const [settings,setSettings]=useState<Settings>(DEFAULT);
- const [settingsDirty,setSettingsDirty]=useState(false);
+ const [settings,setSettings]=useState<Settings>(()=>settingsDraft??DEFAULT);
+ const [settingsDirty,setSettingsDirty]=useState(Boolean(settingsDraft));
  const [saving,setSaving]=useState(false);
  const [error,setError]=useState(""),[notificationId,setNotificationId]=useState(0);
+ useEffect(()=>{if(settingsDraft===null)setSettingsDirty(false);},[settingsDraft]);
  useEffect(()=>{
   if(!recordId)return;
   let alive=true;
@@ -105,7 +115,7 @@ export default function CmsSlideEditor({recordId,revision,disabled,pending,onSta
  const slides=[...known].sort((a,b)=>
   settings.slide_order.indexOf(a)-settings.slide_order.indexOf(b));
  const canEdit=Boolean(recordId)&&!disabled&&!saving;
- const change=(patch:Partial<Settings>)=>{setSettings(prev=>({...prev,...patch}));setSettingsDirty(true);};
+ const change=(patch:Partial<Settings>)=>{const next={...settings,...patch};setSettings(next);setSettingsDirty(true);onSettingsDraft(next);};
  const orderMove=(slide:number,step:-1|1)=>{
   const current=settings.slide_order.indexOf(slide),next=current+step;
   if(next<0||next>=5)return;
@@ -116,12 +126,8 @@ export default function CmsSlideEditor({recordId,revision,disabled,pending,onSta
   if(!recordId||!canEdit)return;
   setSaving(true);setError("");
   try{
-   const result=await slidesApi<{revision:number}>("slide-settings","POST",undefined,{
-    id:recordId,expectedRevision:revision,
-    enabled:settings.enabled,autoplay:settings.autoplay,effect:settings.effect,
-    intervalMs:settings.interval_ms,durationMs:settings.duration_ms,order:settings.slide_order
-   });
-   setSettingsDirty(false);onRevision(result.revision);onUpdated();
+   const result=await saveCmsSlideSettings(recordId,revision,settings);
+   setSettingsDirty(false);onSettingsDraft(null);onRevision(result.revision);onUpdated();
   }catch(ex){setError(ex instanceof Error?ex.message:"Không lưu được motion.");setNotificationId(v=>v+1);}
   finally{setSaving(false);}
  };
