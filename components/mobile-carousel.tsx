@@ -43,7 +43,7 @@ export function MobileCarousel({ children, itemCount }: { children: ReactNode; i
   }, [syncPage]);
 
   return (
-    <div className="mobile-carousel" aria-label="Bộ sưu tập sản phẩm minh họa">
+    <div className="mobile-carousel" aria-label="Danh sách sản phẩm công khai">
       <div className="products-grid" ref={rail} onScroll={syncPage}
         role="region" aria-roledescription="carousel" aria-label="Danh sách sản phẩm, vuốt ngang để xem thêm"
         tabIndex={0}>

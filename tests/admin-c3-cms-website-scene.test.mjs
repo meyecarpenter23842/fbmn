@@ -32,7 +32,8 @@ test("C3 maps every public_web slot exactly, no native App slot and no fake live
 test("C3 keeps real homepage section order and correct category/layout sources",()=>{
  assert.match(home,/className="ref-hero"/);
  assert.match(home,/id="collections" className="ref-featured"/);
- assert.match(home,/className="ref-promos"/);
+ assert.doesNotMatch(home,/className="ref-promos"/);
+ assert.match(home,/CmsBannerSlot items=\{cms\} slot="home\.after_products"/);
  assert.match(scene,/className="cms-site-hero"/);
  assert.match(scene,/className="cms-site-categories"/);
  assert.match(scene,/className="cms-site-featured"/);

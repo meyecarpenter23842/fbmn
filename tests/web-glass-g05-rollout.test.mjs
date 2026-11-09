@@ -54,7 +54,7 @@ test("G05 home, catalogue, editorial and footer share glass styling but retain t
   for (const route of ["app/san-pham/page.tsx","app/danh-muc/[slug]/page.tsx"]) {
     assert.match(read(route), /<CatalogShell>/, route);
   }
-  assert.match(home, /<GlassCard hover className="fb-glass-home-product"/);
+  assert.match(read("components/home-product-card.tsx"), /<GlassCard hover linkCard className="fb-glass-home-product"/);
   assert.doesNotMatch(home, /<Card className="ref-product-card"/);
   assert.match(listing, /<ProductCard key=\{product\.id\} product=\{product\} glass\/>/);
   assert.match(detail, /const glass=true/);
@@ -74,8 +74,8 @@ test("G05 does not fabricate commerce capabilities, claims, prices or product ph
   assert.doesNotMatch(header, /type="button" disabled title="Giỏ hàng chưa mở"/);
   assert.match(header, /ref-header__dealer-cta/);
   assert.match(header, /aria-controls="site-navigation"/);
-  assert.match(home, /MẪU GIAO DIỆN/);
-  assert.match(home, /Liên hệ báo giá/);
+  assert.doesNotMatch(home, /MẪU GIAO DIỆN|previewProducts|ref-demo-badge/);
+  assert.match(home, /getPublicCatalog\(\)/);
   assert.match(detail, /getPublishedProductImageUrl\(media\.r2Key,process\.env\.NEXT_PUBLIC_MEDIA_BASE_URL\)/);
   assert.match(detail, /getProductBySlug\(catalog, slug\)/);
   assert.match(detail, /getPublicCatalog\(\)/);

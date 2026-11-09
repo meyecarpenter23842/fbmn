@@ -1,12 +1,14 @@
 import Link from "next/link";
+import { Suspense } from "react";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { CategoryNavigation } from "@/components/category-navigation";
 import { MobileCarousel } from "@/components/mobile-carousel";
 import { NotebookArt } from "@/components/notebook-art";
 import { Container, Icon } from "@/components/ui";
-import { GlassCard } from "@/components/glass-ui";
-import { previewProducts } from "@/lib/ui-preview";
+import { getPublicCatalog } from "@/lib/catalog/adapter";
+import { selectHomeCatalog } from "@/lib/catalog/home";
+import { HomeProductCard } from "@/components/home-product-card";
 import { VerifiedMediaImage } from "@/components/verified-media-image";
 import { approvedSiteMedia } from "@/lib/media/approved-site-media";
 import {getOptionalPublicCms} from "@/lib/content/cms";
@@ -57,53 +59,19 @@ export default async function HomePage() {
         </section>
 
         <Container>
-          <section id="categories" className="ref-categories" aria-label="Danh mục Futurebook">
-            <CategoryNavigation />
-          </section>
-
-          <section id="collections" className="ref-featured" aria-labelledby="featured-heading">
-            <div className="ref-featured__intro" id="about">
-              <span className="ref-featured__crown" aria-hidden="true">♛</span>
-              <h2 id="featured-heading">Sản phẩm nổi bật</h2>
-              <p>Các mẫu được minh họa theo bố cục thiết kế. Sản phẩm và thông số chính thức đang cập nhật.</p>
-              <a className="ref-cta ref-cta--small" href="#categories">Xem danh mục <Icon name="arrow" size={17}/></a>
+          <Suspense fallback={<section id="categories" className="ref-categories" aria-label="Đang tải danh mục">
+            <div className="ref-catalog-state" role="status" aria-busy="true">
+              Đang tải danh mục và sản phẩm đã công khai…
             </div>
-            <MobileCarousel itemCount={previewProducts.length}>
-              {previewProducts.map(product => (
-                <GlassCard hover className="fb-glass-home-product" key={product.title}>
-                  <span className="ref-demo-badge">MẪU GIAO DIỆN</span>
-                  <div className="ref-product-card__image"><NotebookArt cover={product.cover} title="FUTUREBOOK"/></div>
-                  <div className="ref-product-card__copy">
-                    <h3>{product.title}</h3>
-                    <p>{product.group}</p>
-                    <strong>Liên hệ báo giá</strong>
-                    <div className="ref-product-card__actions">
-                      <button type="button" disabled title="Giỏ hàng chưa mở" aria-label={"Chưa mở giỏ hàng cho " + product.title}><Icon name="cart" size={17}/></button>
-                      <Link href="/lien-he">Xem thông tin</Link>
-                    </div>
-                  </div>
-                </GlassCard>
-              ))}
-            </MobileCarousel>
-          </section>
-          <p className="ref-preview-note">* Hình tập vở, thẻ sản phẩm và thứ tự hiển thị chỉ là mẫu UI, không phải catalogue, bảng giá hoặc sản phẩm bán chạy đã xác minh.</p>
+          </section>}>
+            <HomePublicCatalogue />
+          </Suspense>
 
           <CmsBannerSlot items={cms} slot="home.after_products"/>
           <CmsFeaturedSlot items={cms} slot="home.news_featured"/>
           <CmsFeaturedSlot items={cms} slot="home.promotion_featured"/>
-          <section className="ref-promos" aria-label="Khám phá nhóm sản phẩm">
-            <div className="ref-promo ref-promo--a4">
-              <div><h2>Vở A4</h2><p>Không gian học tập và làm việc</p><a href="#categories">Xem danh mục <Icon name="arrow" size={16}/></a></div>
-              <div className="ref-promo__art" aria-hidden="true"><NotebookArt cover="rose" title="A4"/><NotebookArt cover="sky" title="FBMN"/></div>
-            </div>
-            <div className="ref-promo ref-promo--b5">
-              <div><h2>Vở B5</h2><p>Nhỏ gọn · Tiện lợi</p><a href="#categories">Xem danh mục <Icon name="arrow" size={16}/></a></div>
-              <div className="ref-promo__art" aria-hidden="true"><NotebookArt cover="kraft" title="B5"/><NotebookArt cover="lime" title="FBMN"/></div>
-            </div>
-          </section>
-
           <section className="ref-trust" id="agency" aria-label="Thông tin hỗ trợ khách hàng và đại lý">
-            <div><Icon name="package" size={28}/><span><strong>Danh mục sản phẩm</strong><small>Đang được xác minh</small></span></div>
+            <div><Icon name="package" size={28}/><span><strong>Danh mục sản phẩm</strong><small>Dữ liệu công khai đã duyệt</small></span></div>
             <div><Icon name="shield" size={28}/><span><strong>Thông tin rõ ràng</strong><small>Nguồn catalogue chính thức</small></span></div>
             <div><Icon name="book" size={28}/><span><strong>Hỗ trợ đại lý</strong><small>Chính sách đang cập nhật</small></span></div>
             <div><Icon name="heart" size={28}/><span><strong>Kết nối Futurebook</strong><small>Xem trang liên hệ</small></span></div>
@@ -113,4 +81,56 @@ export default async function HomePage() {
       <SiteFooter />
     </>
   );
+}
+
+/**
+ * DL3: the live catalogue may fail independently of the CMS Hero.
+ * Never silently turn an API outage into fabricated products or an empty
+ * "published" catalogue. React Suspense supplies the loading state.
+ */
+async function HomePublicCatalogue() {
+  let catalog;
+  try {
+    catalog = await getPublicCatalog();
+  } catch {
+    console.error("[Futurebook catalogue] homepage public catalogue unavailable");
+    return <section id="categories" className="ref-categories" aria-label="Trạng thái danh mục">
+      <div className="ref-catalog-state" role="alert">
+        <strong>Chưa thể tải danh mục lúc này</strong>
+        <p>Dữ liệu sản phẩm tạm thời không khả dụng. Anh/chị có thể thử mở trang Sản phẩm sau.</p>
+        <Link href="/san-pham">Đến trang Sản phẩm</Link>
+      </div>
+    </section>;
+  }
+
+  const { categories, products } = selectHomeCatalog(catalog);
+  if (!products.length) return <section id="categories" className="ref-categories" aria-label="Trạng thái danh mục">
+    <div className="ref-catalog-state" role="status">
+      <strong>Danh mục sản phẩm đang được cập nhật</strong>
+      <p>Hiện chưa có sản phẩm đủ điều kiện công khai. Trang chủ không hiển thị mẫu hoặc SKU minh họa.</p>
+      <Link href="/san-pham">Xem trang Sản phẩm</Link>
+    </div>
+  </section>;
+
+  return <>
+    <section id="categories" className="ref-categories" aria-label="Danh mục Futurebook đã công khai">
+      <h2 className="sr-only">Danh mục sản phẩm</h2>
+      <CategoryNavigation categories={categories} />
+      <div className="ref-categories__all"><Link href="/san-pham">Xem tất cả danh mục</Link></div>
+    </section>
+
+    <section id="collections" className="ref-featured" aria-labelledby="featured-heading">
+      <div className="ref-featured__intro" id="about">
+        <span className="ref-featured__crown" aria-hidden="true">♛</span>
+        <h2 id="featured-heading">Sản phẩm đã công khai</h2>
+        <p>Các sản phẩm được chọn theo thứ tự danh mục, không phải xếp hạng bán chạy. Xem chi tiết để chọn mã hàng và quy cách.</p>
+        <Link className="ref-cta ref-cta--small" href="/san-pham">
+          Xem toàn bộ sản phẩm <Icon name="arrow" size={17}/>
+        </Link>
+      </div>
+      <MobileCarousel itemCount={products.length}>
+        {products.map(product => <HomeProductCard key={product.id} product={product}/>)}
+      </MobileCarousel>
+    </section>
+  </>;
 }

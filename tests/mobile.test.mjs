@@ -31,10 +31,10 @@ test("category navigation has an image for each group and mobile scroll affordan
   const home = read("app/page.tsx");
   const nav = read("components/category-navigation.tsx");
   const styles = read("app/category-navigation.css");
-  assert.match(home, /<CategoryNavigation\s*\/>/);
+  assert.match(home, /<CategoryNavigation categories=\{categories\} \/>/);
   assert.match(nav, /categories\.map/);
-  assert.match(nav, /<NotebookArt cover=\{category\.kind\}/);
-  assert.match(nav, /<StationeryArt/);
+  assert.match(nav, /<CatalogProductImage/);
+  assert.match(nav, /category\.representativeMedia/);
   assert.match(styles, /overflow-x:\s*auto/);
   assert.match(styles, /scroll-snap-type:\s*x mandatory/);
   assert.match(styles, /prefers-reduced-motion:\s*reduce/);

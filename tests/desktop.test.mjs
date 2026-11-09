@@ -5,14 +5,15 @@ const read = file => readFileSync(new URL("../" + file, import.meta.url), "utf8"
 
 test("rebaselined desktop sections follow the new approved screenshot", () => {
   const page = read("app/page.tsx");
-  const order = ["ref-hero", "ref-categories", "ref-featured", "ref-promos", "ref-trust", "      <SiteFooter />"];
+  const order = ["ref-hero", "<Suspense fallback=", "home.after_products", "ref-trust", "      <SiteFooter />"];
   const offsets = order.map(s => page.indexOf(s));
   assert.ok(offsets.every(n => n >= 0), "Missing required desktop section");
   assert.deepEqual([...offsets].sort((a,b) => a-b), offsets);
   assert.match(page, /VỞ VIẾT/);
   assert.match(page, /FUTUREBOOK/);
-  assert.match(page, /Vở A4/);
-  assert.match(page, /Vở B5/);
+  assert.match(page, /getPublicCatalog\(\)/);
+  assert.match(page, /HomeProductCard/);
+  assert.ok(page.indexOf('id="categories" className="ref-categories"') < page.indexOf('id="collections" className="ref-featured"'));
 });
 
 test("DL1 desktop main nav has six links and approved purple theme", () => {
@@ -33,9 +34,9 @@ test("mockup phone, price, code and popularity labels are not offered as true da
   const source = read("app/page.tsx") + read("lib/ui-preview.ts") + read("components/site-header.tsx");
   assert.doesNotMatch(source, /19\.500|28\.500|14\.500|32\.500|M483|M494|M885|M439|0901\.567\.890/);
   assert.doesNotMatch(source, />Bán chạy<|>Mới Mở<|>Sản phẩm chính hãng</);
-  assert.match(source, /MẪU UI|MẪU GIAO DIỆN/);
-  assert.match(source, /Liên hệ báo giá/);
-  assert.match(source, /đang cập nhật|đang hoàn thiện/i);
+  assert.doesNotMatch(read("app/page.tsx"), /MẪU GIAO DIỆN|previewProducts|ref-demo-badge/);
+  assert.match(read("app/page.tsx"), /chưa có sản phẩm đủ điều kiện công khai/i);
+  assert.match(read("components/home-product-card.tsx"), /CatalogProductImage/);
 });
 
 test("unsupported search, cart and account actions remain disabled", () => {
@@ -45,7 +46,7 @@ test("unsupported search, cart and account actions remain disabled", () => {
   assert.match(header, /type="search" name="q"/);
   assert.doesNotMatch(header, /type="button" disabled title="Giỏ hàng chưa mở"/);
   assert.match(header, /ref-header__dealer-cta/);
-  assert.match(home, /type="button" disabled title="Giỏ hàng chưa mở"/);
+  assert.doesNotMatch(home, /type="button" disabled title="Giỏ hàng chưa mở"/);
   assert.match(home, /href="#categories"/);
   assert.match(home, /id="categories"/);
 });
