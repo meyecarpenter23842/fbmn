@@ -154,3 +154,6 @@ a.site-footer__social-icon:focus-visible { outline: 3px solid #fff; outline-offs
   .site-footer__social-icon { transition: none; }
   a.site-footer__social-icon:hover { transform: none; }
 }
+
+/* DL1: App discovery is a secondary footer control; main navigation has only six links. */
+.site-footer__links .ref-navigation__download { margin-left:0;align-self:flex-start; }
