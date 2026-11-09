@@ -136,7 +136,7 @@ test("C5 settings mutation locks revision, audits and validates order before wri
  assert.equal(result.status,200);
  assert.equal((await result.json()).data.revision,4);
  assert.equal(queries.at(-1).sql,"COMMIT");
- assert.ok(queries.some(x=>x.sql.includes("banner_slide_settings")));
+ assert.ok(queries.some(x=>x.sql.includes("cms_banner_settings")));
  assert.ok(queries.some(x=>x.sql.includes("cms_entry_audit")));
 });
 test("C5 published Banner rejects mutable settings with revision-safe 409",async()=>{
