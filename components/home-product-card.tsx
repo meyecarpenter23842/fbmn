@@ -5,7 +5,7 @@ import { CatalogProductImage } from "@/components/catalog-product-image";
 import { GlassCard } from "@/components/glass-ui";
 
 /** One accessible card-link to an already published product family (DL5 is
- * responsible for any future SKU-per-card mode). No checkout, prices or mock art. */
+ * responsible for any future SKU-per-card mode). No fake price or mock art. */
 export function HomeProductCard({ product }: { product: PublicProduct }) {
   const media = product.media[0];
   const photo = media
