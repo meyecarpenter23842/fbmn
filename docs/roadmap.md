@@ -1,4 +1,4 @@
-# FUTUREBOOK MIỀN NAM — ROADMAP DUY NHẤT (v1.3, Website-first, Admin theo kênh)
+# FUTUREBOOK MIỀN NAM — ROADMAP DUY NHẤT (v1.4, Website đại lý & Admin theo kênh)
 
 **Chốt module sản phẩm:** 01/11/2026; **cập nhật IA Admin theo kênh:** 08/11/2026 (giữ lịch sử nguồn 29/10). **Chủ sở hữu scope:** Futurebook Miền Nam.  
 **Đây là tài liệu kế hoạch DUY NHẤT.** GitHub [issue #1](https://github.com/alibaba240185/fbmn/issues/1) chỉ là **mục lục/trạng thái**, không là một kế hoạch thứ hai. Các issue thực thi phải dẫn về đây. `docs/admin-console-roadmap.md` được giữ như tài liệu tham khảo kỹ thuật, không còn roadmap độc lập.
@@ -63,6 +63,53 @@ Owner chốt hai ảnh tham chiếu Premium Purple Glass: **glassmorphism trong 
 | **C6 — Mở rộng theo App** | Lặp lại mô hình IA và preview **riêng** cho Dealer/Consumer khi đã có UI/API nghiệp vụ và quyền | Phụ thuộc ADM-04 #40 + quyết định thiết kế từng app; không tạo màn App giả trong C1–C5 |
 
 **Tình trạng làm gốc ngày 08/11/2026 (không phải xác nhận UAT):** G07.2 Website đã merge/deploy tại `a8f76bb` nhưng UAT trực quan còn mở; Admin CMS #20 đã có code CRUD, placement, upload ảnh responsive/preview tại Admin nhưng **chưa xác nhận public CMS renderer và luồng xuất bản hoàn chỉnh**. Khác biệt code/merge/deploy/UAT phải báo riêng. Ưu tiên hoàn tất UAT G07.2/R2 song song với chuẩn bị C1; **không mở C1 trước khi C0 được merge**.
+
+
+## 0.2. QUYẾT ĐỊNH OWNER 09/11/2026 — WEBSITE FBMN THEO HƯỚNG KHÁCH ĐẠI LÝ (LÀM KẾ HOẠCH TRƯỚC)
+
+**Đây là cập nhật kế hoạch DUY NHẤT, không phải roadmap thứ hai.** Thay đổi thông tin điều hướng và trình bày Website chỉ theo phạm vi Owner yêu cầu; ngoại lệ mới đối với những đoạn “giữ menu/bố cục” của G05/G07 và Website Design System 08/11. Các hợp đồng còn lại giữ nguyên. **PR DL0 chỉ sửa `docs/roadmap.md`: chưa sửa UI, Admin, API, Worker, DB hoặc deploy.** Dùng issue hiện có: Web/content/contact [#9](https://github.com/alibaba240185/fbmn/issues/9), visual [#24](https://github.com/alibaba240185/fbmn/issues/24), SKU/catalogue [#19](https://github.com/alibaba240185/fbmn/issues/19), Admin [#41](https://github.com/alibaba240185/fbmn/issues/41), CMS [#20](https://github.com/alibaba240185/fbmn/issues/20), quality [#12](https://github.com/alibaba240185/fbmn/issues/12), release [#13](https://github.com/alibaba240185/fbmn/issues/13). Không tạo issue/roadmap trùng.
+
+### Mục tiêu, menu và nguyên tắc
+
+**Khách ưu tiên:** đại lý, nhà phân phối, nhà sách, khách đặt gia công. Hành trình chính: **xem mẫu → chọn danh mục/SKU và quy cách → xem/tải Catalogue chính thức → gửi nhu cầu báo giá hoặc hợp tác**. Không thiết kế Website như sàn bán lẻ và không coi giỏ hàng/checkout chưa hoạt động là CTA chính.
+
+**Menu Website theo đúng thứ tự Owner chốt:** **Trang chủ – Sản phẩm – Gia công – Bảng tin – Catalogue – Liên hệ**.
+
+- **Trang chủ:** Hero CMS nhiều Slide/motion giữ nguyên; lấy danh mục và sản phẩm thật đã phát hành thay vì card minh họa; có CTA liên hệ/báo giá sỉ/đăng ký đại lý dẫn tới luồng hoạt động thật.
+- **Sản phẩm:** danh mục nhiều cấp, tìm tên/SKU, lọc quy cách, mẫu bìa rõ, trang chi tiết và chọn biến thể theo mã công ty. Mỗi sản phẩm độc lập trong danh mục là một card; nếu gom nhiều SKU vào một `family`, **mặc định chỉ một card và chọn biến thể bên trong**. Muốn bung mỗi SKU thành card phải thực hiện DL5, **không báo đã có sẵn**.
+- **Gia công:** trang giới thiệu và form nhận yêu cầu gia công. Phạm vi dịch vụ, khổ, chất liệu, in riêng, MOQ, tiến độ và năng lực chỉ công bố khi Owner có thông tin xác minh; không tự tạo cam kết thương mại.
+- **Bảng tin:** hợp nhất điều hướng Tin tức/Khuyến mãi vào một trang, phân loại vẫn rõ và giữ CMS/publication, permalink/SEO cũ.
+- **Catalogue:** danh sách tài liệu PDF đã được Owner phê duyệt, theo nhóm hàng/phiên bản/ngày cập nhật; xem/tải thật, không tạo PDF giả hoặc đưa bảng giá NET ra công khai. **Catalogue PDF khác catalogue dữ liệu SKU**.
+- **Liên hệ:** thông tin thật, form đại lý/yêu cầu báo giá/gia công đến đầu nhận đã xác minh; không bịa số điện thoại, Zalo, địa chỉ. Giữ tương thích URL cũ `/gioi-thieu`, `/khuyen-mai`, `/tin-tuc`, `/dai-ly` qua redirect/đường dẫn hợp lệ có kiểm SEO.
+- **Giữ nguyên** logo, tone tím–kem Premium Purple Glass, lớp nền R2, CMS C4/C5 Banner/motion, SKU thực (bao gồm số 0 đầu), nhóm family, R2 ảnh, backend dùng chung, quyền Owner/public, và bảng giá private. Website `public_web` **không được trả NET, tồn kho nội bộ, giá đại lý/chính sách hợp đồng hay PII**. Không dùng ảnh AI/mockup làm sản phẩm công khai.
+
+**Hiện trạng kiểm từ mã ngày 09/11/2026:** `components/site-header.tsx` còn 7 menu cũ; `app/page.tsx` vẫn dùng `previewProducts` và danh mục/thẻ minh họa. `app/san-pham/page.tsx` và `app/danh-muc/[slug]/page.tsx` đã dùng `getPublicCatalog()` và `CatalogListing` nhưng không đồng nghĩa có chế độ một card cho mỗi SKU. Cần kiểm tra logic/family/ảnh/quyền trước mỗi PR.
+
+**Quy tắc bố cục sản phẩm:**
+1. `category` (danh mục) ≠ `family` (nhóm hiển thị) ≠ `SKU` (mã hàng công ty); sắp xếp danh mục trên Trang chủ **không** làm đổi SKU hoặc family. Ảnh phụ của cùng SKU **không** phải SKU mới.
+2. Card phải ưu tiên nhìn rõ bìa, hình ảnh chiếm mục tiêu khoảng **70–75% vùng card**, hạn chế padding và bỏ scale cứng khiến ảnh nhỏ. Ưu tiên `object-fit:contain` và ảnh thật đã cắt khoảng trống hợp lý; không méo, không cắt bìa, thiếu ảnh dùng placeholder trung tính. Tên/SKU/quy cách/đóng gói chỉ hiển thị khi có dữ liệu thật.
+3. Desktop mục tiêu **Trang chủ 4 card/hàng**, **danh mục 3 card/hàng nếu có bộ lọc bên trái**. Mobile phải nghiệm thu 390/360px; thử hai cột nếu đủ chỗ cho SKU và tên, nếu không giữ card ngang một cột theo G07. **Không tự đảo G07 mobile trước khi Owner duyệt ảnh thực.**
+4. Admin `Website Futurebook → Trang chủ & bố cục` cần cho chọn danh mục công khai, thứ tự, số card và nhóm nổi bật; `Danh mục & hiển thị sản phẩm` cần chọn mode `family` (mặc định) hoặc `sku` (chỉ khi DL5 sẵn sàng). Có preview Desktop/Mobile, quyền, version/audit và public API thật; **không làm nút cấu hình giả**.
+5. Mode `sku`: mỗi SKU đã xuất bản được một card đúng ảnh/thông số và link chọn SKU; không nhân bản records, không sinh mã theo mẫu bìa; cần kiểm filter, pagination, canonical/SEO, ảnh thiếu và quyền công khai.
+
+### Lộ trình từng PR — **DL0 trước mọi thay đổi runtime**
+
+| Thứ tự | Gói / phạm vi | Điều kiện hoàn thành |
+|---|---|---|
+| **DL0 — Cập nhật roadmap** | Chỉ `docs/roadmap.md`, chốt 6 menu, dữ liệu, 7 hạng mục, thứ tự, giới hạn và gate. | PR docs-only → CI/Codex sạch → squash merge repo phụ → đối chiếu/fast-forward repo chính. **Không deploy**. |
+| **DL1 — Menu và CTA đại lý** | 6 menu, search SKU/tên, CTA liên hệ/báo giá sỉ, responsive, redirect/SEO URL cũ. | Menu đúng desktop/mobile, keyboard/focus, link không gãy, tone và Hero không đổi; Owner nghiệm thu rồi mới DL2. |
+| **DL2 — Thẻ sản phẩm ảnh lớn** | Dùng component/style owner chung cho home/category/related; tăng khung ảnh, giảm đệm, giữ tên, SKU/quy cách. | So sánh ảnh thật 1440/1280/768/390/360; không crop/méo bìa, không tràn chữ, placeholder rõ; không vô ý phá G07. |
+| **DL3 — Trang chủ dữ liệu thật** | Thay `previewProducts`/danh mục minh họa bằng catalogue `public_web` đã duyệt, giữ Hero và slot CMS, có trạng thái empty/loading/error. | Danh mục/sản phẩm thay đổi theo publish không cần code deploy; không hardcode SKU/giá/ảnh và không lộ NET. |
+| **DL4 — Admin cấu hình bố cục** | Chọn danh mục nổi bật, thứ tự section/card, số lượng hiển thị, preview desktop/mobile; settings/API/version/audit. | Admin thay đổi → Website nhận đúng; kiểm quyền, fallback, reset/sort và test dữ liệu thật; không đổi SKU. |
+| **DL5 — Danh mục theo nhóm hoặc SKU** | Mở `family|sku` mode trong danh mục/Admin, ánh xạ mỗi SKU công ty và ảnh đúng, mặc định family. | Kiểm 1 nhóm nhiều SKU, 1 SKU nhiều ảnh, SEO, lọc/phân trang, đổi mode không đổi dữ liệu gốc. |
+| **DL6 — Gia công** | Trang dịch vụ đã xác minh + form yêu cầu gia công/báo giá đến đầu nhận thật. | Có nguồn cho năng lực/MOQ/quy cách; test gửi thành công/lỗi, quyền dữ liệu, chống spam; chưa có thông tin thì để trạng thái chờ, không bịa. |
+| **DL7 — Bảng tin và Catalogue** | Trang tin/khuyến mãi hợp nhất có lọc; kho PDF được duyệt và xem/tải; nối CMS/Admin khi có backend thực. | Giữ URL cũ/SEO, không hiện tài liệu nháp, không lộ key R2/giá NET, mobile xem/tải được, có file thật mới bật. |
+| **DL8 — Regression và nghiệm thu** | Kiểm toàn luồng đại lý, performance ảnh, mobile/Chrome/Safari, SEO, a11y, CMS Hero, contact, rollback. | CI/Codex mỗi PR + UAT bằng trình duyệt thật và Owner xác nhận; HTTP 200/CI xanh không thay thế UAT. |
+
+**Quy trình bắt buộc cho DL1–DL8:** đọc `AGENTS.md`, UI contract, roadmap và hiện trạng hai repo → branch phát triển `meyecarpenter23842/fbmn` → PR, CI, Codex review sạch, squash merge → fetch/đối soát `origin/main` và `upstream/main`, fast-forward repo chính `alibaba240185/fbmn` (không force push) → xác minh commit/tree → **chỉ migration/deploy production theo lệnh Owner cho từng phạm vi** → kiểm tra thực tế và bàn giao SHA/CI/review/UAT. Không dùng preview nếu Owner không yêu cầu; **CI repo phụ không được tính thay CI repo chính**. Một PR/gói, không gộp toàn bộ vào một PR khổng lồ. DL0 được duyệt **không** đồng nghĩa tự động duyệt deploy DL1–DL8.
+
+**Đo hiệu quả sau khi có tracking thật:** số lượt xem danh mục/chi tiết SKU, lượt xem/tải Catalogue, lead đại lý và yêu cầu gia công hợp lệ. Không tự đặt KPI hoặc báo cáo số liệu khi chưa đo.
+
 
 ---
 
