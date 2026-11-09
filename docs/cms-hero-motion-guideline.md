@@ -53,3 +53,12 @@ Kiểm tra thật tại 1440 / 1280 / 768 / 390 / 360 và Chrome/Safari; so sán
 **Giới hạn và bảo vệ:** Mỗi Slide là một cụm hình đã dàn trang, **không** phải animation từng sản phẩm/layer riêng. Ảnh R2 private và chỉ xuất qua image proxy với `id + device + slide` 1–5, kiểm lại published/approved/time bằng public SQL view mỗi lần. Banner chưa phát hành và slide thiếu cặp ảnh không hiển thị. Với nhiều Banner cùng Hero, carousel vẫn giới hạn tối đa năm slide đã duyệt mỗi lần render. `prefers-reduced-motion` luôn vô hiệu hóa tự phát và transition.
 
 **Release:** migration C5 tạo bảng riêng `cms_banner_settings` và `cms_banner_slide_media`, không sửa hay xóa `cms_entry_media` hiện hành; Public Worker, Admin Worker, Website và Admin phải cập nhật đồng bộ. C5 không thay SKU, NET, bảng giá, quyền ngoài Owner hay dữ liệu CMS cũ.
+
+## C5.1 — Chỉ báo Slide và chuẩn artwork ngang (09/11/2026)
+
+- Bỏ bộ đếm `‹ 2/2 ›` nổi trong góc Hero. Khi có từ hai Slide, dùng **chấm điều hướng nhỏ** căn giữa mép dưới, mỗi chấm vẫn có vùng nhấn ≥36px desktop và ≥44px mobile, có `aria-label`, `aria-pressed`, bàn phím và focus rõ ràng. Không có nút/bộ đếm khi chỉ một Slide.
+- **Desktop Hero:** ưu tiên artwork ngang **16:9** (ví dụ 1600×900, 1920×1080). Ảnh có tỷ lệ **nhỏ hơn 1.35:1** được cảnh báo mềm khi chọn và sau khi lưu trong Admin; không chặn vì có thể là bố cục đặc biệt cần chủ ý.
+- **Mobile Hero:** dùng asset riêng, kiểm với màn 360–390px để không đè chữ. Không đảo nhầm ảnh dọc vào Desktop. Sản phẩm phải chiếm phần lớn **diện tích ảnh hữu ích**, không chỉ nằm giữa một khung ảnh có nền trong suốt quá rộng.
+- `object-fit:contain` giữ nguyên để **không cắt/méo sản phẩm**. Do đó hai artwork có tỷ lệ khung khác nhau, hoặc có khoảng trống alpha khác nhau, sẽ có **kích thước sản phẩm nhìn thấy khác nhau** dù dung lượng/độ phân giải lớn hơn. Đây là lỗi chuẩn bị asset, không được giải quyết bằng `object-fit:cover` bừa bãi.
+- Căn khung sản phẩm đồng nhất trong từng file WebP, bỏ khoảng trống transparent dư thừa, giữ cùng mức phóng đại và chân sản phẩm. Ảnh dọc đã xuất bản phải được Owner thay bằng artwork ngang đã duyệt; **không tự sửa hoặc thay ảnh production**.
+

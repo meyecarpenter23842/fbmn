@@ -32,8 +32,6 @@ export default function CmsHeroCarousel({items}:{items:PublicCmsItem[]}){
   return ()=>window.clearInterval(timer);
  },[slides.length,index,current?.motion.enabled,current?.motion.autoplay,current?.motion.intervalMs]);
  if(!current)return null;
- const move=(direction:-1|1)=>setActive(previous=>
-  (previous+direction+slides.length)%slides.length);
  const style={"--cms-hero-duration":current.motion.enabled?
   current.motion.durationMs+"ms":"0ms"} as CSSProperties;
  return <div className="cms-hero-carousel" role="region"
@@ -60,10 +58,14 @@ export default function CmsHeroCarousel({items}:{items:PublicCmsItem[]}){
     </picture>
    </div>)}
   </div>
-  {slides.length>1&&<div className="cms-hero-controls" aria-label="Điều khiển ảnh Hero">
-   <button type="button" onClick={()=>move(-1)} aria-label="Ảnh trước">‹</button>
-   <span aria-live="off">{index+1} / {slides.length}</span>
-   <button type="button" onClick={()=>move(1)} aria-label="Ảnh tiếp theo">›</button>
+  {slides.length>1&&<div className="cms-hero-controls" role="group" aria-label="Chọn ảnh Hero">
+   {slides.map((item,i)=><button key={item.id+":"+item.slide} type="button"
+    className={"cms-hero-dot"+(i===index?" is-active":"")}
+    aria-label={"Xem Slide "+(i+1)+" / "+slides.length}
+    aria-pressed={i===index}
+    onClick={()=>setActive(i)}>
+     <span aria-hidden="true"/>
+    </button>)}
   </div>}
  </div>;
 }

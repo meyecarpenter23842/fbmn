@@ -42,18 +42,23 @@
  padding:22px 5% 44px;box-sizing:border-box;overflow:hidden}
 .cms-hero-image{display:block;width:100%;height:100%;max-height:430px;
  object-fit:contain;object-position:center;mix-blend-mode:multiply}
-.cms-hero-controls{position:absolute;z-index:3;right:18px;bottom:7px;display:flex;
- align-items:center;gap:8px;border-radius:12px;padding:3px 6px;
- color:var(--color-primary-strong,#431078);background:rgba(255,255,255,.65);
- border:1px solid rgba(255,255,255,.75);backdrop-filter:blur(12px)}
-.cms-hero-controls button{min-width:var(--fb-control-height-compact,36px);
- width:var(--fb-control-height-compact,36px);height:var(--fb-control-height-compact,36px);
- padding:0;border:0;border-radius:var(--fb-control-radius,9px);background:transparent;
- color:inherit;font-size:24px;line-height:1;cursor:pointer;
- transition:background var(--fb-motion-button,190ms) var(--fb-easing-open,ease)}
-.cms-hero-controls button:hover{background:rgba(109,36,158,.12)}
-.cms-hero-controls button:focus-visible{outline:2px solid #8148b2;outline-offset:2px}
-.cms-hero-controls span{min-width:36px;text-align:center;font-size:13px;font-weight:750}
+/* Discreet controls: accessible hit areas, never a floating counter/card. */
+.cms-hero-controls{position:absolute;z-index:3;left:50%;bottom:8px;
+ transform:translateX(-50%);display:flex;align-items:center;justify-content:center;
+ gap:0;padding:2px 5px;border-radius:999px;
+ background:rgba(255,255,255,.22);backdrop-filter:blur(6px)}
+.cms-hero-controls .cms-hero-dot{position:relative;display:grid;place-items:center;
+ flex:0 0 var(--fb-control-height-compact,36px);
+ width:var(--fb-control-height-compact,36px);
+ height:var(--fb-control-height-compact,36px);padding:0;
+ border:0;border-radius:999px;background:transparent;cursor:pointer}
+.cms-hero-dot span{display:block;width:7px;height:7px;border-radius:999px;
+ background:rgba(67,16,120,.36);
+ transition:width var(--fb-motion-button,190ms) ease,
+ background var(--fb-motion-button,190ms) ease}
+.cms-hero-dot.is-active span{width:20px;background:var(--color-primary-strong,#431078)}
+.cms-hero-dot:hover span{background:rgba(67,16,120,.75)}
+.cms-hero-dot:focus-visible{outline:2px solid #8148b2;outline-offset:0}
 .cms-web-featured{margin:20px 0;min-width:0}
 .cms-web-featured>h2{font-family:var(--fb-glass-display-font,Georgia,serif);
  color:var(--color-primary-strong,#431078);font-size:24px}
@@ -123,8 +128,8 @@
  .cms-hero-stage{height:clamp(225px,55vw,350px)}
  .cms-hero-picture{padding:8px 5% 44px}
  .cms-hero-image{max-height:325px}
- .cms-hero-controls{right:10px;bottom:4px}
- .cms-hero-controls button{width:var(--fb-control-height-touch,44px);height:var(--fb-control-height-touch,44px)}
+ .cms-hero-controls{left:50%;bottom:3px}
+ .cms-hero-controls .cms-hero-dot{flex-basis:var(--fb-control-height-touch,44px);width:var(--fb-control-height-touch,44px);height:var(--fb-control-height-touch,44px)}
  .cms-web-banner{grid-template-columns:1fr}
  .cms-web-banner-copy{padding:15px}
  .cms-web-banner-copy h2{font-size:22px}
@@ -140,7 +145,7 @@
 }
 @media(prefers-reduced-motion:reduce){
  .cms-hero-slide{transition:none!important;transform:none!important}
- .cms-hero-controls button{transition:none!important}
+ .cms-hero-dot span{transition:none!important}
  .cms-web-banner-cta,.cms-web-popup-cta,.cms-web-popup-heading button{transition:none}
  .cms-web-popup-dialog,.cms-web-popup-dialog::backdrop{animation:none!important;transition:none!important}
  .cms-web-popup-dialog::backdrop{backdrop-filter:none}

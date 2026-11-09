@@ -87,6 +87,7 @@ export default function CmsSlideEditor({recordId,revision,disabled,pending,onSta
  settingsDraft?:CmsSlideSettings|null;onSettingsDraft:(value:CmsSlideSettings|null)=>void
 }){
  const [assets,setAssets]=useState<SlideAsset[]>([]);
+ const [ratioNotices,setRatioNotices]=useState<Record<string,string>>({});
  const [added,setAdded]=useState<number[]>([]);
  const [settings,setSettings]=useState<Settings>(()=>settingsDraft??DEFAULT);
  const settingsDirty=Boolean(settingsDraft);
@@ -178,7 +179,13 @@ export default function CmsSlideEditor({recordId,revision,disabled,pending,onSta
        onClick={()=>void remove(slide)}>Xóa</button>}
      </div>
     </div>
-    {slide===1?<p className="cms-help">Dùng cặp ảnh Desktop/Mobile ở mục Ảnh Website phía trên.</p>:
+    {slide===1?<div>
+      <p className="cms-help">Dùng cặp ảnh Desktop/Mobile ở mục Ảnh Website phía trên.</p>
+      {assets.some(a=>a.slide_no===1&&a.device==="desktop"&&a.width/a.height<1.35)&&
+       <p className="cms-image-ratio-warning" role="note">
+        Ảnh Desktop Slide 1 đang dọc/hẹp. Khi đặt vào Hero ngang, hình sẽ nhỏ. Nên dùng artwork ngang 16:9.
+       </p>}
+     </div>:
     <div className="cms-media-grid">
      {(["desktop","mobile"] as CmsDevice[]).map(device=>{
       const key=extraKey(slide,device),stored=assets.find(a=>a.slide_no===slide&&a.device===device);
@@ -201,10 +208,25 @@ export default function CmsSlideEditor({recordId,revision,disabled,pending,onSta
            setError("Chỉ nhận JPG/PNG/WebP dưới 5 MB.");setNotificationId(n=>n+1);return;
           }
           onStage(slide,device,file);
+          if(typeof createImageBitmap==="function"){
+           void createImageBitmap(file).then(image=>{
+            const aspect=image.width/image.height;image.close();
+            const message=device==="desktop"&&aspect<1.35?
+             "Ảnh Desktop có tỷ lệ "+aspect.toFixed(2)+":1 (dọc/hẹp). Hero ngang sẽ thu nhỏ sản phẩm; nên dùng artwork 16:9, cắt bớt khoảng trống.":
+             "";
+            setRatioNotices(prev=>({...prev,[key]:message}));
+           }).catch(()=>{});
+          }
          }}/>
        </label>
        <small>{pending[key]?"Đã chọn · lưu cùng bản nháp":stored?
         stored.width+" × "+stored.height+" · đã lưu R2":"Chưa tải lên"}</small>
+       {((pending[key]&&ratioNotices[key])||
+         (!pending[key]&&stored&&device==="desktop"&&stored.width/stored.height<1.35))&&
+        <small className="cms-image-ratio-warning" role="note">
+         {pending[key]?ratioNotices[key]:
+          "Ảnh Desktop đang dọc/hẹp ("+stored?.width+" × "+stored?.height+"). Hero ngang sẽ thu nhỏ sản phẩm; nên thay artwork 16:9."}
+        </small>}
       </div>;
      })}
     </div>}

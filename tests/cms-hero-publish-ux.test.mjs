@@ -37,12 +37,15 @@ test("Hero CMS is one visual composition with low-motion safe carousel",()=>{
  assert.match(carousel,/prefers-reduced-motion: reduce/);
  assert.match(carousel,/document\.hidden/);
  assert.match(carousel,/onFocusCapture/);
- assert.match(carousel,/aria-label="Ảnh tiếp theo"/);
+ assert.match(carousel,/aria-label=\{"Xem Slide "/);
+ assert.match(carousel,/aria-pressed=\{i===index\}/);
+ assert.doesNotMatch(carousel,/\{index\+1\} \/ \{slides\.length\}/);
  assert.match(carousel,/media="\(max-width: 800px\)"/);
  assert.match(css,/\.cms-hero-image\{[^}]*object-fit:contain/s);
  assert.match(css,/\.cms-hero-image\{[^}]*mix-blend-mode:multiply/s);
  assert.match(css,/\.cms-hero-slide\.is-active/);
- assert.match(css,/\.cms-hero-controls button:focus-visible/);
+ assert.match(css,/\.cms-hero-dot:focus-visible/);
+ assert.match(css,/\.cms-hero-controls\{position:absolute;z-index:3;left:50%/);
  assert.match(css,/@media\(prefers-reduced-motion:reduce\)/);
  assert.doesNotMatch(slot,/cms-web-banners--home-hero.*cms-web-banner-copy/s);
 });

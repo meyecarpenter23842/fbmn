@@ -237,3 +237,7 @@
 @media(prefers-reduced-motion:reduce){
  .cms-slide-item,.cms-slide-actions button,.cms-motion-settings button{transition:none}
 }
+
+/* Editorial warning, never blocks an otherwise valid Owner upload. */
+.cms-image-ratio-warning{display:block;margin:6px 0 4px;
+ font-size:12px;line-height:1.5;color:#925118;font-weight:600}
