@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {readFileSync} from "node:fs";
 import {DEFAULT_HOME_LAYOUT,selectHomeCatalog} from "../lib/catalog/home.ts";
-import {handleHomeLayout,validateHomeLayout} from "../backend/admin-api/home-layout-service.mjs";
+import {handleHomeLayout,validateHomeLayout,eligibleHomeLayout} from "../backend/admin-api/home-layout-service.mjs";
 import {createAdminApi} from "../backend/admin-api/handler.mjs";
 import {projectPublicHomeLayout,createPublicApi} from "../backend/public-api/handler.mjs";
 
@@ -119,4 +119,29 @@ test("DL4 source remains channel-scoped and release-gated",()=>{
  assert.match(migration,/web_home_layout_audit/);
  assert.match(migration,/GRANT SELECT ON fbmn_public.v_web_home_layout TO fbmn_public_reader/);
  assert.doesNotMatch(migration,/GRANT .*net|GRANT .*pricebook/i);
+});
+
+test("DL4 eligible categories reflect grouped, cross-category published families",()=>{
+ const rows=[
+  {sku:"0001",name:"A",category_id:"aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",category_label:"A",family_id:"11111111-1111-1111-1111-111111111111"},
+  {sku:"0002",name:"B",category_id:"bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",category_label:"B",family_id:"11111111-1111-1111-1111-111111111111"},
+  {sku:"0003",name:"C",category_id:"bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",category_label:"B",family_id:null}
+ ];
+ const eligible=eligibleHomeLayout(rows);
+ assert.deepEqual(eligible.categories.map(c=>[c.id,c.productCount]),[
+  ["p5-aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",1],
+  ["p5-bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",1]
+ ]);
+ assert.equal(eligible.skus.find(s=>s.sku==="0002").categoryId,eligible.skus.find(s=>s.sku==="0001").categoryId);
+ const familyOnly=eligibleHomeLayout(rows.slice(0,2));
+ assert.deepEqual(familyOnly.categories.map(c=>c.id),["p5-aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"]);
+ assert.equal(validateHomeLayout({...DEFAULT_HOME_LAYOUT,categoryIds:["p5-bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"]},familyOnly),false);
+ const fallback=eligibleHomeLayout([{...rows[0],category_id:null,category_label:null},rows[1]]);
+ assert.deepEqual(fallback.categories.map(c=>c.id),["p5-bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"]);
+});
+test("DL4 Admin save errors use shared toast and editor locks while busy",()=>{
+ const source=readFileSync(new URL("../apps/admin/app/home-layout-manager.tsx",import.meta.url),"utf8");
+ assert.match(source,/setNoticeVariant\("error"\)/);
+ assert.match(source,/variant=\{noticeVariant\}/);
+ assert.match(source,/<fieldset className="dl4-edit-fields" disabled=\{busy\}/);
 });

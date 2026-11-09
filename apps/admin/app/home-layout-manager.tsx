@@ -43,6 +43,7 @@ export default function HomeLayoutManager({owner}:{owner:boolean}){
  const [error,setError]=useState("");
  const [notice,setNotice]=useState("");
  const [noticeId,setNoticeId]=useState(0);
+ const [noticeVariant,setNoticeVariant]=useState<"success"|"error">("success");
  const [skuInput,setSkuInput]=useState("");
  const [device,setDevice]=useState<"desktop"|"mobile">("desktop");
  const [resetOpen,setResetOpen]=useState(false);
@@ -65,9 +66,10 @@ export default function HomeLayoutManager({owner}:{owner:boolean}){
     categoryIds:draft.categoryIds,featuredSkus:draft.featuredSkus,
     categoryLimit:draft.categoryLimit,productLimit:draft.productLimit,sectionOrder:draft.sectionOrder});
    setSaved(clone(result.layout));setDraft(clone(result.layout));setResetOpen(false);
+   setNoticeVariant("success");
    setNotice(operation==="reset"?"Đã khôi phục mặc định.":"Đã lưu bố cục Trang chủ.");
    setNoticeId(n=>n+1);
-  }catch(e){setError(e instanceof Error?e.message:"Lỗi lưu cấu hình.");}
+  }catch(e){setNoticeVariant("error");setNotice(e instanceof Error?e.message:"Lỗi lưu cấu hình.");setNoticeId(n=>n+1);}
   finally{setBusy(false);}
  }
  const chosenIds=draft?.categoryIds||[];
@@ -95,7 +97,7 @@ export default function HomeLayoutManager({owner}:{owner:boolean}){
   {loading&&<div role="status" aria-busy="true" className="surface dl4-panel">Đang tải cấu hình thực tế…</div>}
   {error&&<div role="alert" className="dl4-error">{error} <button type="button" className="fb-ui-button fb-ui-button--secondary" onClick={()=>void load()}>Thử lại</button></div>}
   {!loading&&draft&&<div className="dl4-columns">
-   <div className="dl4-settings">
+   <div className="dl4-settings"><fieldset className="dl4-edit-fields" disabled={busy} aria-busy={busy}>
     <section className="surface dl4-panel">
      <h2>Danh mục nổi bật</h2><p>Chỉ danh mục có SKU đã công khai. Bỏ chọn tất cả để dùng thứ tự tự động.</p>
      <label className="dl4-field">Số danh mục <select value={draft.categoryLimit} onChange={e=>patch({categoryLimit:Number(e.target.value)})}>
@@ -108,7 +110,7 @@ export default function HomeLayoutManager({owner}:{owner:boolean}){
       return <li key={c.id} className="dl4-item">
        <label><input type="checkbox" checked={selected} disabled={!selected&&chosenIds.length===6}
          onChange={e=>patch({categoryIds:e.target.checked?[...chosenIds,c.id]:chosenIds.filter(id=>id!==c.id)})}/>
-        <span>{c.name}<small>{c.productCount} SKU công khai</small></span></label>
+        <span>{c.name}<small>{c.productCount} nhóm sản phẩm</small></span></label>
        {selected&&<div className="dl4-arrows">
         <button type="button" className="fb-ui-button fb-ui-button--secondary" disabled={i===0} aria-label={"Đưa "+c.name+" lên"} onClick={()=>patch({categoryIds:move(chosenIds,i,-1)})}>↑</button>
         <button type="button" className="fb-ui-button fb-ui-button--secondary" disabled={i===chosenIds.length-1} aria-label={"Đưa "+c.name+" xuống"} onClick={()=>patch({categoryIds:move(chosenIds,i,1)})}>↓</button>
@@ -149,7 +151,7 @@ export default function HomeLayoutManager({owner}:{owner:boolean}){
       </div>
      </li>)}</ol>
     </section>
-   </div>
+   </fieldset></div>
    <section className="surface dl4-panel dl4-preview">
     <div className="dl4-toolbar"><h2>Preview bố cục</h2>
      <div role="group" aria-label="Thiết bị xem trước" className="dl4-arrows">
@@ -176,6 +178,6 @@ export default function HomeLayoutManager({owner}:{owner:boolean}){
     <button type="button" className="fb-ui-button fb-ui-button--primary" disabled={busy} onClick={()=>void save("reset")}>Xác nhận và lưu</button></>}>
     <p>Trở về 6 danh mục, 4 thẻ, không ghim SKU, danh mục trước sản phẩm. Thay đổi được ghi revision và audit.</p>
    </ProductModal>}
-  <AdminToast message={notice} notificationId={noticeId} onClose={()=>setNotice("")}/>
+  <AdminToast message={notice} variant={noticeVariant} notificationId={noticeId} onClose={()=>setNotice("")}/>
  </div>;
 }

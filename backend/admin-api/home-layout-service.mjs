@@ -11,7 +11,7 @@ export const DEFAULT_HOME_LAYOUT=Object.freeze({
 const LAYOUT_SQL="SELECT category_ids,featured_skus,category_limit,product_limit,section_order,revision FROM "+TABLE+" WHERE singleton=true";
 const ELIGIBLE_SQL="SELECT s.sku_cong_ty AS sku, COALESCE(NULLIF(BTRIM(s.ten_san_pham),''),"+
  "NULLIF(BTRIM(s.ten_goc_xnt),''),s.sku_cong_ty) AS name,"+
- "s.category_id::text AS category_id,c.category_label FROM fbmn_catalog.skus s "+
+ "s.category_id::text AS category_id,c.category_label,s.family_id::text AS family_id FROM fbmn_catalog.skus s "+
  "JOIN fbmn_catalog.publications p ON p.sku_cong_ty=s.sku_cong_ty "+
  "LEFT JOIN fbmn_catalog.categories c ON c.id=s.category_id "+
  "WHERE p.channel_code='public_web' AND p.state='published' AND p.published_at IS NOT NULL "+
@@ -22,19 +22,41 @@ function fromRow(row){
   categoryLimit:Number(row.category_limit),productLimit:Number(row.product_limit),
   sectionOrder:row.section_order,revision:Number(row.revision)};
 }
-function published(rows){
+/**
+ * Mirrors Public P5 grouping: a published family (up to 100 SKUs per card)
+ * has a single category, even if member SKUs were assigned different ones.
+ * The fallback uncategorized slot upgrades to the first real category.
+ * Admin must not offer categories which have no actual Website cards.
+ */
+export function eligibleHomeLayout(rows){
  if(rows.length>10000)throw Error("too_many_skus");
- const map=new Map(),skus=[];
+ const labels=new Map(),groups=new Map(),counts=new Map();
  for(const row of rows){
-  const id=row.category_id?"p5-"+row.category_id:"p5-uncategorized";
-  const name=String(row.category_label||"Chưa phân loại");
-  const existing=map.get(id);
-  if(existing)existing.productCount++;
-  else map.set(id,{id,name,productCount:1});
-  skus.push({sku:String(row.sku),name:String(row.name),categoryId:id});
+  const sku=String(row.sku);
+  const categoryId=row.category_id?"p5-"+String(row.category_id):"p5-uncategorized";
+  labels.set(categoryId,String(row.category_label||"Chưa phân loại"));
+  const key=row.family_id?"family:"+String(row.family_id):"sku:"+sku;
+  const count=counts.get(key)??0;
+  counts.set(key,count+1);
+  const pageKey=key+"|part:"+Math.floor(count/100);
+  let group=groups.get(pageKey);
+  if(!group){
+   group={categoryId,skus:[]};
+   groups.set(pageKey,group);
+  }
+  if(row.category_id&&group.categoryId==="p5-uncategorized")group.categoryId=categoryId;
+  group.skus.push({sku,name:String(row.name)});
  }
- return {categories:[...map.values()].sort((a,b)=>a.name.localeCompare(b.name,"vi")||a.id.localeCompare(b.id)),
-  skus};
+ const categories=new Map(),skus=[];
+ for(const group of groups.values()){
+  const id=group.categoryId;
+  const existing=categories.get(id);
+  if(existing)existing.productCount++;
+  else categories.set(id,{id,name:labels.get(id)||"Chưa phân loại",productCount:1});
+  for(const item of group.skus)skus.push({...item,categoryId:id});
+ }
+ return {categories:[...categories.values()].sort((a,b)=>
+  a.name.localeCompare(b.name,"vi")||a.id.localeCompare(b.id)),skus};
 }
 function uniqueStrings(x,max,length){
  return Array.isArray(x)&&x.length<=max&&x.every(v=>
@@ -74,7 +96,7 @@ export async function handleHomeLayout({request,actor,db}){
   if(request.method==="GET"){
    const result=await db(async client=>{
     const [layout,eligible]=await Promise.all([client.query(LAYOUT_SQL),client.query(ELIGIBLE_SQL)]);
-    return {layout:fromRow(layout.rows[0]),available:published(eligible.rows)};
+    return {layout:fromRow(layout.rows[0]),available:eligibleHomeLayout(eligible.rows)};
    });
    return ok(result);
   }
@@ -88,7 +110,7 @@ export async function handleHomeLayout({request,actor,db}){
     const before=fromRow((await client.query(LAYOUT_SQL)).rows[0]);
     if(before.revision!==body.revision)throw Error("revision_conflict");
     const selected=body.operation==="reset"?{...DEFAULT_HOME_LAYOUT,revision:body.revision}:body;
-    const available=published((await client.query(ELIGIBLE_SQL)).rows);
+    const available=eligibleHomeLayout((await client.query(ELIGIBLE_SQL)).rows);
     if(!validateHomeLayout(selected,available))throw Error("invalid_layout");
     const args=[selected.categoryIds,selected.featuredSkus,selected.categoryLimit,
       selected.productLimit,selected.sectionOrder,body.revision,actor.subject];
