@@ -131,9 +131,8 @@
 }
 .ref-catalog-state strong { color: var(--color-primary-strong); font-size: 17px; }
 .ref-catalog-state p { font-size: 13px; line-height: 1.6; color: var(--fb-glass-muted); }
-.ref-catalog-state a, .ref-categories__all a { color: var(--color-primary-strong); font-size: var(--fb-control-font-size); font-weight: 800; text-underline-offset: 3px; }
-.ref-catalog-state a:focus-visible, .ref-categories__all a:focus-visible { outline: 3px solid var(--color-primary); outline-offset: 3px; }
-.ref-categories__all { display: flex; justify-content: flex-end; padding: 9px 3px 0; }
+.ref-catalog-state a { color: var(--color-primary-strong); font-size: var(--fb-control-font-size); font-weight: 800; text-underline-offset: 3px; }
+.ref-catalog-state a:focus-visible { outline: 3px solid var(--color-primary); outline-offset: 3px; }
 .ref-featured .mobile-carousel__controls { display: none; }
 
 .ref-promos { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin: 20px 0 22px; }
