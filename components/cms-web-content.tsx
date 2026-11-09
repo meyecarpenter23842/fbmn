@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import CmsHeroCarousel from "@/components/cms-hero-carousel";
 import type {PublicCmsItem,CmsWebSlot} from "@/lib/content/cms";
 
 function imgUrl(id:string,device:"desktop"|"mobile"){
@@ -9,6 +10,7 @@ function imgUrl(id:string,device:"desktop"|"mobile"){
 export function CmsBannerSlot({items,slot}:{items:PublicCmsItem[];slot:CmsWebSlot}){
  const banners=items.filter(item=>item.kind==="banner"&&item.slot===slot);
  if(!banners.length)return null;
+ if(slot==="home.hero")return <CmsHeroCarousel items={banners}/>;
  return <section className={"cms-web-banners cms-web-banners--"+slot.replaceAll(".","-")}
   aria-label="Banner Futurebook đã công bố">
   {banners.map(item=><article className="cms-web-banner" key={item.id}>
