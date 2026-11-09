@@ -27,7 +27,7 @@ export default async function DealerPage() {
           {dealerInformation.paragraphs.map((paragraph, index) => <p key={index}>{paragraph}</p>)}
           <p>{dealerInformation.contactInstructions}</p>
         </> : <p>Chính sách đại lý, khu vực phân phối, điều kiện hợp tác và kênh đăng ký đang chờ phê duyệt. Website chưa công bố mức chiết khấu hoặc cam kết kinh doanh.</p>}
-        <Link className="content-text-link" href="/lien-he">Thông tin liên hệ</Link>
+        <Link className="content-text-link" href="/lien-he#thong-tin-lien-he">Thông tin liên hệ dành cho đại lý</Link>
       </div>
     </section>
   </ContentShell>;
