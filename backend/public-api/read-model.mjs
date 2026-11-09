@@ -21,6 +21,10 @@ const SQL = Object.freeze({
    "FROM fbmn_public.v_cms_web_entries e ORDER BY sort_order,published_at,id LIMIT 501",
   cmsImageKey: "SELECT r2_key FROM fbmn_public.v_cms_web_images WHERE id=$1 AND device=$2 LIMIT 1",
   cmsSlideImageKey: "SELECT r2_key FROM fbmn_public.v_cms_web_banner_slide_images WHERE id=$1 AND device=$2 AND slide_no=$3 LIMIT 1",
+  catalogueBooks: "SELECT id,title,edition FROM fbmn_public.v_catalogue_ready_books ORDER BY updated_at DESC,id LIMIT 101",
+  catalogueBook: "SELECT id,title,edition FROM fbmn_public.v_catalogue_ready_books WHERE id=$1::uuid LIMIT 1",
+  catalogueAssets: "SELECT id,kind,sort_order,width,height FROM fbmn_public.v_catalogue_ready_assets WHERE book_id=$1::uuid ORDER BY kind,sort_order,id LIMIT 204",
+  catalogueAssetKey: "SELECT r2_key,byte_size FROM fbmn_public.v_catalogue_ready_assets WHERE id=$1::uuid LIMIT 1",
 });
 function rows(value, max) {
   if (!Array.isArray(value) || value.length > max) throw new Error("Invalid SQL read result");
@@ -268,6 +272,28 @@ export function createReadModel(query,{enableP5=false}={}) {
        slide===1?[id,device]:[id,device,slide]),1);
       return entries.length===1&&/^cms\/[0-9a-f-]{36}\/public_web\/(desktop|mobile)\/[0-9a-f-]{36}\.webp$/i.test(String(entries[0].r2_key))
        ?String(entries[0].r2_key):null;
+    },
+    async getReadyCatalogueBooks(){
+      const result=rows(await query(SQL.catalogueBooks),101);
+      if(result.length>100)throw Error("Too many public books");
+      return result.map(b=>({id:String(b.id),title:String(b.title),edition:String(b.edition)}));
+    },
+    async getReadyCatalogueBook(id){
+      if(!/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(id))return null;
+      const result=rows(await query(SQL.catalogueBook,[id]),1);
+      return result.length===1?{id:String(result[0].id),title:String(result[0].title),edition:String(result[0].edition)}:null;
+    },
+    async getReadyCatalogueAssets(id){
+      if(!/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(id))return [];
+      const result=rows(await query(SQL.catalogueAssets,[id]),204);
+      if(result.length>203)throw Error("Too many public pages");
+      return result.map(a=>({id:String(a.id),kind:String(a.kind),sortOrder:Number(a.sort_order),
+       width:Number(a.width),height:Number(a.height)}));
+    },
+    async getReadyCatalogueAssetKey(id){
+      if(!/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(id))return null;
+      const result=rows(await query(SQL.catalogueAssetKey,[id]),1);
+      return result.length===1?{key:String(result[0].r2_key),bytes:Number(result[0].byte_size)}:null;
     },
     async getPublicContent() {
       const [articles,promotions,companies,dealers] = await Promise.all([

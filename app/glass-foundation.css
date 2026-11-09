@@ -311,3 +311,38 @@
     transition: none;
   }
 }
+
+/* Shared native-dialog motion: each caller owns its geometry and surface,
+ * this primitive exclusively owns timing, opacity, transform and top-layer exit. */
+.fb-glass-dialog-motion{
+ opacity:0;
+ transform:translateY(10px) scale(.985);
+ transition:
+  opacity var(--fb-motion-dialog-close) var(--fb-easing-close),
+  transform var(--fb-motion-dialog-close) var(--fb-easing-close),
+  display var(--fb-motion-dialog-close) allow-discrete,
+  overlay var(--fb-motion-dialog-close) allow-discrete;
+}
+.fb-glass-dialog-motion[open]:not([data-closing="true"]){
+ opacity:1;transform:none;
+ transition-duration:var(--fb-motion-dialog-open);
+ transition-timing-function:var(--fb-easing-open);
+}
+.fb-glass-dialog-motion::backdrop{
+ opacity:0;
+ transition:opacity var(--fb-motion-dialog-close) var(--fb-easing-close),
+  display var(--fb-motion-dialog-close) allow-discrete,
+  overlay var(--fb-motion-dialog-close) allow-discrete;
+}
+.fb-glass-dialog-motion[open]:not([data-closing="true"])::backdrop{
+ opacity:1;
+ transition-duration:var(--fb-motion-dialog-open);
+ transition-timing-function:var(--fb-easing-open);
+}
+@starting-style{
+ .fb-glass-dialog-motion[open]:not([data-closing="true"]){opacity:0;transform:translateY(10px) scale(.985)}
+ .fb-glass-dialog-motion[open]:not([data-closing="true"])::backdrop{opacity:0}
+}
+@media(prefers-reduced-motion:reduce){
+ .fb-glass-dialog-motion,.fb-glass-dialog-motion::backdrop{transition:none;transform:none}
+}
