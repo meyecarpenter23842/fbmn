@@ -12,7 +12,8 @@ import {websiteDraftTargets,withWebsitePlacement} from "./cms-website-policy";
 import {websiteCmsPage} from "./cms-website-list";
 import type {CmsSourcePage} from "./cms-website-list";
 import {cmsPublishIssues,cmsPublishWarnings} from "./cms-publish-readiness";
-import CmsSlideEditor,{uploadCmsSlide} from "./cms-slide-editor";
+import CmsSlideEditor,{uploadCmsSlide,saveCmsSlideSettings} from "./cms-slide-editor";
+import type {CmsSlideSettings} from "./cms-slide-editor";
 
 type CmsKind = "banner"|"popup"|"article"|"promotion";
 type CmsStatus = "draft"|"published"|"hidden";
@@ -98,6 +99,7 @@ function CmsEditor({item,kind,onSaved,onSavingChange,dirtyRef,step,onStep,formId
  const [savedRecord,setSavedRecord]=useState<CmsItem|null>(item);
  const [pendingImages,setPendingImages]=useState<CmsPendingImages>({});
  const [pendingSlides,setPendingSlides]=useState<CmsPendingImages>({});
+ const [slideSettingsDraft,setSlideSettingsDraft]=useState<CmsSlideSettings|null>(null);
  const [previewSlide,setPreviewSlide]=useState(1);
  const [busy,setBusy]=useState(false);
  const [error,setError]=useState("");
@@ -195,6 +197,12 @@ function CmsEditor({item,kind,onSaved,onSavingChange,dirtyRef,step,onStep,formId
     setSavedRecord(current);
     setPendingSlides(prev=>{const updated={...prev};delete updated[key];return updated;});
     URL.revokeObjectURL(pending.url);previewUrls.current.delete(pending.url);
+   }
+   if(slideSettingsDraft&&current.kind==="banner"&&draft.placements.public_web==="home.hero"){
+    const result=await saveCmsSlideSettings(current.id,current.revision,slideSettingsDraft);
+    current={...current,revision:result.revision};
+    setSavedRecord(current);
+    setSlideSettingsDraft(null);
    }
    // Re-read authoritative R2 flags and incomplete extra-slide count.
    const refreshed=await cmsApi<{item:CmsItem}>("entry?id="+encodeURIComponent(current.id));
@@ -340,7 +348,13 @@ function CmsEditor({item,kind,onSaved,onSavingChange,dirtyRef,step,onStep,formId
      <CmsSlideEditor recordId={savedRecord?.id??null} revision={savedRecord?.revision??0}
       disabled={busy} pending={pendingSlides} onStage={stageSlide}
       onRevision={revision=>setSavedRecord(prev=>prev?{...prev,revision}:prev)}
-      onUpdated={onSaved} previewSlide={previewSlide} onPreviewSlide={setPreviewSlide}/>}
+      onUpdated={onSaved} previewSlide={previewSlide} onPreviewSlide={setPreviewSlide}
+      settingsDraft={slideSettingsDraft}
+      onSettingsDraft={value=>{
+       setSlideSettingsDraft(value);
+       dirtyRef.current=Boolean(value)||contentDirty.current||
+        Object.keys(pendingImages).length>0||Object.keys(pendingSlides).length>0;
+      }}/>}
     <CmsVisualPreview kind={draft.kind} title={draft.title} summary={draft.summary}
      ctaUrl={draft.ctaUrl} channelTargets={["public_web"]} placements={draft.placements}
       recordId={savedRecord?.id??null} revision={savedRecord?.revision??0}
