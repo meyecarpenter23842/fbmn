@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {createAdminApi} from "../handler.mjs";
-import {catalogueObjectKey,validateCatalogueBook,validateCatalogueImage,handleCatalogueBooks}
+import {catalogueObjectKey,validateCatalogueBook,validateCatalogueImage,handleCatalogueBooks,parseCataloguePage}
  from "../catalogue-books-service.mjs";
 
 const ID="123e4567-e89b-42d3-a456-426614174000",FILE="123e4567-e89b-42d3-a456-426614174001";
@@ -46,4 +46,11 @@ test("DL7B fails closed for bad asset ids, query and inaccessible catalogue",asy
  assert.equal((await handleCatalogueBooks({request:request("/image?asset=../../x"),actor:direct,db:async()=>{},r2:validR2})).status,400);
  assert.equal((await handleCatalogueBooks({request:request("?unexpected=1"),actor:direct,db:async()=>{},r2:validR2})).status,400);
  assert.equal((await api().fetch(request(""))).status,503);
+});
+
+test("DL7B valid positive book-list page numbers",()=>{
+ assert.equal(parseCataloguePage("1"),1);
+ assert.equal(parseCataloguePage("100"),100);
+ for(const invalid of ["0","-1","01","1.5","Infinity","100000","",null])
+  assert.equal(parseCataloguePage(invalid),null);
 });

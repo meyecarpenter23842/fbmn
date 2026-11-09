@@ -20,8 +20,8 @@ async function proxy(request:Request,params:Promise<{path?:string[]}>,method:"GE
  const u=new URL(request.url),binary=method==="GET"&&action==="image",upload=action==="upload";
  const query=[...u.searchParams.keys()];
  if(method==="GET"){
-  const allowed=action==="image"?"asset":"id";
-  if(query.length>1||query.some(x=>x!==allowed))return fail(400,"invalid_query");
+  const allowed=action==="image"?new Set(["asset"]):new Set(["id","page"]);
+  if(query.length>1||query.some(x=>!allowed.has(x)))return fail(400,"invalid_query");
   if(action==="image"&&query.length!==1)return fail(400,"invalid_query");
  }else{
   if(u.search)return fail(400,"invalid_query");

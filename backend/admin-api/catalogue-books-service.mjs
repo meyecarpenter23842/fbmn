@@ -83,10 +83,19 @@ async function bodyJson(request){
  if(raw.length>20000)return null;
  try{return JSON.parse(raw);}catch{return null;}
 }
-async function queryList(db){
- const q=await db(c=>c.query("SELECT id,title,edition,state,revision,updated_at"+
-  " FROM "+BOOKS+" ORDER BY updated_at DESC,id DESC LIMIT 50"));
- return {books:q.rows.map(exposeBook)};
+export function parseCataloguePage(value){
+ return typeof value==="string"&&/^[1-9][0-9]{0,4}$/.test(value)?Number(value):null;
+}
+async function queryList(db,requestedPage=1){
+ return db(async c=>{
+  const counter=await c.query("SELECT count(*)::integer AS total FROM "+BOOKS);
+  const total=Number(counter.rows[0]?.total||0);
+  const totalPages=Math.max(1,Math.ceil(total/50));
+  const page=Math.min(requestedPage,totalPages);
+  const q=await c.query("SELECT id,title,edition,state,revision,updated_at"+
+   " FROM "+BOOKS+" ORDER BY updated_at DESC,id DESC LIMIT 50 OFFSET $1",[(page-1)*50]);
+  return {books:q.rows.map(exposeBook),page,totalPages,total};
+ });
 }
 async function queryDetail(db,id){
  const v=await db(async c=>{
@@ -237,6 +246,11 @@ export async function handleCatalogueBooks({request,actor,db,r2}){
  try{
   if(request.method==="GET"&&action===""){
    if(!u.search)return ok(await queryList(db));
+   if(one(u,"page")){
+    const page=parseCataloguePage(u.searchParams.get("page"));
+    if(page===null)return fail(400,"invalid_query");
+    return ok(await queryList(db,page));
+   }
    if(!one(u,"id")||!validId(u.searchParams.get("id")))return fail(400,"invalid_query");
    return ok(await queryDetail(db,u.searchParams.get("id")));
   }
