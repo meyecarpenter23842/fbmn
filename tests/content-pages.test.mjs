@@ -96,8 +96,11 @@ test("PR07 routes and responsive nav exist; no fake contact submission", () => {
   assert.match(contact,/type="button" className="content-button" disabled/);
   assert.doesNotMatch(contact,/type="submit"|action=|onSubmit=|\/api\/contact/);
   const header=read("components/site-header.tsx");
-  for(const slug of ["gioi-thieu","tin-tuc","khuyen-mai","dai-ly","lien-he"]) {
+  for(const slug of ["san-pham","gia-cong","bang-tin","catalogue","lien-he"]) {
     assert.ok(header.includes('href: "/'+slug+'"'),slug);
+  }
+  for(const slug of ["gioi-thieu","tin-tuc","khuyen-mai","dai-ly"]){
+    assert.match(read("app/"+slug+"/page.tsx"),/ContentShell/,slug);
   }
   assert.match(read("app/page.tsx"),/<SiteFooter\s*\/>/);
   assert.match(read("components/site-footer.tsx"),/aria-label="Khám phá Futurebook"/);
