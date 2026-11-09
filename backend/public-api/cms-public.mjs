@@ -45,6 +45,21 @@ export function projectPublicCms(raw){
    popupCooldownMinutes:boundedInt(row.popupCooldownMinutes,0,43200),
    popupMaxPerSession:boundedInt(row.popupMaxPerSession,1,20),
   };
+  if(row.kind==="banner"&&row.slot==="home.hero"&&row.slides!==undefined){
+   if(!Array.isArray(row.slides)||row.slides.length<1||row.slides.length>5||
+      !row.slides.includes(1)||new Set(row.slides).size!==row.slides.length||
+      row.slides.some(n=>!Number.isInteger(n)||n<1||n>5))
+     throw Error("Invalid CMS hero slides");
+   const m=row.motion;
+   if(!m||typeof m!=="object"||Array.isArray(m)||
+      typeof m.enabled!=="boolean"||typeof m.autoplay!=="boolean"||
+      !["fade","slide","fade-slide"].includes(m.effect))
+     throw Error("Invalid CMS motion");
+   result.slides=[...row.slides];
+   result.motion={enabled:m.enabled,autoplay:m.autoplay,effect:m.effect,
+    intervalMs:boundedInt(m.intervalMs,3000,15000),
+    durationMs:boundedInt(m.durationMs,300,800)};
+  }
   if(row.kind==="promotion"&&!result.endsAt)throw Error("Promotion without expiry");
   if(["banner","popup"].includes(row.kind)&&(!result.hasDesktop||!result.hasMobile))
    throw Error("Missing public CMS images");

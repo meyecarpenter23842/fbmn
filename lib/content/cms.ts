@@ -8,6 +8,9 @@ export interface PublicCmsItem{
  ctaUrl:string|null;slot:CmsWebSlot;sortOrder:number;publishedAt:string;
  startsAt:string|null;endsAt:string|null;hasDesktop:boolean;hasMobile:boolean;
  popupDelaySeconds:number;popupCooldownMinutes:number;popupMaxPerSession:number;
+ slides?:number[];
+ motion?:{enabled:boolean;autoplay:boolean;effect:"fade"|"slide"|"fade-slide";
+  intervalMs:number;durationMs:number};
 }
 type Rec=Record<string,unknown>;
 const KIND=new Set(["banner","popup","article","promotion"]);
@@ -48,6 +51,22 @@ function item(value:unknown):PublicCmsItem{
  const nullable=(x:unknown):string|null=>x==null?null:string(x,500,true);
  const publishedAt=string(o.publishedAt,60);
  if(!Number.isFinite(Date.parse(publishedAt)))throw Error("Invalid CMS publication");
+ let heroExtras:Pick<PublicCmsItem,"slides"|"motion">={};
+ if(kind==="banner"&&slot==="home.hero"&&o.slides!==undefined){
+  if(!Array.isArray(o.slides)||o.slides.length<1||o.slides.length>5||
+   !o.slides.includes(1)||new Set(o.slides).size!==o.slides.length||
+   !o.slides.every(x=>Number.isSafeInteger(x)&&x>=1&&x<=5))
+   throw Error("Invalid published slides");
+  const m=obj(o.motion);
+  if(typeof m.enabled!=="boolean"||typeof m.autoplay!=="boolean"||
+   !["fade","slide","fade-slide"].includes(m.effect as string))
+   throw Error("Invalid slide motion");
+  heroExtras={slides:[...o.slides],
+   motion:{enabled:m.enabled,autoplay:m.autoplay,
+    effect:m.effect as "fade"|"slide"|"fade-slide",
+    intervalMs:integer(m.intervalMs,3000,15000),
+    durationMs:integer(m.durationMs,300,800)}};
+ }
  const startsAt=nullable(o.startsAt),endsAt=nullable(o.endsAt);
  if(startsAt&&!Number.isFinite(Date.parse(startsAt)))throw Error("Invalid CMS schedule");
  if(endsAt&&!Number.isFinite(Date.parse(endsAt)))throw Error("Invalid CMS schedule");
@@ -59,7 +78,8 @@ function item(value:unknown):PublicCmsItem{
   hasDesktop:o.hasDesktop===true,hasMobile:o.hasMobile===true,
   popupDelaySeconds:integer(o.popupDelaySeconds,0,120),
   popupCooldownMinutes:integer(o.popupCooldownMinutes,0,43200),
-  popupMaxPerSession:integer(o.popupMaxPerSession,1,20)
+  popupMaxPerSession:integer(o.popupMaxPerSession,1,20),
+  ...heroExtras
  };
 }
 export function cmsEnabled():boolean{

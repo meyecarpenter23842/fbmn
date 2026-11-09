@@ -2,6 +2,7 @@
 import { parseCmsTimestamp } from "./cms-publication-policy.mjs";
 import { validCmsPlacements, cmsPlacementIsReady, validatePopupFrequency } from "./cms-placement-contract.mjs";
 import { handleCmsMedia } from "./cms-media-service.mjs";
+import {handleCmsSlides} from "./cms-slides-service.mjs";
 
 const ROOT = "/v1/admin/cms";
 const KIND = new Set(["banner","popup","article","promotion"]);
@@ -10,6 +11,7 @@ const SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const IDENTIFIER = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const TABLE = "fbmn_catalog_private.cms_entries";
 const AUDIT = "fbmn_catalog_private.cms_entry_audit";
+const EXTRA = "fbmn_catalog_private.cms_banner_slide_media";
 const HEADERS = { "Cache-Control": "private, no-store", "X-Content-Type-Options": "nosniff" };
 
 const ok = data => Response.json({ data }, { headers: HEADERS });
@@ -83,7 +85,7 @@ function errorFor(e) {
  if(e?.message==="surface_unavailable")return fail(409,"surface_unavailable");
  if(e?.message==="revision_conflict"||e?.message==="hide_before_edit"||
     e?.message==="already_published"||e?.message==="already_hidden")return fail(409,e.message);
- if(e?.message==="source_required"||e?.message==="channels_required"||e?.message==="placements_required"||e?.message==="media_required"||e?.message==="ends_at_required")return fail(400,e.message);
+ if(e?.message==="source_required"||e?.message==="channels_required"||e?.message==="placements_required"||e?.message==="media_required"||e?.message==="ends_at_required"||e?.message==="slides_incomplete")return fail(400,e.message);
  return fail(e?.code==="23505"?409:503,e?.code==="23505"?"slug_conflict":"cms_unavailable");
 }
 // Fetch lightweight summaries in bounded pages; full prose is loaded only on edit.
@@ -92,7 +94,8 @@ async function list(db,mode,page){
   "SELECT id::text,kind,slug,title,summary,channel_targets,sort_order,"+
   "starts_at,ends_at,source_ref,placements,popup_delay_seconds,popup_cooldown_minutes,popup_max_per_session,status,revision,created_at,updated_at,"+
   "EXISTS (SELECT 1 FROM fbmn_catalog_private.cms_entry_media m WHERE m.entry_id=c.id AND m.channel='public_web' AND m.device='desktop' AND m.mime_type='image/webp') AS has_desktop,"+
-  "EXISTS (SELECT 1 FROM fbmn_catalog_private.cms_entry_media m WHERE m.entry_id=c.id AND m.channel='public_web' AND m.device='mobile' AND m.mime_type='image/webp') AS has_mobile "+
+  "EXISTS (SELECT 1 FROM fbmn_catalog_private.cms_entry_media m WHERE m.entry_id=c.id AND m.channel='public_web' AND m.device='mobile' AND m.mime_type='image/webp') AS has_mobile,"+
+  "(SELECT count(*)::integer FROM (SELECT slide_no FROM "+EXTRA+" m WHERE m.entry_id=c.id GROUP BY slide_no HAVING count(DISTINCT device)<>2) x) AS incomplete_slide_count "+
   "FROM "+TABLE+" c WHERE (($1::text='marketing' AND kind IN ('banner','popup')) "+
   "OR ($1::text='editorial' AND kind IN ('article','promotion'))) "+
   "ORDER BY updated_at DESC,id LIMIT 51 OFFSET $2",
@@ -104,7 +107,8 @@ async function detail(db,id){
   "SELECT id::text,kind,slug,title,summary,paragraphs,cta_url,channel_targets,"+
   "sort_order,starts_at,ends_at,source_ref,placements,popup_delay_seconds,popup_cooldown_minutes,popup_max_per_session,status,revision,created_at,updated_at,"+
   "EXISTS (SELECT 1 FROM fbmn_catalog_private.cms_entry_media m WHERE m.entry_id=c.id AND m.channel='public_web' AND m.device='desktop' AND m.mime_type='image/webp') AS has_desktop,"+
-  "EXISTS (SELECT 1 FROM fbmn_catalog_private.cms_entry_media m WHERE m.entry_id=c.id AND m.channel='public_web' AND m.device='mobile' AND m.mime_type='image/webp') AS has_mobile "+
+  "EXISTS (SELECT 1 FROM fbmn_catalog_private.cms_entry_media m WHERE m.entry_id=c.id AND m.channel='public_web' AND m.device='mobile' AND m.mime_type='image/webp') AS has_mobile,"+
+  "(SELECT count(*)::integer FROM (SELECT slide_no FROM "+EXTRA+" m WHERE m.entry_id=c.id GROUP BY slide_no HAVING count(DISTINCT device)<>2) x) AS incomplete_slide_count "+
   "FROM "+TABLE+" c WHERE id=$1::uuid LIMIT 1",[id]));
  if(result.rowCount!==1)return fail(404,"cms_not_found");
  return ok({item:result.rows[0]});
@@ -154,6 +158,11 @@ async function mutate(db,input,subject,action,publicSurfaceReady=false){
     if(!["desktop","mobile"].every(device=>media.rows.some(m=>m.channel==="public_web"&&m.device===device)))
      throw Error("media_required");
    }
+   if(action==="publish"&&old.kind==="banner"&&old.placements?.public_web==="home.hero"){
+    const incomplete=await c.query("SELECT slide_no FROM "+EXTRA+
+     " WHERE entry_id=$1::uuid GROUP BY slide_no HAVING count(DISTINCT device)<>2 LIMIT 1",[input.id]);
+    if(incomplete.rowCount)throw Error("slides_incomplete");
+   }
    let result;
    if(action==="update"){
     result=await c.query("UPDATE "+TABLE+" SET "+
@@ -189,6 +198,8 @@ export async function handleCms({request,actor,db,r2,publicSurfaceReady=false}){
   u.pathname.slice(ROOT.length+1):"unknown";
  if(["assets","image","image-upload"].includes(action))
   return handleCmsMedia({request,db,r2,actor,action});
+ if(["slides","slide-image","slide-upload","slide-settings","slide-remove"].includes(action))
+  return handleCmsSlides({request,db,r2,actor,action});
  if(request.method==="GET"){
   if(action==="capability"){
    if(u.search)return fail(400,"invalid_query");

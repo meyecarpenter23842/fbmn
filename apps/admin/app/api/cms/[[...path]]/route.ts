@@ -5,8 +5,8 @@ export const dynamic="force-dynamic";
 const PRIVATE={"Cache-Control":"private, no-store","X-Content-Type-Options":"nosniff"};
 const JSON_HEADERS={...PRIVATE,"Content-Type":"application/json; charset=utf-8"};
 const fail=(status:number,code:string)=>Response.json({error:{code}},{status,headers:JSON_HEADERS});
-const GET_ACTIONS=new Set(["","entry","assets","image","capability"]);
-const POST_ACTIONS=new Set(["create","update","publish","hide","image-upload"]);
+const GET_ACTIONS=new Set(["","entry","assets","image","capability","slides","slide-image"]);
+const POST_ACTIONS=new Set(["create","update","publish","hide","image-upload","slide-upload","slide-settings","slide-remove"]);
 const MAX_IMAGE=5*1024*1024;
 function baseUrl(){
  try{
@@ -21,11 +21,12 @@ async function proxy(request:Request,params:Promise<{path?:string[]}>,method:"GE
  const action=path[0]||"";
  if(!(method==="GET"?GET_ACTIONS:POST_ACTIONS).has(action))return fail(404,"not_found");
  const url=new URL(request.url);
- const isImage=method==="GET"&&action==="image";
- const isUpload=method==="POST"&&action==="image-upload";
+ const isImage=method==="GET"&&(action==="image"||action==="slide-image");
+ const isUpload=method==="POST"&&(action==="image-upload"||action==="slide-upload");
  if(method==="GET"){
   const keys=[...url.searchParams.keys()];
-  const allowed=action==="entry"||action==="assets"?new Set(["id"]):
+  const allowed=["entry","assets","slides"].includes(action)?new Set(["id"]):
+   action==="slide-image"?new Set(["id","slide","device"]):
    isImage?new Set(["id","channel","device"]):action==="capability"?new Set():new Set(["mode","page"]);
   if(keys.length!==new Set(keys).size||keys.some(k=>!allowed.has(k)))
    return fail(400,"invalid_query");
@@ -51,7 +52,9 @@ async function proxy(request:Request,params:Promise<{path?:string[]}>,method:"GE
    const ch=request.headers.get("x-cms-channel")||"";
    const device=request.headers.get("x-cms-device")||"";
    const rev=request.headers.get("x-cms-revision")||"";
-   if(!/^[a-f0-9-]{36}$/i.test(id)||!["public_web","dealer_app","consumer_app"].includes(ch)||
+   if(!/^[a-f0-9-]{36}$/i.test(id)||
+    (action==="image-upload"&&!["public_web","dealer_app","consumer_app"].includes(ch))||
+    (action==="slide-upload"&&!/^[2-5]$/.test(request.headers.get("x-cms-slide")||""))||
     !["desktop","mobile"].includes(device)||!/^[1-9][0-9]{0,9}$/.test(rev))
     return fail(400,"invalid_upload");
    const bytes=await request.arrayBuffer();
@@ -74,6 +77,7 @@ async function proxy(request:Request,params:Promise<{path?:string[]}>,method:"GE
      "X-CMS-Channel":request.headers.get("x-cms-channel")||"",
      "X-CMS-Device":request.headers.get("x-cms-device")||"",
      "X-CMS-Revision":request.headers.get("x-cms-revision")||"",
+     ...(action==="slide-upload"?{"X-CMS-Slide":request.headers.get("x-cms-slide")||""}:{}),
     }:{})},
    ...(body===undefined?{}:{body})
   });

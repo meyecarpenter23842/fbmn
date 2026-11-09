@@ -12,6 +12,8 @@ import {websiteDraftTargets,withWebsitePlacement} from "./cms-website-policy";
 import {websiteCmsPage} from "./cms-website-list";
 import type {CmsSourcePage} from "./cms-website-list";
 import {cmsPublishIssues,cmsPublishWarnings} from "./cms-publish-readiness";
+import CmsSlideEditor,{uploadCmsSlide,saveCmsSlideSettings} from "./cms-slide-editor";
+import type {CmsSlideSettings} from "./cms-slide-editor";
 
 type CmsKind = "banner"|"popup"|"article"|"promotion";
 type CmsStatus = "draft"|"published"|"hidden";
@@ -21,7 +23,7 @@ type CmsItem = {
  cta_url:string|null;channel_targets:CmsChannel[];sort_order:number;
  starts_at:string|null;ends_at:string|null;source_ref:string;status:CmsStatus;
  revision:number;updated_at:string;placements:Partial<Record<CmsChannel,string>>;
- has_desktop?:boolean;has_mobile?:boolean;
+ has_desktop?:boolean;has_mobile?:boolean;incomplete_slide_count?:number;
  popup_delay_seconds:number;popup_cooldown_minutes:number;popup_max_per_session:number;
 };
 type CmsSummary = Omit<CmsItem,"paragraphs"|"cta_url">;
@@ -96,6 +98,9 @@ function CmsEditor({item,kind,onSaved,onSavingChange,dirtyRef,step,onStep,formId
  const [draft,setDraft]=useState<Draft>(()=>item?fromItem(item):blank(kind));
  const [savedRecord,setSavedRecord]=useState<CmsItem|null>(item);
  const [pendingImages,setPendingImages]=useState<CmsPendingImages>({});
+ const [pendingSlides,setPendingSlides]=useState<CmsPendingImages>({});
+ const [slideSettingsDraft,setSlideSettingsDraft]=useState<CmsSlideSettings|null>(null);
+ const [previewSlide,setPreviewSlide]=useState(1);
  const [busy,setBusy]=useState(false);
  const [error,setError]=useState("");
  const [toastId,setToastId]=useState(0);
@@ -118,6 +123,16 @@ function CmsEditor({item,kind,onSaved,onSavingChange,dirtyRef,step,onStep,formId
   if(prior){URL.revokeObjectURL(prior.url);previewUrls.current.delete(prior.url);}
   dirtyRef.current=true;
   setPendingImages(prev=>({...prev,[key]:{file,url}}));
+ };
+ const stageSlide=(slide:number,device:CmsDevice,file:File)=>{
+  if(busy||operationLock.current)return;
+  const key=slide+":"+device,url=URL.createObjectURL(file);
+  previewUrls.current.add(url);
+  const previous=pendingSlides[key];
+  if(previous){URL.revokeObjectURL(previous.url);previewUrls.current.delete(previous.url);}
+  dirtyRef.current=true;
+  setPendingSlides(prev=>({...prev,[key]:{file,url}}));
+  setPreviewSlide(slide);
  };
  const submit=async(event:FormEvent<HTMLFormElement>)=>{
   event.preventDefault();
@@ -172,6 +187,27 @@ function CmsEditor({item,kind,onSaved,onSavingChange,dirtyRef,step,onStep,formId
     // Preserve the selected preview until the saved R2 image can be loaded.
     URL.revokeObjectURL(pending.url);previewUrls.current.delete(pending.url);
    }
+   const extra=draft.kind==="banner"&&draft.placements.public_web==="home.hero"?
+    Object.entries(pendingSlides).sort(([a],[b])=>a.localeCompare(b)):[];
+   for(const [key,pending] of extra){
+    const [index,device]=key.split(":");
+    const slide=Number(index);
+    const revision=await uploadCmsSlide(current.id,current.revision,slide,
+     device as CmsDevice,pending.file);
+    current={...current,revision};
+    setSavedRecord(current);
+    setPendingSlides(prev=>{const updated={...prev};delete updated[key];return updated;});
+    URL.revokeObjectURL(pending.url);previewUrls.current.delete(pending.url);
+   }
+   if(slideSettingsDraft&&current.kind==="banner"&&draft.placements.public_web==="home.hero"){
+    const result=await saveCmsSlideSettings(current.id,current.revision,slideSettingsDraft);
+    current={...current,revision:result.revision};
+    setSavedRecord(current);
+    setSlideSettingsDraft(null);
+   }
+   // Re-read authoritative R2 flags and incomplete extra-slide count.
+   const refreshed=await cmsApi<{item:CmsItem}>("entry?id="+encodeURIComponent(current.id));
+   current=refreshed.item;setSavedRecord(current);
    dirtyRef.current=false;
    onSaved();
    onStep(2);
@@ -191,6 +227,7 @@ function CmsEditor({item,kind,onSaved,onSavingChange,dirtyRef,step,onStep,formId
   channel_targets:draft.channelTargets,
   has_desktop:savedRecord?.has_desktop===true,
   has_mobile:savedRecord?.has_mobile===true,
+  incomplete_slide_count:savedRecord?.incomplete_slide_count??0,
   starts_at:draft.startsAt||null,ends_at:draft.endsAt||null
  };
  const preflight=cmsPublishIssues(publishInput);
@@ -267,8 +304,16 @@ function CmsEditor({item,kind,onSaved,onSavingChange,dirtyRef,step,onStep,formId
     <div className="cms-form-grid">
      <CmsWebsitePlacement kind={draft.kind} value={draft.placements.public_web||""}
        disabled={busy} onChange={value=>{
+        if(draft.placements.public_web==="home.hero"&&value!=="home.hero"&&
+           (Object.keys(pendingSlides).length>0||slideSettingsDraft!==null)){
+         if(!window.confirm("Đổi khỏi Hero sẽ bỏ các Slide/motion chưa lưu. Tiếp tục?"))return;
+         for(const img of Object.values(pendingSlides)){
+          URL.revokeObjectURL(img.url);previewUrls.current.delete(img.url);
+         }
+         setPendingSlides({});setSlideSettingsDraft(null);setPreviewSlide(1);
+        }
         // Only Website slot is edited; App placements remain unchanged.
-         set("placements",withWebsitePlacement(draft.placements,value));
+        set("placements",withWebsitePlacement(draft.placements,value));
        }}/>
       {draft.kind==="popup"&&<fieldset className="cms-popup-frequency cms-wide">
       <legend>Popup quảng bá cho khách truy cập</legend>
@@ -308,10 +353,22 @@ function CmsEditor({item,kind,onSaved,onSavingChange,dirtyRef,step,onStep,formId
     </div>
     <CmsMediaEditor recordId={savedRecord?.id??null} revision={savedRecord?.revision??0}
      channels={["public_web"]} pending={pendingImages} onStage={stageImage} disabled={busy}/>
+    {draft.kind==="banner"&&draft.placements.public_web==="home.hero"&&
+     <CmsSlideEditor recordId={savedRecord?.id??null} revision={savedRecord?.revision??0}
+      disabled={busy} pending={pendingSlides} onStage={stageSlide}
+      onRevision={revision=>setSavedRecord(prev=>prev?{...prev,revision}:prev)}
+      onUpdated={onSaved} previewSlide={previewSlide} onPreviewSlide={setPreviewSlide}
+      settingsDraft={slideSettingsDraft}
+      onSettingsDraft={value=>{
+       setSlideSettingsDraft(value);
+       dirtyRef.current=Boolean(value)||contentDirty.current||
+        Object.keys(pendingImages).length>0||Object.keys(pendingSlides).length>0;
+      }}/>}
     <CmsVisualPreview kind={draft.kind} title={draft.title} summary={draft.summary}
      ctaUrl={draft.ctaUrl} channelTargets={["public_web"]} placements={draft.placements}
       recordId={savedRecord?.id??null} revision={savedRecord?.revision??0}
       pending={pendingImages} channel="public_web" device={previewDevice} webOnly
+      previewSlide={previewSlide} pendingSlides={pendingSlides}
       onDevice={setPreviewDevice}/>
    </>}
   </section>
