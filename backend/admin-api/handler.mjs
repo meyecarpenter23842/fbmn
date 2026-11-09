@@ -2,6 +2,7 @@
 import { handleCatalogue } from "./catalogue-service.mjs";
 import { handleCms } from "./cms-service.mjs";
 import { handleHomeLayout } from "./home-layout-service.mjs";
+import { handleCatalogueBooks } from "./catalogue-books-service.mjs";
 import { handlePricebook } from "./pricebook-service.mjs";
 import { handleBulkPricebook } from "./pricebook-bulk-service.mjs";
 import { handleManagedPriceLists } from "./managed-price-lists-service.mjs";
@@ -21,6 +22,7 @@ const PERMITTED = Object.freeze({
   "catalogue.manage": new Set(["owner", "admin", "editor"]),
   "cms.manage": new Set(["owner"]),
   "website.layout": new Set(["owner"]),
+  "website.catalogue": new Set(["owner"]),
   "pricing.private": new Set(["owner","admin","pricing"]),
 });
 const error = (status, code, corsOrigin) =>
@@ -35,7 +37,7 @@ function reply(status, body, corsOrigin) {
   if (corsOrigin) headers.set("Access-Control-Allow-Origin", corsOrigin);
   return new Response(JSON.stringify(body), { status, headers });
 }
-export function createAdminApi({ verifyToken, loadActor, listChannels, recordAudit, catalogueDb, catalogueR2, cmsPublicSurfaceReady = false, allowedOrigins = [] }) {
+export function createAdminApi({ verifyToken, loadActor, listChannels, recordAudit, catalogueDb, catalogueR2, catalogueBookR2, cmsPublicSurfaceReady = false, allowedOrigins = [] }) {
   if (![verifyToken,loadActor,listChannels,recordAudit].every(f => typeof f === "function")) {
     throw new Error("ADM-01 dependencies required");
   }
@@ -50,7 +52,8 @@ export function createAdminApi({ verifyToken, loadActor, listChannels, recordAud
       const corsOrigin = origin && origins.has(origin) ? origin : null;
       if (origin && !corsOrigin) return error(403, "origin_forbidden", null);
       const url = new URL(request.url);
-      const action = url.pathname === "/v1/admin/website/home-layout" ? "website.layout" : (url.pathname === "/v1/admin/cms" || url.pathname.startsWith("/v1/admin/cms/")) ? "cms.manage" :
+      const action = (url.pathname === "/v1/admin/website/catalogue" || url.pathname.startsWith("/v1/admin/website/catalogue/")) ? "website.catalogue" :
+        url.pathname === "/v1/admin/website/home-layout" ? "website.layout" : (url.pathname === "/v1/admin/cms" || url.pathname.startsWith("/v1/admin/cms/")) ? "cms.manage" :
         url.pathname.startsWith("/v1/admin/catalogue/") ? "catalogue.manage" :
         url.pathname.startsWith("/v1/admin/pricing/") ? "pricing.private" : ROUTES.get(url.pathname);
       if (!action) return error(404, "not_found", corsOrigin);
@@ -85,6 +88,9 @@ export function createAdminApi({ verifyToken, loadActor, listChannels, recordAud
         try { await recordAudit({ subject, action, outcome: "denied" }); }
         catch { return error(503, "service_unavailable", corsOrigin); }
         return error(403, "forbidden", corsOrigin);
+      }
+      if (action === "website.catalogue") {
+        return handleCatalogueBooks({request,actor:{...actor,subject},db:catalogueDb,r2:catalogueBookR2});
       }
       if (action === "website.layout") {
         return handleHomeLayout({request,actor:{...actor,subject},db:catalogueDb});
