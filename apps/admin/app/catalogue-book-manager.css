@@ -38,3 +38,5 @@
 .fb-admin .dl7b-fields p{font-size:13px;color:#74687b;margin:0}
 @media(max-width:1080px){.fb-admin .dl7b-grid{grid-template-columns:1fr}}
 @media(max-width:780px){.fb-admin .dl7b-panel{padding:12px}.fb-admin .dl7b-backgrounds{grid-template-columns:1fr}.fb-admin .dl7b-order .fb-ui-button{width:44px}}
+
+.fb-admin .dl7b-pages-nav{display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap;margin:14px 0;font-size:13px;color:#65536e}

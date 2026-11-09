@@ -72,6 +72,7 @@ export default function CatalogueBookManager({owner,onBusyChange}:{
  const [detail,setDetail]=useState<Details|null>(null);
  const [loading,setLoading]=useState(true);
  const [busy,setBusy]=useState(false);
+ const [pageOffset,setPageOffset]=useState(0);
  const [readError,setReadError]=useState("");
  const [dialog,setDialog]=useState<"create"|"edit"|null>(null);
  const [deleteFile,setDeleteFile]=useState<Asset|null>(null);
@@ -98,8 +99,9 @@ export default function CatalogueBookManager({owner,onBusyChange}:{
  },[]);
  useEffect(()=>{
   if(!owner)return;
-  void load();
-  return ()=>{loadId.current+=1;};
+  let active=true;
+  void Promise.resolve().then(()=>{if(active)return load();});
+  return ()=>{active=false;loadId.current+=1;};
  },[owner,load]);
  useEffect(()=>{onBusyChange?.(busy);return ()=>onBusyChange?.(false);},[busy,onBusyChange]);
  async function mutate(action:string,payload:object,success:string,choose?:string){
@@ -115,6 +117,7 @@ export default function CatalogueBookManager({owner,onBusyChange}:{
  }
  const book=detail?.book,assets=detail?.assets||[];
  const pages=assets.filter(f=>f.kind==="page").sort(sortAssets);
+ const visiblePages=pages.slice(pageOffset,pageOffset+24);
  const cover=assets.find(f=>f.kind==="cover");
  const desktop=assets.find(f=>f.kind==="background_desktop");
  const mobile=assets.find(f=>f.kind==="background_mobile");
@@ -202,7 +205,7 @@ export default function CatalogueBookManager({owner,onBusyChange}:{
     <section className="surface dl7b-panel">
      <div className="dl7b-panel-heading"><div><h2>Trang sách</h2><p>{pages.length} / 200 trang · WebP riêng theo bộ</p></div>{fileInput("page","Thêm trang WebP")}</div>
      {!pages.length&&<p>Chưa có trang nào. Thêm ảnh từng trang theo đúng thứ tự đọc.</p>}
-     <ol className="dl7b-pages">{pages.slice(0,100).map((p,i)=><li key={p.id}>
+     <ol className="dl7b-pages">{visiblePages.map((p,localIndex)=>{const i=pageOffset+localIndex;return <li key={p.id}>
       <div className="dl7b-image"><CatalogueImage id={p.id} alt={"Trang "+(i+1)}/></div>
       <div className="dl7b-page-caption"><strong>Trang {i+1}</strong><small>{p.width} × {p.height}</small></div>
       <div className="dl7b-order">
@@ -210,8 +213,12 @@ export default function CatalogueBookManager({owner,onBusyChange}:{
        <button type="button" className="fb-ui-button fb-ui-button--secondary" aria-label={"Đưa trang "+(i+1)+" xuống"} disabled={!canEdit||busy||i===pages.length-1} onClick={()=>void move(i,1)}>↓</button>
        <button type="button" className="fb-ui-button fb-ui-button--secondary" aria-label={"Xóa trang "+(i+1)} disabled={!canEdit||busy} onClick={()=>setDeleteFile(p)}>×</button>
       </div>
-     </li>)}</ol>
-     {pages.length>100&&<p>Đang hiển thị 100 trang đầu. Các trang khác vẫn được lưu trong kho.</p>}
+     </li>;})}</ol>
+     {pages.length>24&&<div className="dl7b-pages-nav">
+      <button type="button" className="fb-ui-button fb-ui-button--secondary" disabled={pageOffset===0} onClick={()=>setPageOffset(v=>Math.max(0,v-24))}>Trang trước</button>
+      <span>Đang xem {pageOffset+1}–{Math.min(pages.length,pageOffset+24)} / {pages.length}</span>
+      <button type="button" className="fb-ui-button fb-ui-button--secondary" disabled={pageOffset+24>=pages.length} onClick={()=>setPageOffset(v=>v+24)}>Trang sau</button>
+     </div>}
     </section>
     <section className="surface dl7b-panel">
      <h2>Ảnh bìa</h2><div className="dl7b-single">

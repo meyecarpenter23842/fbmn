@@ -261,7 +261,8 @@ export default function AdminPage() {
   }
   function navigate(to:Section){
     // A running image upload/replace must not be detached by navigation.
-    if(workspaceOperationBusy&&["media","pricing","catalogue-books"].includes(section)&&to!==section)return;
+    if(workspaceOperationBusy&&["media","pricing"].includes(section)&&to!==section)return;
+    if(workspaceOperationBusy&&section==="catalogue-books"&&to!==section)return;
     setSection(to==="new-product"?"products":to);
     if(["products","structure","media","import-products"].includes(to))
       setProductMenuExpanded(true);
