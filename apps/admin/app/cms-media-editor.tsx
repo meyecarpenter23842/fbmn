@@ -11,14 +11,14 @@ const CHANNEL_NAMES:Record<CmsChannel,string>={
  public_web:"Website",dealer_app:"App đại lý",consumer_app:"App người tiêu dùng"
 };
 export const cmsMediaKey=(ch:CmsChannel,device:CmsDevice)=>ch+":"+device;
-async function bearerToken(){
+export async function bearerToken(){
  const res=await fetch("/api/auth/token",{credentials:"same-origin",cache:"no-store"});
  if(!res.ok)throw Error("Phiên đăng nhập đã hết hạn.");
  const data=(await res.json()) as {token?:unknown};
  if(typeof data.token!=="string"||!data.token)throw Error("Không xác thực được Owner.");
  return data.token;
 }
-async function convertToWebP(file:File,longest:number){
+export async function convertToWebP(file:File,longest:number){
  if(!["image/jpeg","image/png","image/webp"].includes(file.type)||file.size>5*1024*1024)
   throw Error("Ảnh phải là JPG/PNG/WebP, dung lượng tối đa 5 MB.");
  const bitmap=await createImageBitmap(file);
