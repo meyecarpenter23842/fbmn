@@ -47,7 +47,7 @@ export function projectPublicCms(raw){
   };
   if(row.kind==="banner"&&row.slot==="home.hero"&&row.slides!==undefined){
    if(!Array.isArray(row.slides)||row.slides.length<1||row.slides.length>5||
-      row.slides[0]!==1||new Set(row.slides).size!==row.slides.length||
+      !row.slides.includes(1)||new Set(row.slides).size!==row.slides.length||
       row.slides.some(n=>!Number.isInteger(n)||n<1||n>5))
      throw Error("Invalid CMS hero slides");
    const m=row.motion;
