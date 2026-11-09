@@ -31,7 +31,7 @@ test("G07: one accessible full-card link, no nested links, redundant detail acti
 test("G07: mobile catalogue stacks compact horizontal cards and preserves all rows",()=>{
   assert.match(listingCss, /@media \(max-width: 700px\)[\s\S]*?\.catalog-grid\s*\{\s*grid-template-columns:\s*1fr/);
   assert.match(css, /@media \(max-width: 700px\)[\s\S]*?\.fb-song-related-hit\s*\{[^}]*display:\s*grid;[^}]*grid-template-columns:\s*minmax\(85px, 36%\) minmax\(0,1fr\)/);
-  assert.match(css, /\.fb-song-related-image\s*\{[^}]*height:\s*132px/);
+  assert.match(css, /\.fb-song-related-image\s*\{[^}]*height:\s*clamp\(216px, 22vw, 270px\)/);
   assert.match(css, /\.fb-song-related-body h3\s*\{[^}]*-webkit-line-clamp:\s*2/);
   assert.doesNotMatch(css, /\.fb-song-related-grid\s*>\s*\.fb-song-related-card:nth-child/);
   assert.match(listingCss, /\.catalog-empty-image\.catalog-image-compact\s*\{/);
