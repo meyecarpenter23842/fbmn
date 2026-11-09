@@ -28,7 +28,7 @@ CREATE TABLE fbmn_catalog_private.website_catalogue_assets (
  id uuid PRIMARY KEY,
  book_id uuid NOT NULL REFERENCES fbmn_catalog_private.website_catalogue_books(id) ON DELETE RESTRICT,
  kind text NOT NULL CHECK(kind IN ('page','cover','background_desktop','background_mobile')),
- sort_order integer NOT NULL DEFAULT 0 CHECK(sort_order BETWEEN 0 AND 200),
+ sort_order integer NOT NULL DEFAULT 0 CHECK(sort_order BETWEEN 0 AND 1000000),
  r2_key text NOT NULL UNIQUE,
  mime_type text NOT NULL DEFAULT 'image/webp' CHECK(mime_type='image/webp'),
  byte_size integer NOT NULL CHECK(byte_size BETWEEN 100 AND 5242880),
