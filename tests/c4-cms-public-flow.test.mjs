@@ -216,7 +216,8 @@ test("C4 published Hero supersedes notebook fallback and grows on narrow mobile"
  assert.match(home,/hasCmsHero\?<CmsBannerSlot items=\{cms\} slot="home\.hero"\/>:<\>/);
  assert.match(css,/\.ref-hero__visual\.ref-hero__visual--cms\{[^}]*height:auto/s);
  assert.match(css,/@media\(max-width:800px\)\{[\s\S]*?\.ref-hero__visual\.ref-hero__visual--cms\{min-height:0;height:auto/);
- assert.match(css,/\.cms-web-banners--home-hero\{margin:10px 8px/);
+ assert.match(css,/\.cms-hero-stage\{position:relative/);
+ assert.match(css,/\.cms-hero-image\{display:block/);
  assert.match(css,/\.cms-web-popup-heading button:hover/);
  assert.match(css,/\.cms-web-popup-heading button:active/);
  assert.match(css,/var\(--fb-motion-button,190ms\)/);
