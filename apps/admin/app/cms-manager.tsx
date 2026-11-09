@@ -187,7 +187,8 @@ function CmsEditor({item,kind,onSaved,onSavingChange,dirtyRef,step,onStep,formId
     // Preserve the selected preview until the saved R2 image can be loaded.
     URL.revokeObjectURL(pending.url);previewUrls.current.delete(pending.url);
    }
-   const extra=Object.entries(pendingSlides).sort(([a],[b])=>a.localeCompare(b));
+   const extra=draft.kind==="banner"&&draft.placements.public_web==="home.hero"?
+    Object.entries(pendingSlides).sort(([a],[b])=>a.localeCompare(b)):[];
    for(const [key,pending] of extra){
     const [index,device]=key.split(":");
     const slide=Number(index);
@@ -303,8 +304,16 @@ function CmsEditor({item,kind,onSaved,onSavingChange,dirtyRef,step,onStep,formId
     <div className="cms-form-grid">
      <CmsWebsitePlacement kind={draft.kind} value={draft.placements.public_web||""}
        disabled={busy} onChange={value=>{
+        if(draft.placements.public_web==="home.hero"&&value!=="home.hero"&&
+           (Object.keys(pendingSlides).length>0||slideSettingsDraft!==null)){
+         if(!window.confirm("Đổi khỏi Hero sẽ bỏ các Slide/motion chưa lưu. Tiếp tục?"))return;
+         for(const img of Object.values(pendingSlides)){
+          URL.revokeObjectURL(img.url);previewUrls.current.delete(img.url);
+         }
+         setPendingSlides({});setSlideSettingsDraft(null);setPreviewSlide(1);
+        }
         // Only Website slot is edited; App placements remain unchanged.
-         set("placements",withWebsitePlacement(draft.placements,value));
+        set("placements",withWebsitePlacement(draft.placements,value));
        }}/>
       {draft.kind==="popup"&&<fieldset className="cms-popup-frequency cms-wide">
       <legend>Popup quảng bá cho khách truy cập</legend>
