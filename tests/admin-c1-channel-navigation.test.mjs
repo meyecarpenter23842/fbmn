@@ -31,7 +31,7 @@ test("C1 preserves both live CMS managers, SKU and price workspaces",()=>{
     assert.ok(page.includes('key:"'+section+'"'),"missing common product menu: "+section);
   assert.match(page,/if\(workspaceOperationBusy&&\["media","pricing"\]\.includes\(section\)&&to!==section\)return/);
   assert.match(page,/if\(\["banners","content"\]\.includes\(to\)\)\s*setWebsiteMenuExpanded\(true\)/);
-  assert.match(page,/\["banners","content"\]\.includes\(section\)\?"Website Futurebook":"Quản trị"/);
+  assert.match(page,/\["banners","content","home-layout"\]\.includes\(section\)\?"Website Futurebook":"Quản trị"/);
   assert.match(page,/banners:"Banner & Popup",content:"Tin tức & Khuyến mãi"/);
 });
 

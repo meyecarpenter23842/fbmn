@@ -54,7 +54,7 @@ export default function HomeLayoutManager({owner}:{owner:boolean}){
   }catch(e){setError(e instanceof Error?e.message:"Không tải được cấu hình.");}
   finally{setLoading(false);}
  },[]);
- useEffect(()=>{if(owner)void load();else setLoading(false);},[owner,load]);
+ useEffect(()=>{if(!owner)return;let cancelled=false;void Promise.resolve().then(()=>{if(!cancelled)return load();});return ()=>{cancelled=true;};},[owner,load]);
  const dirty=useMemo(()=>draft&&saved&&JSON.stringify(draft)!==JSON.stringify(saved),[draft,saved]);
  const patch=(p:Partial<Layout>)=>setDraft(v=>v?{...v,...p}:v);
  async function save(operation:"save"|"reset"){
