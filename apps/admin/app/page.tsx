@@ -8,10 +8,11 @@ import CatalogueManager from "./catalogue-manager";
 import CatalogueSideWorkspace from "./catalogue-side-workspace";
 import CmsManager from "./cms-manager";
 import HomeLayoutManager from "./home-layout-manager";
+import CatalogueBookManager from "./catalogue-book-manager";
 import AdminTelemetry from "./admin-telemetry";
 
 type AuthState = "checking" | "anonymous" | "authorised" | "forbidden" | "unavailable";
-type Section = "dashboard" | "products" | "structure" | "pricing" | "import-products" | "new-product" | "media" | "categories" | "banners" | "content" | "home-layout" | "customers" | "accounts" | "settings";
+type Section = "dashboard" | "products" | "structure" | "pricing" | "import-products" | "new-product" | "media" | "categories" | "banners" | "content" | "home-layout" | "catalogue-books" | "customers" | "accounts" | "settings";
 type GlyphName = "home" | "box" | "folder" | "image" | "layers" | "file" | "users" | "user" | "settings" | "search" | "bell" | "chevron" | "plus" | "upload" | "save" | "eye" | "edit" | "copy" | "trash" | "check" | "alert" | "logout" | "grid" | "arrow-left" | "link" | "book" | "sparkle" | "menu" | "globe" | "close" | "shield" | "filter" | "refresh";
 type SessionData = { role: string; channels: string[] };
 type Channel = { code: string; label: string };
@@ -73,6 +74,7 @@ const websiteSections: Array<{key:Section;label:string;icon:GlyphName}> = [
   {key:"home-layout",label:"Trang chủ & bố cục",icon:"grid"},
   {key:"banners",label:"Banner & Popup",icon:"image"},
   {key:"content",label:"Tin tức & Khuyến mãi",icon:"file"},
+  {key:"catalogue-books",label:"Kho Catalogue",icon:"book"},
 ];
 
 function Brand() {
@@ -259,11 +261,11 @@ export default function AdminPage() {
   }
   function navigate(to:Section){
     // A running image upload/replace must not be detached by navigation.
-    if(workspaceOperationBusy&&["media","pricing"].includes(section)&&to!==section)return;
+    if(workspaceOperationBusy&&["media","pricing","catalogue-books"].includes(section)&&to!==section)return;
     setSection(to==="new-product"?"products":to);
     if(["products","structure","media","import-products"].includes(to))
       setProductMenuExpanded(true);
-    if(["banners","content"].includes(to))
+    if(["banners","content","catalogue-books"].includes(to))
       setWebsiteMenuExpanded(true);
     setMenuOpen(false);setNotice("");
   }
@@ -283,7 +285,7 @@ export default function AdminPage() {
   function removePhoto(id:number){setPhotos(prev=>{const found=prev.find(p=>p.id===id);if(found){URL.revokeObjectURL(found.url);photoUrls.current=photoUrls.current.filter(u=>u!==found.url);}return prev.filter(p=>p.id!==id);});if(selectedPhoto===id)setSelectedPhoto(null);if(coverId===id)setCoverId(null);}
   const activePhoto=photos.find(p=>p.id===selectedPhoto)||photos[0];
   const roleLabel=session?.role?.toUpperCase() || "";
-  const sectionName:Record<Section,string>={dashboard:"Tổng quan",products:"Danh sách sản phẩm",structure:"Danh mục & nhóm mẫu",pricing:"Giá & bảng giá","import-products":"Nhập / cập nhật Excel","new-product":"Thêm sản phẩm",media:"Thư viện hình ảnh",categories:"Danh mục",banners:"Banner & Popup",content:"Tin tức & Khuyến mãi","home-layout":"Trang chủ & bố cục",customers:"Khách hàng",accounts:"Tài khoản",settings:"Cài đặt"};
+  const sectionName:Record<Section,string>={dashboard:"Tổng quan",products:"Danh sách sản phẩm",structure:"Danh mục & nhóm mẫu",pricing:"Giá & bảng giá","import-products":"Nhập / cập nhật Excel","new-product":"Thêm sản phẩm",media:"Thư viện hình ảnh",categories:"Danh mục",banners:"Banner & Popup",content:"Tin tức & Khuyến mãi","home-layout":"Trang chủ & bố cục","catalogue-books":"Kho Catalogue",customers:"Khách hàng",accounts:"Tài khoản",settings:"Cài đặt"};
   return <div className="admin-app">
     <div className={"workspace "+(authState!=="authorised"?"workspace-locked":"")}>
       <aside className={"sidebar "+(menuOpen?"sidebar-open":"")}>
@@ -293,7 +295,7 @@ export default function AdminPage() {
             <button type="button" key={item.key}
               className={"side-link "+(section===item.key?"active":"")}
               aria-current={section===item.key?"page":undefined}
-              onClick={()=>navigate(item.key)} disabled={authState!=="authorised"||(workspaceOperationBusy&&["media","pricing"].includes(section)&&item.key!==section)}>
+              onClick={()=>navigate(item.key)} disabled={authState!=="authorised"||(workspaceOperationBusy&&["media","pricing","catalogue-books"].includes(section)&&item.key!==section)}>
               <Glyph name={item.icon} size={20}/><span>{item.label}</span>
             </button>)}
           <div className="side-menu-divider" aria-hidden="true"/>
@@ -313,7 +315,7 @@ export default function AdminPage() {
                   className={"side-sub-link"+(section===item.key?" active":"")}
                   aria-current={section===item.key?"page":undefined}
                   onClick={()=>navigate(item.key)}
-                  disabled={authState!=="authorised"||(workspaceOperationBusy&&["media","pricing"].includes(section)&&item.key!==section)}>
+                  disabled={authState!=="authorised"||(workspaceOperationBusy&&["media","pricing","catalogue-books"].includes(section)&&item.key!==section)}>
                   <Glyph name={item.icon} size={16}/><span>{item.label}</span>
                 </button>)}
               </div>
@@ -324,13 +326,13 @@ export default function AdminPage() {
             <button type="button" key={item.key}
               className={"side-link "+(section===item.key?"active":"")}
               aria-current={section===item.key?"page":undefined}
-              onClick={()=>navigate(item.key)} disabled={authState!=="authorised"||(workspaceOperationBusy&&["media","pricing"].includes(section)&&item.key!==section)}>
+              onClick={()=>navigate(item.key)} disabled={authState!=="authorised"||(workspaceOperationBusy&&["media","pricing","catalogue-books"].includes(section)&&item.key!==section)}>
               <Glyph name={item.icon} size={20}/><span>{item.label}</span>
             </button>)}
           <div className="side-menu-divider" aria-hidden="true"/>
           <div className="side-group">
             <button type="button" className={"side-group-heading"+(
-              ["banners","content","home-layout"].includes(section)?" active":"")}
+              ["banners","content","home-layout","catalogue-books"].includes(section)?" active":"")}
               aria-controls="website-navigation" aria-expanded={websiteMenuExpanded}
               onClick={()=>setWebsiteMenuExpanded(value=>!value)}
               disabled={authState!=="authorised"}>
@@ -344,7 +346,7 @@ export default function AdminPage() {
                   className={"side-sub-link"+(section===item.key?" active":"")}
                   aria-current={section===item.key?"page":undefined}
                   onClick={()=>navigate(item.key)}
-                  disabled={authState!=="authorised"||(workspaceOperationBusy&&["media","pricing"].includes(section)&&item.key!==section)}>
+                  disabled={authState!=="authorised"||(workspaceOperationBusy&&["media","pricing","catalogue-books"].includes(section)&&item.key!==section)}>
                   <Glyph name={item.icon} size={16}/><span>{item.label}</span>
                 </button>)}
               </div>
@@ -355,7 +357,7 @@ export default function AdminPage() {
       </aside>
       <div className="work-area">
         <header className="topbar"><button type="button" className="mobile-menu" onClick={()=>setMenuOpen(v=>!v)} aria-label="Mở menu"><Glyph name="menu"/></button>
-          <div className="breadcrumbs"><Glyph name="home" size={21}/><span className="crumb-sep">›</span><span>{["products","structure","media","import-products"].includes(section)?"Sản phẩm":["banners","content","home-layout"].includes(section)?"Website Futurebook":"Quản trị"}</span><span className="crumb-sep">›</span><b>{sectionName[section]}</b></div>
+          <div className="breadcrumbs"><Glyph name="home" size={21}/><span className="crumb-sep">›</span><span>{["products","structure","media","import-products"].includes(section)?"Sản phẩm":["banners","content","home-layout","catalogue-books"].includes(section)?"Website Futurebook":"Quản trị"}</span><span className="crumb-sep">›</span><b>{sectionName[section]}</b></div>
           <div className="top-actions"><div className="profile-avatar">{name.slice(0,1).toUpperCase()||"F"}</div><div className="profile-text"><b>{name || "Futurebook Admin"}</b><small>{session?roleLabel:"Yêu cầu đăng nhập"}</small></div><button type="button" className="top-icon" onClick={()=>void signOut()} disabled={authState!=="authorised"} title="Đăng xuất"><Glyph name="logout" size={18}/></button></div>
         </header>
         <main className="workspace-main">
@@ -370,6 +372,7 @@ export default function AdminPage() {
             {section==="pricing"&&<CatalogueSideWorkspace mode="pricing" onBusyChange={setWorkspaceOperationBusy}/>}
             {section==="import-products" && <CatalogueImportPreview/>}
             {section==="home-layout"&&<HomeLayoutManager owner={session?.role==="owner"}/>}
+            {section==="catalogue-books"&&<CatalogueBookManager owner={session?.role==="owner"} onBusyChange={setWorkspaceOperationBusy}/>}
             {section==="banners"&&<CmsManager mode="marketing" owner={session?.role==="owner"}/>}
             {section==="content"&&<CmsManager mode="editorial" owner={session?.role==="owner"}/>}
             {section==="new-product" && <><div className="page-title"><div><h1>Thêm sản phẩm mới</h1><p>Chuẩn bị thông tin sản phẩm cho Website và App Futurebook.</p></div><div className="action-row"><Button icon="arrow-left" variant="outline" onClick={()=>navigate("products")}>Quay lại</Button><Button icon="save" disabled title="API ghi bản nháp chưa triển khai">Lưu nháp</Button><Button icon="eye" variant="outline" disabled title="Cần bản nháp thật để xem trước">Xem trước</Button><Button icon="upload" variant="primary" disabled title="Cần quyền publisher và API duyệt/xuất bản">Xuất bản</Button></div></div><p className="draft-warning"><Glyph name="alert" size={17}/>Mẫu nhập liệu đang ở chế độ giao diện thử nghiệm. Thông tin chưa lưu lên database; nút lưu và xuất bản bị khóa cho đến khi có API catalogue.</p>
@@ -378,7 +381,7 @@ export default function AdminPage() {
             </>}
             {section==="media"&&<CatalogueSideWorkspace mode="media" onBusyChange={setWorkspaceOperationBusy}/>}
             {section==="dashboard"&&<><div className="page-title"><div><h1>Tổng quan quản trị</h1><p>Thông tin tài khoản và quyền quản trị hiện tại.</p></div><span className="tag">Thông tin tài khoản</span></div><div className="metric-grid"><div className="metric"><span className="metric-icon green"><Glyph name="shield"/></span><div><small>Trạng thái</small><strong className="metric-word">Đã xác thực</strong><em>Phiên đăng nhập hợp lệ</em></div></div><div className="metric"><span className="metric-icon purple"><Glyph name="user"/></span><div><small>Vai trò</small><strong className="metric-word">{roleLabel}</strong><em>Quyền theo tài khoản</em></div></div><div className="metric"><span className="metric-icon blue"><Glyph name="layers"/></span><div><small>Kênh được xem</small><strong>{session?.channels.length||0}</strong><em>Phạm vi theo tài khoản</em></div></div></div><Panel><SectionHeading icon="layers">Kênh kinh doanh được cấp quyền</SectionHeading>{channels.map(c=><div className="channel-row" key={c.code}><span>{c.label}</span><b>{session?.role==="admin"||session?.channels.includes(c.code)?"Có quyền":"Không có quyền"}</b></div>)}</Panel></>}
-            {!["dashboard","products","structure","pricing","import-products","new-product","media","banners","content","home-layout"].includes(section)&&<><div className="page-title"><div><h1>{sectionName[section]}</h1></div></div><Placeholder title={sectionName[section]+" chưa kích hoạt"} text="Chức năng này đang được hoàn thiện."/></>}
+            {!["dashboard","products","structure","pricing","import-products","new-product","media","banners","content","home-layout","catalogue-books"].includes(section)&&<><div className="page-title"><div><h1>{sectionName[section]}</h1></div></div><Placeholder title={sectionName[section]+" chưa kích hoạt"} text="Chức năng này đang được hoàn thiện."/></>}
           </>}
         </main>
       </div>

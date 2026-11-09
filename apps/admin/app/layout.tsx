@@ -10,6 +10,7 @@ import "./admin-l01-navigation.css";
 import "./admin-controls.css";
 import "./cms-manager.css";
 import "./home-layout.css";
+import "./catalogue-book-manager.css";
 import "./cms-website-scene.css";
 
 export const metadata: Metadata = {
