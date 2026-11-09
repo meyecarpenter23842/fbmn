@@ -144,13 +144,14 @@ export function projectPublicContent(raw) {
   })();
   return { company, articles, promotions, dealerInformation };
 }
-const ROUTES = new Set(["/v1/public/categories", "/v1/public/products", "/v1/public/catalog", "/v1/public/content", "/v1/public/cms"]);
+const ROUTES = new Set(["/v1/public/categories", "/v1/public/products", "/v1/public/catalog", "/v1/public/content", "/v1/public/cms", "/v1/public/home-layout"]);
 const QUERY_KEYS = {
   "/v1/public/categories": new Set(["slug"]),
   "/v1/public/products": new Set(["slug", "categoryId", "page", "limit"]),
   "/v1/public/catalog": new Set(["page", "limit"]),
   "/v1/public/content": new Set(),
   "/v1/public/cms": new Set(),
+  "/v1/public/home-layout": new Set(),
 };
 function integerParam(input, defaultValue, max) {
   if (input === null) return defaultValue;
@@ -192,7 +193,24 @@ function failure(status, code, origin) {
  * source verification, publication approvals, isolation and DB permissions.
  * Do NOT deploy before the separate data-source, rate-limit and staging gates.
  */
-export function createPublicApi({ getPublicCatalog, getPublicContent, getPublicCms, cmsEnabled = false, allowedOrigins = [] }) {
+export function projectPublicHomeLayout(raw) {
+  guard(object(raw) && Array.isArray(raw.categoryIds) && Array.isArray(raw.featuredSkus) &&
+    raw.categoryIds.length<=6 && raw.featuredSkus.length<=12 &&
+    raw.categoryIds.every(id=>typeof id==="string" && /^p5-(?:[0-9a-f-]{36}|uncategorized)$/.test(id)) &&
+    raw.featuredSkus.every(s=>typeof s==="string" && s.length>0 && s.length<=100) &&
+    new Set(raw.categoryIds).size===raw.categoryIds.length &&
+    new Set(raw.featuredSkus).size===raw.featuredSkus.length &&
+    Number.isSafeInteger(raw.categoryLimit) && raw.categoryLimit>=1 && raw.categoryLimit<=6 &&
+    Number.isSafeInteger(raw.productLimit) && raw.productLimit>=1 && raw.productLimit<=12 &&
+    Array.isArray(raw.sectionOrder) && raw.sectionOrder.length===2 &&
+    raw.sectionOrder.includes("categories") && raw.sectionOrder.includes("products") &&
+    new Set(raw.sectionOrder).size===2 &&
+    Number.isSafeInteger(raw.revision) && raw.revision>=1);
+  return {categoryIds:[...raw.categoryIds],featuredSkus:[...raw.featuredSkus],
+    categoryLimit:raw.categoryLimit,productLimit:raw.productLimit,
+    sectionOrder:[...raw.sectionOrder],revision:raw.revision};
+}
+export function createPublicApi({ getPublicCatalog, getPublicContent, getPublicCms, getPublicHomeLayout, cmsEnabled = false, homeLayoutEnabled = false, allowedOrigins = [] }) {
   guard(typeof getPublicCatalog === "function" && typeof getPublicContent === "function");
   guard(Array.isArray(allowedOrigins) && allowedOrigins.every(o => {
     try { const u = new URL(o); return u.protocol === "https:" && u.origin === o; }
@@ -222,6 +240,11 @@ export function createPublicApi({ getPublicCatalog, getPublicContent, getPublicC
       }
       if (!validQuery(url)) return failure(400, "invalid_query", corsOrigin);
       try {
+        if (url.pathname === "/v1/public/home-layout") {
+          if(!homeLayoutEnabled || typeof getPublicHomeLayout!=="function")return failure(404,"not_found",corsOrigin);
+          const layout=projectPublicHomeLayout(await getPublicHomeLayout());
+          return response(200,{data:layout},corsOrigin,"no-store");
+        }
         if (url.pathname === "/v1/public/cms") {
           if(!cmsEnabled||typeof getPublicCms!=="function")
             return failure(503,"cms_unavailable",corsOrigin);

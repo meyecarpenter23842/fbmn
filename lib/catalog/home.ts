@@ -1,8 +1,20 @@
 import type { PublicCatalog, PublicProduct } from "./schema";
 
+export interface HomeLayout {
+  categoryIds: string[];
+  featuredSkus: string[];
+  categoryLimit: number;
+  productLimit: number;
+  sectionOrder: ("categories" | "products")[];
+  revision: number;
+}
+export const DEFAULT_HOME_LAYOUT: HomeLayout = {
+  categoryIds: [], featuredSkus: [], categoryLimit: 6, productLimit: 4,
+  sectionOrder: ["categories","products"], revision: 1
+};
 /**
  * Homepage selects from the already allowlisted public_web catalogue only.
- * This is a deterministic default until DL4 adds Owner-curated placement.
+ * Owner curation only orders/limits products already approved for public_web.
  * Never infer popularity, insert demo entries or manufacture SKU/media/price.
  */
 export const HOME_CATEGORY_LIMIT = 6;
@@ -17,7 +29,7 @@ export interface HomeCategory {
   representativeMedia: PublicProduct["media"][number] | null;
 }
 
-export function selectHomeCatalog(catalog: PublicCatalog): {
+export function selectHomeCatalog(catalog: PublicCatalog, layout: HomeLayout = DEFAULT_HOME_LAYOUT): {
   categories: HomeCategory[];
   products: PublicProduct[];
 } {
@@ -40,7 +52,11 @@ export function selectHomeCatalog(catalog: PublicCatalog): {
       || a.id.localeCompare(b.id));
   }
 
-  const visible = ordered.slice(0, HOME_CATEGORY_LIMIT);
+  const allowed=new Set(ordered.map(category=>category.id));
+  const curated=layout.categoryIds.length
+    ? layout.categoryIds.filter(id=>allowed.has(id)).map(id=>ordered.find(c=>c.id===id)!)
+    : ordered;
+  const visible = curated.slice(0, layout.categoryLimit);
   const categories = visible.map(category => {
     const list = byCategory.get(category.id)!;
     const representativeMedia = list.find(product => product.media.length > 0)?.media[0] ?? null;
@@ -52,7 +68,15 @@ export function selectHomeCatalog(catalog: PublicCatalog): {
 
   // Take one product from each available category first (variety, NOT a
   // fabricated "best-seller" rank), then fill remaining slots deterministically.
-  const picks = visible.map(category => byCategory.get(category.id)![0]);
-  const rest = visible.flatMap(category => byCategory.get(category.id)!.slice(1));
-  return { categories, products: [...picks, ...rest].slice(0, HOME_PRODUCT_LIMIT) };
+  const all=visible.flatMap(category=>byCategory.get(category.id)!);
+  const selected:PublicProduct[]=[];
+  const seen=new Set<string>();
+  const add=(item:PublicProduct|undefined)=>{
+    if(item && !seen.has(item.id)){seen.add(item.id);selected.push(item);}
+  };
+  for(const sku of layout.featuredSkus)
+    add(all.find(item=>item.variants.some(v=>v.sku===sku)));
+  for(const category of visible)add(byCategory.get(category.id)![0]);
+  for(const item of all)add(item);
+  return { categories, products: selected.slice(0,layout.productLimit) };
 }

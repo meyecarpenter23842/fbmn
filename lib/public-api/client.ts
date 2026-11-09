@@ -213,3 +213,26 @@ export async function fetchPublicContent(input: string, transport: typeof fetch 
   }
   return { company, articles, promotions, dealerInformation };
 }
+
+/**
+ * DL4 read-only public settings: never read private Admin credentials.
+ * Disabled/legacy Workers return a 404 and the server caller retains defaults.
+ */
+export async function fetchPublicHomeLayout(input:string,transport:typeof fetch=fetch) {
+ const envelope=await getData(baseUrl(input),"/v1/public/home-layout",transport);
+ const layout=obj(envelope.data);
+ const categoryIds=arr(layout.categoryIds,6).map(x=>str(x,80));
+ const featuredSkus=arr(layout.featuredSkus,12).map(x=>str(x,100));
+ const order=arr(layout.sectionOrder,2);
+ if(order.length!==2||new Set(order).size!==2||
+    !order.includes("categories")||!order.includes("products")||
+    categoryIds.some(id=>!/^p5-(?:[0-9a-f-]{36}|uncategorized)$/.test(id))||
+    new Set(categoryIds).size!==categoryIds.length||
+    new Set(featuredSkus).size!==featuredSkus.length)
+  throw new Error("Invalid public layout");
+ const categoryLimit=integer(layout.categoryLimit,1);
+ const productLimit=integer(layout.productLimit,1);
+ if(categoryLimit>6||productLimit>12)throw new Error("Invalid public layout limits");
+ return {categoryIds,featuredSkus,categoryLimit,productLimit,
+   sectionOrder:order as ("categories"|"products")[],revision:integer(layout.revision,1)};
+}
