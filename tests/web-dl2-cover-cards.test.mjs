@@ -28,15 +28,15 @@ test("DL2 touch cards remain full-row horizontal with larger image and readable 
  assert.equal((block.match(/<Link\b/g)||[]).length,1);
 });
 
-test("DL2 homepage preview is enlarged but remains clearly labelled demo until DL3",()=>{
+test("DL2 enlarged home stage is reused by DL3 published cover cards",()=>{
  assert.match(home,/\.ref-product-card__image\s*\{[^}]*min-height:\s*238px/);
- assert.match(home,/\.ref-product-card__image \.notebook\s*\{[^}]*width:\s*min\(80%, 146px\);\s*height:\s*auto;\s*aspect-ratio:\s*106 \/ 155/);
- assert.doesNotMatch(home,/\.ref-product-card__image \.notebook\s*\{\s*transform:\s*scale/);
+ assert.match(home,/\.ref-product-card__image\s*\{[^}]*position:\s*relative/);
  assert.match(home,/@media \(max-width: 800px\)[\s\S]*\.ref-product-card__image\s*\{\s*min-height:\s*190px/);
- assert.match(home,/\.ref-product-card__image \.notebook\s*\{\s*width:\s*min\(78%, 110px\)/);
- assert.match(read("app/page.tsx"),/MẪU GIAO DIỆN/);
- assert.match(read("app/page.tsx"),/previewProducts\.map/);
- assert.match(read("app/page.tsx"),/ref-preview-note/);
+ const realCard=read("components/home-product-card.tsx");
+ assert.match(realCard,/<CatalogProductImage/);
+ assert.match(realCard,/getPublishedProductImageUrl/);
+ assert.match(realCard,/GlassCard hover linkCard/);
+ assert.doesNotMatch(read("app/page.tsx"),/MẪU GIAO DIỆN|previewProducts\.map|ref-preview-note/);
 });
 
 test("DL2 respects Premium Glass style owner and does not change product data or NET",()=>{
