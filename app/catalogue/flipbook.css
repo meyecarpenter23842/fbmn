@@ -28,9 +28,8 @@
 .fb-catalogue-leaf--right{border-radius:0 3px 3px 0}
 .fb-catalogue-leaf--blank{background:linear-gradient(90deg,#f6f2f5,#fff);cursor:default}
 .fb-catalogue-spine{position:absolute;left:calc(50% - 8px);top:0;height:100%;width:16px;z-index:3;pointer-events:none;background:linear-gradient(90deg,rgba(57,23,77,.09),rgba(255,255,255,.48) 35%,rgba(55,17,73,.12));mix-blend-mode:multiply}
-.fb-catalogue-nav{flex:0 0 auto;border:1px solid rgba(255,255,255,.72);border-radius:50%;width:46px;height:46px;display:grid;place-items:center;font-size:33px;line-height:1;color:var(--color-primary-strong);background:rgba(255,255,255,.82);box-shadow:0 7px 20px rgba(66,22,98,.11);cursor:pointer;transition:background var(--fb-motion-button) var(--fb-easing-open),transform var(--fb-motion-button) var(--fb-easing-open)}
-.fb-catalogue-nav:not(:disabled):hover{background:#fff;transform:translateY(-2px)}
-.fb-catalogue-nav:disabled{opacity:.35;cursor:not-allowed}
+.fb-catalogue-nav{flex:0 0 auto}
+.fb-catalogue-nav-glyph{font-size:23px;line-height:1;pointer-events:none}
 .fb-catalogue-nav:focus-visible,.fb-catalogue-leaf:focus-visible,.fb-catalogue-thumb:focus-visible{outline:3px solid var(--color-primary);outline-offset:3px}
 .fb-catalogue-turn{position:absolute;top:0;width:50%;height:100%;z-index:5;transform-style:preserve-3d;pointer-events:none}
 .fb-catalogue-turn--next{right:0;transform-origin:left center;animation:fb-dl7c-next 450ms cubic-bezier(.22,1,.36,1) both}
@@ -58,11 +57,11 @@
  .fb-catalogue-scene-content{padding:18px 8px 30px}.fb-catalogue-heading{padding:0 12px;margin-bottom:14px}
  .fb-catalogue-count{font-size:12px}.fb-catalogue-book{grid-template-columns:minmax(0,1fr);width:min(78vw,450px);height:min(122vw,630px);min-height:240px}
  .fb-catalogue-book .fb-catalogue-leaf--blank,.fb-catalogue-book .fb-catalogue-leaf--right,.fb-catalogue-spine{display:none}
- .fb-catalogue-leaf--left{border-radius:3px}.fb-catalogue-nav{width:42px;height:44px;font-size:29px}
+ .fb-catalogue-leaf--left{border-radius:3px}
  .fb-catalogue-turn{width:100%}.fb-catalogue-toolbar{gap:6px;padding:0 8px}.fb-catalogue-toolbar .fb-glass-button{flex:1 1 calc(50% - 12px);max-width:210px}
  .fb-catalogue-thumb{flex-basis:74px}.fb-catalogue-thumb img{width:60px;height:75px}
 }
-@media(max-width:390px){.fb-catalogue-reader{gap:2px}.fb-catalogue-nav{width:37px;height:44px;font-size:26px}.fb-catalogue-book{width:calc(100vw - 90px)}}
+@media(max-width:390px){.fb-catalogue-reader{gap:2px}.fb-catalogue-book{width:calc(100vw - 90px)}}
 @media(prefers-reduced-motion:reduce){.fb-catalogue-turn{animation:none}.fb-catalogue-nav,.fb-catalogue-thumb{transition:none}}
 
 .fb-catalogue-related{display:flex;gap:20px;align-items:center;justify-content:center;flex-wrap:wrap;padding:18px 12px 28px;font-size:13px;font-weight:750}

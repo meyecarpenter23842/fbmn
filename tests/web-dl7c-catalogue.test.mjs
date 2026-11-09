@@ -146,3 +146,13 @@ test("DL7C thumbnail navigation uses mandatory readable control-size token",()=>
  assert.match(rule,/font-size:var\(--fb-control-font-size\)/);
  assert.doesNotMatch(rule,/font-size:12px/);
 });
+
+test("DL7C navigation remains shared 36px/44px Glass control and modal owns arrow keys",()=>{
+ const ui=readFile("app/catalogue/catalogue-flipbook.tsx");
+ const css=readFile("app/catalogue/flipbook.css");
+ assert.match(ui,/if\(zoom\.current\?\.open\)return/);
+ assert.match(ui,/fb-glass-button fb-glass-button--secondary fb-catalogue-nav fb-catalogue-nav--prev/);
+ assert.match(ui,/fb-glass-button fb-glass-button--secondary fb-catalogue-nav fb-catalogue-nav--next/);
+ assert.match(css,/\.fb-catalogue-nav\{flex:0 0 auto\}/);
+ assert.doesNotMatch(css,/\.fb-catalogue-nav\{[^}]*\b(?:width|height|border-radius|background):/);
+});

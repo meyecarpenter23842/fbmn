@@ -162,6 +162,7 @@ export default function CatalogueFlipbook(){
   turnTimer.current=setTimeout(()=>{go(next);turnTimer.current=null;},450);
  },[detail,turn,leaves,active,cover,mobile,reduceMotion,go,right,left]);
  const handleKey=(e:KeyboardEvent<HTMLElement>)=>{
+  if(zoom.current?.open)return;
   if(e.altKey||e.metaKey||e.ctrlKey||e.target instanceof HTMLSelectElement||
    e.target instanceof HTMLInputElement)return;
   if(e.key==="ArrowRight"){e.preventDefault();flip("next");}
@@ -232,8 +233,8 @@ export default function CatalogueFlipbook(){
     <div className="fb-catalogue-reader" role="region" aria-label={"Sách "+detail.book.title}
      onTouchStart={e=>{swipeStart.current=e.touches[0]?.clientX??null;}}
      onTouchEnd={touchEnd} onTouchCancel={()=>{swipeStart.current=null;}}>
-     <button type="button" className="fb-catalogue-nav fb-catalogue-nav--prev"
-      aria-label="Trang trước" disabled={!hasPrev||Boolean(turn)} onClick={()=>flip("prev")}>‹</button>
+     <button type="button" className="fb-glass-button fb-glass-button--secondary fb-catalogue-nav fb-catalogue-nav--prev"
+      aria-label="Trang trước" disabled={!hasPrev||Boolean(turn)} onClick={()=>flip("prev")}><span className="fb-catalogue-nav-glyph" aria-hidden="true">‹</span></button>
      <div className="fb-catalogue-book">
       {left?<button type="button" className="fb-catalogue-leaf fb-catalogue-leaf--left"
        onClick={()=>openZoom(start)} aria-label={"Phóng to "+left.label}>
@@ -251,8 +252,8 @@ export default function CatalogueFlipbook(){
       </div>}
       {!mobile&&<span className="fb-catalogue-spine" aria-hidden="true"/>}
      </div>
-     <button type="button" className="fb-catalogue-nav fb-catalogue-nav--next"
-      aria-label="Trang sau" disabled={!hasNext||Boolean(turn)} onClick={()=>flip("next")}>›</button>
+     <button type="button" className="fb-glass-button fb-glass-button--secondary fb-catalogue-nav fb-catalogue-nav--next"
+      aria-label="Trang sau" disabled={!hasNext||Boolean(turn)} onClick={()=>flip("next")}><span className="fb-catalogue-nav-glyph" aria-hidden="true">›</span></button>
     </div>
     <div className="fb-catalogue-toolbar" role="toolbar" aria-label="Công cụ xem sách">
      <button type="button" className="fb-glass-button fb-glass-button--secondary"
