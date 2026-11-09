@@ -111,8 +111,9 @@ test("DL7C only swaps Catalogue tab; no PDF viewer frame, no open R2 key",()=>{
  const page=readFile("app/catalogue/page.tsx");
  const ui=readFile("app/catalogue/catalogue-flipbook.tsx");
  const css=readFile("app/catalogue/flipbook.css");
- assert.match(page,/<SiteHeader\/>/);
- assert.match(page,/<SiteFooter\/>/);
+ assert.match(page,/<ContentShell>/);
+ assert.match(page,/<PageHeading/);
+ assert.match(page,/<ContentBreadcrumb/);
  assert.match(ui,/catalogue-books\/image\?asset=/);
  assert.match(ui,/prefers-reduced-motion/);
  assert.match(ui,/requestFullscreen/);

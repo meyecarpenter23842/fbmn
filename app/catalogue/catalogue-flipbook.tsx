@@ -186,9 +186,7 @@ export default function CatalogueFlipbook(){
  } as CSSProperties):undefined;
  return <div className="fb-catalogue-viewer" onKeyDown={handleKey}>
   <div className="fb-catalogue-topbar">
-   <nav aria-label="Đường dẫn" className="fb-catalogue-identity">
-    <Link href="/">Trang chủ</Link><span aria-hidden="true">/</span><span>Catalogue</span>
-   </nav>
+   <div className="fb-catalogue-identity"><span>Catalogue tương tác</span></div>
    {books.length>0&&<label className="fb-catalogue-picker">
     <span>Bộ Catalogue</span>
     <select value={detail?.book.id||books[0].id} disabled={loading}
