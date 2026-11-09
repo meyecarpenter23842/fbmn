@@ -5,7 +5,7 @@ const read = file => readFileSync(new URL("../" + file, import.meta.url), "utf8"
 
 test("rebaselined desktop sections follow the new approved screenshot", () => {
   const page = read("app/page.tsx");
-  const order = ["ref-hero", "ref-categories", "ref-featured", "home.after_products", "ref-trust", "      <SiteFooter />"];
+  const order = ["ref-hero", "<Suspense fallback=", "home.after_products", "ref-trust", "      <SiteFooter />"];
   const offsets = order.map(s => page.indexOf(s));
   assert.ok(offsets.every(n => n >= 0), "Missing required desktop section");
   assert.deepEqual([...offsets].sort((a,b) => a-b), offsets);
@@ -13,6 +13,7 @@ test("rebaselined desktop sections follow the new approved screenshot", () => {
   assert.match(page, /FUTUREBOOK/);
   assert.match(page, /getPublicCatalog\(\)/);
   assert.match(page, /HomeProductCard/);
+  assert.ok(page.indexOf('id="categories" className="ref-categories"') < page.indexOf('id="collections" className="ref-featured"'));
 });
 
 test("DL1 desktop main nav has six links and approved purple theme", () => {
