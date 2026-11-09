@@ -51,8 +51,16 @@ GRANT USAGE ON SEQUENCE fbmn_catalog_private.web_home_layout_audit_id_seq TO fbm
 
 -- Public Worker sees ONLY allowlisted presentation preferences, never audit/user data.
 CREATE VIEW fbmn_public.v_web_home_layout WITH (security_barrier=true) AS
- SELECT category_ids,featured_skus,category_limit,product_limit,section_order,revision
- FROM fbmn_catalog_private.web_home_layout WHERE singleton=true;
+ SELECT l.category_ids,
+  ARRAY(
+   SELECT pin.sku FROM unnest(l.featured_skus) WITH ORDINALITY AS pin(sku,position)
+   JOIN fbmn_catalog.publications p ON p.sku_cong_ty=pin.sku
+   WHERE p.channel_code='public_web' AND p.state='published'
+     AND p.published_at IS NOT NULL
+   ORDER BY pin.position
+  ) AS featured_skus,
+  l.category_limit,l.product_limit,l.section_order,l.revision
+ FROM fbmn_catalog_private.web_home_layout l WHERE l.singleton=true;
 REVOKE ALL ON fbmn_public.v_web_home_layout FROM PUBLIC;
 GRANT SELECT ON fbmn_public.v_web_home_layout TO fbmn_public_reader;
 COMMIT;

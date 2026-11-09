@@ -145,3 +145,24 @@ test("DL4 Admin save errors use shared toast and editor locks while busy",()=>{
  assert.match(source,/variant=\{noticeVariant\}/);
  assert.match(source,/<fieldset className="dl4-edit-fields" disabled=\{busy\}/);
 });
+
+test("DL4 automatic Admin preview honors first-public-category order, not alphabetic labels",()=>{
+ const rows=[
+  {sku:"0001",name:"X",category_id:"aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",category_label:"Z - Sau tên",family_id:null},
+  {sku:"0002",name:"Y",category_id:"bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",category_label:"A - Trước tên",family_id:null}
+ ];
+ const eligible=eligibleHomeLayout(rows);
+ assert.deepEqual(eligible.categories.map(c=>c.id),[
+  "p5-aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+  "p5-bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"
+ ]);
+ assert.deepEqual(eligible.categories.map(c=>c.sortOrder),[100,101]);
+});
+test("DL4 public layout view filters withdrawn featured SKUs at request time",()=>{
+ const migration=readFileSync(new URL("../backend/neon/migrations/20261109_dl4_web_home_layout.up.sql",import.meta.url),"utf8");
+ const down=readFileSync(new URL("../backend/neon/migrations/20261109_dl4_web_home_layout.down.sql",import.meta.url),"utf8");
+ assert.match(migration,/unnest\(l\.featured_skus\) WITH ORDINALITY/);
+ assert.match(migration,/p\.channel_code='public_web' AND p\.state='published'/);
+ assert.match(migration,/ORDER BY pin\.position/);
+ assert.doesNotMatch(down,/DROP CONSTRAINT audit_events_action_check/);
+});

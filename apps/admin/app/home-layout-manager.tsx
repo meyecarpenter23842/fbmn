@@ -5,7 +5,7 @@ import ProductModal from "./product-modal";
 
 type Section="categories"|"products";
 type Layout={categoryIds:string[];featuredSkus:string[];categoryLimit:number;productLimit:number;sectionOrder:Section[];revision:number};
-type Category={id:string;name:string;productCount:number};
+type Category={id:string;name:string;productCount:number;sortOrder:number};
 type Sku={sku:string;name:string;categoryId:string};
 type Payload={layout:Layout;available:{categories:Category[];skus:Sku[]}};
 const clone=(l:Layout):Layout=>({...l,categoryIds:[...l.categoryIds],featuredSkus:[...l.featuredSkus],sectionOrder:[...l.sectionOrder]});
@@ -164,7 +164,7 @@ export default function HomeLayoutManager({owner}:{owner:boolean}){
      <div className="dl4-stage-banner">Hero CMS · giữ nguyên</div>
      {draft.sectionOrder.map(x=><div className="dl4-stage-section" key={x}><h3>{x==="categories"?"Danh mục sản phẩm":"Sản phẩm đã công khai"}</h3>
       <div className="dl4-stage-grid">{x==="categories"?
-       (categories.length?categories.map(c=><div className="dl4-stage-card" key={c.id}>{c.name}<small>{c.productCount} SKU</small></div>):<p>Chưa có danh mục công khai.</p>):
+       (categories.length?categories.map(c=><div className="dl4-stage-card" key={c.id}>{c.name}<small>{c.productCount} nhóm sản phẩm</small></div>):<p>Chưa có danh mục công khai.</p>):
        (pinned.length?pinned.map(s=><div className="dl4-stage-card" key={s.sku}>{s.name}<small>SKU {s.sku}</small></div>):<p>Thẻ tự chọn từ family đã công khai (tối đa {draft.productLimit}).</p>)}
       </div>
      </div>)}

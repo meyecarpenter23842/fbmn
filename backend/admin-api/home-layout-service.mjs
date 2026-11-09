@@ -34,7 +34,7 @@ export function eligibleHomeLayout(rows){
  for(const row of rows){
   const sku=String(row.sku);
   const categoryId=row.category_id?"p5-"+String(row.category_id):"p5-uncategorized";
-  labels.set(categoryId,String(row.category_label||"Chưa phân loại"));
+  if(!labels.has(categoryId))labels.set(categoryId,{name:String(row.category_label||"Chưa phân loại"),sortOrder:labels.size+100});
   const key=row.family_id?"family:"+String(row.family_id):"sku:"+sku;
   const count=counts.get(key)??0;
   counts.set(key,count+1);
@@ -52,11 +52,11 @@ export function eligibleHomeLayout(rows){
   const id=group.categoryId;
   const existing=categories.get(id);
   if(existing)existing.productCount++;
-  else categories.set(id,{id,name:labels.get(id)||"Chưa phân loại",productCount:1});
+  else categories.set(id,{id,name:labels.get(id)?.name||"Chưa phân loại",productCount:1,sortOrder:labels.get(id)?.sortOrder??100});
   for(const item of group.skus)skus.push({...item,categoryId:id});
  }
  return {categories:[...categories.values()].sort((a,b)=>
-  a.name.localeCompare(b.name,"vi")||a.id.localeCompare(b.id)),skus};
+  a.sortOrder-b.sortOrder||a.name.localeCompare(b.name,"vi")||a.id.localeCompare(b.id)),skus};
 }
 function uniqueStrings(x,max,length){
  return Array.isArray(x)&&x.length<=max&&x.every(v=>
