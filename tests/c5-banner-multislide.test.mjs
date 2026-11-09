@@ -108,3 +108,54 @@ test("C5 UI has Add Slide, ordering, motion settings and device safe previews",(
  assert.match(hero,/document\.hidden/);
  assert.doesNotMatch(hero,/r2_key|r2Key|source_ref|NET/);
 });
+
+test("C5 settings mutation locks revision, audits and validates order before writing",async()=>{
+ const queries=[];
+ const db=async job=>job({query:async(sql,params=[])=>{
+  queries.push({sql,params});
+  if(sql==="BEGIN"||sql==="COMMIT"||sql==="ROLLBACK")return {rows:[],rowCount:0};
+  if(sql.includes("FROM fbmn_catalog_private.cms_entries")&&sql.includes("FOR UPDATE"))
+   return {rowCount:1,rows:[{id,kind:"banner",status:"draft",revision:3,
+    channel_targets:["public_web"],placements:{public_web:"home.hero"}}]};
+  if(sql.includes("SELECT * FROM fbmn_catalog_private.cms_banner_settings"))return {rows:[]};
+  if(sql.startsWith("INSERT INTO fbmn_catalog_private.cms_banner_settings"))return {rowCount:1,rows:[]};
+  if(sql.startsWith("UPDATE fbmn_catalog_private.cms_entries"))return {rowCount:1,rows:[{revision:4}]};
+  if(sql.startsWith("INSERT INTO fbmn_catalog_private.cms_entry_audit"))return {rowCount:1,rows:[]};
+  throw Error("Unexpected query "+sql);
+ }});
+ const action="slide-settings";
+ const values={id,expectedRevision:3,enabled:true,autoplay:false,effect:"fade",intervalMs:5000,
+  durationMs:400,order:[2,1,3,4,5]};
+ const req=(body)=>new Request("https://admin.invalid/v1/admin/cms/"+action,{
+  method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(body)});
+ const invalid=await handleCmsSlides({request:req({...values,order:[2,2,3,4,5]}),
+  db,r2:null,actor:{role:"owner",subject:"owner"},action});
+ assert.equal(invalid.status,400);assert.equal(queries.length,0);
+ const result=await handleCmsSlides({request:req(values),db,r2:null,
+  actor:{role:"owner",subject:"owner"},action});
+ assert.equal(result.status,200);
+ assert.equal((await result.json()).data.revision,4);
+ assert.equal(queries.at(-1).sql,"COMMIT");
+ assert.ok(queries.some(x=>x.sql.includes("banner_slide_settings")));
+ assert.ok(queries.some(x=>x.sql.includes("cms_entry_audit")));
+});
+test("C5 published Banner rejects mutable settings with revision-safe 409",async()=>{
+ let wrote=false;
+ const db=async job=>job({query:async(sql)=>{
+  if(sql==="BEGIN"||sql==="ROLLBACK")return {rows:[],rowCount:0};
+  if(sql.includes("FROM fbmn_catalog_private.cms_entries")&&sql.includes("FOR UPDATE"))
+   return {rowCount:1,rows:[{id,kind:"banner",status:"published",revision:3,
+    channel_targets:["public_web"],placements:{public_web:"home.hero"}}]};
+  wrote=true;throw Error("Published Banner was mutated");
+ }});
+ const request=new Request("https://admin.invalid/v1/admin/cms/slide-settings",{
+  method:"POST",headers:{"content-type":"application/json"},
+  body:JSON.stringify({id,expectedRevision:3,enabled:true,autoplay:true,effect:"slide",
+   intervalMs:5000,durationMs:400,order:[1,2,3,4,5]})
+ });
+ const response=await handleCmsSlides({request,db,r2:null,
+  actor:{role:"owner",subject:"owner"},action:"slide-settings"});
+ assert.equal(response.status,409);
+ assert.equal((await response.json()).error.code,"hide_before_edit");
+ assert.equal(wrote,false);
+});
