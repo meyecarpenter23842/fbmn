@@ -67,3 +67,7 @@ Không suy luận slot từ URL hoặc cùng một kiểu CSS. Một nội dung 
 5. Nếu cần rollback: tắt `ADMIN_CMS_PUBLIC_READY` trước để khóa publish, tắt `FBMN_CMS_PUBLIC_ENABLED` rồi `PUBLIC_CMS_ENABLED`; rollback view SQL chỉ sau khi Owner xác nhận `fbmn.rollback_confirmed=yes`. **Không xóa data hay ảnh R2**.
 
 **Giới hạn đã biết:** C3 là scene thu nhỏ từ mã nguồn, không phải pixel-perfect. Vì không có quyền kiểm tra trình duyệt Owner và Neon staging thực từ PR, chỉ có CI/test code. Thông số chương trình khuyến mãi yêu cầu ngày kết thúc khi publish; bài nổi bật có trang chi tiết riêng nhưng không lọt vào tab danh sách nếu chỉ target Home. Cookie/session popup chỉ giữ số lần và dấu thời gian trên trình duyệt; không thu dữ liệu cá nhân. Các bản ghi legacy dùng chung Web/App vẫn không được phát hành từ Website cho đến khi có quy trình phân tách được duyệt.
+
+## C5 mở rộng Banner đa Slide
+
+Xem [Motion guideline C5](cms-hero-motion-guideline.md). Một Banner tại `home.hero` có tối đa 5 Slide, Desktop/Mobile riêng, cấu hình hiệu ứng và thứ tự. Slide 1 dùng ảnh legacy; chỉ C5 view mới cung cấp ảnh Slide 2–5 đã được duyệt. Giữ nguyên toàn bộ điều kiện xuất bản C4; thiếu cặp ảnh mới là điều kiện chặn.
