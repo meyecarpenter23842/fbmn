@@ -7,7 +7,7 @@ type Book={id:string;title:string;edition:string;state:"draft"|"ready"|"hidden";
 type Asset={id:string;kind:"page"|"cover"|"background_desktop"|"background_mobile";
  sort_order:number;width:number;height:number;byte_size:number};
 type Details={book:Book;assets:Asset[]};
-type ListResult={books:Book[]};
+type ListResult={books:Book[];page:number;totalPages:number;total:number};
 type SavedResult={book:Book;asset?:Asset};
 type Kind=Asset["kind"];
 const MAX_IMAGE=5*1024*1024;
@@ -117,6 +117,9 @@ export default function CatalogueBookManager({owner,onBusyChange}:{
  owner:boolean;onBusyChange?:(busy:boolean)=>void;
 }){
  const [books,setBooks]=useState<Book[]>([]);
+ const [bookPage,setBookPage]=useState(1);
+ const [bookTotalPages,setBookTotalPages]=useState(1);
+ const [bookTotal,setBookTotal]=useState(0);
  const [detail,setDetail]=useState<Details|null>(null);
  const [loading,setLoading]=useState(true);
  const [busy,setBusy]=useState(false);
@@ -130,16 +133,23 @@ export default function CatalogueBookManager({owner,onBusyChange}:{
  const [noticeId,setNoticeId]=useState(0);
  const [noticeType,setNoticeType]=useState<"success"|"error">("success");
  const loadId=useRef(0);
+ const selectedBook=useRef("");
  const alert=(message:string,variant:"success"|"error")=>{
   setNotice(message);setNoticeType(variant);setNoticeId(i=>i+1);
  };
- const load=useCallback(async(preferred?:string)=>{
+ const load=useCallback(async(preferred?:string,requestedPage=1)=>{
   const seq=++loadId.current;setLoading(true);setReadError("");
   try{
-   const all=await requestCatalogue<ListResult>();
+   const all=await requestCatalogue<ListResult>(requestedPage===1?"":"?page="+requestedPage);
    const chosen=preferred&&all.books.some(b=>b.id===preferred)?preferred:(all.books[0]?.id||"");
    const data=chosen?await requestCatalogue<Details>("?id="+encodeURIComponent(chosen)):null;
    if(seq!==loadId.current)return;
+   const changed=selectedBook.current!==chosen;
+   selectedBook.current=chosen;
+   const pagesCount=(data?.assets||[]).filter(a=>a.kind==="page").length;
+   const maxOffset=Math.max(0,Math.floor((pagesCount-1)/12)*12);
+   setPageOffset(prev=>changed?0:Math.min(prev,maxOffset));
+   setBookPage(all.page);setBookTotalPages(all.totalPages);setBookTotal(all.total);
    setBooks(all.books);setDetail(data);
   }catch(e){
    if(seq===loadId.current)setReadError(e instanceof Error?e.message:"Không tải được Catalogue.");
@@ -215,7 +225,7 @@ export default function CatalogueBookManager({owner,onBusyChange}:{
    <p>Quản lý bộ sách lật, trang và ảnh nền riêng trong R2 <strong>fbmn-catalogue</strong>. Không dùng kho ảnh SKU/CMS.</p>
    </div><div className="action-row">
     <button type="button" className="fb-ui-button fb-ui-button--secondary" disabled={busy||loading}
-     onClick={()=>void load(book?.id)}>Tải lại</button>
+     onClick={()=>void load(book?.id,bookPage)}>Tải lại</button>
     <button type="button" className="fb-ui-button fb-ui-button--primary" disabled={busy}
      onClick={()=>{setTitle("");setEdition("");setDialog("create");}}>Tạo bộ Catalogue</button>
    </div>
@@ -223,17 +233,25 @@ export default function CatalogueBookManager({owner,onBusyChange}:{
   <p className="dl7b-note">DL7B chuẩn bị nội dung riêng cho tab Catalogue. Trạng thái “Sẵn sàng” là duyệt nội bộ; sách chưa hiển thị ngoài Website trước khi DL7C kết nối.</p>
   {loading&&<section className="surface dl7b-panel" role="status" aria-busy="true">Đang đọc kho Catalogue…</section>}
   {readError&&<section className="surface dl7b-panel" role="alert"><strong>Chưa kết nối được kho</strong><p>{readError}</p>
-   <button type="button" className="fb-ui-button fb-ui-button--secondary" onClick={()=>void load(book?.id)}>Thử lại</button></section>}
+   <button type="button" className="fb-ui-button fb-ui-button--secondary" onClick={()=>void load(book?.id,bookPage)}>Thử lại</button></section>}
   {!loading&&!readError&&<div className="dl7b-grid">
    <section className="surface dl7b-panel">
     <h2>Danh sách bộ</h2>
     {!books.length&&<p>Chưa có bộ Catalogue. Chọn “Tạo bộ Catalogue” để bắt đầu.</p>}
+    <p>Đang quản lý {bookTotal} bộ · Trang {bookPage}/{bookTotalPages}</p>
     <ul className="dl7b-books">{books.map(b=><li key={b.id}>
      <button type="button" className={"dl7b-book"+(b.id===book?.id?" is-selected":"")}
-      aria-pressed={b.id===book?.id} onClick={()=>void load(b.id)}>
+      aria-pressed={b.id===book?.id} onClick={()=>void load(b.id,bookPage)}>
       <strong>{b.title}</strong><small>{b.edition||"Chưa đặt phiên bản"} · {STATUS[b.state]}</small>
      </button>
     </li>)}</ul>
+    {bookTotalPages>1&&<nav className="dl7b-book-nav" aria-label="Phân trang các bộ Catalogue">
+     <button type="button" className="fb-ui-button fb-ui-button--secondary"
+      disabled={bookPage<=1||busy} onClick={()=>void load(undefined,bookPage-1)}>Trước</button>
+     <span>Trang {bookPage}/{bookTotalPages}</span>
+     <button type="button" className="fb-ui-button fb-ui-button--secondary"
+      disabled={bookPage>=bookTotalPages||busy} onClick={()=>void load(undefined,bookPage+1)}>Sau</button>
+    </nav>}
    </section>
    {book&&<div className="dl7b-details">
     <section className="surface dl7b-panel">
