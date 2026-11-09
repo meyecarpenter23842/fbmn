@@ -84,13 +84,21 @@ export function createStagingWorker({createDbClient}) {
              typeof env.PUBLIC_MEDIA_R2?.get!=="function")return error(404,"not_found");
           const origin=request.headers.get("Origin");
           if(origin&&!origins.includes(origin))return error(403,"origin_forbidden");
-          if(url.searchParams.size!==2||url.searchParams.getAll("id").length!==1||
-             url.searchParams.getAll("device").length!==1)return error(400,"invalid_query");
+          const keys=[...url.searchParams.keys()];
+          if(keys.length<2||keys.length>3||new Set(keys).size!==keys.length||
+             keys.some(k=>!["id","device","slide"].includes(k))||
+             url.searchParams.getAll("id").length!==1||
+             url.searchParams.getAll("device").length!==1||
+             (url.searchParams.has("slide")&&url.searchParams.getAll("slide").length!==1))
+            return error(400,"invalid_query");
           const id=url.searchParams.get("id")||"",device=url.searchParams.get("device")||"";
+          const slide=url.searchParams.has("slide")?Number(url.searchParams.get("slide")):1;
           if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)||
-              !["desktop","mobile"].includes(device))return error(400,"invalid_query");
+              !["desktop","mobile"].includes(device)||!Number.isInteger(slide)||slide<1||slide>5||
+              (url.searchParams.has("slide")&&!/^[1-5]$/.test(url.searchParams.get("slide")||"")))
+            return error(400,"invalid_query");
           // The SQL view rechecks publication, approval and time at each request.
-          const key=await readModel(env,m=>m.getPublicCmsImageKey(id,device));
+          const key=await readModel(env,m=>m.getPublicCmsImageKey(id,device,slide));
           if(!key)return error(404,"not_found");
           const object=await env.PUBLIC_MEDIA_R2.get(key);
           if(!object?.body||object.size<100||object.size>5*1024*1024||
