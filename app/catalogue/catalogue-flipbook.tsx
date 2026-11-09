@@ -53,6 +53,7 @@ export default function CatalogueFlipbook(){
  const [books,setBooks]=useState<Book[]>([]);
  const [detail,setDetail]=useState<Detail|null>(null);
  const [active,setActive]=useState(0);
+ const [zoomPosition,setZoomPosition]=useState(0);
  const [loading,setLoading]=useState(true);
  const [error,setError]=useState("");
  const [mobile,setMobile]=useState(false);
@@ -80,7 +81,8 @@ export default function CatalogueFlipbook(){
  const hasNext=mobile?start+1<leaves.length:cover&&start===0?leaves.length>1:start+2<leaves.length;
  const displayLabel=mobile?left?.label||"":cover&&start===0?"Bìa":
   (left?.label||"")+(right?" – "+right.label:"");
- const zoomLeaf=right||left;
+ const zoomLeaf=leaves[zoomPosition]||right||left;
+ const openZoom=(position:number)=>{setZoomPosition(position);zoom.current?.showModal();};
  useEffect(()=>{
   const m=window.matchMedia("(max-width: 700px)");
   const r=window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -220,12 +222,12 @@ export default function CatalogueFlipbook(){
       aria-label="Trang trước" disabled={!hasPrev||Boolean(turn)} onClick={()=>flip("prev")}>‹</button>
      <div className="fb-catalogue-book">
       {left?<button type="button" className="fb-catalogue-leaf fb-catalogue-leaf--left"
-       onClick={()=>zoom.current?.showModal()} aria-label={"Phóng to "+left.label}>
+       onClick={()=>openZoom(start)} aria-label={"Phóng to "+left.label}>
         <img src={image(left.asset.id)} alt={left.label+" "+detail.book.title}
          width={left.asset.width} height={left.asset.height} loading="eager"/>
        </button>:<div className="fb-catalogue-leaf fb-catalogue-leaf--blank" aria-hidden="true"/>}
       {right?<button type="button" className="fb-catalogue-leaf fb-catalogue-leaf--right"
-       onClick={()=>zoom.current?.showModal()} aria-label={"Phóng to "+right.label}>
+       onClick={()=>openZoom(cover&&start===0?0:start+1)} aria-label={"Phóng to "+right.label}>
         <img src={image(right.asset.id)} alt={right.label+" "+detail.book.title}
          width={right.asset.width} height={right.asset.height} loading="eager"/>
        </button>:<div className="fb-catalogue-leaf fb-catalogue-leaf--blank fb-catalogue-leaf--right" aria-hidden="true"/>}
@@ -242,7 +244,7 @@ export default function CatalogueFlipbook(){
      <button type="button" className="fb-glass-button fb-glass-button--secondary"
       onClick={()=>setThumbnails(x=>!x)} aria-expanded={thumbnails}>☷ <span>Mục lục</span></button>
      <button type="button" className="fb-glass-button fb-glass-button--secondary"
-      onClick={()=>zoom.current?.showModal()}>⌕ <span>Phóng to</span></button>
+      onClick={()=>openZoom(active)}>⌕ <span>Phóng to</span></button>
      <button type="button" className="fb-glass-button fb-glass-button--secondary"
       onClick={()=>void full()}>{fullscreen?"⤢":"⛶"} <span>{fullscreen?"Thu nhỏ":"Toàn màn hình"}</span></button>
      <button type="button" className="fb-glass-button fb-glass-button--secondary"
