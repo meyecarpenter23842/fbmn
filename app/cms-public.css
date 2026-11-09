@@ -30,8 +30,12 @@
 .cms-hero-stage{position:relative;width:100%;height:clamp(400px,34vw,460px);overflow:hidden}
 .cms-hero-slide{position:absolute;inset:0;z-index:0;display:grid;place-items:center;
  opacity:0;transform:translate3d(16px,0,0);pointer-events:none;
- transition:opacity 480ms var(--fb-easing-open,cubic-bezier(.22,1,.36,1)),
- transform 480ms var(--fb-easing-open,cubic-bezier(.22,1,.36,1))}
+ transition:opacity var(--cms-hero-duration,480ms) var(--fb-easing-open,cubic-bezier(.22,1,.36,1)),
+ transform var(--cms-hero-duration,480ms) var(--fb-easing-open,cubic-bezier(.22,1,.36,1))}
+.cms-hero-carousel[data-effect="fade"] .cms-hero-slide{transform:none}
+.cms-hero-carousel[data-effect="slide"] .cms-hero-slide{opacity:1;transform:translate3d(100%,0,0)}
+.cms-hero-carousel[data-effect="slide"] .cms-hero-slide.is-active{transform:translate3d(0,0,0)}
+.cms-hero-carousel[data-motion="off"] .cms-hero-slide{transition:none}
 .cms-hero-slide.is-active{opacity:1;transform:translate3d(0,0,0);z-index:1;pointer-events:auto}
 .cms-hero-picture{display:flex;align-items:center;justify-content:center;width:100%;height:100%;
  padding:22px 5% 44px;box-sizing:border-box;overflow:hidden}
