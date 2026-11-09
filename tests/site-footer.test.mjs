@@ -14,7 +14,7 @@ test("all website shells share one structured footer", () => {
   }
   assert.match(siteFooter, /className="site-footer__brand-link"/);
   assert.match(siteFooter, /brand\/fbmn-official-logo\.webp/);
-  assert.match(siteFooter, /href="\/lien-he"/);
+  assert.match(siteFooter, /href="\/lien-he#thong-tin-lien-he"/);
   assert.match(siteFooter, /href="\/dai-ly"/);
   assert.match(siteFooter, /href="\/san-pham"/);
 });
