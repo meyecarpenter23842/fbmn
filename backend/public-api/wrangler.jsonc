@@ -10,7 +10,8 @@
     "PUBLIC_ALLOWED_ORIGINS": "https://fbmn-web.vercel.app",
     "EXPECTED_DB_ROLE": "fbmn_p5_public_login",
     "PUBLIC_P5_ENABLED": "true",
-    "PUBLIC_CMS_ENABLED": "false"
+    "PUBLIC_CMS_ENABLED": "false",
+    "PUBLIC_DL7C_ENABLED": "false"
   },
   "hyperdrive": [
     {
@@ -22,6 +23,10 @@
     {
       "binding": "PUBLIC_MEDIA_R2",
       "bucket_name": "fbmn"
+    },
+    {
+      "binding": "CATALOGUE_MEDIA_R2",
+      "bucket_name": "fbmn-catalogue"
     }
   ],
   "ratelimits": [

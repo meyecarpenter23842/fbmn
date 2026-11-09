@@ -1,12 +1,15 @@
 import { createPublicApi } from "./handler.mjs";
 import { createReadModel, PUBLIC_READ_QUERIES } from "./read-model.mjs";
+import { handlePublicCatalogueRequest } from "./catalogue-books-public.mjs";
 
 const ALLOWED_SQL = new Set(Object.values(PUBLIC_READ_QUERIES));
-const ROUTES = new Set(["/v1/public/categories", "/v1/public/products", "/v1/public/catalog", "/v1/public/content", "/v1/public/cms", "/v1/public/home-layout"]);
+const ROUTES = new Set(["/v1/public/categories", "/v1/public/products", "/v1/public/catalog", "/v1/public/content", "/v1/public/cms", "/v1/public/home-layout", "/v1/public/catalogue-books"]);
 // Owner-approved single decorative image. This Worker binding is in the same
 // Cloudflare account as the private fbmn R2 bucket. Never accept caller keys.
 const DECORATIVE_ROUTE = "/v1/public/decorative-background";
 const CMS_IMAGE_ROUTE="/v1/public/cms/image";
+const CATALOGUE_IMAGE_ROUTE="/v1/public/catalogue-image";
+const CATALOGUE_BOOKS_ROUTE="/v1/public/catalogue-books";
 const DECORATIVE_KEY = "banners/G04/backdrop-v1.webp";
 const error = (status,code) => new Response(JSON.stringify({error:{code,message:"Yêu cầu không thể xử lý."}}),
   {status,headers:{"Content-Type":"application/json; charset=utf-8","Cache-Control":"no-store","X-Content-Type-Options":"nosniff"}});
@@ -41,7 +44,9 @@ export function createStagingWorker({createDbClient}) {
       const url=new URL(request.url);
       const isDecorative=url.pathname===DECORATIVE_ROUTE;
       const isCmsImage=url.pathname===CMS_IMAGE_ROUTE;
-      const isImage=url.pathname==="/v1/public/image"||isDecorative||isCmsImage;
+      const isCatalogueImage=url.pathname===CATALOGUE_IMAGE_ROUTE;
+      const isCatalogueRequest=isCatalogueImage||url.pathname===CATALOGUE_BOOKS_ROUTE;
+      const isImage=url.pathname==="/v1/public/image"||isDecorative||isCmsImage||isCatalogueImage;
       // Vercel's image proxy pools many visitors behind a small number of
       // egress IPs. Use a separate bounded per-image budget for public WebP,
       // never spoofable X-Forwarded-For. Other API traffic keeps its old limit.
@@ -51,7 +56,7 @@ export function createStagingWorker({createDbClient}) {
       try {
         const actor=(request.headers.get("CF-Connecting-IP")||"unknown").slice(0,100);
         const key=isImage?"media:"+actor+":"+(isDecorative?"g04-backdrop":
-          url.searchParams.get("id")?.slice(0,40)):
+          (isCatalogueImage?url.searchParams.get("asset"):url.searchParams.get("id"))?.slice(0,40)):
           actor+":"+(ROUTES.has(url.pathname)?url.pathname:"other");
         rate=await (isImage?env.IMAGE_RATE_LIMITER:env.RATE_LIMITER).limit({key});
       } catch {
@@ -60,6 +65,16 @@ export function createStagingWorker({createDbClient}) {
       if (rate?.success !== true) return error(429,"rate_limited");
       try {
         const origins=env.PUBLIC_ALLOWED_ORIGINS.split(",").map(s=>s.trim()).filter(Boolean);
+        if(isCatalogueRequest){
+          return handlePublicCatalogueRequest({
+            request,enabled:env.PUBLIC_DL7C_ENABLED==="true",
+            allowedOrigins:origins,r2:env.CATALOGUE_MEDIA_R2,
+            listBooks:()=>readModel(env,m=>m.getReadyCatalogueBooks()),
+            getBook:id=>readModel(env,m=>m.getReadyCatalogueBook(id)),
+            getAssets:id=>readModel(env,m=>m.getReadyCatalogueAssets(id)),
+            getKey:id=>readModel(env,m=>m.getReadyCatalogueAssetKey(id)),
+          });
+        }
         if(isDecorative){
           const origin=request.headers.get("Origin");
           if(origin&&!origins.includes(origin))return error(403,"origin_forbidden");
