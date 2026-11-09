@@ -38,7 +38,8 @@ export function cmsPublishIssues(item:CmsPublishInput,now=Date.now()):CmsPublish
   if(item.has_desktop!==true)add("desktop","Thiếu ảnh Desktop WebP",2);
   if(item.has_mobile!==true)add("mobile","Thiếu ảnh Mobile WebP",2);
  }
- if(item.kind==="banner"&&(item.incomplete_slide_count??0)>0)
+ if(item.kind==="banner"&&item.placements?.public_web==="home.hero"&&
+    (item.incomplete_slide_count??0)>0)
   add("slides","Slide mới thiếu ảnh Desktop/Mobile",2);
  if(item.kind==="promotion"&&!item.ends_at)
   add("expiry","Khuyến mãi chưa có ngày kết thúc",1);
