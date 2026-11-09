@@ -138,3 +138,11 @@ test("DL7C zoom uses shared dialog timing, reduced motion and deferred close",()
  assert.match(css,/--fb-motion-dialog-close/);
  assert.match(css,/prefers-reduced-motion:reduce/);
 });
+
+test("DL7C thumbnail navigation uses mandatory readable control-size token",()=>{
+ const css=readFile("app/catalogue/flipbook.css");
+ const rule=css.match(/\.fb-catalogue-thumb\{([^}]+)\}/)?.[1];
+ assert.ok(rule);
+ assert.match(rule,/font-size:var\(--fb-control-font-size\)/);
+ assert.doesNotMatch(rule,/font-size:12px/);
+});
