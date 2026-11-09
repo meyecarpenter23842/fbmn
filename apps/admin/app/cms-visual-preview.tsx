@@ -1,5 +1,6 @@
 "use client";
 import {CmsImagePreview,cmsMediaKey} from "./cms-media-editor";
+import {CmsSlideImagePreview} from "./cms-slide-editor";
 import type {CmsChannel,CmsDevice,CmsPendingImages} from "./cms-media-editor";
 import {CMS_SLOTS} from "./cms-placement-options";
 import CmsWebsiteScene from "./cms-website-scene";
@@ -9,18 +10,23 @@ const CHANNEL_LABELS:Record<CmsChannel,string>={
  public_web:"Website",dealer_app:"App đại lý",consumer_app:"App người tiêu dùng"
 };
 export default function CmsVisualPreview({kind,title,summary,ctaUrl,channelTargets,placements,
- recordId,revision,pending,channel,device,onChannel,onDevice,webOnly=false}:{
+ recordId,revision,pending,channel,device,onChannel,onDevice,webOnly=false,
+ previewSlide=1,pendingSlides={}}:{
  kind:CmsKind;title:string;summary:string;ctaUrl:string;channelTargets:CmsChannel[];
  placements:Partial<Record<CmsChannel,string>>;recordId:string|null;revision:number;
  pending:CmsPendingImages;channel:CmsChannel;device:CmsDevice;
+ previewSlide?:number;pendingSlides?:CmsPendingImages;
  onChannel?:(v:CmsChannel)=>void;onDevice:(v:CmsDevice)=>void;webOnly?:boolean;
 }){
  const current=webOnly?"public_web":channelTargets.includes(channel)?channel:channelTargets[0]??"public_web";
  const slot=placements[current]??"";
  const label=CMS_SLOTS[kind][current].find(x=>x.value===slot)?.label??"Chưa chọn vị trí";
  const file=pending[cmsMediaKey(current,device)];
- const image=<CmsImagePreview recordId={recordId} revision={revision} channel={current}
-  device={device} pending={file}/>;
+ const image=kind==="banner"&&slot==="home.hero"&&previewSlide>1?
+  <CmsSlideImagePreview recordId={recordId} revision={revision} slide={previewSlide}
+   device={device} pending={pendingSlides[previewSlide+":"+device]}/>:
+  <CmsImagePreview recordId={recordId} revision={revision} channel={current}
+   device={device} pending={file}/>;
  const words=<div className="cms-simulation-caption">
   <strong>{title.trim()||"Tiêu đề nội dung"}</strong>
   <p>{summary.trim()||"Phần mô tả hiển thị tại vị trí đã chọn"}</p>
