@@ -13,12 +13,13 @@ const mediaUrl=(id:string,device:"desktop"|"mobile")=>
 export default function CmsHeroCarousel({items}:{items:PublicCmsItem[]}){
  const slides=items.slice(0,MAX_HERO_SLIDES);
  const [active,setActive]=useState(0);
- const paused=useRef(false);
+ const hovered=useRef(false);
+ const focused=useRef(false);
  useEffect(()=>{
   if(slides.length<2)return;
   const reduce=window.matchMedia("(prefers-reduced-motion: reduce)");
   const timer=window.setInterval(()=>{
-   if(reduce.matches||document.hidden||paused.current)return;
+   if(reduce.matches||document.hidden||hovered.current||focused.current)return;
    setActive(previous=>(previous+1)%slides.length);
   },AUTO_ADVANCE_MS);
   return ()=>window.clearInterval(timer);
@@ -28,12 +29,12 @@ export default function CmsHeroCarousel({items}:{items:PublicCmsItem[]}){
   (previous+direction+slides.length)%slides.length);
  return <div className="cms-hero-carousel" role="region"
   aria-roledescription="carousel" aria-label="Hình ảnh sản phẩm Futurebook"
-  onMouseEnter={()=>{paused.current=true;}}
-  onMouseLeave={()=>{paused.current=false;}}
-  onFocusCapture={()=>{paused.current=true;}}
+  onMouseEnter={()=>{hovered.current=true;}}
+  onMouseLeave={()=>{hovered.current=false;}}
+  onFocusCapture={()=>{focused.current=true;}}
   onBlurCapture={event=>{
    if(!event.currentTarget.contains(event.relatedTarget as Node|null))
-    paused.current=false;
+    focused.current=false;
   }}>
   <div className="cms-hero-stage" aria-live="off">
    {slides.map((item,index)=><div key={item.id}
