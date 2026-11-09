@@ -89,10 +89,9 @@ export default function CmsSlideEditor({recordId,revision,disabled,pending,onSta
  const [assets,setAssets]=useState<SlideAsset[]>([]);
  const [added,setAdded]=useState<number[]>([]);
  const [settings,setSettings]=useState<Settings>(()=>settingsDraft??DEFAULT);
- const [settingsDirty,setSettingsDirty]=useState(Boolean(settingsDraft));
+ const settingsDirty=Boolean(settingsDraft);
  const [saving,setSaving]=useState(false);
  const [error,setError]=useState(""),[notificationId,setNotificationId]=useState(0);
- useEffect(()=>{if(settingsDraft===null)setSettingsDirty(false);},[settingsDraft]);
  useEffect(()=>{
   if(!recordId)return;
   let alive=true;
@@ -115,7 +114,7 @@ export default function CmsSlideEditor({recordId,revision,disabled,pending,onSta
  const slides=[...known].sort((a,b)=>
   settings.slide_order.indexOf(a)-settings.slide_order.indexOf(b));
  const canEdit=Boolean(recordId)&&!disabled&&!saving;
- const change=(patch:Partial<Settings>)=>{const next={...settings,...patch};setSettings(next);setSettingsDirty(true);onSettingsDraft(next);};
+ const change=(patch:Partial<Settings>)=>{const next={...settings,...patch};setSettings(next);onSettingsDraft(next);};
  const orderMove=(slide:number,step:-1|1)=>{
   const current=settings.slide_order.indexOf(slide),next=current+step;
   if(next<0||next>=5)return;
@@ -127,7 +126,7 @@ export default function CmsSlideEditor({recordId,revision,disabled,pending,onSta
   setSaving(true);setError("");
   try{
    const result=await saveCmsSlideSettings(recordId,revision,settings);
-   setSettingsDirty(false);onSettingsDraft(null);onRevision(result.revision);onUpdated();
+   onSettingsDraft(null);onRevision(result.revision);onUpdated();
   }catch(ex){setError(ex instanceof Error?ex.message:"Không lưu được motion.");setNotificationId(v=>v+1);}
   finally{setSaving(false);}
  };
