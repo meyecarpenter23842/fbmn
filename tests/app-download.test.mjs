@@ -31,11 +31,11 @@ test("app promotion is limited to once per two hours per browser", () => {
 });
 
 test("menu action and popup are global, dismissible and have recognized brand marks", () => {
-  const layout = read("app/layout.tsx"), header = read("components/site-header.tsx");
+  const layout = read("app/layout.tsx"), footer = read("components/site-footer.tsx");
   const ui = read("components/app-download.tsx");
   const css = read("app/app-download.css");
   assert.match(layout, /<AppDownloadProvider>/);
-  assert.match(header, /<AppDownloadMenuButton/);
+  assert.match(footer, /<AppDownloadMenuButton/);
   assert.match(ui, /aria-haspopup="dialog"/);
   assert.match(ui, /aria-label="Đóng thông báo tải ứng dụng"/);
   assert.match(ui, /APP_PROMPT_STORAGE_KEY/);
