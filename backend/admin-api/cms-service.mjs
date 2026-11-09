@@ -90,8 +90,10 @@ function errorFor(e) {
 async function list(db,mode,page){
  const result=await db(client=>client.query(
   "SELECT id::text,kind,slug,title,summary,channel_targets,sort_order,"+
-  "starts_at,ends_at,source_ref,placements,popup_delay_seconds,popup_cooldown_minutes,popup_max_per_session,status,revision,created_at,updated_at "+
-  "FROM "+TABLE+" WHERE (($1::text='marketing' AND kind IN ('banner','popup')) "+
+  "starts_at,ends_at,source_ref,placements,popup_delay_seconds,popup_cooldown_minutes,popup_max_per_session,status,revision,created_at,updated_at,"+
+  "EXISTS (SELECT 1 FROM fbmn_catalog_private.cms_entry_media m WHERE m.entry_id=c.id AND m.channel='public_web' AND m.device='desktop' AND m.mime_type='image/webp') AS has_desktop,"+
+  "EXISTS (SELECT 1 FROM fbmn_catalog_private.cms_entry_media m WHERE m.entry_id=c.id AND m.channel='public_web' AND m.device='mobile' AND m.mime_type='image/webp') AS has_mobile "+
+  "FROM "+TABLE+" c WHERE (($1::text='marketing' AND kind IN ('banner','popup')) "+
   "OR ($1::text='editorial' AND kind IN ('article','promotion'))) "+
   "ORDER BY updated_at DESC,id LIMIT 51 OFFSET $2",
   [mode,(page-1)*50]));
@@ -100,8 +102,10 @@ async function list(db,mode,page){
 async function detail(db,id){
  const result=await db(client=>client.query(
   "SELECT id::text,kind,slug,title,summary,paragraphs,cta_url,channel_targets,"+
-  "sort_order,starts_at,ends_at,source_ref,placements,popup_delay_seconds,popup_cooldown_minutes,popup_max_per_session,status,revision,created_at,updated_at "+
-  "FROM "+TABLE+" WHERE id=$1::uuid LIMIT 1",[id]));
+  "sort_order,starts_at,ends_at,source_ref,placements,popup_delay_seconds,popup_cooldown_minutes,popup_max_per_session,status,revision,created_at,updated_at,"+
+  "EXISTS (SELECT 1 FROM fbmn_catalog_private.cms_entry_media m WHERE m.entry_id=c.id AND m.channel='public_web' AND m.device='desktop' AND m.mime_type='image/webp') AS has_desktop,"+
+  "EXISTS (SELECT 1 FROM fbmn_catalog_private.cms_entry_media m WHERE m.entry_id=c.id AND m.channel='public_web' AND m.device='mobile' AND m.mime_type='image/webp') AS has_mobile "+
+  "FROM "+TABLE+" c WHERE id=$1::uuid LIMIT 1",[id]));
  if(result.rowCount!==1)return fail(404,"cms_not_found");
  return ok({item:result.rows[0]});
 }
