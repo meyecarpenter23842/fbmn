@@ -8,7 +8,7 @@ export type CmsPublishInput={
  title?:string|null;slug?:string|null;summary?:string|null;cta_url?:string|null;
  source_ref?:string|null;
  channel_targets?:readonly string[];
- placements?:Record<string,string|undefined>|null;
+ placements?:{public_web?:string|null}|null;
  has_desktop?:boolean;has_mobile?:boolean;
  starts_at?:string|null;ends_at?:string|null;
 };
