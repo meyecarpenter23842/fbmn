@@ -10,17 +10,17 @@ export async function cxSessionId(visitor,session,revision){
 }
 export async function detectCx({config,secret,session,text,fetcher=fetch,getToken=tokenFor}){
  const c=normalizeConfig(config);
- // Production traffic must use a published Environment; drafts never receive public messages.
- if(!c||!c.model||c.environmentId==="draft"||!secret)throw Error("chat_unavailable");
+ // Owner explicitly selects the default Agent or an existing versioned Environment.
+ if(!c||!c.model||!secret)throw Error("chat_unavailable");
  const host=c.location==="global"?"dialogflow.googleapis.com":c.location+"-dialogflow.googleapis.com";
  const resource="projects/"+c.projectId+"/locations/"+c.location+"/agents/"+c.agentId+
-  "/environments/"+c.environmentId+"/sessions/"+session;
+  (c.environmentId==="draft"?"":"/environments/"+c.environmentId)+"/sessions/"+session;
  const token=await getToken(secret,fetcher);
  const response=await fetcher("https://"+host+"/v3beta1/"+resource+":detectIntent",{
   method:"POST",redirect:"manual",signal:AbortSignal.timeout(15000),
   headers:{Authorization:"Bearer "+token,"Content-Type":"application/json",Accept:"application/json"},
   body:JSON.stringify({queryInput:{text:{text},languageCode:"vi"},queryParams:{
-   timeZone:"Asia/Ho_Chi_Minh",sessionTtl:"1800s",disableWebhook:true,llmModelSettings:{model:c.model}}})});
+   timeZone:"Asia/Ho_Chi_Minh",sessionTtl:"1800s",disableWebhook:true,...(c.model==="agent-default"?{}:{llmModelSettings:{model:c.model}})}})});
  if(!response.ok)throw Error("chat_unavailable");
  const result=await response.json();
  const messages=result?.queryResult?.responseMessages;
@@ -37,7 +37,7 @@ export async function runChat({request,visitor,db,secret,loadSecret,detect=detec
  try{
   const row=await db();
   const config=normalizeConfig(row?.config),revision=Number(row?.revision);
-  if(!config||!config.model||config.environmentId==="draft")return {ok:false};
+  if(!config||!config.model)return {ok:false};
   const session=await cxSessionId(visitor,checked.session,revision);
   const credential=loadSecret?await loadSecret(revision)||secret:secret;
   if(!credential)return {ok:false};
