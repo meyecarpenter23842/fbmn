@@ -1,3 +1,4 @@
+import ContactRequestForm from "@/components/contact-request-form";
 import type { Metadata } from "next";
 import { ContentShell, ContentBreadcrumb, PageHeading } from "@/components/content-ui";
 import { getPublicContent } from "@/lib/content/adapter";
@@ -26,8 +27,7 @@ export default async function ContactPage() {
       </div>
       <div className="content-intro-panel">
         <h2>Tư vấn &amp; hợp tác đại lý</h2>
-        <p>Gửi nhu cầu sản phẩm, báo giá sỉ hoặc hợp tác phân phối qua email Futurebook Miền Nam.</p>
-        <a className="content-button" href={contact.emailHref}>Gửi email liên hệ</a>
+        <ContactRequestForm/>
       </div>
     </section>
   </ContentShell>;

@@ -39,7 +39,7 @@
 .content-form-notice { background: rgba(255,255,255,.7); border-left: 3px solid var(--color-primary); padding: 11px 14px; border-radius: 6px;  color: var(--fb-glass-muted);}
 .content-contact-form fieldset { display: flex; flex-direction: column; gap: 9px; margin: 0; padding: 0; border: 0; }
 .content-contact-form label { color: #462b54; font-size: 12px; font-weight: 800; }
-.content-contact-form input:not([type="checkbox"]), .content-contact-form textarea { width: 100%; min-height: var(--fb-field-height); border: 1px solid var(--fb-glass-stroke); border-radius: var(--fb-control-radius); font-size: 13px; padding: 10px; color: #403148; background: rgba(255,255,255,.8); }
+.content-contact-form input:not([type="checkbox"]), .content-contact-form textarea, .content-contact-form select { width: 100%; min-height: var(--fb-field-height); border: 1px solid var(--fb-glass-stroke); border-radius: var(--fb-control-radius); font-size: 13px; padding: 10px; color: #403148; background: rgba(255,255,255,.8); }
 .content-contact-form input:disabled, .content-contact-form textarea:disabled { opacity: .7; cursor: not-allowed; }
 .content-contact-form .content-consent { display: flex; gap: 9px; align-items: flex-start; font-size: 11px; line-height: 1.5; margin: 9px 0; }
 .content-consent input { margin-top: 2px; }
@@ -110,3 +110,10 @@
 .news-hub-back{margin-bottom:10px;font-size:13px;}
 @media(max-width:780px){.news-hub-filters{width:100%;}.news-hub-heading{align-items:flex-start;}
  .content-story>.news-hub-cover{aspect-ratio:16/9;}}
+
+/* DL9 composition; shared contact field tokens above. */
+.contact-interests legend{font-size:13px;font-weight:700;color:var(--fb-glass-ink)}
+.contact-interest-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 12px}
+.contact-interest-grid label{display:flex;align-items:center;gap:8px;min-width:0;font-weight:600}
+.contact-interest-grid input{flex:none;accent-color:var(--color-primary)}
+@media(max-width:780px){.contact-interest-grid{grid-template-columns:1fr}}

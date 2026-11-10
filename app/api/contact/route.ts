@@ -1,30 +1,55 @@
-import { validateContactInput } from "@/lib/contact/validation";
-export const runtime = "nodejs";
-export const dynamic = "force-dynamic";
-const reject = (status:number,error:string) => Response.json({ok:false,error},{status,headers:{"Cache-Control":"no-store"}});
-export async function POST(request:Request):Promise<Response> {
-  if (request.headers.get("content-type")?.split(";")[0].trim().toLowerCase()!=="application/json") return reject(415,"Chỉ nhận JSON.");
-  const origin = request.headers.get("origin");
-  if (!origin || origin!==new URL(request.url).origin) return reject(403,"Nguồn không hợp lệ.");
-  if (Number(request.headers.get("content-length")||0)>8192) return reject(413,"Nội dung quá lớn.");
-  if (!request.body) return reject(400,"Thiếu nội dung.");
-  const reader=request.body.getReader(), decoder=new TextDecoder("utf-8",{fatal:true});
-  let total=0, raw="";
-  try {
-    for (;;) {
-      const {done,value}=await reader.read(); if(done)break;
-      total+=value.byteLength;
-      if(total>8192){await reader.cancel();return reject(413,"Nội dung quá lớn.");}
-      raw+=decoder.decode(value,{stream:true});
-    }
-    raw+=decoder.decode();
-  } catch { return reject(400,"Nội dung không hợp lệ."); }
-  finally {reader.releaseLock();}
-  let value:unknown;
-  try { value=JSON.parse(raw); } catch { return reject(400,"JSON không hợp lệ."); }
-  const checked=validateContactInput(value);
-  if(!checked.ok) return reject(400,checked.error);
-  // Fail closed until durable storage, anti-spam, rate limiting, consent and retention controls
-  // are implemented, reviewed and verified in a separate staging release.
-  return reject(503,"Kênh tiếp nhận liên hệ chưa hoạt động.");
+import {isIP} from "node:net";
+import {createIntakeProof} from "@/lib/outsourcing/proxy-proof";
+import {validateContactRequest} from "@/lib/contact/dl9-validation";
+export const runtime="nodejs";
+export const dynamic="force-dynamic";
+const HEADERS={"Cache-Control":"no-store","X-Content-Type-Options":"nosniff"};
+const fail=(status:number,code:string)=>Response.json({ok:false,error:{code}},{status,headers:HEADERS});
+function publicApiOrigin(){
+ try{const u=new URL(process.env.FBMN_PUBLIC_API_BASE_URL||"");
+  return u.protocol==="https:"&&!u.username&&!u.password&&!u.search&&!u.hash&&u.pathname==="/"?u.origin:null;
+ }catch{return null;}
+}
+async function boundedJson(request:Request){
+ if(Number(request.headers.get("content-length")||0)>8192||!request.body)return null;
+ const reader=request.body.getReader(),decoder=new TextDecoder("utf-8",{fatal:true});
+ let raw="",bytes=0;
+ try{for(;;){const {done,value}=await reader.read();if(done)break;
+  bytes+=value.byteLength;if(bytes>8192){await reader.cancel();return null;}
+  raw+=decoder.decode(value,{stream:true});}
+  raw+=decoder.decode();return JSON.parse(raw) as unknown;
+ }catch{return null;}finally{reader.releaseLock();}
+}
+export async function POST(request:Request){
+ if(process.env.FBMN_DL6_ENABLED!=="true")return fail(503,"intake_unavailable");
+ const url=new URL(request.url);
+ if(url.search)return fail(400,"invalid_query");
+ if(request.headers.get("origin")!==url.origin||request.headers.get("sec-fetch-site")==="cross-site")
+  return fail(403,"origin_forbidden");
+ if(request.headers.get("content-type")?.split(";")[0].trim().toLowerCase()!=="application/json")
+  return fail(415,"invalid_content_type");
+ const body=await boundedJson(request),checked=validateContactRequest(body);
+ if(!checked.ok)return fail(400,checked.error);
+ const base=publicApiOrigin();if(!base)return fail(503,"intake_unavailable");
+ const secret=process.env.FBMN_DL6_PROXY_SECRET||"";
+ const visitorIp=request.headers.get("x-vercel-forwarded-for")||"";
+ // Vercel overwrites its own canonical visitor header at ingress; never trust user XFF.
+ if(process.env.VERCEL!=="1"||!isIP(visitorIp)||!/^[0-9a-f]{64}$/.test(secret))
+  return fail(503,"intake_unavailable");
+ try{
+  const payload=JSON.stringify(checked.data);
+  const proof=await createIntakeProof(secret,visitorIp,payload);
+  const response=await fetch(base+"/v1/public/contact-requests",{method:"POST",cache:"no-store",
+   redirect:"manual",signal:AbortSignal.timeout(10000),
+   headers:{"Content-Type":"application/json","Origin":url.origin,
+    "X-FBMN-DL6-Visitor":proof.visitor,"X-FBMN-DL6-Time":proof.time,
+    "X-FBMN-DL6-Signature":proof.signature},
+   body:payload});
+  if(response.status===201&&response.headers.get("content-type")?.includes("application/json")){
+    const result=await response.json().catch(()=>null) as {ok?:unknown}|null;
+    if(result?.ok===true)return Response.json({ok:true},{status:201,headers:HEADERS});
+  }
+  if(response.status===429)return fail(429,"request_limited");
+  return fail(503,"intake_unavailable");
+ }catch{return fail(503,"intake_unavailable");}
 }
