@@ -20,13 +20,13 @@ test("DL10B proof, origin and rate limits precede Google",async()=>{
  assert.equal(called,0);
  assert.deepEqual(await (await handleChat({...options,request:req()})).json(),{ok:true,text:"hello"});
 });
-test("DL10B isolates sessions and refuses drafts or missing credentials",async()=>{
+test("DL10B isolates sessions and accepts explicitly configured default Agent",async()=>{
  assert.notEqual(await cxSessionId(visitor,session,1),await cxSessionId("b".repeat(64),session,1));
  assert.notEqual(await cxSessionId(visitor,session,1),await cxSessionId(visitor,session,2));
  const opts={request:data,visitor,secret:"secret",db:async()=>({config,revision:1}),detect:async()=> "reply"};
  assert.deepEqual(await runChat(opts),{ok:true,text:"reply"});
  assert.deepEqual(await runChat({...opts,secret:""}),{ok:false});
- assert.deepEqual(await runChat({...opts,db:async()=>({config:{...config,environmentId:"draft"},revision:1})}),{ok:false});
+ assert.deepEqual(await runChat({...opts,db:async()=>({config:{...config,environmentId:"draft"},revision:1})}),{ok:true,text:"reply"});
 });
 test("DL10B detectIntent targets saved environment/model and strips nontext data",async()=>{
  const answer=await detectCx({config,secret:"secret",session:"abc",text:"hi",getToken:async()=> "token",fetcher:async(url,init)=>{
@@ -37,4 +37,11 @@ test("DL10B detectIntent targets saved environment/model and strips nontext data
  return Response.json({queryResult:{parameters:{private:"secret"},responseMessages:[{text:{text:["Hello"]}},{payload:{secret:"ignore"}}]}});
  }});
  assert.equal(answer,"Hello");
+});
+
+test("default Agent uses direct sessions endpoint and omits default model override",async()=>{
+ const answer=await detectCx({config:{...config,environmentId:"draft",model:"agent-default"},secret:"secret",session:"abc",text:"hi",getToken:async()=> "token",fetcher:async(url,init)=>{
+ assert.match(url,/\/agents\/[^/]+\/sessions\/abc:detectIntent$/);assert.ok(!url.includes("/environments/"));
+ assert.equal(JSON.parse(init.body).queryParams.llmModelSettings,undefined);return Response.json({queryResult:{responseMessages:[{text:{text:["ok"]}}]}});
+ }});assert.equal(answer,"ok");
 });

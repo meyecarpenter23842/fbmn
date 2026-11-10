@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import {tokenFor,listCxAgents} from "../backend/admin-api/chatbot-config-service.mjs";
+import {tokenFor,listCxAgents,discoverCx} from "../backend/admin-api/chatbot-config-service.mjs";
 const keys=await crypto.subtle.generateKey({name:"RSASSA-PKCS1-v1_5",modulusLength:2048,publicExponent:new Uint8Array([1,0,1]),hash:"SHA-256"},true,["sign","verify"]);
 const pem="-----BEGIN PRIVATE KEY-----\n"+Buffer.from(await crypto.subtle.exportKey("pkcs8",keys.privateKey)).toString("base64")+"\n-----END PRIVATE KEY-----\n";
 const secret=JSON.stringify({type:"service_account",project_id:"futurebook-test",client_email:"bot@futurebook-test.iam.gserviceaccount.com",private_key:pem});
@@ -41,4 +41,16 @@ test("Cloudflare Workers accepts manual redirect and rejects Google redirects wi
   assert.equal(init.redirect,"manual");
   return url.includes("oauth2")?Response.json({access_token:"token"}):new Response(null,{status:302,headers:{Location:"https://example.invalid"}});
  },"global"),/google_unavailable/);
+});
+
+test("default Agent discovery does not require environment or Vertex API",async()=>{
+ const config={projectId:"futurebook-test",location:"asia-southeast1",agentId:"00000000-0000-4000-8000-000000000001",environmentId:"draft",model:"agent-default"};
+ const path="projects/"+config.projectId+"/locations/"+config.location+"/agents/"+config.agentId;
+ const result=await discoverCx(config,secret,async url=>{
+  assert.ok(!url.includes("/environments/")&&!url.includes("aiplatform"));
+  if(url.includes("oauth2"))return Response.json({access_token:"token"});
+  if(url.includes("/generativeSettings"))return Response.json({error:{}},{status:403});
+  return Response.json({name:path,defaultLanguageCode:"vi"});
+ });
+ assert.ok(result.models.includes("agent-default"));
 });

@@ -5,7 +5,7 @@ const ok=data=>Response.json({data},{headers:HEADERS});
 const fail=(status,code)=>Response.json({error:{code}},{status,headers:HEADERS});
 const KEYS=["projectId","location","agentId","environmentId","model"];
 // Google CX Playbooks documented supported models, not a Gemini API catalogue.
-const SUPPORTED=["gemini-2.5-flash","gemini-2.5-flash-lite","gemini-3.1-flash-lite","gemini-3.5-flash-lite"];
+const SUPPORTED=["agent-default","gemini-2.5-flash","gemini-2.5-flash-lite","gemini-3.1-flash-lite","gemini-3.5-flash-lite"];
 export const LOCATIONS=new Set(["global","asia-south1","asia-southeast1","asia-southeast2","asia-northeast1","australia-southeast1","eu","europe-west1","europe-west2","europe-west3","europe-west4","europe-west6","northamerica-northeast1","us","us-central1","us-east1","us-west1"]);
 const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 export function normalizeConfig(input){
@@ -158,24 +158,21 @@ export async function discoverCx(config,secret,fetcher=fetch){
   if(env.name!==path+"/environments/"+config.environmentId)throw Error("google_unavailable");
  }
  const lang=typeof agent.defaultLanguageCode==="string"?agent.defaultLanguageCode:"vi";
- const settings=await googleJson(root+"/generativeSettings?languageCode="+encodeURIComponent(lang),token,fetcher,signal);
- // Model Garden is a real Google API; intersect with CX Playbook support, never advertise all Vertex models.
- const found=new Set();
- let page="";
- for(let i=0;i<10;i++){
-  const query=new URLSearchParams({pageSize:"100",...(page?{pageToken:page}:{})});
-  const data=await googleJson("https://aiplatform.googleapis.com/v1beta1/publishers/google/models?"+query,token,fetcher,signal);
-  for(const model of Array.isArray(data.publisherModels)?data.publisherModels:[]){
-   const name=typeof model.name==="string"?model.name.split("/").pop().split("@")[0]:"";
-   if(SUPPORTED.includes(name))found.add(name);
-  }
-  page=typeof data.nextPageToken==="string"?data.nextPageToken:"";
-  if(!page)break;
-  if(i===9)throw Error("google_unavailable");
+ // Agent default always works without a model override. Other choices are the
+ // documented CX Playbook models, not a project-specific Vertex catalogue.
+ let current="";
+ try{
+  const settings=await googleJson(root+"/generativeSettings?languageCode="+encodeURIComponent(lang),token,fetcher,signal);
+  const value=settings.llmModelSettings?.model;
+  if(typeof value==="string"&&/^[a-z0-9-]{1,80}$/.test(value))current=value;
+ }catch(e){
+  // A flow-only agent or a service account without settings access still
+  // supports its default model; do not block the basic Agent connection.
+  if(!["google_resource_not_found","google_permission_denied"].includes(e?.message))throw e;
  }
- const current=settings.llmModelSettings?.model;
- if(SUPPORTED.includes(current))found.add(current);
- return {models:SUPPORTED.filter(m=>found.has(m)),currentModel:typeof current==="string"&&/^[a-z0-9-]{1,80}$/.test(current)?current:""};
+ const models=["agent-default","gemini-2.5-flash","gemini-2.5-flash-lite"];
+ if(SUPPORTED.includes(current)&&!models.includes(current))models.push(current);
+ return {models,currentModel:current};
 }
 export async function handleChatbotConfig({request,actor,db,googleSecret,credentialStore,discover=discoverCx,listAgents=listCxAgents,listEnvironments=listCxEnvironments}){
  const url=new URL(request.url);
@@ -223,7 +220,7 @@ export async function handleChatbotConfig({request,actor,db,googleSecret,credent
    return ok(await discover(config,secret));
   }
   if(body.operation!=="save"||!Number.isSafeInteger(body.revision)||body.revision<1)return fail(400,"invalid_config");
-  if(account&&(!credentialStore||!config.model||config.environmentId==="draft"))return fail(400,"invalid_config");
+  if(account&&(!credentialStore||!config.model))return fail(400,"invalid_config");
   // Blank model is a saved draft; a selected model must be observed by Google on every save.
   if(config.model){
    const secret=await getSecret();if(!secret)return fail(503,"credentials_missing");

@@ -1,0 +1,2 @@
+# DL10B — Simplified Agent selection
+Owner decision: no Environment selection required. Selecting an Agent uses its default Draft sessions endpoint. Existing stored versioned Environment IDs remain supported until the Owner selects a new Agent. Agent edits in Google can affect live responses immediately. Model `agent-default` sends no request override. Other model options are documented CX Playbook choices, not a verified per-project catalogue. No Vertex AI list dependency. No migration. Keep credentials private and session isolation intact. Owner UAT required.

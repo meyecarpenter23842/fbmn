@@ -5,10 +5,9 @@ import AdminToast from "./admin-toast";
 type Config={projectId:string;location:string;agentId:string;environmentId:string;model:string};
 type Stored={config:Partial<Config>;revision:number;credentialsConfigured?:boolean};
 type Agent={id:string;location:string;name:string};
-type Environment={id:string;name:string};
 type Models={models:string[];currentModel:string};
 const empty:Config={projectId:"",location:"global",agentId:"",environmentId:"draft",model:""};
-const labels:Record<keyof Config,string>={projectId:"Google Cloud Project ID",location:"Vùng Agent",agentId:"Agent ID",environmentId:"Environment ID (hoặc draft)",model:"Model"};
+const labels:Record<keyof Config,string>={projectId:"Google Cloud Project ID",location:"Vùng Agent",agentId:"Agent ID",environmentId:"Môi trường (nội bộ)",model:"Model"};
 async function api<T>(body?:object):Promise<T>{
  const auth=await fetch("/api/auth/token",{credentials:"same-origin",cache:"no-store"});
  const jwt=await auth.json().catch(()=>({})) as {token?:unknown};
@@ -35,13 +34,13 @@ export default function ChatbotConfigManager({owner}:{owner:boolean}){
  const [open,setOpen]=useState(false),[busy,setBusy]=useState(false),[saved,setSaved]=useState(false),[error,setError]=useState("");
  const credential=useRef<string>("");
  const [region,setRegion]=useState("all");
- const [fileName,setFileName]=useState(""),[agents,setAgents]=useState<Agent[]>([]),[environments,setEnvironments]=useState<Environment[]>([]);
+ const [fileName,setFileName]=useState(""),[agents,setAgents]=useState<Agent[]>([]);
  const [models,setModels]=useState<Models|null>(null),[notice,setNotice]=useState(""),[noticeId,setNoticeId]=useState(0);
  const [variant,setVariant]=useState<"success"|"error">("success");
  const notify=(message:string,v:"success"|"error")=>{setNotice(message);setVariant(v);setNoticeId(n=>n+1);};
  const load=useCallback(async()=>{setError("");try{setStored(await api<Stored>());}catch(e){setError(e instanceof Error?e.message:"Không tải được cấu hình.");}},[]);
  useEffect(()=>{if(owner)void Promise.resolve().then(load);},[owner,load]);
- const resetDiscovery=()=>{setAgents([]);setEnvironments([]);setModels(null);};
+ const resetDiscovery=()=>{setAgents([]);setModels(null);};
  const change=(key:keyof Config,value:string)=>{setDraft(d=>({...d,[key]:value,...(key!=="model"?{model:""}:{})}));if(key!=="model")setModels(null);};
  const withCredential=(body:object)=>({...body,...(credential.current?{credential:credential.current}:{})});
  async function importFile(file:File){
@@ -68,19 +67,12 @@ export default function ChatbotConfigManager({owner}:{owner:boolean}){
    notify(result.agents.length?"Đã tải "+result.agents.length+" Agent."+ (result.failedLocations.length?" Một số vùng không truy cập được.":""):"Không tìm thấy Agent có quyền truy cập.",result.agents.length?"success":"error");
   }catch(e){notify(e instanceof Error?e.message:"Không tải được Agent.","error");}finally{setBusy(false);}
  }
- async function loadEnvironments(){
-  setBusy(true);setEnvironments([]);setModels(null);
-  try{
-   const result=await api<{environments:Environment[]}>(withCredential({operation:"list_environments",config:{...draft,environmentId:"draft",model:""}}));
-   setEnvironments(result.environments);setDraft(d=>({...d,environmentId:"draft",model:""}));
-   notify(result.environments.length?"Đã tải Environment.":"Chưa có Environment đã phát hành bên Google.",result.environments.length?"success":"error");
-  }catch(e){notify(e instanceof Error?e.message:"Không tải được Environment.","error");}finally{setBusy(false);}
- }
- async function discover(){
+ async function discover(config:Config){
+
   setBusy(true);setModels(null);
-  try{const result=await api<Models>(withCredential({operation:"discover",config:draft}));setModels(result);
-   setDraft(d=>({...d,model:result.models.includes(d.model)?d.model:""}));
-   notify("Đã xác minh Agent/Environment và tải model từ Google.","success");
+  try{const result=await api<Models>(withCredential({operation:"discover",config}));setModels(result);
+   setDraft(d=>({...d,model:result.models.includes(d.model)?d.model:"agent-default"}));
+   notify("Đã kết nối Agent. Chọn model hoặc dùng mặc định.","success");
   }catch(e){notify(e instanceof Error?e.message:"Không kết nối được Google.","error");}finally{setBusy(false);}
  }
  async function save(){
@@ -98,12 +90,12 @@ export default function ChatbotConfigManager({owner}:{owner:boolean}){
   {!stored&&!error&&<p role="status">Đang tải cấu hình…</p>}
   {stored&&<section className="surface dl4-panel"><h2>Kết nối Google</h2>
    <p>{stored.credentialsConfigured?"Đã có tài khoản Google ở backend.":"Chưa có tài khoản Google ở backend."}</p>
-   <dl className="dl6-request-details">{(Object.keys(labels) as (keyof Config)[]).map(k=><Fragment key={k}><dt>{labels[k]}</dt><dd>{stored.config[k]||"Chưa cấu hình"}</dd></Fragment>)}</dl>
-   <p className="content-small-note">Website sử dụng Agent, Environment và model đã lưu. Prompt/Playbook quản lý bên Google. Chưa lưu lịch sử hội thoại.</p>
+   <dl className="dl6-request-details">{(Object.keys(labels) as (keyof Config)[]).filter(k=>k!=="environmentId").map(k=><Fragment key={k}><dt>{labels[k]}</dt><dd>{k==="model"&&stored.config[k]==="agent-default"?"Mặc định của Agent":stored.config[k]||"Chưa cấu hình"}</dd></Fragment>)}</dl>
+   <p className="content-small-note">Website sử dụng Agent và model đã lưu. Prompt/Playbook quản lý bên Google. Chưa lưu lịch sử hội thoại.</p>
   </section>}
   {open&&<ProductModal title="Cấu hình Dialogflow CX" locked={busy} onClose={()=>{credential.current="";setFileName("");setOpen(false);setNotice("");if(saved)notify("Đã lưu cấu hình.","success");}}
    beforeClose={()=>saved||(!credential.current&&JSON.stringify(draft)===JSON.stringify({...empty,...stored?.config}))||window.confirm("Bỏ thay đổi chưa lưu?")}
-   footer={<><Cancel/><button className="fb-ui-button fb-ui-button--primary" disabled={busy||saved||!draft.projectId||!draft.agentId||draft.environmentId==="draft"||!draft.model} onClick={()=>void save()}>Lưu cấu hình</button></>}>
+   footer={<><Cancel/><button className="fb-ui-button fb-ui-button--primary" disabled={busy||saved||!draft.projectId||!draft.agentId||!draft.model} onClick={()=>void save()}>Lưu cấu hình</button></>}>
    <CloseAfterSave ready={saved&&!busy}/>
    <div className="form-grid">
     <label>Nhập file Google Cloud (JS/JSON)<input type="file" accept=".js,.json" disabled={busy} onChange={e=>{const f=e.target.files?.[0];if(f)void importFile(f);e.target.value="";}}/></label>
@@ -116,22 +108,18 @@ export default function ChatbotConfigManager({owner}:{owner:boolean}){
     <button className="fb-ui-button fb-ui-button--secondary" disabled={busy||!draft.projectId} onClick={()=>void loadAgents()}>Load Agent</button>
     <label>Agent<select className="fb-ui-select" value={draft.agentId?draft.location+"/"+draft.agentId:""} disabled={busy||!agents.length} onChange={e=>{
       const a=agents.find(x=>x.location+"/"+x.id===e.target.value);if(!a)return;
-      setDraft(d=>({...d,location:a.location,agentId:a.id,environmentId:"draft",model:""}));setEnvironments([]);setModels(null);
+      const next={...draft,location:a.location,agentId:a.id,environmentId:"draft",model:""};setDraft(next);setModels(null);void discover(next);
     }}><option value="">Chọn Agent</option>
     {draft.agentId&&!agents.some(a=>a.id===draft.agentId&&a.location===draft.location)&&<option value={draft.location+"/"+draft.agentId}>{draft.agentId} (đã lưu)</option>}
     {agents.map(a=><option key={a.location+"/"+a.id} value={a.location+"/"+a.id}>{a.name} — {a.location}</option>)}</select></label>
-    <button className="fb-ui-button fb-ui-button--secondary" disabled={busy||!draft.agentId} onClick={()=>void loadEnvironments()}>Load Environment</button>
-    <label>Environment<select className="fb-ui-select" value={draft.environmentId} disabled={busy||!environments.length} onChange={e=>change("environmentId",e.target.value)}>
-    <option value="draft">Chọn Environment đã phát hành</option>
-    {draft.environmentId!=="draft"&&!environments.some(x=>x.id===draft.environmentId)&&<option value={draft.environmentId}>{draft.environmentId} (đã lưu)</option>}
-    {environments.map(x=><option key={x.id} value={x.id}>{x.name}</option>)}</select></label>
-    <button className="fb-ui-button fb-ui-button--secondary" disabled={busy||!draft.agentId||draft.environmentId==="draft"} onClick={()=>void discover()}>Load Model</button>
+    <button className="fb-ui-button fb-ui-button--secondary" disabled={busy||!draft.agentId} onClick={()=>void discover(draft)}>Load Model</button>
     <label>Model<select className="fb-ui-select" value={draft.model} disabled={busy||!models} onChange={e=>change("model",e.target.value)}>
      <option value="">Chọn model</option>
      {draft.model&&!models?.models.includes(draft.model)&&<option value={draft.model}>{draft.model} (chưa kiểm tra)</option>}
-     {models?.models.map(m=><option key={m} value={m}>{m}</option>)}
+     {models?.models.map(m=><option key={m} value={m}>{m==="agent-default"?"Mặc định của Agent":m}</option>)}
     </select></label>
-    {models&&<p role="status">Model hiện tại của Agent: {models.currentModel||"Không trả về"} · {models.models.length} lựa chọn được đối chiếu.</p>}
+    <p className="content-small-note">Website dùng Agent mặc định (Draft). Thay đổi Agent bên Google có thể ảnh hưởng ngay đến chatbot.</p>
+    {models&&<p role="status">Model hiện tại của Agent: {models.currentModel||"Mặc định"} · Các lựa chọn khác theo tài liệu Dialogflow CX.</p>}
    </div>
    <AdminToast message={notice} variant={variant} notificationId={noticeId} onClose={()=>setNotice("")}/>
   </ProductModal>}
