@@ -28,7 +28,7 @@ test("DL6 public intake fails closed and rejects untrusted origin",async()=>{
 });
 test("DL6 accepts a valid request only after durable submit succeeds",async()=>{
  let calls=0;const submit=async data=>{calls++;assert.equal(data.email,"a@example.com");};
- const res=await handleOutsourcingRequest({request:req(draft),enabled:true,allowedOrigins:["https://fbmn-web.vercel.app"],submit});
+ const res=await handleOutsourcingRequest({request:req(draft),enabled:true,allowedOrigins:["https://fbmn-web.vercel.app"],submit,...verified});
  assert.equal(res.status,201);assert.deepEqual(await res.json(),{ok:true});assert.equal(calls,1);
 });
 test("DL6 failed storage never gives false success",async()=>{
