@@ -370,7 +370,7 @@ export default function AdminPage() {
           <div className="top-actions"><div className="profile-avatar">{name.slice(0,1).toUpperCase()||"F"}</div><div className="profile-text"><b>{name || "Futurebook Admin"}</b><small>{session?roleLabel:"Yêu cầu đăng nhập"}</small></div><button type="button" className="top-icon" onClick={()=>void signOut()} disabled={authState!=="authorised"} title="Đăng xuất"><Glyph name="logout" size={18}/></button></div>
         </header>
         <main className="workspace-main">
-          {authState==="authorised" && <><AdminTelemetry section={section}/>
+          {authState==="authorised" && <>{section!=="contact-requests"&&<AdminTelemetry section={section}/>}
             {section==="products" && <CatalogueManager
               onImport={()=>navigate("import-products")}
               onStructure={pane=>{setStructureTab(pane);navigate("structure");}}/>}
