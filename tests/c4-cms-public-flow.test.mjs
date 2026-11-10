@@ -150,8 +150,11 @@ test("C4 Website and Admin remain behind independent release gates",()=>{
  assert.match(category,/slot="category.header"/);
  assert.match(layout,/CmsPopupRuntime/);
  assert.match(cmsWeb,/FBMN_CMS_PUBLIC_ENABLED/);
- assert.match(read("backend/public-api/wrangler.jsonc"),/"PUBLIC_CMS_ENABLED": "false"/);
- assert.match(read("backend/admin-api/wrangler.jsonc"),/"ADMIN_CMS_PUBLIC_READY": "false"/);
+ // DL5 deploy safety: these flags are already LIVE on Cloudflare, do not reset them.
+ assert.match(read("backend/public-api/wrangler.jsonc"),/"PUBLIC_CMS_ENABLED": "true"/);
+ assert.match(read("backend/public-api/wrangler.jsonc"),/"PUBLIC_DL4_ENABLED": "true"/);
+ assert.match(read("backend/public-api/wrangler.jsonc"),/"PUBLIC_DL7C_ENABLED": "true"/);
+ assert.match(read("backend/admin-api/wrangler.jsonc"),/"ADMIN_CMS_PUBLIC_READY": "true"/);
  const proxy=read("app/api/cms-image/route.ts");
  assert.match(proxy,/MAX=5\*1024\*1024/);
  assert.match(proxy,/cache:"no-store"/);

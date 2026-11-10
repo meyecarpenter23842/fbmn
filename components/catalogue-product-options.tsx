@@ -41,10 +41,10 @@ function VariantChoice({glass,variant,active,onClick}:{
   </button>;
 }
 
-export default function CatalogueProductOptions({product,photos,glass=false}:{
-  product:PublicProduct;photos:ProductPhoto[];glass?:boolean;
+export default function CatalogueProductOptions({product,photos,glass=false,initialSku}:{
+  product:PublicProduct;photos:ProductPhoto[];glass?:boolean;initialSku?:string;
 }){
-  const [sku,setSku]=useState(product.variants[0].sku);
+  const [sku,setSku]=useState(initialSku && product.variants.some(v=>v.sku===initialSku)?initialSku:product.variants[0].sku);
   const [photoIndex,setPhotoIndex]=useState(0);
   const selectSku=(nextSku:string)=>{setSku(nextSku);setPhotoIndex(0);};
   const [audience,setAudience]=useState("");

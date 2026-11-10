@@ -39,7 +39,7 @@ test("G07: mobile catalogue stacks compact horizontal cards and preserves all ro
 });
 
 test("G07: compact published-image preview and SKU controls precede large gallery on mobile",()=>{
-  assert.match(detail, /const \[sku,setSku\]=useState\(product\.variants\[0\]\.sku\)/);
+  assert.match(detail, /const \[sku,setSku\]=useState\(initialSku && product\.variants\.some/);
   assert.match(detail, /const gallery=photosForSku\(photos,selected\.sku\)/);
   assert.match(detail, /className="fb-song-overview-preview"/);
   assert.match(detail, /src=\{gallery\[photoIndex\]\?\.src\?\?gallery\[0\]\?\.src\?\?null\}/);

@@ -94,6 +94,8 @@ export interface Catalog {
 
 export interface PublicVariant {
   sku: string;
+  /** Published SKU category, may differ from the family canonical category. */
+  categoryId?: string;
   name: string;
   specifications: Specifications;
   price: { kind: "retail"; amountVnd: number; currency: "VND" } | null;

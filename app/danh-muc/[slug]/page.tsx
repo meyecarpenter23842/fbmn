@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { CatalogShell, CatalogBreadcrumb, CatalogListing, EmptyState } from "@/components/catalog-ui";
 import { getPublicCatalog } from "@/lib/catalog/adapter";
+import {getPublicCategoryDisplay} from "@/lib/catalog/category-display";
 import { getCategoryBySlug, parseCatalogFilters, GROUP_LABELS } from "@/lib/catalog/query";
 import { toAllowedParams, type RawSearchParams } from "@/lib/catalog/route";
 import {getOptionalPublicCms} from "@/lib/content/cms";
@@ -19,7 +20,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 export default async function CategoryPage({ params, searchParams }: Props) {
-  const [catalog, { slug }, raw, cms] = await Promise.all([getPublicCatalog(), params, searchParams, getOptionalPublicCms()]);
+  const [catalog, { slug }, raw, cms, modes] = await Promise.all([getPublicCatalog(), params, searchParams, getOptionalPublicCms(), getPublicCategoryDisplay()]);
   const category = getCategoryBySlug(catalog, slug);
   if (!category) return <CatalogShell><div className="catalog-wrap">
     <CatalogBreadcrumb trail={[{ label: "Sản phẩm", href: "/san-pham" }, { label: "Danh mục" }]}/>
@@ -32,6 +33,6 @@ export default async function CategoryPage({ params, searchParams }: Props) {
     <CmsBannerSlot items={cms} slot="category.header"/>
     <CatalogListing data={catalog} filters={filters} heading={category.name}
       description={"Nhóm " + GROUP_LABELS[category.group] + ". Dữ liệu hiển thị theo nguồn đã được duyệt."}
-      actionPath={"/danh-muc/" + encodeURIComponent(category.slug)}/>
+      actionPath={"/danh-muc/" + encodeURIComponent(category.slug)} modeByCategory={modes}/>
   </div></CatalogShell>;
 }

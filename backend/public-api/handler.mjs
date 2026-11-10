@@ -81,6 +81,7 @@ export function projectPublicCatalog(raw) {
       }
       return {
         sku: text(v.sku, 100), name: text(v.name, 160),
+        ...(v.categoryId === undefined ? {} : {categoryId: (()=>{const id=text(v.categoryId,80);guard(ids.has(id));return id;})()}),
         specifications: copySpecifications(v.specifications), price,
       };
     });
@@ -144,7 +145,7 @@ export function projectPublicContent(raw) {
   })();
   return { company, articles, promotions, dealerInformation };
 }
-const ROUTES = new Set(["/v1/public/categories", "/v1/public/products", "/v1/public/catalog", "/v1/public/content", "/v1/public/cms", "/v1/public/home-layout"]);
+const ROUTES = new Set(["/v1/public/categories", "/v1/public/products", "/v1/public/catalog", "/v1/public/content", "/v1/public/cms", "/v1/public/home-layout", "/v1/public/category-display"]);
 const QUERY_KEYS = {
   "/v1/public/categories": new Set(["slug"]),
   "/v1/public/products": new Set(["slug", "categoryId", "page", "limit"]),
@@ -152,6 +153,7 @@ const QUERY_KEYS = {
   "/v1/public/content": new Set(),
   "/v1/public/cms": new Set(),
   "/v1/public/home-layout": new Set(),
+  "/v1/public/category-display": new Set(),
 };
 function integerParam(input, defaultValue, max) {
   if (input === null) return defaultValue;
@@ -210,7 +212,18 @@ export function projectPublicHomeLayout(raw) {
     categoryLimit:raw.categoryLimit,productLimit:raw.productLimit,
     sectionOrder:[...raw.sectionOrder],revision:raw.revision};
 }
-export function createPublicApi({ getPublicCatalog, getPublicContent, getPublicCms, getPublicHomeLayout, cmsEnabled = false, homeLayoutEnabled = false, allowedOrigins = [] }) {
+export function projectPublicCategoryDisplay(raw) {
+  guard(object(raw) && Array.isArray(raw.modes) && raw.modes.length<=2000);
+  const seen=new Set();
+  return {modes:raw.modes.map(item=>{
+    guard(object(item) && typeof item.categoryId==="string" &&
+      /^p5-(?:[0-9a-f-]{36}|uncategorized)$/.test(item.categoryId) && item.mode==="sku" &&
+      !seen.has(item.categoryId));
+    seen.add(item.categoryId);
+    return {categoryId:item.categoryId,mode:"sku"};
+  })};
+}
+export function createPublicApi({ getPublicCatalog, getPublicContent, getPublicCms, getPublicHomeLayout, getPublicCategoryDisplay, cmsEnabled = false, homeLayoutEnabled = false, categoryDisplayEnabled = false, allowedOrigins = [] }) {
   guard(typeof getPublicCatalog === "function" && typeof getPublicContent === "function");
   guard(Array.isArray(allowedOrigins) && allowedOrigins.every(o => {
     try { const u = new URL(o); return u.protocol === "https:" && u.origin === o; }
@@ -240,6 +253,10 @@ export function createPublicApi({ getPublicCatalog, getPublicContent, getPublicC
       }
       if (!validQuery(url)) return failure(400, "invalid_query", corsOrigin);
       try {
+        if (url.pathname === "/v1/public/category-display") {
+          if(!categoryDisplayEnabled || typeof getPublicCategoryDisplay!=="function")return failure(404,"not_found",corsOrigin);
+          return response(200,{data:projectPublicCategoryDisplay(await getPublicCategoryDisplay())},corsOrigin,"no-store");
+        }
         if (url.pathname === "/v1/public/home-layout") {
           if(!homeLayoutEnabled || typeof getPublicHomeLayout!=="function")return failure(404,"not_found",corsOrigin);
           const layout=projectPublicHomeLayout(await getPublicHomeLayout());
