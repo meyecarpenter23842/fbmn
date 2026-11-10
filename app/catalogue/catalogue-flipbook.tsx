@@ -2,7 +2,7 @@
 import {useCallback,useEffect,useMemo,useRef,useState} from "react";
 import type {KeyboardEvent} from "react";
 import Link from "next/link";
-import type {PageFlip} from "page-flip";
+import type {PageFlip,SizeType,FlipCorner} from "page-flip";
 
 type Asset={id:string;width:number;height:number};
 type Book={id:string;title:string;edition:string};
@@ -186,7 +186,7 @@ export default function CatalogueFlipbook(){
      return leaf;
     });
     flip=new PageFlip(host,{
-     width:440,height:610,size:"stretch",minWidth:185,maxWidth:555,
+     width:440,height:610,size:"stretch" as SizeType,minWidth:185,maxWidth:555,
      minHeight:256,maxHeight:770,autoSize:false,
      flippingTime:950,drawShadow:true,maxShadowOpacity:0.26,
      showCover:Boolean(detail.cover),usePortrait:true,swipeDistance:38,
@@ -236,7 +236,7 @@ export default function CatalogueFlipbook(){
    activeRef.current=n;setActive(n);
    window.history.replaceState(window.history.state,"",deepLink(detail.book.id,n));
   }else{
-   direction==="next"?book.flipNext("bottom"):book.flipPrev("bottom");
+   direction==="next"?book.flipNext("bottom" as FlipCorner):book.flipPrev("bottom" as FlipCorner);
   }
  };
  const keyboard=(event:KeyboardEvent<HTMLElement>)=>{

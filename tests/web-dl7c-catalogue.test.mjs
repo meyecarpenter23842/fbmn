@@ -180,7 +180,7 @@ test("DL7C-R page curl and paper audio are interaction-based and reduced-motion-
  assert.match(ui,/const \{PageFlip\}=await import\("page-flip"\)/);
  assert.match(ui,/flippingTime:950/);
  assert.match(ui,/maxShadowOpacity:0\.26/);
- assert.match(ui,/flipNext\("bottom"\)/);
+ assert.match(ui,/flipNext\("bottom" as FlipCorner\)/);
  assert.match(ui,/turnToNextPage\(\)/);
  assert.match(ui,/new AudioContext\(\)/);
  assert.match(ui,/aria-pressed=\{soundEnabled\}/);
