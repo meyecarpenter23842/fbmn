@@ -18,11 +18,12 @@ test("DL6 rejects oversized descriptions and invalid emails",()=>{
  assert.equal(validateOutsourcingRequest({...draft,email:"bad"},now).ok,false);
 });
 const url="https://api.example.test/v1/public/outsourcing-requests";
+const verified={verifyProxy:async()=>"trustedvisitor",limitVisitor:async()=>({success:true})};
 function req(body,origin="https://fbmn-web.vercel.app"){return new Request(url,{method:"POST",headers:{
  "Content-Type":"application/json","Origin":origin},body:JSON.stringify(body)});}
 test("DL6 public intake fails closed and rejects untrusted origin",async()=>{
  const submit=async()=>{};
- assert.equal((await handleOutsourcingRequest({request:req(draft),enabled:false,allowedOrigins:["https://fbmn-web.vercel.app"],submit})).status,503);
+ assert.equal((await handleOutsourcingRequest({request:req(draft),enabled:false,allowedOrigins:["https://fbmn-web.vercel.app"],submit,...verified})).status,503);
  assert.equal((await handleOutsourcingRequest({request:req(draft,"https://evil.test"),enabled:true,allowedOrigins:["https://fbmn-web.vercel.app"],submit})).status,403);
 });
 test("DL6 accepts a valid request only after durable submit succeeds",async()=>{
@@ -31,6 +32,6 @@ test("DL6 accepts a valid request only after durable submit succeeds",async()=>{
  assert.equal(res.status,201);assert.deepEqual(await res.json(),{ok:true});assert.equal(calls,1);
 });
 test("DL6 failed storage never gives false success",async()=>{
- const res=await handleOutsourcingRequest({request:req(draft),enabled:true,allowedOrigins:["https://fbmn-web.vercel.app"],submit:async()=>{throw Error("db down");}});
+ const res=await handleOutsourcingRequest({request:req(draft),enabled:true,allowedOrigins:["https://fbmn-web.vercel.app"],submit:async()=>{throw Error("db down");},...verified});
  assert.equal(res.status,503);
 });

@@ -13,10 +13,11 @@ async function limitedJson(request){
    raw+=decoder.decode();return JSON.parse(raw);
  }catch{return null;}finally{reader.releaseLock();}
 }
-export async function handleOutsourcingRequest({request,enabled,allowedOrigins,submit}){
+export async function handleOutsourcingRequest({request,enabled,allowedOrigins,submit,verifyProxy,limitVisitor}){
  const url=new URL(request.url);
  if(url.pathname!=="/v1/public/outsourcing-requests")return fail(404,"not_found");
- if(!enabled||typeof submit!=="function")return fail(503,"intake_unavailable");
+ if(!enabled||typeof submit!=="function"||typeof verifyProxy!=="function"||
+    typeof limitVisitor!=="function")return fail(503,"intake_unavailable");
  const origin=request.headers.get("Origin");
  if(!origin||!allowedOrigins.includes(origin))return fail(403,"origin_forbidden");
  if(url.search)return fail(400,"invalid_query");
@@ -24,6 +25,10 @@ export async function handleOutsourcingRequest({request,enabled,allowedOrigins,s
  const body=await limitedJson(request),validated=validateOutsourcingRequest(body);
  if(!validated.ok)return fail(400,validated.error);
  try{
+  const visitor=await verifyProxy(request,JSON.stringify(validated.data));
+  if(!visitor)return fail(403,"untrusted_proxy");
+  const limit=await limitVisitor(visitor);
+  if(limit?.success!==true)return fail(429,"request_limited");
   await submit(validated.data);
   return Response.json({ok:true},{status:201,headers:HEADERS});
  }catch(error){

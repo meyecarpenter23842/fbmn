@@ -1,3 +1,5 @@
+import {isIP} from "node:net";
+import {createIntakeProof} from "@/lib/outsourcing/proxy-proof";
 import {validateOutsourcingRequest} from "@/lib/outsourcing/validation";
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
@@ -29,11 +31,20 @@ export async function POST(request:Request){
  const body=await boundedJson(request),checked=validateOutsourcingRequest(body);
  if(!checked.ok)return fail(400,checked.error);
  const base=publicApiOrigin();if(!base)return fail(503,"intake_unavailable");
+ const secret=process.env.FBMN_DL6_PROXY_SECRET||"";
+ const visitorIp=request.headers.get("x-vercel-forwarded-for")||"";
+ // Vercel overwrites its own canonical visitor header at ingress; never trust user XFF.
+ if(process.env.VERCEL!=="1"||!isIP(visitorIp)||!/^[0-9a-f]{64}$/.test(secret))
+  return fail(503,"intake_unavailable");
  try{
+  const payload=JSON.stringify(checked.data);
+  const proof=await createIntakeProof(secret,visitorIp,payload);
   const response=await fetch(base+"/v1/public/outsourcing-requests",{method:"POST",cache:"no-store",
    redirect:"manual",signal:AbortSignal.timeout(10000),
-   headers:{"Content-Type":"application/json","Origin":url.origin},
-   body:JSON.stringify(checked.data)});
+   headers:{"Content-Type":"application/json","Origin":url.origin,
+    "X-FBMN-DL6-Visitor":proof.visitor,"X-FBMN-DL6-Time":proof.time,
+    "X-FBMN-DL6-Signature":proof.signature},
+   body:payload});
   if(response.status===201&&response.headers.get("content-type")?.includes("application/json")){
     const result=await response.json().catch(()=>null) as {ok?:unknown}|null;
     if(result?.ok===true)return Response.json({ok:true},{status:201,headers:HEADERS});

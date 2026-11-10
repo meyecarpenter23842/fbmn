@@ -2,6 +2,7 @@ import { createPublicApi } from "./handler.mjs";
 import { createReadModel, PUBLIC_READ_QUERIES } from "./read-model.mjs";
 import { handlePublicCatalogueRequest } from "./catalogue-books-public.mjs";
 import {handleOutsourcingRequest} from "./outsourcing-service.mjs";
+import {verifyIntakeProof} from "../../lib/outsourcing/proxy-proof.ts";
 
 const ALLOWED_SQL = new Set(Object.values(PUBLIC_READ_QUERIES));
 const ROUTES = new Set(["/v1/public/categories", "/v1/public/products", "/v1/public/catalog", "/v1/public/content", "/v1/public/cms", "/v1/public/home-layout", "/v1/public/category-display", "/v1/public/catalogue-books", "/v1/public/outsourcing-requests"]);
@@ -68,13 +69,12 @@ export function createStagingWorker({createDbClient}) {
       try {
         const origins=env.PUBLIC_ALLOWED_ORIGINS.split(",").map(s=>s.trim()).filter(Boolean);
         if(url.pathname===OUTSOURCING_ROUTE){
-          if(env.PUBLIC_DL6_ENABLED!=="true"||typeof env.OUTSOURCING_RATE_LIMITER?.limit!=="function")
+          if(env.PUBLIC_DL6_ENABLED!=="true"||typeof env.OUTSOURCING_RATE_LIMITER?.limit!=="function"||
+             !/^[0-9a-f]{64}$/.test(env.DL6_PROXY_SECRET||""))
             return error(503,"intake_unavailable");
-          let limited;
-          try{limited=await env.OUTSOURCING_RATE_LIMITER.limit({key:"dl6:"+(request.headers.get("CF-Connecting-IP")||"unknown").slice(0,100)});}
-          catch{return error(503,"intake_unavailable");}
-          if(limited?.success!==true)return error(429,"rate_limited");
-          return handleOutsourcingRequest({request,enabled:env.PUBLIC_DL6_ENABLED==="true",allowedOrigins:origins,
+          return handleOutsourcingRequest({request,enabled:true,allowedOrigins:origins,
+            verifyProxy:(req,payload)=>verifyIntakeProof(env.DL6_PROXY_SECRET,req.headers,payload),
+            limitVisitor:visitor=>env.OUTSOURCING_RATE_LIMITER.limit({key:"dl6:"+visitor}),
             submit:async data=>{
               const client=createDbClient({connectionString:env.HYPERDRIVE.connectionString,
                 connectionTimeoutMillis:3500,query_timeout:3500,statement_timeout:3500});
