@@ -1,0 +1,49 @@
+name: DL10C Admin browser UI QA
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "apps/admin/app/chat-history-manager.tsx"
+      - "apps/admin/app/home-layout.css"
+      - "scripts/dl10c-browser-qa.mjs"
+      - ".github/workflows/dl10c-browser-ui.yml"
+permissions:
+  contents: read
+concurrency:
+  group: dl10c-browser-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  browser:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: "22"
+      - run: npm install --no-audit --no-fund
+        working-directory: apps/admin
+      - run: npm run build
+        working-directory: apps/admin
+        env:
+          NEXT_TELEMETRY_DISABLED: "1"
+      - run: npm install --no-save --no-audit --no-fund playwright@1.56.1
+      - run: npx playwright install --with-deps chromium
+      - name: Browser tests on exact built Admin (fixture API)
+        run: |
+          set -euo pipefail
+          (cd apps/admin && npm run start -- --port 3100) > /tmp/dl10c-admin.log 2>&1 &
+          for i in $(seq 1 60); do
+            if curl -fsS http://127.0.0.1:3100/ >/dev/null; then break; fi
+            sleep 1
+          done
+          node scripts/dl10c-browser-qa.mjs
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: dl10c-admin-browser
+          path: artifacts/dl10c
+          if-no-files-found: warn
+          retention-days: 7
