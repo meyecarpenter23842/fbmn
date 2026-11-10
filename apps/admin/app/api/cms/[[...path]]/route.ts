@@ -38,7 +38,7 @@ async function proxy(request:Request,params:Promise<{path?:string[]}>,method:"GE
       (kind!==null&&!["article","promotion"].includes(kind))||
       (status!==null&&!["draft","published","hidden"].includes(status))||
       (search!==null&&(search.length<1||search.length>80||search!==search.trim()||
-        /[\\x00-\\x1f\\x7f]/.test(search))))
+        /[\x00-\x1f\x7f]/.test(search))))
     return fail(400,"invalid_query");
   }
  }else{
