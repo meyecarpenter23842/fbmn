@@ -286,3 +286,12 @@ test("DL7C-S admin-owned settings: no visitor toggles and browser-safe sound",()
  assert.equal(web.toString("ascii",8,12),"WAVE");
  assert.deepEqual(web,admin);
 });
+
+ test("DL7C-T keyboard focus survives temporarily disabled navigation buttons",()=>{
+ const ui=readFile("app/catalogue/catalogue-flipbook.tsx");
+ assert.match(ui,/ref=\{readerRef\} tabIndex=\{0\} className="fb-catalogue-reader"/);
+ for(const key of ["ArrowRight","ArrowLeft"]){
+  const line=ui.split("\n").find(s=>s.includes(`event.key==="${key}"`));
+  assert.ok(line?.includes("readerRef.current?.focus({preventScroll:true})"));
+ }
+});
