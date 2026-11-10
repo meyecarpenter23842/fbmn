@@ -268,8 +268,9 @@ export default function AdminPage() {
     setSection(to==="new-product"?"products":to);
     if(["products","structure","media","import-products"].includes(to))
       setProductMenuExpanded(true);
-    if(["banners","content","category-display"].includes(to))
+    if(["banners","content"].includes(to))
       setWebsiteMenuExpanded(true);
+    if(to==="category-display")setWebsiteMenuExpanded(true);
     if(to==="catalogue-books")setWebsiteMenuExpanded(true);
     setMenuOpen(false);setNotice("");
   }
@@ -361,7 +362,7 @@ export default function AdminPage() {
       </aside>
       <div className="work-area">
         <header className="topbar"><button type="button" className="mobile-menu" onClick={()=>setMenuOpen(v=>!v)} aria-label="Mở menu"><Glyph name="menu"/></button>
-          <div className="breadcrumbs"><Glyph name="home" size={21}/><span className="crumb-sep">›</span><span>{["products","structure","media","import-products"].includes(section)?"Sản phẩm":section==="catalogue-books"?"Website Futurebook":["banners","content","home-layout"].includes(section)?"Website Futurebook":"Quản trị"}</span><span className="crumb-sep">›</span><b>{sectionName[section]}</b></div>
+          <div className="breadcrumbs"><Glyph name="home" size={21}/><span className="crumb-sep">›</span><span>{["products","structure","media","import-products"].includes(section)?"Sản phẩm":section==="catalogue-books"?"Website Futurebook":section==="category-display"?"Website Futurebook":["banners","content","home-layout"].includes(section)?"Website Futurebook":"Quản trị"}</span><span className="crumb-sep">›</span><b>{sectionName[section]}</b></div>
           <div className="top-actions"><div className="profile-avatar">{name.slice(0,1).toUpperCase()||"F"}</div><div className="profile-text"><b>{name || "Futurebook Admin"}</b><small>{session?roleLabel:"Yêu cầu đăng nhập"}</small></div><button type="button" className="top-icon" onClick={()=>void signOut()} disabled={authState!=="authorised"} title="Đăng xuất"><Glyph name="logout" size={18}/></button></div>
         </header>
         <main className="workspace-main">

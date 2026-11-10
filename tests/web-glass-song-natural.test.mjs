@@ -24,7 +24,7 @@ test("G05 extends G03 glass detail to all products, preserving public data and S
     "getPublishedProductImageUrl(media.r2Key,process.env.NEXT_PUBLIC_MEDIA_BASE_URL)",
     "const recommendations=relatedProducts(catalog,product)",
     "generateMetadata",'<div className="fb-glass-song-page">',
-    '<CatalogueProductOptions product={product} photos={images} glass={glass}/>',
+    '<CatalogueProductOptions product={product} photos={images} glass={glass}',
     '<CatalogueRelatedProducts items={recommendations.items} glass={glass}/>'
   ])assert.ok(page.includes(fragment),fragment);
   assert.match(page, /return <CatalogShell><div className="fb-glass-song-page">\{content\}<\/div><\/CatalogShell>/);
@@ -39,7 +39,7 @@ test("Glass SKU controls display only the company code with accessible full spec
   assert.match(options,/const label="Chọn mã "\+variant\.sku\+": "\+shortVariantLabel\(variant\)/);
   assert.match(options,/<span className="catalogue-variant-option__code">Mã \{variant\.sku\}<\/span>/);
   for(const logic of [
-    "useState(product.variants[0].sku)",
+    "useState(initialSku && product.variants.some(v=>v.sku===initialSku)",
     "availableVariantFacets(product.variants)",
     "visibleVariants(product.variants,audience,format)",
     "photosForSku(photos,selected.sku)",

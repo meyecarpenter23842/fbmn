@@ -1,5 +1,5 @@
 -- DL5. Category presentation only: Family default, individual published SKU optional.
--- Requires DL4 + P5; does not alter SKU, pricebook, publication, R2 or CMS data.
+-- Requires DL4 + P5; does not alter SKU, commercial pricing, publication, R2 or CMS data.
 BEGIN;
 DO $check$ BEGIN
  IF to_regrole('fbmn_admin_http_staging') IS NULL OR

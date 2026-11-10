@@ -52,7 +52,7 @@ test("G06 glass improves backdrop visibility with existing R2 asset and gradient
 });
 
 test("G06 preserves real SKU selection, photos, and conversion CTA", () => {
-  assert.match(options, /const \[sku,setSku\]=useState\(product\.variants\[0\]\.sku\)/);
+  assert.match(options, /const \[sku,setSku\]=useState\(initialSku && product\.variants\.some/);
   assert.match(options, /<VariantChoice key=\{variant\.sku\} glass=\{glass\}/);
   assert.match(options, /aria-live="polite" aria-atomic="true"/);
   assert.match(options, /<PublishedImageGallery key=\{selected\.sku\} items=\{gallery\} glass=\{glass\}[\s\S]*?zoomDialogRef=\{zoomDialogRef\}[\s\S]*?onActiveIndexChange=\{setPhotoIndex\}\/>/);

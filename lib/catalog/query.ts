@@ -95,7 +95,8 @@ export function searchCatalog(publicCatalog: PublicCatalog, filters: CatalogFilt
         ? (familyVariants.find(v => v.categoryId && v.categoryId !== "p5-uncategorized")?.categoryId
           ?? familyVariants[0].categoryId ?? product.categoryId)
         : product.categoryId;
-      cards.push(familyCategory === product.categoryId ? product : {...product,categoryId:familyCategory});
+      cards.push(skuVariants.length ? {...product,categoryId:familyCategory,variants:familyVariants,
+        media:product.media.filter(media => media.sku === undefined || familyVariants.some(v => v.sku===media.sku))} : product);
     }
     for (const variant of skuVariants) {
       const categoryId = variant.categoryId ?? product.categoryId;

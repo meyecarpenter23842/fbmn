@@ -28,7 +28,7 @@ export function CatalogBreadcrumb({ trail }: { trail: Array<{ label: string; hre
 }
 
 export function ProductCard({ product, glass = false }: { product: ListingProduct; glass?: boolean }) {
-  const media = product.media[0];
+  const media = (product.listingSku && product.media.find(m=>m.sku===product.listingSku)) ?? product.media[0];
   const image = media ? getPublishedProductImageUrl(media.r2Key, process.env.NEXT_PUBLIC_MEDIA_BASE_URL) : null;
   const label = product.priceLabel ?? (
     product.variants.find(v => v.price)?.price

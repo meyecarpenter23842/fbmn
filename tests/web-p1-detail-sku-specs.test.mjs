@@ -15,7 +15,7 @@ test("Issue #130/G07: real code cards, original CTA plus visibility-gated mobile
   const picker=read("components/catalogue-product-options.tsx");
   const related=read("components/catalogue-related-products.tsx");
   const css=read("app/catalog.css");
-  assert.match(page,/<CatalogueProductOptions product={product} photos={images} glass={glass}\/>/);
+  assert.match(page,/<CatalogueProductOptions product={product} photos={images} glass={glass}[\s\S]*?initialSku=/);
   assert.match(page,/<CatalogueRelatedProducts items={recommendations.items} glass={glass}\/>/);
   assert.doesNotMatch(page,/const suggested=recommendations\.items\.map/);
   assert.doesNotMatch(page,/catalog-variants|catalog-variant-list/);
