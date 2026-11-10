@@ -7,7 +7,7 @@ import type {PageFlip,SizeType,FlipCorner} from "page-flip";
 import {canFlipForward,canFlipBackward} from "@/lib/catalogue/spread-navigation";
 
 type Asset={id:string;width:number;height:number};
-type Book={id:string;title:string;edition:string;hasPages:boolean;hasPdf:boolean;pdfDownloadEnabled:boolean};
+type Book={id:string;title:string;edition:string;hasPages?:boolean;hasPdf?:boolean;pdfDownloadEnabled?:boolean};
 type Detail={book:Book;pages:Asset[];cover:Asset|null};
 type ViewerSettings={flipDurationMs:number;soundEnabled:boolean;shadowOpacity:number};
 const DEFAULT_VIEWER:ViewerSettings={flipDurationMs:950,soundEnabled:false,shadowOpacity:0.26};
@@ -19,8 +19,10 @@ const validBook=(x:unknown):x is Book=>{
  const v=x as Record<string,unknown>;
  return typeof v.id==="string"&&UUID.test(v.id)&&typeof v.title==="string"&&
  v.title.length>0&&v.title.length<=120&&typeof v.edition==="string"&&v.edition.length<=80&&
- typeof v.hasPages==="boolean"&&typeof v.hasPdf==="boolean"&&
- typeof v.pdfDownloadEnabled==="boolean"&&(!v.pdfDownloadEnabled||v.hasPdf);
+ (v.hasPages===undefined||typeof v.hasPages==="boolean")&&
+ (v.hasPdf===undefined||typeof v.hasPdf==="boolean")&&
+ (v.pdfDownloadEnabled===undefined||typeof v.pdfDownloadEnabled==="boolean")&&
+ (!v.pdfDownloadEnabled||v.hasPdf===true);
 };
 const validAsset=(x:unknown):x is Asset=>{
  if(!x||typeof x!=="object")return false;
@@ -325,7 +327,7 @@ export default function CatalogueFlipbook(){
        <h3>{item.title}</h3>
        <p>{item.edition||"Phiên bản hiện hành"}</p></div>
       <div className="fb-catalogue-library-actions">
-       {item.hasPages&&<GlassButton variant={detail?.book.id===item.id?"primary":"secondary"}
+       {item.hasPages!==false&&<GlassButton variant={detail?.book.id===item.id?"primary":"secondary"}
         disabled={loading} onClick={()=>void loadBook(item.id)}>Lật sách</GlassButton>}
        {item.hasPdf&&<GlassButtonLink variant="secondary" href={pdfHref(item)}
         target="_blank" rel="noopener noreferrer">Xem PDF</GlassButtonLink>}

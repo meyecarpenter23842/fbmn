@@ -56,9 +56,11 @@ export async function handlePublicCatalogueRequest({request,enabled,pdfEnabled=f
     typeof settings.shadowOpacity!=="number"||settings.shadowOpacity<0.1||
     settings.shadowOpacity>0.5)return fail(503,"catalogue_unavailable");
    return ok({books:books.filter(b=>pdfEnabled||b.hasPages!==false).map(b=>({
-    id:b.id,title:b.title,edition:b.edition,hasPages:b.hasPages!==false,
-    hasPdf:pdfEnabled&&b.hasPdf===true,
-    pdfDownloadEnabled:pdfEnabled&&b.hasPdf===true&&b.pdfDownloadEnabled===true
+    id:b.id,title:b.title,edition:b.edition,
+    ...(typeof b.hasPages==="boolean"?{
+     hasPages:b.hasPages!==false,hasPdf:pdfEnabled&&b.hasPdf===true,
+     pdfDownloadEnabled:pdfEnabled&&b.hasPdf===true&&b.pdfDownloadEnabled===true
+    }:{})
    })),
     viewerSettings:{flipDurationMs:settings.flipDurationMs,soundEnabled:settings.soundEnabled,
      shadowOpacity:settings.shadowOpacity}});
@@ -75,8 +77,10 @@ export async function handlePublicCatalogueRequest({request,enabled,pdfEnabled=f
    const cover=assets.find(a=>a.kind==="cover");
    const assetDTO=a=>({id:a.id,width:a.width,height:a.height});
    return ok({book:{id:book.id,title:book.title,edition:book.edition,
-    hasPages:pages.length>0,hasPdf:pdfEnabled&&book.hasPdf===true,
-    pdfDownloadEnabled:pdfEnabled&&book.hasPdf===true&&book.pdfDownloadEnabled===true},
+    ...(typeof book.hasPages==="boolean"?{
+     hasPages:pages.length>0,hasPdf:pdfEnabled&&book.hasPdf===true,
+     pdfDownloadEnabled:pdfEnabled&&book.hasPdf===true&&book.pdfDownloadEnabled===true
+    }:{})},
     pages:pages.map(assetDTO),
     cover:cover?assetDTO(cover):null});
   }

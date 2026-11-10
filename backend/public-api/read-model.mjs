@@ -297,14 +297,20 @@ export function createReadModel(query,{enableP5=false}={}) {
       const result=rows(await query(SQL.catalogueBooks),101);
       if(result.length>100)throw Error("Too many public books");
       return result.map(b=>({id:String(b.id),title:String(b.title),edition:String(b.edition),
-       hasPages:b.has_pages===true,hasPdf:b.has_pdf===true,pdfDownloadEnabled:b.pdf_download_enabled===true}));
+       ...(typeof b.has_pages==="boolean"?{
+        hasPages:b.has_pages===true,hasPdf:b.has_pdf===true,
+        pdfDownloadEnabled:b.pdf_download_enabled===true
+       }:{})}));
     },
     async getReadyCatalogueBook(id){
       if(!/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(id))return null;
       const result=rows(await query(SQL.catalogueBook,[id]),1);
-      return result.length===1?{id:String(result[0].id),title:String(result[0].title),edition:String(result[0].edition),
-       hasPages:result[0].has_pages===true,hasPdf:result[0].has_pdf===true,
-       pdfDownloadEnabled:result[0].pdf_download_enabled===true}:null;
+      return result.length===1?{id:String(result[0].id),title:String(result[0].title),
+       edition:String(result[0].edition),
+       ...(typeof result[0].has_pages==="boolean"?{
+        hasPages:result[0].has_pages===true,hasPdf:result[0].has_pdf===true,
+        pdfDownloadEnabled:result[0].pdf_download_enabled===true
+       }:{})}:null;
     },
     async getReadyCatalogueAssets(id){
       if(!/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(id))return [];
