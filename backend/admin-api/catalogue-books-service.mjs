@@ -6,6 +6,8 @@ const ROOT="/v1/admin/website/catalogue";
 const BOOKS="fbmn_catalog_private.website_catalogue_books";
 const ASSETS="fbmn_catalog_private.website_catalogue_assets";
 const AUDIT="fbmn_catalog_private.website_catalogue_audit";
+const VIEWER="fbmn_catalog_private.website_catalogue_viewer_settings";
+const VIEWER_AUDIT="fbmn_catalog_private.website_catalogue_viewer_settings_audit";
 const UUID=/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i;
 const KINDS=new Set(["page","cover"]);
 const LIMIT=5*1024*1024, MAX_PAGES=200;
@@ -27,6 +29,42 @@ export function validateCatalogueBook(input){
  return input&&typeof input==="object"&&!Array.isArray(input)&&
   textField(input.title,120,1)&&textField(input.edition,80);
 }
+/** One Owner-managed global flipbook configuration, not a visitor preference. */
+export function validCatalogueViewerSettings(x){
+ return x&&typeof x==="object"&&!Array.isArray(x)&&Object.keys(x).sort().join(",")==="flipDurationMs,revision,shadowOpacity,soundEnabled"&&
+  Number.isSafeInteger(x.flipDurationMs)&&x.flipDurationMs>=750&&x.flipDurationMs<=1500&&x.flipDurationMs%50===0&&
+  typeof x.soundEnabled==="boolean"&&typeof x.shadowOpacity==="number"&&
+  Number.isFinite(x.shadowOpacity)&&x.shadowOpacity>=0.10&&x.shadowOpacity<=0.50&&
+  Math.abs(x.shadowOpacity*100-Math.round(x.shadowOpacity*100))<1e-8&&revision(x.revision);
+}
+const exposeViewer=x=>({flipDurationMs:Number(x.flip_duration_ms),soundEnabled:x.sound_enabled===true,
+ shadowOpacity:Number(x.shadow_opacity),revision:Number(x.revision)});
+async function readViewer(db){
+ return db(async c=>{
+  const r=await c.query("SELECT flip_duration_ms,sound_enabled,shadow_opacity,revision FROM "+VIEWER+" WHERE singleton=true");
+  if(r.rowCount!==1)throw Error("viewer_unavailable");
+  return {settings:exposeViewer(r.rows[0])};
+ });
+}
+async function saveViewer(db,actor,input){
+ if(!validCatalogueViewerSettings(input))throw Error("invalid_settings");
+ return transact(db,async c=>{
+  const old=await c.query("SELECT flip_duration_ms,sound_enabled,shadow_opacity,revision FROM "+
+   VIEWER+" WHERE singleton=true FOR UPDATE");
+  if(old.rowCount!==1)throw Error("viewer_unavailable");
+  const before=exposeViewer(old.rows[0]);
+  if(before.revision!==input.revision)throw Error("revision_conflict");
+  const updated=await c.query("UPDATE "+VIEWER+
+   " SET flip_duration_ms=$1,sound_enabled=$2,shadow_opacity=$3,revision=revision+1,updated_at=now(),updated_by=$4"+
+   " WHERE singleton=true RETURNING flip_duration_ms,sound_enabled,shadow_opacity,revision",
+   [input.flipDurationMs,input.soundEnabled,input.shadowOpacity,actor]);
+  const after=exposeViewer(updated.rows[0]);
+  await c.query("INSERT INTO "+VIEWER_AUDIT+
+   "(revision,actor_subject,before_data,after_data) VALUES ($1,$2,$3::jsonb,$4::jsonb)",
+   [after.revision,actor,JSON.stringify(before),JSON.stringify(after)]);
+  return {settings:after};
+ });
+}
 export function validateCatalogueImage(bytes){
  if(!(bytes instanceof Uint8Array)||bytes.length<100||bytes.length>LIMIT)return null;
  const d=imageSize(bytes,"image/webp",64);
@@ -41,7 +79,7 @@ function errorCode(e){
  if(["revision_conflict","ready_locked"].includes(m))return [409,m];
  if(m==="not_found")return [404,m];
  if(m==="pages_required")return [422,m];
- if(["bad_order","page_limit","invalid_book"].includes(m))return [400,m];
+ if(["bad_order","page_limit","invalid_book","invalid_settings"].includes(m))return [400,m];
  return [503,"catalogue_unavailable"];
 }
 async function transact(db,fn){
@@ -238,7 +276,7 @@ export async function handleCatalogueBooks({request,actor,db,r2}){
  const u=new URL(request.url);
  if(u.pathname!==ROOT&&!u.pathname.startsWith(ROOT+"/"))return fail(404,"not_found");
  const action=u.pathname===ROOT?"":u.pathname.slice(ROOT.length+1);
- if(action.includes("/")||!["","image","create","save","ready","hide","upload","reorder","remove"].includes(action))
+ if(action.includes("/")||!["","image","settings","create","save","ready","hide","upload","reorder","remove"].includes(action))
   return fail(404,"not_found");
  try{
   if(request.method==="GET"&&action===""){
@@ -250,6 +288,10 @@ export async function handleCatalogueBooks({request,actor,db,r2}){
    }
    if(!one(u,"id")||!validId(u.searchParams.get("id")))return fail(400,"invalid_query");
    return ok(await queryDetail(db,u.searchParams.get("id")));
+  }
+  if(request.method==="GET"&&action==="settings"){
+   if(u.search)return fail(400,"invalid_query");
+   return ok(await readViewer(db));
   }
   if(request.method==="GET"&&action==="image"){
    if(!one(u,"asset")||!validId(u.searchParams.get("asset")))return fail(400,"invalid_query");
@@ -268,6 +310,7 @@ export async function handleCatalogueBooks({request,actor,db,r2}){
   const input=await bodyJson(request);
   if(!input||typeof input!=="object"||Array.isArray(input))
    return fail(400,action==="settings"?"invalid_settings":"invalid_book");
+  if(action==="settings")return ok(await saveViewer(db,actor.subject,input));
   if(action==="create")return ok(await createBook(db,actor.subject,input));
   if(["save","ready","hide","reorder","remove"].includes(action))
    return ok(await mutate(db,r2,actor.subject,action,input));
