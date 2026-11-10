@@ -108,7 +108,7 @@ export default function ChatbotConfigManager({owner}:{owner:boolean}){
     <button className="fb-ui-button fb-ui-button--secondary" disabled={busy||!draft.projectId} onClick={()=>void loadAgents()}>Load Agent</button>
     <label>Agent<select className="fb-ui-select" value={draft.agentId?draft.location+"/"+draft.agentId:""} disabled={busy||!agents.length} onChange={e=>{
       const a=agents.find(x=>x.location+"/"+x.id===e.target.value);if(!a)return;
-      setDraft(d=>({...d,location:a.location,agentId:a.id,environmentId:"draft",model:""}));setEnvironments([]);setModels(null);
+      const next={...draft,location:a.location,agentId:a.id,environmentId:"draft",model:""};setDraft(next);setModels(null);void discover(next);
     }}><option value="">Chọn Agent</option>
     {draft.agentId&&!agents.some(a=>a.id===draft.agentId&&a.location===draft.location)&&<option value={draft.location+"/"+draft.agentId}>{draft.agentId} (đã lưu)</option>}
     {agents.map(a=><option key={a.location+"/"+a.id} value={a.location+"/"+a.id}>{a.name} — {a.location}</option>)}</select></label>
