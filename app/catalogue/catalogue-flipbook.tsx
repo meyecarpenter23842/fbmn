@@ -47,6 +47,7 @@ export default function CatalogueFlipbook(){
  const [books,setBooks]=useState<Book[]>([]);
  const [detail,setDetail]=useState<Detail|null>(null);
  const [active,setActive]=useState(0);
+ const [selectedPage,setSelectedPage]=useState(0);
  const [zoomIndex,setZoomIndex]=useState(0);
  const [loading,setLoading]=useState(true);
  const [error,setError]=useState("");
@@ -140,7 +141,7 @@ export default function CatalogueFlipbook(){
    if(idSequence!==sequence.current)return;
    const count=payload.pages.length+(payload.cover?1:0);
    const position=Math.min(Math.max(0,requested-1),count-1);
-   activeRef.current=position;setActive(position);setDetail(payload);
+   activeRef.current=position;setActive(position);setSelectedPage(position);setDetail(payload);
    window.history.replaceState(window.history.state,"",deepLink(payload.book.id,position));
   }catch(e){if(idSequence===sequence.current){setDetail(null);
    setError(e instanceof Error?e.message:"Không mở được Catalogue.");}}
@@ -203,7 +204,7 @@ export default function CatalogueFlipbook(){
      if(cancelled)return;
      const n=Number(event.data);
      if(!Number.isInteger(n)||n<0||n>=nodes.length)return;
-     activeRef.current=n;setActive(n);setTurning(false);
+     activeRef.current=n;setActive(n);setSelectedPage(n);setTurning(false);
      window.history.replaceState(window.history.state,"",deepLink(detail.book.id,n));
     });
     flip.on("changeState",event=>{
@@ -231,7 +232,7 @@ export default function CatalogueFlipbook(){
   if(!flip)return;
   flip.turnToPage(next);
   const visible=flip.getCurrentPageIndex();
-  activeRef.current=visible;setActive(visible);
+  activeRef.current=visible;setActive(visible);setSelectedPage(next);
   window.history.replaceState(window.history.state,"",deepLink(detail.book.id,visible));
  };
  const turn=(direction:"next"|"prev")=>{
@@ -244,7 +245,7 @@ export default function CatalogueFlipbook(){
   if(reduced){
    direction==="next"?book.turnToNextPage():book.turnToPrevPage();
    const n=book.getCurrentPageIndex();
-   activeRef.current=n;setActive(n);
+   activeRef.current=n;setActive(n);setSelectedPage(n);
    window.history.replaceState(window.history.state,"",deepLink(detail.book.id,n));
   }else{
    direction==="next"?book.flipNext("bottom" as FlipCorner):book.flipPrev("bottom" as FlipCorner);
@@ -314,7 +315,7 @@ export default function CatalogueFlipbook(){
     <div className="fb-catalogue-heading">
      <div><span className="fb-catalogue-overline">FUTUREBOOK MIỀN NAM · CATALOGUE</span>
       <h2>{detail.book.title}</h2>{detail.book.edition&&<p>{detail.book.edition}</p>}</div>
-     <span className="fb-catalogue-count" aria-live="polite">{leaves[active]?.label}</span>
+     <span className="fb-catalogue-count" aria-live="polite">{leaves[selectedPage]?.label}</span>
     </div>
     <div className="fb-catalogue-reader" role="region" aria-label={"Sách lật "+detail.book.title}>
      <button type="button" className="fb-glass-button fb-glass-button--secondary fb-catalogue-nav fb-catalogue-nav--prev"
@@ -332,7 +333,7 @@ export default function CatalogueFlipbook(){
      <button type="button" className="fb-glass-button fb-glass-button--secondary"
       onClick={()=>setThumbnails(x=>!x)} aria-expanded={thumbnails}>☷ <span>Mục lục</span></button>
      <button type="button" className="fb-glass-button fb-glass-button--secondary"
-      onClick={()=>openZoom(active)}>⌕ <span>Phóng to</span></button>
+      onClick={()=>openZoom(selectedPage)}>⌕ <span>Phóng to trang chọn</span></button>
      <button type="button" className="fb-glass-button fb-glass-button--secondary"
       onClick={()=>void toggleFullscreen()}>{fullScreen?"⤢":"⛶"} <span>{fullScreen?"Thu nhỏ":"Toàn màn hình"}</span></button>
      <button type="button" className="fb-glass-button fb-glass-button--secondary"
@@ -347,8 +348,8 @@ export default function CatalogueFlipbook(){
      <input readOnly value={manualLink} onFocus={e=>e.target.select()}/></label>}
     {thumbnails&&<div className="fb-catalogue-index" aria-label="Chọn trang Catalogue">
      {leaves.map((leaf,i)=><button key={leaf.asset.id} type="button"
-       className={"fb-catalogue-thumb"+(i===active?" is-active":"")}
-       aria-current={i===active?"page":undefined} onClick={()=>go(i)}>
+       className={"fb-catalogue-thumb"+(i===selectedPage?" is-active":"")}
+       aria-current={i===selectedPage?"page":undefined} onClick={()=>go(i)}>
        <img src={image(leaf.asset.id)} alt="" loading="lazy" width={leaf.asset.width} height={leaf.asset.height}/>
        <span>{leaf.label}</span>
       </button>)}

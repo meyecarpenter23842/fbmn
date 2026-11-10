@@ -215,3 +215,11 @@ test("DL7C-R uses a disposable StPageFlip mount and never destroys React host",(
  assert.doesNotMatch(ui,/new PageFlip\(host/);
  assert.match(css,/\.fb-catalogue-engine-root\{/);
 });
+
+test("DL7C-R zoom targets selected leaf, including right-hand spread page",()=>{
+ const ui=readFile("app/catalogue/catalogue-flipbook.tsx");
+ assert.match(ui,/const \[selectedPage,setSelectedPage\]=useState\(0\)/);
+ assert.match(ui,/activeRef\.current=visible;setActive\(visible\);setSelectedPage\(next\)/);
+ assert.match(ui,/onClick=\{\(\)=>openZoom\(selectedPage\)\}/);
+ assert.match(ui,/i===selectedPage\?" is-active"/);
+});
