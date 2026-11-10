@@ -149,7 +149,7 @@ export function ChatbotWidget() {
               <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m3 11 18-8-8 18-3-8-7-2zM10 13l11-10"/></svg>
             </button>
           </form>
-          <p className="fb-chat__notice">Tin nhắn được gửi tới Google Dialogflow CX để trả lời. Không nhập mật khẩu, giá NET hoặc thông tin cá nhân. Futurebook chưa lưu lịch sử chat trong hệ thống.</p>
+          <p className="fb-chat__notice">Tin nhắn được gửi tới Google Dialogflow CX để trả lời. Không nhập mật khẩu, giá NET hoặc thông tin cá nhân. Futurebook lưu nội dung trò chuyện để hỗ trợ khách hàng.</p>
         </section>
       )}
       <button

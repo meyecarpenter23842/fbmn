@@ -1,4 +1,4 @@
-// DL10B internal RPC only. No HTTP route, no private business data or conversation persistence.
+// DL10B internal RPC only. No HTTP route or private business data injection.
 import {normalizeConfig,tokenFor} from "./chatbot-config-service.mjs";
 import {parseChatRequest} from "../../lib/chatbot/chat-request.ts";
 const HEX=/^[0-9a-f]{64}$/;
@@ -31,7 +31,7 @@ export async function detectCx({config,secret,session,text,fetcher=fetch,getToke
  if(!reply)throw Error("chat_unavailable");
  return reply;
 }
-export async function runChat({request,visitor,db,secret,loadSecret,detect=detectCx}){
+export async function runChat({request,visitor,db,secret,loadSecret,saveTurn,detect=detectCx}){
  const checked=parseChatRequest(request);
  if(!checked||!HEX.test(visitor)||typeof db!=="function"||(!secret&&!loadSecret))return {ok:false};
  try{
@@ -41,7 +41,13 @@ export async function runChat({request,visitor,db,secret,loadSecret,detect=detec
   const session=await cxSessionId(visitor,checked.session,revision);
   const credential=loadSecret?await loadSecret(revision)||secret:secret;
   if(!credential)return {ok:false};
-  const text=await detect({config,secret:credential,session,text:checked.text});
-  return {ok:true,text};
+  let text=null;
+  try{text=await detect({config,secret:credential,session,text:checked.text});}catch{/* no fabricated reply */}
+  if(typeof text!=="string"||!text.trim()||text.length>3000)text=null;
+  if(saveTurn){
+   try{await saveTurn({session,question:checked.text,answer:text});}
+   catch{console.warn("DL10C transcript write failed");}
+  }
+  return text===null?{ok:false}:{ok:true,text};
  }catch{return {ok:false};}
 }
