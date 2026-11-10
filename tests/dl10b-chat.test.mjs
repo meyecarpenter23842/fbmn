@@ -31,6 +31,7 @@ test("DL10B isolates sessions and refuses drafts or missing credentials",async()
 test("DL10B detectIntent targets saved environment/model and strips nontext data",async()=>{
  const answer=await detectCx({config,secret:"secret",session:"abc",text:"hi",getToken:async()=> "token",fetcher:async(url,init)=>{
  assert.match(url,/\/environments\/.*\/sessions\/abc:detectIntent$/);
+ assert.equal(init.redirect,"manual");
  const body=JSON.parse(init.body);assert.equal(body.queryParams.llmModelSettings.model,config.model);
  assert.equal(body.queryParams.disableWebhook,true);
  return Response.json({queryResult:{parameters:{private:"secret"},responseMessages:[{text:{text:["Hello"]}},{payload:{secret:"ignore"}}]}});

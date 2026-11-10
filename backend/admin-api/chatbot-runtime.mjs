@@ -17,7 +17,7 @@ export async function detectCx({config,secret,session,text,fetcher=fetch,getToke
   "/environments/"+c.environmentId+"/sessions/"+session;
  const token=await getToken(secret,fetcher);
  const response=await fetcher("https://"+host+"/v3beta1/"+resource+":detectIntent",{
-  method:"POST",redirect:"error",signal:AbortSignal.timeout(15000),
+  method:"POST",redirect:"manual",signal:AbortSignal.timeout(15000),
   headers:{Authorization:"Bearer "+token,"Content-Type":"application/json",Accept:"application/json"},
   body:JSON.stringify({queryInput:{text:{text},languageCode:"vi"},queryParams:{
    timeZone:"Asia/Ho_Chi_Minh",sessionTtl:"1800s",disableWebhook:true,llmModelSettings:{model:c.model}}})});
