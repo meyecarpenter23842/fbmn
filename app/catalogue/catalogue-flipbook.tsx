@@ -57,6 +57,7 @@ function deepLink(id:string,index:number){
 
 export default function CatalogueFlipbook(){
  const [books,setBooks]=useState<Book[]>([]);
+ const [selectedBookId,setSelectedBookId]=useState("");
  const [detail,setDetail]=useState<Detail|null>(null);
  const [active,setActive]=useState(0);
  const [selectedPage,setSelectedPage]=useState(0);
@@ -121,6 +122,7 @@ export default function CatalogueFlipbook(){
   audioRef.current?.dispose();audioRef.current=null;},[]);
  const loadBook=useCallback(async(id:string,requested=1)=>{
   const idSequence=++sequence.current;
+  setSelectedBookId(id);
   audioRef.current?.silence();
   setLoading(true);setError("");setTurning(false);turnLock.current=false;
   try{
@@ -290,13 +292,13 @@ export default function CatalogueFlipbook(){
  const pdfHref=(b:Book,download=false)=>"/api/catalogue-books/pdf?book="+
   encodeURIComponent(b.id)+(download?"&download=1":"");
  return <div className="fb-catalogue-viewer" onKeyDown={keyboard}>
-  {!loading&&!error&&detail&&(books.length>1||detail.book.hasPdf)&&
+  {(books.length>1||(!loading&&!error&&detail?.book.hasPdf))&&
    <div className="fb-catalogue-topbar">
     {books.length>1&&<label className="fb-catalogue-picker"><span>Bộ Catalogue</span>
-     <select value={detail.book.id} onChange={e=>void loadBook(e.target.value)}>
+     <select value={selectedBookId||books[0]?.id||""} onChange={e=>void loadBook(e.target.value)}>
       {books.map(b=><option value={b.id} key={b.id}>{b.title}{b.edition?" · "+b.edition:""}</option>)}
      </select></label>}
-    {detail.book.hasPdf&&<div className="fb-catalogue-pdf-actions">
+    {!loading&&!error&&detail?.book.hasPdf&&<div className="fb-catalogue-pdf-actions">
      <GlassButtonLink variant="secondary" href={pdfHref(detail.book)}
       target="_blank" rel="noopener noreferrer">Xem PDF</GlassButtonLink>
      {detail.book.pdfDownloadEnabled&&<GlassButtonLink variant="secondary"
@@ -306,6 +308,7 @@ export default function CatalogueFlipbook(){
   {loading&&<div className="fb-catalogue-state" role="status">Đang mở Catalogue…</div>}
   {!loading&&error&&<div className="fb-catalogue-state" role="alert">
    <h2>Chưa thể mở cuốn sách</h2><p>{error}</p>
+   {selectedBookId&&<button type="button" className="fb-glass-button fb-glass-button--primary" onClick={()=>void loadBook(selectedBookId)}>Thử lại</button>}
    <Link className="fb-glass-button fb-glass-button--secondary" href="/san-pham">Xem sản phẩm</Link>
   </div>}
   {!loading&&!error&&!detail&&<div className="fb-catalogue-state" role="status">

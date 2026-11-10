@@ -307,7 +307,7 @@ test("DL7C-S admin-owned settings: no visitor toggles and browser-safe sound",()
  assert.match(ui,/data-closed=\{!portrait&&active===0&&!turning/);
  assert.match(css,/translateX\(-25%\)/);
  assert.doesNotMatch(ui,/fb-catalogue-library|<GlassPanel/);
- assert.match(ui,/books\.length>1\|\|detail\.book\.hasPdf/);
+ assert.match(ui,/books\.length>1\|\|\(!loading&&!error&&detail\?\.book\.hasPdf\)/);
  assert.match(ui,/detail\.book\.pdfDownloadEnabled&&<GlassButtonLink/);
  });
  test("DL7C-T Owner can find cover and PDF before page list and global settings",()=>{
@@ -320,4 +320,13 @@ test("DL7C-S admin-owned settings: no visitor toggles and browser-safe sound",()
  assert.match(admin,/fileInput\("cover",cover\?"Thay ảnh bìa":"Chọn ảnh bìa WebP"\)/);
  assert.match(admin,/trang đầu làm bìa tạm/);
  assert.match(admin,/Lưu quyền PDF/);
+ });
+
+ test("DL7C-T book selector and retry survive detail loading errors",()=>{
+ const ui=readFile("app/catalogue/catalogue-flipbook.tsx");
+ assert.match(ui,/const \[selectedBookId,setSelectedBookId\]=useState\(""\)/);
+ assert.match(ui,/setSelectedBookId\(id\)/);
+ assert.match(ui,/\{\(books\.length>1\|\|\(!loading&&!error&&detail\?\.book\.hasPdf\)\)&&/);
+ assert.match(ui,/value=\{selectedBookId\|\|books\[0\]\?\.id\|\|""\}/);
+ assert.match(ui,/loadBook\(selectedBookId\)\}>Thử lại/);
  });
