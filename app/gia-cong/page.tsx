@@ -2,6 +2,7 @@ import type {Metadata} from "next";
 import Link from "next/link";
 import {ContentShell,ContentBreadcrumb,PageHeading} from "@/components/content-ui";
 import OutsourcingRequestForm from "@/components/outsourcing-request-form";
+export const dynamic="force-dynamic";
 export const metadata:Metadata={
  title:"Gia công theo yêu cầu | Futurebook Miền Nam",
  description:"Gửi yêu cầu tư vấn gia công tập vở, sổ và sản phẩm giấy theo quy cách dự kiến. Khả năng đáp ứng và báo giá được trao đổi riêng.",

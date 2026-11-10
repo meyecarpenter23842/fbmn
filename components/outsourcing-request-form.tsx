@@ -1,16 +1,15 @@
 "use client";
-import {useEffect,useState,type FormEvent} from "react";
+import {useState,type FormEvent} from "react";
 const blank={name:"",email:"",phone:"",productType:"",specifications:"",quantity:"",desiredDate:"",details:""};
 type Fields=typeof blank;
 export default function OutsourcingRequestForm(){
  const [fields,setFields]=useState<Fields>(blank);
- const [startedAt,setStartedAt]=useState(0);
+ const [startedAt,setStartedAt]=useState(()=>Date.now());
  const [consent,setConsent]=useState(false);
  const [website,setWebsite]=useState("");
  const [busy,setBusy]=useState(false);
  const [state,setState]=useState<"idle"|"success"|"error">("idle");
  const [error,setError]=useState("");
- useEffect(()=>setStartedAt(Date.now()),[]);
  function edit(field:keyof Fields,value:string){setFields(prev=>({...prev,[field]:value}));if(state!=="idle")setState("idle");}
  async function submit(event:FormEvent<HTMLFormElement>){
   event.preventDefault();if(busy||!startedAt)return;
