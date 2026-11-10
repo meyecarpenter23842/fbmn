@@ -5,12 +5,13 @@ import Link from "next/link";
 import {GlassButton,GlassButtonLink,GlassPanel} from "@/components/glass-ui";
 import type {PageFlip,SizeType,FlipCorner} from "page-flip";
 import {canFlipForward,canFlipBackward} from "@/lib/catalogue/spread-navigation";
+import {PaperSound} from "@/lib/catalogue/paper-sound";
 
 type Asset={id:string;width:number;height:number};
 type Book={id:string;title:string;edition:string;hasPages?:boolean;hasPdf?:boolean;pdfDownloadEnabled?:boolean};
 type Detail={book:Book;pages:Asset[];cover:Asset|null};
-type ViewerSettings={flipDurationMs:number;soundEnabled:boolean;shadowOpacity:number};
-const DEFAULT_VIEWER:ViewerSettings={flipDurationMs:950,soundEnabled:false,shadowOpacity:0.26};
+type ViewerSettings={flipDurationMs:number;soundEnabled:boolean;soundVolume:number;shadowOpacity:number};
+const DEFAULT_VIEWER:ViewerSettings={flipDurationMs:950,soundEnabled:false,soundVolume:35,shadowOpacity:0.26};
 type Leaf={asset:Asset;label:string};
 const UUID=/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i;
 const image=(id:string)=>"/api/catalogue-books/image?asset="+encodeURIComponent(id);
@@ -32,7 +33,7 @@ const validAsset=(x:unknown):x is Asset=>{
 };
 const validViewer=(v:ViewerSettings)=>Boolean(v&&Number.isSafeInteger(v.flipDurationMs)&&
  v.flipDurationMs>=750&&v.flipDurationMs<=1500&&v.flipDurationMs%50===0&&
- typeof v.soundEnabled==="boolean"&&typeof v.shadowOpacity==="number"&&
+ typeof v.soundEnabled==="boolean"&&Number.isInteger(v.soundVolume)&&v.soundVolume>=0&&v.soundVolume<=100&&typeof v.shadowOpacity==="number"&&
  Number.isFinite(v.shadowOpacity)&&v.shadowOpacity>=0.10&&v.shadowOpacity<=0.50);
 const validDetail=(v:Detail)=>validBook(v?.book)&&Array.isArray(v.pages)&&
  (v.pages.length>0||v.book.hasPdf)&&v.pages.length<=200&&v.pages.every(validAsset)&&
@@ -66,7 +67,7 @@ export default function CatalogueFlipbook(){
  const [portrait,setPortrait]=useState(false);
  const [reduced,setReduced]=useState(false);
  const [fullScreen,setFullScreen]=useState(false);
- const [thumbnails,setThumbnails]=useState(true);
+ const [thumbnails,setThumbnails]=useState(false);
  const [viewerSettings,setViewerSettings]=useState<ViewerSettings>(DEFAULT_VIEWER);
  const [status,setStatus]=useState("");
  const [manualLink,setManualLink]=useState("");
@@ -75,10 +76,10 @@ export default function CatalogueFlipbook(){
  const engineRef=useRef<PageFlip|null>(null);
  const zoomRef=useRef<HTMLDialogElement>(null);
  const zoomCloseTimer=useRef<ReturnType<typeof setTimeout>|null>(null);
- const audioRef=useRef<AudioContext|null>(null);
+ const audioRef=useRef<PaperSound|null>(null);
  const viewerRef=useRef<ViewerSettings>(DEFAULT_VIEWER);
  const reducedRef=useRef(false);
- const lastAudioAt=useRef(-1);
+ const turnLock=useRef(false);
  const sequence=useRef(0);
  const activeRef=useRef(0);
  const leaves=useMemo<Leaf[]>(()=>{
@@ -92,48 +93,17 @@ export default function CatalogueFlipbook(){
  useEffect(()=>{viewerRef.current=viewerSettings;},[viewerSettings]);
  useEffect(()=>{reducedRef.current=reduced;},[reduced]);
 
- // Original paper rustle, synthesized locally. No copyrighted audio or autoplay.
- const playPageSound=()=>{
-  if(!viewerRef.current.soundEnabled||reducedRef.current)return;
-  const ctx=audioRef.current;
-  if(!ctx||ctx.state!=="running")return;
-  const now=ctx.currentTime;
-  if(now-lastAudioAt.current<0.2)return;
-  lastAudioAt.current=now;
-  const duration=0.23;
-  const count=Math.ceil(ctx.sampleRate*duration);
-  const buffer=ctx.createBuffer(1,count,ctx.sampleRate);
-  const samples=buffer.getChannelData(0);
-  let brown=0;
-  for(let i=0;i<count;i++){
-   brown=(brown+(Math.random()*2-1)*0.11)/1.04;
-   samples[i]=brown*1.7+(Math.random()*2-1)*0.075;
-  }
-  const src=ctx.createBufferSource();
-  src.buffer=buffer;
-  const filter=ctx.createBiquadFilter();
-  filter.type="bandpass";filter.frequency.value=980;filter.Q.value=0.6;
-  const gain=ctx.createGain();
-  gain.gain.setValueAtTime(0.0001,now);
-  gain.gain.exponentialRampToValueAtTime(0.11,now+0.035);
-  gain.gain.exponentialRampToValueAtTime(0.025,now+0.12);
-  gain.gain.exponentialRampToValueAtTime(0.0001,now+duration);
-  src.connect(filter);filter.connect(gain);gain.connect(ctx.destination);
-  src.start(now);src.stop(now+duration+0.02);
-  src.onended=()=>{src.disconnect();filter.disconnect();gain.disconnect();};
- };
- const soundPlayer=useRef(playPageSound);
- useEffect(()=>{soundPlayer.current=playPageSound;});
- // Browsers require a trusted user gesture to unlock WebAudio.
- // Admin enables the feature globally; visitors have NO sound-setting control.
+ // A real paper recording shared with the Admin preview.
  const unlockAudio=()=>{
   if(!viewerRef.current.soundEnabled||reducedRef.current)return;
-  try{
-   const ctx=audioRef.current||new AudioContext();
-   audioRef.current=ctx;
-   if(ctx.state==="suspended")void ctx.resume().catch(()=>{});
-  }catch{/* Autoplay policy and unsupported devices remain silent. */}
+  const player=audioRef.current??(audioRef.current=new PaperSound());
+  void player.prepare().catch(()=>{});
  };
+ const soundPlayer=useRef(()=>{});
+ useEffect(()=>{soundPlayer.current=()=>{
+  if(viewerRef.current.soundEnabled&&!reducedRef.current)
+   void audioRef.current?.play(viewerRef.current.soundVolume).catch(()=>{});
+ };});
 
  useEffect(()=>{
   const media=window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -144,10 +114,10 @@ export default function CatalogueFlipbook(){
   return ()=>{media.removeEventListener("change",apply);document.removeEventListener("fullscreenchange",sync);};
  },[]);
  useEffect(()=>()=>{if(zoomCloseTimer.current)clearTimeout(zoomCloseTimer.current);
-  void audioRef.current?.close().catch(()=>{});},[]);
+  audioRef.current?.dispose();audioRef.current=null;},[]);
  const loadBook=useCallback(async(id:string,requested=1)=>{
   const idSequence=++sequence.current;
-  setLoading(true);setError("");setTurning(false);
+  setLoading(true);setError("");setTurning(false);turnLock.current=false;
   try{
    const payload=await fetchCatalogue<Detail>("/api/catalogue-books?id="+encodeURIComponent(id));
    if(!validDetail(payload))throw Error("Bộ Catalogue chưa có đủ trang hợp lệ.");
@@ -210,8 +180,8 @@ export default function CatalogueFlipbook(){
      return leaf;
     });
     flip=new PageFlip(disposable,{
-     width:440,height:610,size:"stretch" as SizeType,minWidth:185,maxWidth:555,
-     minHeight:256,maxHeight:770,autoSize:false,
+     width:440,height:610,size:"stretch" as SizeType,minWidth:140,maxWidth:640,
+     minHeight:194,maxHeight:887,autoSize:false,
      flippingTime:viewerSettings.flipDurationMs,drawShadow:true,maxShadowOpacity:viewerSettings.shadowOpacity,
      showCover:Boolean(detail.cover),usePortrait:true,swipeDistance:38,
      mobileScrollSupport:true,useMouseEvents:!reducedRef.current,
@@ -224,14 +194,14 @@ export default function CatalogueFlipbook(){
      // loadFromHTML emits flip synchronously with the spread's first leaf.
      // Keep the originally requested right-hand leaf and deep link intact.
      if(initializing){activeRef.current=n;setActive(n);return;}
-     activeRef.current=n;setActive(n);setSelectedPage(n);setTurning(false);
+     activeRef.current=n;setActive(n);setSelectedPage(n);
      window.history.replaceState(window.history.state,"",deepLink(detail.book.id,n));
     });
     flip.on("changeState",event=>{
      if(cancelled)return;
      const state=String(event.data);
-     if(state==="flipping"){setTurning(true);soundPlayer.current();}
-     else if(state==="read")setTurning(false);
+     if(state==="flipping"){turnLock.current=true;setTurning(true);soundPlayer.current();}
+     else if(state==="read"){turnLock.current=false;setTurning(false);}
     });
     flip.on("changeOrientation",event=>{if(!cancelled)setPortrait(event.data==="portrait");});
     flip.loadFromHTML(nodes);
@@ -247,7 +217,7 @@ export default function CatalogueFlipbook(){
  },[detail,reduced,leaves,viewerSettings.flipDurationMs,viewerSettings.shadowOpacity]);
 
  const go=(index:number)=>{
-  if(!detail||!leaves.length||turning)return;
+  if(!detail||!leaves.length||turning||turnLock.current)return;
   const next=Math.max(0,Math.min(leaves.length-1,index));
   const flip=engineRef.current;
   if(!flip)return;
@@ -257,7 +227,7 @@ export default function CatalogueFlipbook(){
   window.history.replaceState(window.history.state,"",deepLink(detail.book.id,next));
  };
  const turn=(direction:"next"|"prev")=>{
-  if(turning||!engineRef.current||!detail)return;
+  if(turnLock.current||turning||!engineRef.current||!detail)return;
   const book=engineRef.current;
   const index=book.getCurrentPageIndex();
   const onePage=book.getOrientation()==="portrait";
@@ -317,14 +287,10 @@ export default function CatalogueFlipbook(){
  return <div className="fb-catalogue-viewer" onKeyDown={keyboard}>
   {!loading&&!error&&books.length>0&&<section className="fb-catalogue-library"
    aria-labelledby="fb-catalogue-library-title">
-   <div className="fb-catalogue-library-intro">
-    <h2 id="fb-catalogue-library-title">Danh sách bộ và phiên bản Catalogue</h2>
-    <p>Chọn bộ Catalogue đã công bố để lật sách, xem PDF hoặc tải bản PDF khi được cho phép.</p>
-   </div>
+   <h2 id="fb-catalogue-library-title" className="sr-only">Danh sách Catalogue</h2>
    <div className="fb-catalogue-library-grid">
     {books.map(item=><GlassPanel key={item.id} className="fb-catalogue-library-item">
-      <div><p className="fb-catalogue-overline">CATALOGUE FUTUREBOOK</p>
-       <h3>{item.title}</h3>
+      <div><h3>{item.title}</h3>
        <p>{item.edition||"Phiên bản hiện hành"}</p></div>
       <div className="fb-catalogue-library-actions">
        {item.hasPages!==false&&<GlassButton variant={detail?.book.id===item.id?"primary":"secondary"}
@@ -338,7 +304,6 @@ export default function CatalogueFlipbook(){
    </div>
   </section>}
   <div className="fb-catalogue-topbar">
-   <div className="fb-catalogue-identity">Catalogue tương tác</div>
    {books.length>0&&<label className="fb-catalogue-picker"><span>Bộ Catalogue</span>
     <select value={detail?.book.id||books[0].id} disabled={loading}
      onChange={e=>void loadBook(e.target.value)}>
@@ -358,21 +323,20 @@ export default function CatalogueFlipbook(){
   {!loading&&detail&&<div ref={sceneRef} className="fb-catalogue-scene">
    <div className="fb-catalogue-scene-content">
     <div className="fb-catalogue-heading">
-     <div><span className="fb-catalogue-overline">FUTUREBOOK MIỀN NAM · CATALOGUE</span>
-      <h2>{detail.book.title}</h2>{detail.book.edition&&<p>{detail.book.edition}</p>}</div>
+     <h2 className="sr-only">{detail.book.title}</h2>
      <span className="fb-catalogue-count" aria-live="polite">{leaves[selectedPage]?.label||"Bản PDF"}</span>
     </div>
     {leaves.length>0?<div className="fb-catalogue-reader" role="region" aria-label={"Sách lật "+detail.book.title}
      onPointerDownCapture={unlockAudio}>
      <button type="button" className="fb-glass-button fb-glass-button--secondary fb-catalogue-nav fb-catalogue-nav--prev"
-      aria-label="Trang trước" disabled={turning||!canPrev} onClick={()=>turn("prev")}>
+      aria-label="Trang trước" disabled={turning||!canPrev} onClick={()=>{unlockAudio();turn("prev");}}>
       <span className="fb-catalogue-nav-glyph" aria-hidden="true">‹</span></button>
      <div className="fb-catalogue-book-shell">
       <div className="fb-catalogue-book-edge" aria-hidden="true"/>
       <div className="fb-catalogue-book-host" ref={bookRef} aria-label="Kéo mép hoặc góc giấy để lật trang"/>
      </div>
      <button type="button" className="fb-glass-button fb-glass-button--secondary fb-catalogue-nav fb-catalogue-nav--next"
-      aria-label="Trang tiếp" disabled={turning||!canNext} onClick={()=>turn("next")}>
+      aria-label="Trang tiếp" disabled={turning||!canNext} onClick={()=>{unlockAudio();turn("next");}}>
       <span className="fb-catalogue-nav-glyph" aria-hidden="true">›</span></button>
     </div>:<p className="fb-catalogue-pdf-only">Bộ này được phát hành dưới dạng PDF. Chọn “Xem PDF” bên trên để mở tài liệu.</p>}
     {leaves.length>0&&<div className="fb-catalogue-toolbar" role="toolbar" aria-label="Công cụ sách">
@@ -396,7 +360,7 @@ export default function CatalogueFlipbook(){
        <span>{leaf.label}</span>
       </button>)}
     </div>}
-    {leaves.length>0&&<p className="fb-catalogue-hint">Kéo góc trang để lật · Phím ← → để chuyển trang{portrait?" · Chế độ một trang":""}</p>}
+    
    </div>
    {leaves.length>0&&<dialog ref={zoomRef} className="fb-catalogue-zoom fb-glass-dialog-motion" aria-label="Xem trang phóng to"
     onCancel={e=>{if(!reduced){e.preventDefault();closeZoom();}}}>

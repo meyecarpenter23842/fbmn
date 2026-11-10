@@ -22,7 +22,7 @@ const SQL = Object.freeze({
    "FROM fbmn_public.v_cms_web_entries e ORDER BY sort_order,published_at,id LIMIT 501",
   cmsImageKey: "SELECT r2_key FROM fbmn_public.v_cms_web_images WHERE id=$1 AND device=$2 LIMIT 1",
   cmsSlideImageKey: "SELECT r2_key FROM fbmn_public.v_cms_web_banner_slide_images WHERE id=$1 AND device=$2 AND slide_no=$3 LIMIT 1",
-  catalogueViewerSettings: "SELECT flip_duration_ms,sound_enabled,shadow_opacity FROM fbmn_public.v_catalogue_viewer_settings LIMIT 2",
+  catalogueViewerSettings: "SELECT flip_duration_ms,sound_enabled,shadow_opacity,sound_volume FROM fbmn_public.v_catalogue_viewer_settings LIMIT 2",
   catalogueBooks: "SELECT b.id,b.title,b.edition,EXISTS(SELECT 1 FROM fbmn_public.v_catalogue_ready_assets a WHERE a.book_id=b.id AND a.kind='page') AS has_pages,EXISTS(SELECT 1 FROM fbmn_public.v_catalogue_ready_pdfs p WHERE p.book_id=b.id) AS has_pdf,EXISTS(SELECT 1 FROM fbmn_public.v_catalogue_ready_pdfs p WHERE p.book_id=b.id AND p.download_enabled=true) AS pdf_download_enabled FROM fbmn_public.v_catalogue_ready_books b ORDER BY b.updated_at DESC,b.id LIMIT 101",
   catalogueBook: "SELECT b.id,b.title,b.edition,EXISTS(SELECT 1 FROM fbmn_public.v_catalogue_ready_assets a WHERE a.book_id=b.id AND a.kind='page') AS has_pages,EXISTS(SELECT 1 FROM fbmn_public.v_catalogue_ready_pdfs p WHERE p.book_id=b.id) AS has_pdf,EXISTS(SELECT 1 FROM fbmn_public.v_catalogue_ready_pdfs p WHERE p.book_id=b.id AND p.download_enabled=true) AS pdf_download_enabled FROM fbmn_public.v_catalogue_ready_books b WHERE b.id=$1::uuid LIMIT 1",
   catalogueAssets: "SELECT id,kind,sort_order,width,height FROM fbmn_public.v_catalogue_ready_assets WHERE book_id=$1::uuid AND kind IN ('page','cover') ORDER BY kind,sort_order,id LIMIT 202",
@@ -284,10 +284,10 @@ export function createReadModel(query,{enableP5=false}={}) {
       const result=rows(await query(SQL.catalogueViewerSettings),2);
       if(result.length!==1)throw Error("Missing viewer settings");
       const r=result[0];
-      const value={flipDurationMs:Number(r.flip_duration_ms),soundEnabled:r.sound_enabled===true,
+      const value={flipDurationMs:Number(r.flip_duration_ms),soundEnabled:r.sound_enabled===true,soundVolume:Number(r.sound_volume),
        shadowOpacity:Number(r.shadow_opacity)};
       if(!Number.isSafeInteger(value.flipDurationMs)||value.flipDurationMs<750||
-       value.flipDurationMs>1500||value.flipDurationMs%50!==0||
+       value.flipDurationMs>1500||value.flipDurationMs%50!==0||!Number.isInteger(value.soundVolume)||value.soundVolume<0||value.soundVolume>100||
        !Number.isFinite(value.shadowOpacity)||value.shadowOpacity<0.10||
        value.shadowOpacity>0.50||typeof r.sound_enabled!=="boolean")
        throw Error("Invalid viewer settings");

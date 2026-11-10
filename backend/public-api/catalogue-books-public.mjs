@@ -52,7 +52,7 @@ export async function handlePublicCatalogueRequest({request,enabled,pdfEnabled=f
    if(!Array.isArray(books)||books.length>100||
     !Number.isSafeInteger(settings?.flipDurationMs)||settings.flipDurationMs<750||
     settings.flipDurationMs>1500||settings.flipDurationMs%50!==0||
-    typeof settings.soundEnabled!=="boolean"||
+    typeof settings.soundEnabled!=="boolean"||!Number.isInteger(settings.soundVolume)||settings.soundVolume<0||settings.soundVolume>100||
     typeof settings.shadowOpacity!=="number"||settings.shadowOpacity<0.1||
     settings.shadowOpacity>0.5)return fail(503,"catalogue_unavailable");
    return ok({books:books.filter(b=>pdfEnabled||b.hasPages!==false).map(b=>({
@@ -62,7 +62,7 @@ export async function handlePublicCatalogueRequest({request,enabled,pdfEnabled=f
      pdfDownloadEnabled:pdfEnabled&&b.hasPdf===true&&b.pdfDownloadEnabled===true
     }:{})
    })),
-    viewerSettings:{flipDurationMs:settings.flipDurationMs,soundEnabled:settings.soundEnabled,
+    viewerSettings:{flipDurationMs:settings.flipDurationMs,soundEnabled:settings.soundEnabled,soundVolume:settings.soundVolume,
      shadowOpacity:settings.shadowOpacity}});
   }
   if(parsed.kind==="detail"){

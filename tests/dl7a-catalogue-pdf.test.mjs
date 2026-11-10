@@ -61,7 +61,7 @@ test("DL7A public PDF gate, rights, MIME and attachment disposition",async()=>{
 test("DL7A PDF-only book is public only after PDF flag enabled",async()=>{
  const book={id:ID,title:"Bộ giấy",edition:"2026",hasPages:false,hasPdf:true,pdfDownloadEnabled:true};
  const params={request:get("/v1/public/catalogue-books"),enabled:true,allowedOrigins:[],
-  listBooks:async()=>[book],getSettings:async()=>({flipDurationMs:950,soundEnabled:false,shadowOpacity:0.26})};
+  listBooks:async()=>[book],getSettings:async()=>({flipDurationMs:950,soundEnabled:false,soundVolume:35,shadowOpacity:0.26})};
  const hidden=(await (await handlePublicCatalogueRequest({...params,pdfEnabled:false})).json()).data;
  assert.equal(hidden.books.length,0);
  const shown=(await (await handlePublicCatalogueRequest({...params,pdfEnabled:true})).json()).data;

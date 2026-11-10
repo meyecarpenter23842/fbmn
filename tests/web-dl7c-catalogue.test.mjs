@@ -9,7 +9,7 @@ const URL_ROOT="https://public.example/v1/public/";
 const req=(suffix,method="GET",origin)=>new Request(URL_ROOT+suffix,
  {method,headers:origin?{origin}:{}});
 const book={id:ID,title:"Catalogue Futurebook",edition:"2026"};
-const viewerSettings={flipDurationMs:950,soundEnabled:false,shadowOpacity:0.26};
+const viewerSettings={flipDurationMs:950,soundEnabled:false,soundVolume:35,shadowOpacity:0.26};
 const asset={id:ASSET,kind:"page",sortOrder:0,width:1200,height:1600};
 const key="books/"+ID+"/pages/"+ASSET+".webp";
 const readFile=(path)=>readFileSync(new URL("../"+path,import.meta.url),"utf8");
@@ -87,7 +87,7 @@ test("DL7C read model only queries security-filtered public views",async()=>{
  const model=createReadModel(async (sql,args=[])=>{
   inputs.push({sql,args});
   if(sql===PUBLIC_READ_QUERIES.catalogueBooks)return [{...book}];
-  if(sql===PUBLIC_READ_QUERIES.catalogueViewerSettings)return [{flip_duration_ms:950,sound_enabled:false,shadow_opacity:"0.26"}];
+  if(sql===PUBLIC_READ_QUERIES.catalogueViewerSettings)return [{flip_duration_ms:950,sound_enabled:false,sound_volume:35,shadow_opacity:"0.26"}];
   if(sql===PUBLIC_READ_QUERIES.catalogueBook)return [{...book}];
   if(sql===PUBLIC_READ_QUERIES.catalogueAssets)return [{...asset,sort_order:0}];
   if(sql===PUBLIC_READ_QUERIES.catalogueAssetKey)return [{r2_key:key,byte_size:120}];
@@ -189,7 +189,7 @@ test("DL7C-R page curl and paper audio are interaction-based and reduced-motion-
  assert.match(ui,/maxShadowOpacity:viewerSettings.shadowOpacity/);
  assert.match(ui,/flipNext\("bottom" as FlipCorner\)/);
  assert.match(ui,/turnToNextPage\(\)/);
- assert.match(ui,/new AudioContext\(\)/);
+ assert.match(readFile("lib/catalogue/paper-sound.ts"),/new AudioContext\(\)/);
  assert.doesNotMatch(ui,/aria-pressed=\{soundEnabled\}/);
  assert.doesNotMatch(ui,/Âm lật: /);
  assert.match(ui,/viewerRef\.current.soundEnabled/);
