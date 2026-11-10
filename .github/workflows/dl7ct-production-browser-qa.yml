@@ -1,0 +1,32 @@
+name: DL7C-T production browser QA (isolated evidence branch)
+on:
+  push:
+    branches: [qa/dl7ct-live]
+permissions:
+  contents: read
+jobs:
+  catalogue-live:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: "22"
+      - name: Install pinned browser runner
+        run: npm install --prefix /tmp/fbmn-qa --no-audit --no-fund playwright@1.56.1
+      - name: Install Chromium
+        run: /tmp/fbmn-qa/node_modules/.bin/playwright install --with-deps chromium
+      - name: Exercise actual production Catalogue
+        run: node scripts/dl7ct-live-qa.mjs
+        env:
+          PLAYWRIGHT_MODULE: /tmp/fbmn-qa/node_modules/playwright
+      - name: Evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: dl7ct-production-browser-evidence
+          path: artifacts/dl7ct
+          retention-days: 7
