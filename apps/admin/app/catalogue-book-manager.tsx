@@ -2,7 +2,7 @@
 import {useCallback,useEffect,useRef,useState} from "react";
 import AdminToast from "./admin-toast";
 import ProductModal,{useProductModalClose} from "./product-modal";
-import {PaperSound} from "../../../lib/catalogue/paper-sound";
+import {PaperSound} from "../lib/paper-sound";
 
 type Book={id:string;title:string;edition:string;state:"draft"|"ready"|"hidden";revision:number;updated_at:string};
 type Asset={id:string;kind:"page"|"cover";

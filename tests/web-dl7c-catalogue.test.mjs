@@ -189,7 +189,7 @@ test("DL7C-R page curl and paper audio are interaction-based and reduced-motion-
  assert.match(ui,/maxShadowOpacity:viewerSettings.shadowOpacity/);
  assert.match(ui,/flipNext\("bottom" as FlipCorner\)/);
  assert.match(ui,/turnToNextPage\(\)/);
- assert.match(readFile("lib/catalogue/paper-sound.ts"),/new AudioContext\(\)/);
+ assert.match(readFile("apps/admin/lib/paper-sound.ts"),/new AudioContext\(\)/);
  assert.doesNotMatch(ui,/aria-pressed=\{soundEnabled\}/);
  assert.doesNotMatch(ui,/Âm lật: /);
  assert.match(ui,/viewerRef\.current.soundEnabled/);
