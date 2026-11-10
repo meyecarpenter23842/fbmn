@@ -83,10 +83,10 @@
 .fb-song-title {
   color: var(--color-primary-strong);
   font-family: var(--fb-glass-display-font);
-  font-size: clamp(30px, 3.4vw, 48px);
-  font-weight: 750;
-  letter-spacing: -.035em;
-  line-height: 1.07;
+  font-size: clamp(26px, 2.8vw, 34px);
+  font-weight: var(--fb-web-heading-weight);
+  letter-spacing: -.012em;
+  line-height: var(--fb-web-heading-leading);
   margin: 0 0 9px;
 }
 
@@ -248,9 +248,10 @@
   margin: 0;
   color: var(--color-primary-strong);
   font-family: var(--fb-glass-display-font);
-  font-size: clamp(24px, 2.4vw, 32px);
-  font-weight: 750;
-  letter-spacing: -.02em;
+  font-size: clamp(20px, 2.2vw, 26px);
+  font-weight: var(--fb-web-heading-weight);
+  letter-spacing: -.01em;
+  line-height: var(--fb-web-heading-leading);
 }
 
 /* G07.2: conventional grid, never horizontal scrolling. All related
@@ -304,7 +305,8 @@
 .fb-song-related-body h3 {
   color: var(--fb-glass-ink);
   font-size: 14px;
-  font-weight: 800;
+  font-weight: 650;
+  line-height: 1.4;
   margin: 0;
   display: -webkit-box;
   -webkit-box-orient: vertical;
@@ -471,7 +473,7 @@
   }
   .fb-song-overview-preview:disabled { cursor: default; }
   .fb-song-overline { font-size: 10px; font-weight: 850; letter-spacing: .08em; color: var(--color-primary); margin: 0 0 5px; }
-  .fb-song-overview .fb-song-title { font-size: clamp(23px, 6vw, 29px); margin-bottom: 6px; }
+  .fb-song-overview .fb-song-title { font-size: clamp(22px, 5.6vw, 26px); margin-bottom: 6px; }
   .fb-song-overview .fb-song-description {
     display: -webkit-box;
     -webkit-box-orient: vertical;

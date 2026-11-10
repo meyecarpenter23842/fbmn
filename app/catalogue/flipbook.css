@@ -21,7 +21,7 @@
 .fb-catalogue-scene-content{max-width:1480px;margin:0 auto;padding:24px 16px 34px}
 .fb-catalogue-heading{display:flex;align-items:end;justify-content:space-between;gap:12px;flex-wrap:wrap;max-width:1120px;margin:0 auto 18px}
 .fb-catalogue-overline{font-size:11px;letter-spacing:.14em;font-weight:800;color:var(--color-primary)}
-.fb-catalogue-heading h2{font-family:var(--fb-glass-display-font);font-size:clamp(23px,3vw,38px);color:var(--color-primary-strong);line-height:1.12;margin:5px 0}
+.fb-catalogue-heading h2{font-family:var(--fb-glass-display-font);font-size:clamp(20px,2.3vw,28px);color:var(--color-primary-strong);line-height:var(--fb-web-heading-leading);font-weight:var(--fb-web-heading-weight);margin:5px 0}
 .fb-catalogue-heading p{font-size:var(--fb-control-font-size);color:var(--fb-glass-muted);margin:3px 0}
 .fb-catalogue-count{font-size:var(--fb-control-font-size);font-weight:700;color:var(--color-primary-strong);padding:8px 14px;border-radius:999px;background:rgba(255,255,255,.76)}
 .fb-catalogue-reader{display:flex;align-items:center;justify-content:center;gap:clamp(6px,1.5vw,18px);min-width:0}
