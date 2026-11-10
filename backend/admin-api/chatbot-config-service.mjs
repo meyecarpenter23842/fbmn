@@ -191,7 +191,9 @@ export async function handleChatbotConfig({request,actor,db,googleSecret,credent
     const before=fromRow((await client.query("SELECT config,revision FROM "+TABLE+" WHERE singleton=true FOR UPDATE")).rows[0]);
     if(before.revision!==body.revision)throw Error("revision_conflict");
     const retained=account?JSON.stringify(account):await credentialStore?.read(before.revision);
-    if(retained)await credentialStore.write(before.revision+1,retained);
+    // Overwrite even a failed-save orphan at this revision. Empty authenticated
+    // value explicitly means use the pre-existing Worker secret fallback.
+    if(credentialStore)await credentialStore.write(before.revision+1,retained||"");
     const after=fromRow((await client.query("UPDATE "+TABLE+" SET config=$1::jsonb,revision=revision+1,updated_by=$2,updated_at=now() WHERE singleton=true RETURNING config,revision",[JSON.stringify(config),actor.subject])).rows[0]);
     await client.query("INSERT INTO "+TABLE+"_audit(revision,actor_subject,before_data,after_data) VALUES($1,$2,$3::jsonb,$4::jsonb)",[after.revision,actor.subject,JSON.stringify(before.config),JSON.stringify(after.config)]);
     await client.query("COMMIT");return after;

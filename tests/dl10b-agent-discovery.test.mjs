@@ -19,3 +19,23 @@ test("owner lists agents using imported credentials without echoing key",async()
  const response=await handleChatbotConfig({request,actor:{role:"owner"},db:async()=>{},listAgents:async(project,secret)=>{assert.equal(project,account.project_id);assert.equal(JSON.parse(secret).private_key,account.private_key);return {agents:[{id:"a",location:"global",name:"Futurebook"}],failedLocations:[]};}});
  assert.equal(response.status,200);assert.doesNotMatch(await response.text(),/PRIVATE KEY/);
 });
+
+test("failed uploaded-key save cannot activate an orphan on fallback-only revision reuse",async()=>{
+ const map=new Map(),store={read:async r=>map.get(r),write:async(r,v)=>map.set(r,v)};
+ const config={projectId:account.project_id,location:"global",agentId:"00000000-0000-4000-8000-000000000001",environmentId:"00000000-0000-4000-8000-000000000002",model:"gemini-2.5-flash"};
+ let current={config:{},revision:1},pending=current,failAudit=true;
+ const db=async work=>work({query:async(sql,args)=>{
+  if(sql.startsWith("SELECT config"))return {rows:[current]};
+  if(sql.startsWith("UPDATE")){pending={config:JSON.parse(args[0]),revision:2};return {rows:[pending]};}
+  if(sql.startsWith("INSERT")&&failAudit)throw Error("audit failed");
+  if(sql==="COMMIT")current=pending;
+  return {rows:[]};
+ }});
+ const make=body=>new Request("https://example.test/v1/admin/website/chatbot-config",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(body)});
+ const opts={actor:{role:"owner",subject:"owner"},db,googleSecret:"fallback",credentialStore:store,discover:async()=>({models:[config.model]})};
+ assert.equal((await handleChatbotConfig({...opts,request:make({operation:"save",config,revision:1,credential:JSON.stringify(account)})})).status,503);
+ assert.equal(current.revision,1);assert.ok(map.get(2));
+ failAudit=false;
+ assert.equal((await handleChatbotConfig({...opts,request:make({operation:"save",config,revision:1})})).status,200);
+ assert.equal(current.revision,2);assert.equal(map.get(2),"");
+});
