@@ -414,6 +414,7 @@ export default function CmsManager({mode,owner}:{
  mode:"marketing"|"editorial";owner:boolean
 }){
  const [items,setItems]=useState<CmsSummary[]>([]);
+ const latestRequest=useRef(0);
  const [page,setPage]=useState(1);
  const [hasNext,setHasNext]=useState(false);
  const [editorialKind,setEditorialKind]=useState<"all"|"article"|"promotion">("all");
@@ -464,6 +465,7 @@ export default function CmsManager({mode,owner}:{
  const [toastId,setToastId]=useState(0);
  const refresh=useCallback(async()=>{
   if(!owner)return;
+  const requestId=++latestRequest.current;
   setLoading(true);
   try{
    const web=await websiteCmsPage<CmsSummary>(page,backendPage=>{
@@ -475,14 +477,16 @@ export default function CmsManager({mode,owner}:{
     }
     return cmsApi<CmsSourcePage<CmsSummary>>("?"+q.toString());
    });
+   if(requestId!==latestRequest.current)return;
    setItems(web.items);setHasNext(web.hasNext);setLoadError("");
   }
   catch(e){
+   if(requestId!==latestRequest.current)return;
    const reason=e instanceof Error?e.message:"Không tải được CMS.";
    setLoadError(reason);setItems([]);setHasNext(false);
    setError(reason);setToastId(v=>v+1);
   }
-  finally{setLoading(false);}
+  finally{if(requestId===latestRequest.current)setLoading(false);}
  },[owner,mode,page,editorialKind,editorialStatus,appliedSearch]);
  useEffect(()=>{const task=window.setTimeout(()=>{void refresh();},0);return()=>window.clearTimeout(task);},[refresh]);
  const visible=items;
@@ -521,26 +525,26 @@ export default function CmsManager({mode,owner}:{
   {mode==="editorial"&&<form className="cms-editorial-filters" role="search" aria-label="Tìm và lọc bài viết"
    onSubmit={e=>{e.preventDefault();setPage(1);setAppliedSearch(searchInput.trim());}}>
    <label>Loại bài viết
-    <select value={editorialKind} disabled={loading||busy}
+    <select className="fb-ui-select" value={editorialKind} disabled={loading||busy}
      onChange={e=>{setPage(1);setEditorialKind(e.target.value as typeof editorialKind);}}>
      <option value="all">Tất cả</option><option value="article">Tin tức</option>
      <option value="promotion">Khuyến mãi</option>
     </select>
    </label>
    <label>Trạng thái
-    <select value={editorialStatus} disabled={loading||busy}
+    <select className="fb-ui-select" value={editorialStatus} disabled={loading||busy}
      onChange={e=>{setPage(1);setEditorialStatus(e.target.value as typeof editorialStatus);}}>
      <option value="all">Tất cả</option><option value="draft">Bản nháp</option>
      <option value="published">Đã xuất bản</option><option value="hidden">Đã ẩn</option>
     </select>
    </label>
    <label>Tìm theo tiêu đề hoặc slug
-    <input type="search" maxLength={80} value={searchInput}
+    <input className="fb-ui-field" type="search" maxLength={80} value={searchInput}
      onChange={e=>setSearchInput(e.target.value)} placeholder="Nhập từ khóa" />
    </label>
    <button type="submit" className="fb-ui-button fb-ui-button--secondary" disabled={loading||busy}>Tìm</button>
    <button type="button" className="fb-ui-button fb-ui-button--secondary" disabled={loading||busy}
-    onClick={()=>{setPage(1);setEditorialKind("all");setEditorialStatus("all");setSearchInput("");setAppliedSearch("");void refresh();}}>Xóa lọc</button>
+    onClick={()=>{setPage(1);setEditorialKind("all");setEditorialStatus("all");setSearchInput("");setAppliedSearch("");}}>Xóa lọc</button>
   </form>}
   <div className="cms-table-wrap">
    <table className="cms-table">
