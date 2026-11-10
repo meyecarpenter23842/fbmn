@@ -1,0 +1,7 @@
+# DL10A — Admin cấu hình Dialogflow CX
+Roadmap: docs/roadmap.md. Owner-only, private Neon singleton + revision/audit. No website runtime or transcript change.
+- Worker secret DIALOGFLOW_SERVICE_ACCOUNT_JSON: Google service-account JSON; never paste into Admin or Git. Grant only CX Agent/Environment/generative-settings read, Model Garden list; enable Dialogflow and Vertex AI APIs. Do not grant access to NET, contacts or dealer data. Use separate environment credentials.
+- Import accepts exact JSON fields projectId, location, agentId, environmentId ("draft" or UUID), model (empty for draft). JS only literal JSON wrapped in export default or module.exports. No executable JS, service-account file, arbitrary URL or prompt.
+- Google CX v3beta1 reads Agent, optional Environment and generative settings; Model Garden publisher list is intersected with documented CX Playbook models. This is discovery, not a guarantee of per-agent runtime entitlement. Model saved as a DL10B request-level override, not an agent/Playbook mutation. No chat request is issued in DL10A.
+- Official docs: https://cloud.google.com/dialogflow/cx/docs/concept/playbook and https://cloud.google.com/dialogflow/cx/docs/reference/rest/v3beta1/GenerativeSettings
+- Migration must be rehearsed before production; validate authenticated Owner import/discovery/save, denied non-Owner, mobile modal and no public routes. Verify real credentials and Google API before reporting connected.
