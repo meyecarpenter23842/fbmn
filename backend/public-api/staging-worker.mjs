@@ -104,8 +104,7 @@ export function createStagingWorker({createDbClient}) {
                 const identity=await client.query("SELECT current_user AS role_name");
                 if(identity.rows?.[0]?.role_name!==env.EXPECTED_DB_ROLE)throw Error("Unsafe database role");
                 await client.query("SELECT fbmn_public.submit_contact_request($1,$2,$3,$4,$5,$6,$7,$8,$9)",
-                  [data.name,data.email,data.phone,data.productType,data.specifications,
-                   data.quantity,data.desiredDate,data.details,data.consent]);
+                  [data.name,data.company,data.email,data.phone,data.province,data.customerGroup,data.interests,data.message,data.consent]);
               }finally{await client.end();}
             }});
         }

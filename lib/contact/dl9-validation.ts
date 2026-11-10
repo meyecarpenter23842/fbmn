@@ -1,4 +1,4 @@
-import {PROVINCES,CUSTOMER_GROUPS,INTERESTS} from "../../apps/admin/lib/contact-options";
+import {PROVINCES,CUSTOMER_GROUPS,INTERESTS} from "../../apps/admin/lib/contact-options.ts";
 export {PROVINCES,CUSTOMER_GROUPS,INTERESTS};
 export type ContactRequest={name:string;company:string;email:string;phone:string;province:string;customerGroup:string;interests:string[];message:string;consent:true;website:"";startedAt:number};
 export function validateContactRequest(value:unknown,now=Date.now()):{ok:true;data:ContactRequest}|{ok:false;error:string}{
