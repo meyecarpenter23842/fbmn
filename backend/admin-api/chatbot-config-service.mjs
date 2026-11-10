@@ -96,6 +96,7 @@ function fromRow(row){
 // Return only allowlisted diagnostic codes: never echo Google's raw error,
 // OAuth tokens, service-account email, private key, or request payload.
 async function googleError(response,stage){
+ if(response.status>=300&&response.status<400)return Error("google_unavailable");
  if(response.status===429)return Error("google_quota");
  if(response.status===401)return Error("google_auth_failed");
  if(stage==="oauth"&&response.status===400)return Error("google_auth_failed");
@@ -110,7 +111,7 @@ async function googleError(response,stage){
 }
 async function googleJson(url,token,fetcher,signal){
  let response;
- try{response=await fetcher(url,{headers:{Authorization:"Bearer "+token,Accept:"application/json"},redirect:"error",signal});}
+ try{response=await fetcher(url,{headers:{Authorization:"Bearer "+token,Accept:"application/json"},redirect:"manual",signal});}
  catch(e){throw Error(e?.name==="TimeoutError"||e?.name==="AbortError"?"google_timeout":"google_network_error");}
  if(!response.ok)throw await googleError(response,"api");
  try{return await response.json();}catch{throw Error("google_unavailable");}
@@ -135,7 +136,7 @@ export async function tokenFor(secret,fetcher=fetch){
   jwt=input+"."+b64url(new Uint8Array(await crypto.subtle.sign("RSASSA-PKCS1-v1_5",pk,utf8.encode(input))));
  }catch{throw Error("google_invalid_key");}
  let response;
- try{response=await fetcher("https://oauth2.googleapis.com/token",{method:"POST",redirect:"error",signal:AbortSignal.timeout(12000),
+ try{response=await fetcher("https://oauth2.googleapis.com/token",{method:"POST",redirect:"manual",signal:AbortSignal.timeout(12000),
   headers:{"Content-Type":"application/x-www-form-urlencoded"},
   body:new URLSearchParams({grant_type:"urn:ietf:params:oauth:grant-type:jwt-bearer",assertion:jwt})});}
  catch(e){throw Error(e?.name==="TimeoutError"||e?.name==="AbortError"?"google_timeout":"google_network_error");}

@@ -7,6 +7,7 @@ const secret=JSON.stringify({type:"service_account",project_id:"futurebook-test"
 test("native OAuth assertion is a valid RS256 signature with fixed Google audience",async()=>{
  const token=await tokenFor(secret,async(url,init)=>{
   assert.equal(url,"https://oauth2.googleapis.com/token");
+  assert.equal(init.redirect,"manual");
   const [h,p,s]=init.body.get("assertion").split(".");
   assert.equal(JSON.parse(Buffer.from(p,"base64url")).aud,url);
   assert.ok(await crypto.subtle.verify("RSASSA-PKCS1-v1_5",keys.publicKey,Buffer.from(s,"base64url"),new TextEncoder().encode(h+"."+p)));
@@ -27,4 +28,17 @@ test("selected region avoids locations enumeration and uses regional endpoint",a
   return Response.json({agents:[{name:"projects/futurebook-test/locations/asia-southeast1/agents/00000000-0000-4000-8000-000000000001",displayName:"Futurebook"}]});
  },"asia-southeast1");
  assert.equal(seen.length,2);assert.match(seen[1],/^https:\/\/asia-southeast1-dialogflow\.googleapis\.com/);assert.equal(data.agents[0].name,"Futurebook");
+});
+
+test("Cloudflare Workers accepts manual redirect and rejects Google redirects without following",async()=>{
+ const seen=[];
+ await assert.rejects(tokenFor(secret,async(url,init)=>{
+  seen.push(url);assert.equal(init.redirect,"manual");
+  return new Response(null,{status:302,headers:{Location:"https://example.invalid"}});
+ }),/google_unavailable/);
+ assert.equal(seen.length,1);
+ await assert.rejects(listCxAgents("futurebook-test",secret,async(url,init)=>{
+  assert.equal(init.redirect,"manual");
+  return url.includes("oauth2")?Response.json({access_token:"token"}):new Response(null,{status:302,headers:{Location:"https://example.invalid"}});
+ },"global"),/google_unavailable/);
 });
