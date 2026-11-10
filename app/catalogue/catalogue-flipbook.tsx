@@ -73,6 +73,7 @@ export default function CatalogueFlipbook(){
  const [manualLink,setManualLink]=useState("");
  const sceneRef=useRef<HTMLDivElement>(null);
  const bookRef=useRef<HTMLDivElement>(null);
+ const readerRef=useRef<HTMLDivElement>(null);
  const engineRef=useRef<PageFlip|null>(null);
  const zoomRef=useRef<HTMLDialogElement>(null);
  const zoomCloseTimer=useRef<ReturnType<typeof setTimeout>|null>(null);
@@ -247,8 +248,8 @@ export default function CatalogueFlipbook(){
   if(zoomRef.current?.open)return;
   if(event.altKey||event.metaKey||event.ctrlKey||
    event.target instanceof HTMLInputElement||event.target instanceof HTMLSelectElement)return;
-  if(event.key==="ArrowRight"){event.preventDefault();unlockAudio();turn("next");}
-  else if(event.key==="ArrowLeft"){event.preventDefault();unlockAudio();turn("prev");}
+  if(event.key==="ArrowRight"){event.preventDefault();readerRef.current?.focus({preventScroll:true});unlockAudio();turn("next");}
+  else if(event.key==="ArrowLeft"){event.preventDefault();readerRef.current?.focus({preventScroll:true});unlockAudio();turn("prev");}
   else if(event.key==="Home"){event.preventDefault();go(0);}
   else if(event.key==="End"){event.preventDefault();go(leaves.length-1);}
  };
@@ -327,7 +328,7 @@ export default function CatalogueFlipbook(){
      <h2 className="sr-only">{detail.book.title}</h2>
      <span className="fb-catalogue-count" aria-live="polite">{leaves[selectedPage]?.label||"Bản PDF"}</span>
     </div>
-    {leaves.length>0?<div className="fb-catalogue-reader" role="region" aria-label={"Sách lật "+detail.book.title}
+    {leaves.length>0?<div ref={readerRef} tabIndex={0} className="fb-catalogue-reader" role="region" aria-label={"Sách lật "+detail.book.title}
      onPointerDownCapture={unlockAudio}>
      <button type="button" className="fb-glass-button fb-glass-button--secondary fb-catalogue-nav fb-catalogue-nav--prev"
       aria-label="Trang trước" disabled={turning||!canPrev} onClick={()=>{unlockAudio();turn("prev");}}>
