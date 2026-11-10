@@ -27,6 +27,6 @@ test("DL6 Worker denies without dedicated intake rate limiter, never touches DB"
 });
 test("DL6 Worker checks strict dedicated intake limit before database",async()=>{
  let connections=0;const worker=createStagingWorker({createDbClient:()=>{connections++;throw Error("never");}});
- const response=await worker.fetch(request(),env());
+ const response=await worker.fetch(await request(),env());
  assert.equal(response.status,429);assert.equal(connections,0);
 });
