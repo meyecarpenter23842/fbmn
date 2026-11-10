@@ -33,7 +33,7 @@ async function googleJson(url,token,fetcher,signal){
  if(!response.ok)throw Error("google_unavailable");
  return response.json();
 }
-async function tokenFor(secret,fetcher){
+export async function tokenFor(secret,fetcher){
  let key;
  try{key=JSON.parse(secret);}catch{throw Error("credentials_missing");}
  if(key?.type!=="service_account"||typeof key.client_email!=="string"||typeof key.private_key!=="string")throw Error("credentials_missing");

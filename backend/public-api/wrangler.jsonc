@@ -16,6 +16,7 @@
     "PUBLIC_DL7A_PDF_ENABLED": "false",
     "PUBLIC_DL6_ENABLED": "false"
   },
+  "services": [{"binding":"CHATBOT_GATEWAY","service":"futurebook-mien-nam-admin-api-staging","entrypoint":"ChatbotGateway"}],
   "hyperdrive": [
     {
       "binding": "HYPERDRIVE",

@@ -1,12 +1,13 @@
 import { createPublicApi } from "./handler.mjs";
 import { createReadModel, PUBLIC_READ_QUERIES } from "./read-model.mjs";
 import { handlePublicCatalogueRequest } from "./catalogue-books-public.mjs";
+import {handleChat} from "./chat-service.mjs";
 import {handleContactRequest} from "./contact-service.mjs";
 import {handleOutsourcingRequest} from "./outsourcing-service.mjs";
 import {verifyIntakeProof} from "../../lib/outsourcing/proxy-proof.ts";
 
 const ALLOWED_SQL = new Set(Object.values(PUBLIC_READ_QUERIES));
-const ROUTES = new Set(["/v1/public/categories", "/v1/public/products", "/v1/public/catalog", "/v1/public/content", "/v1/public/cms", "/v1/public/home-layout", "/v1/public/category-display", "/v1/public/catalogue-books", "/v1/public/outsourcing-requests", "/v1/public/contact-requests"]);
+const ROUTES = new Set(["/v1/public/categories", "/v1/public/products", "/v1/public/catalog", "/v1/public/content", "/v1/public/cms", "/v1/public/home-layout", "/v1/public/category-display", "/v1/public/catalogue-books", "/v1/public/outsourcing-requests", "/v1/public/contact-requests", "/v1/public/chat"]);
 // Owner-approved single decorative image. This Worker binding is in the same
 // Cloudflare account as the private fbmn R2 bucket. Never accept caller keys.
 const DECORATIVE_ROUTE = "/v1/public/decorative-background";
@@ -71,6 +72,15 @@ export function createStagingWorker({createDbClient}) {
       if (rate?.success !== true) return error(429,"rate_limited");
       try {
         const origins=env.PUBLIC_ALLOWED_ORIGINS.split(",").map(s=>s.trim()).filter(Boolean);
+        if(url.pathname==="/v1/public/chat"){
+          if(typeof env.CHATBOT_GATEWAY?.chat!=="function"||typeof env.OUTSOURCING_RATE_LIMITER?.limit!=="function"||
+             !/^[0-9a-f]{64}$/.test(env.DL6_PROXY_SECRET||""))return error(503,"chat_unavailable");
+          return handleChat({request,allowedOrigins:origins,
+            verifyProxy:(req,payload)=>verifyIntakeProof(env.DL6_PROXY_SECRET,req.headers,payload),
+            limitVisitor:visitor=>env.OUTSOURCING_RATE_LIMITER.limit({key:"dl10b:"+visitor}),
+            limitGlobal:()=>env.RATE_LIMITER.limit({key:"dl10b-global"}),
+            chat:(data,visitor)=>env.CHATBOT_GATEWAY.chat(data,visitor)});
+        }
         if(url.pathname===OUTSOURCING_ROUTE){
           if(env.PUBLIC_DL6_ENABLED!=="true"||typeof env.OUTSOURCING_RATE_LIMITER?.limit!=="function"||
              !/^[0-9a-f]{64}$/.test(env.DL6_PROXY_SECRET||""))

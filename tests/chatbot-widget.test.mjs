@@ -1,7 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { getDemoChatbotReply } from "../lib/chatbot/demo-replies.ts";
 const read = p => readFileSync(new URL("../" + p, import.meta.url), "utf8");
 
 test("chatbot uses user-supplied FBMN image with compact floating launcher", () => {
@@ -15,10 +14,10 @@ test("chatbot uses user-supplied FBMN image with compact floating launcher", () 
   assert.match(css, /\.fb-chat__panel\s*\{/);
   assert.match(css, /@media \(max-width:\s*700px\)/);
 });
-test("widget has typing state, delayed bot response and accessible close", () => {
+test("widget has real pending state and accessible close", () => {
   const code=read("components/chatbot-widget.tsx");
   assert.match(code, /setTyping\(true\)/);
-  assert.match(code, /window\.setTimeout/);
+  assert.match(code, /fetch\("\/api\/chat"/);
   assert.match(code, /fb-chat__typing/);
   assert.match(code, /aria-label="Bot đang nhập tin nhắn"/);
   assert.match(code, /aria-label="Đóng chatbot"/);
@@ -26,17 +25,13 @@ test("widget has typing state, delayed bot response and accessible close", () =>
   assert.match(code, /aria-expanded=\{open\}/);
   assert.match(read("app/chatbot.css"), /prefers-reduced-motion/);
 });
-test("demo is fully local, doesn't invent backend access or leak user messages", () => {
-  const code=read("components/chatbot-widget.tsx");
-  const replySource=read("lib/chatbot/demo-replies.ts");
-  assert.match(code, /data-chatbot-mode="demo"/);
-  assert.match(code, /Hỗ trợ nhanh · Câu trả lời soạn sẵn/);
-  assert.match(code, /không gửi lên máy chủ/);
-  assert.doesNotMatch(code+replySource, /fetch\s*\(|localStorage|sessionStorage|Authorization:/);
-  assert.equal(getDemoChatbotReply("Sản phẩm").href,"/san-pham");
-  assert.equal(getDemoChatbotReply("Dành cho đại lý").href,"/dai-ly");
-  assert.equal(getDemoChatbotReply("Liên hệ").href,"/lien-he");
-  assert.match(getDemoChatbotReply("Một câu hỏi chưa có dữ liệu").text, /chưa có trong phần hỗ trợ nhanh/);
+test("DL10B widget calls same-origin backend and never embeds credentials",()=>{
+ const code=read("components/chatbot-widget.tsx");
+ assert.match(code,/data-chatbot-mode="live"/);
+ assert.match(code,/Google Dialogflow CX/);
+ assert.match(code,/fetch\("\/api\/chat"/);
+ assert.doesNotMatch(code,/getDemoChatbotReply|localStorage|sessionStorage|Authorization:|private_key/);
+ assert.match(code,/tạm thời không phản hồi/);
 });
 test("app invitation anchors near the header, away from chatbot touch targets", () => {
   const styles=read("app/app-download.css");
