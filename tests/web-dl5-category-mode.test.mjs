@@ -75,6 +75,16 @@ test("DL5 public mode settings are allowlisted, gated and no-store",async()=>{
  assert.throws(()=>projectPublicCategoryDisplay({modes:[{categoryId:A,mode:"family"}]}));
  assert.throws(()=>projectPublicCategoryDisplay({modes:[{categoryId:A,mode:"sku"},{categoryId:A,mode:"sku"}]}));
 });
+test("DL5 public projection supports all 2,000 Admin categories and refuses 2,001",()=>{
+ const ids=Array.from({length:2000},(_,i)=>"p5-"+String(i+1).padStart(8,"0")+"-1111-1111-1111-111111111111");
+ const modes=ids.map(categoryId=>({categoryId,mode:"sku"}));
+ assert.equal(projectPublicCategoryDisplay({modes}).modes.length,2000);
+ assert.throws(()=>projectPublicCategoryDisplay({modes:[...modes,{categoryId:"p5-00002001-1111-1111-1111-111111111111",mode:"sku"}]}));
+ const read=path=>readFileSync(new URL("../"+path,import.meta.url),"utf8");
+ assert.match(read("backend/public-api/read-model.mjs"),/categoryDisplay: "SELECT[^\n]+LIMIT 2001"/);
+ assert.match(read("backend/public-api/read-model.mjs"),/execute\("categoryDisplay",2000\)/);
+ assert.match(read("lib/public-api/client.ts"),/const rows=arr\(data.modes,2000\)/);
+});
 test("DL5 non-Owner cannot change category modes or reach DB",async()=>{
  let accessed=false;
  const api=createAdminApi({verifyToken:async()=>"editor",loadActor:async()=>({role:"editor",enabled:true,channels:["public_web"]}),
