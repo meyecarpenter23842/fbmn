@@ -65,7 +65,7 @@ export default function CatalogueFlipbook(){
  const audioRef=useRef<AudioContext|null>(null);
  const soundRef=useRef(false);
  const reducedRef=useRef(false);
- const lastAudioAt=useRef(0);
+ const lastAudioAt=useRef(-1);
  const sequence=useRef(0);
  const activeRef=useRef(0);
  const leaves=useMemo<Leaf[]>(()=>{
