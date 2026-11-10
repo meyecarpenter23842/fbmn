@@ -41,8 +41,10 @@
 .fb-admin .dl10c-filters{display:flex;flex-wrap:wrap;align-items:end;gap:12px;margin-bottom:18px}
 .fb-admin .dl10c-filters label{display:grid;gap:6px;flex:1 1 150px;min-width:0;font-size:13px}
 .fb-admin .dl10c-filters input{width:100%;min-width:0}
-.fb-admin .dl10c-summary{min-width:0;overflow-wrap:anywhere}
-.fb-admin .dl10c-session{overflow-wrap:anywhere}
-.fb-admin .dl10c-messages{display:grid;gap:16px;min-width:0}
-.fb-admin .dl10c-messages p{display:grid;gap:4px;white-space:pre-wrap;overflow-wrap:anywhere;margin:8px 0}
+.fb-admin .dl10c-item{display:flex;justify-content:space-between;align-items:center;gap:12px;border:1px solid var(--fb-ui-border);border-radius:10px;padding:12px;min-width:0}
+.fb-admin .dl10c-summary{min-width:0;flex:1 1 180px;overflow-wrap:anywhere}
+.fb-admin .dl10c-summary small{display:block;margin-top:4px;color:var(--fb-ui-muted)}
+.fb-product-modal .dl10c-session{overflow-wrap:anywhere}
+.fb-product-modal .dl10c-messages{display:grid;gap:16px;min-width:0}
+.fb-product-modal .dl10c-messages p{display:grid;gap:4px;white-space:pre-wrap;overflow-wrap:anywhere;margin:8px 0}
 @media(max-width:780px){.fb-admin .dl10c-item{align-items:flex-start;flex-wrap:wrap}.fb-admin .dl10c-filters label{flex-basis:100%}}

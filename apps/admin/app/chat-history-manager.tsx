@@ -80,7 +80,7 @@ export default function ChatHistoryManager({owner}:{owner:boolean}){
    {error&&<p className="dl4-error" role="alert">{error}</p>}
    {loading?<p role="status">Đang tải hội thoại…</p>:!error&&<>
     <h2>Hội thoại khách hàng</h2>
-    {!items.length?<p>Không có hội thoại phù hợp.</p>:<ul className="dl4-list">{items.map(item=><li className="dl4-item dl10c-item" key={item.session}>
+    {!items.length?<p>Không có hội thoại phù hợp.</p>:<ul className="dl4-list">{items.map(item=><li className="dl10c-item" key={item.session}>
      <div className="dl10c-summary"><strong>{item.latest||"Chưa có phản hồi"}</strong><small>Mã phiên: {item.session}</small>
       <small>{fmt(item.createdAt)} · Mới nhất: {fmt(item.updatedAt)} · {item.messageCount} tin nhắn</small></div>
      <button type="button" className="fb-ui-button fb-ui-button--secondary" onClick={()=>void detail(item,1)}>Xem chi tiết</button>

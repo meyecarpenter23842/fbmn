@@ -56,3 +56,11 @@ test("DL10C UI uses shared controls, confirmation and private relay",()=>{
  assert.match(read("apps/admin/app/page.tsx"),/Quản lý hội thoại/);
  assert.match(read("components/chatbot-widget.tsx"),/Futurebook lưu nội dung trò chuyện/);
 });
+
+test("DL10C list text actions and portal message wrapping use proper style owners",()=>{
+ const read=p=>readFileSync(new URL("../"+p,import.meta.url),"utf8");
+ const ui=read("apps/admin/app/chat-history-manager.tsx"),css=read("apps/admin/app/home-layout.css");
+ assert.doesNotMatch(ui,/className="dl4-item/);
+ assert.match(css,/\.fb-product-modal \.dl10c-messages p\{[^}]*white-space:pre-wrap;overflow-wrap:anywhere/);
+ assert.match(css,/\.fb-admin \.dl10c-item\{display:flex/);
+});
