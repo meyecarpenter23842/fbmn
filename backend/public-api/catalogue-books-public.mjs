@@ -23,7 +23,7 @@ export function parseCataloguePublicQuery(url){
  }
  return null;
 }
-export async function handlePublicCatalogueRequest({request,enabled,allowedOrigins,r2,listBooks,getBook,getAssets,getKey}){
+export async function handlePublicCatalogueRequest({request,enabled,allowedOrigins,r2,listBooks,getSettings,getBook,getAssets,getKey}){
  if(!enabled)return fail(404,"not_found");
  if(request.method!=="GET")return fail(405,"method_not_allowed");
  const origin=request.headers.get("origin");
@@ -32,10 +32,18 @@ export async function handlePublicCatalogueRequest({request,enabled,allowedOrigi
  if(!parsed)return fail(400,"invalid_query");
  try{
   if(parsed.kind==="list"){
-   if(typeof listBooks!=="function")return fail(503,"catalogue_unavailable");
-   const books=await listBooks();
-   if(!Array.isArray(books)||books.length>100)return fail(503,"catalogue_unavailable");
-   return ok({books:books.map(b=>({id:b.id,title:b.title,edition:b.edition}))});
+   if(typeof listBooks!=="function"||typeof getSettings!=="function")
+    return fail(503,"catalogue_unavailable");
+   const [books,settings]=await Promise.all([listBooks(),getSettings()]);
+   if(!Array.isArray(books)||books.length>100||
+    !Number.isSafeInteger(settings?.flipDurationMs)||settings.flipDurationMs<750||
+    settings.flipDurationMs>1500||settings.flipDurationMs%50!==0||
+    typeof settings.soundEnabled!=="boolean"||
+    typeof settings.shadowOpacity!=="number"||settings.shadowOpacity<0.1||
+    settings.shadowOpacity>0.5)return fail(503,"catalogue_unavailable");
+   return ok({books:books.map(b=>({id:b.id,title:b.title,edition:b.edition})),
+    viewerSettings:{flipDurationMs:settings.flipDurationMs,soundEnabled:settings.soundEnabled,
+     shadowOpacity:settings.shadowOpacity}});
   }
   if(parsed.kind==="detail"){
    if(typeof getBook!=="function"||typeof getAssets!=="function")

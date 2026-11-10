@@ -1,3 +1,5 @@
+**DL7C-S — Owner chỉnh vị trí cấu hình 10/11/2026:** tốc độ lật (750–1500ms), tiếng giấy (on/off) và bóng trang (0,10–0,50) **CHỈ** quản lý tập trung tại **Admin → Website Futurebook → Kho Catalogue → Cài đặt sách lật**, lưu Neon revision/audit. Website Catalogue chỉ đọc settings đã duyệt, không hiển thị nút cài đặt/đổi âm thanh cho khách; tiếng giấy chỉ phát khi chính sách trình duyệt cho phép sau thao tác lật. Tất cả bộ dùng chung settings; nền G05 chung không đổi. Migration rehearsal → PR CI/Codex → upstream → production theo phép phát hành Owner; không xóa ảnh R2/metadata/SKU/NET.
+
 # FUTUREBOOK MIỀN NAM — ROADMAP DUY NHẤT (v1.4, Website đại lý & Admin theo kênh)
 
 **Chốt module sản phẩm:** 01/11/2026; **cập nhật IA Admin theo kênh:** 08/11/2026 (giữ lịch sử nguồn 29/10). **Chủ sở hữu scope:** Futurebook Miền Nam.  

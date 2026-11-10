@@ -266,7 +266,8 @@ export async function handleCatalogueBooks({request,actor,db,r2}){
   if(request.method!=="POST"||u.search)return fail(405,"method_not_allowed");
   if(action==="upload")return upload(db,r2,actor.subject,request);
   const input=await bodyJson(request);
-  if(!input||typeof input!=="object"||Array.isArray(input))return fail(400,"invalid_book");
+  if(!input||typeof input!=="object"||Array.isArray(input))
+   return fail(400,action==="settings"?"invalid_settings":"invalid_book");
   if(action==="create")return ok(await createBook(db,actor.subject,input));
   if(["save","ready","hide","reorder","remove"].includes(action))
    return ok(await mutate(db,r2,actor.subject,action,input));

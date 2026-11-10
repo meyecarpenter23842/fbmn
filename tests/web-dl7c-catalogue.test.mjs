@@ -9,6 +9,7 @@ const URL_ROOT="https://public.example/v1/public/";
 const req=(suffix,method="GET",origin)=>new Request(URL_ROOT+suffix,
  {method,headers:origin?{origin}:{}});
 const book={id:ID,title:"Catalogue Futurebook",edition:"2026"};
+const viewerSettings={flipDurationMs:950,soundEnabled:false,shadowOpacity:0.26};
 const asset={id:ASSET,kind:"page",sortOrder:0,width:1200,height:1600};
 const key="books/"+ID+"/pages/"+ASSET+".webp";
 const readFile=(path)=>readFileSync(new URL("../"+path,import.meta.url),"utf8");
@@ -45,12 +46,16 @@ test("DL7C manifest includes only DTO metadata and excludes R2 key and NET",asyn
  const api=async request=>handlePublicCatalogueRequest({
   request,enabled:true,allowedOrigins:[],
   listBooks:async()=>[book],
+  getSettings:async()=>viewerSettings,
   getBook:async id=>id===ID?book:null,
   getAssets:async()=>[asset],
   getKey:async()=>null,r2:null
  });
  const list=await api(req("catalogue-books"));
- assert.equal(list.status,200);assert.deepEqual((await list.json()).data.books,[book]);
+ assert.equal(list.status,200);
+ const listing=(await list.json()).data;
+ assert.deepEqual(listing.books,[book]);
+ assert.deepEqual(listing.viewerSettings,viewerSettings);
  const detail=await api(req("catalogue-books?id="+ID));
  assert.equal(detail.status,200);
  const body=(await detail.json()).data;
@@ -82,20 +87,22 @@ test("DL7C read model only queries security-filtered public views",async()=>{
  const model=createReadModel(async (sql,args=[])=>{
   inputs.push({sql,args});
   if(sql===PUBLIC_READ_QUERIES.catalogueBooks)return [{...book}];
+  if(sql===PUBLIC_READ_QUERIES.catalogueViewerSettings)return [{flip_duration_ms:950,sound_enabled:false,shadow_opacity:"0.26"}];
   if(sql===PUBLIC_READ_QUERIES.catalogueBook)return [{...book}];
   if(sql===PUBLIC_READ_QUERIES.catalogueAssets)return [{...asset,sort_order:0}];
   if(sql===PUBLIC_READ_QUERIES.catalogueAssetKey)return [{r2_key:key,byte_size:120}];
   throw Error("Unknown SQL");
  });
  assert.deepEqual(await model.getReadyCatalogueBooks(),[book]);
+ assert.deepEqual(await model.getCatalogueViewerSettings(),viewerSettings);
  assert.deepEqual(await model.getReadyCatalogueBook(ID),book);
  assert.equal((await model.getReadyCatalogueAssets(ID))[0].id,ASSET);
  assert.equal((await model.getReadyCatalogueAssetKey(ASSET)).key,key);
- assert.equal(inputs.length,4);
- assert.ok(inputs.every(x=>x.sql.includes("fbmn_public.v_catalogue_ready_")));
+ assert.equal(inputs.length,5);
+ assert.ok(inputs.every(x=>x.sql.includes("fbmn_public.v_catalogue_")));
  assert.ok(inputs.every(x=>!x.sql.includes("fbmn_catalog_private.")));
  assert.equal(await model.getReadyCatalogueAssetKey("../../private"),null);
- assert.equal(inputs.length,4);
+ assert.equal(inputs.length,5);
 });
 
 test("DL7C migration hides draft/hidden and never grants private table access",()=>{
@@ -178,13 +185,15 @@ test("DL7C-R page curl and paper audio are interaction-based and reduced-motion-
  assert.equal(pkg.dependencies["page-flip"],"2.0.7");
  assert.equal(pkg.devDependencies["@types/page-flip"],"2.0.4");
  assert.match(ui,/const \{PageFlip\}=await import\("page-flip"\)/);
- assert.match(ui,/flippingTime:950/);
- assert.match(ui,/maxShadowOpacity:0\.26/);
+ assert.match(ui,/flippingTime:viewerSettings.flipDurationMs/);
+ assert.match(ui,/maxShadowOpacity:viewerSettings.shadowOpacity/);
  assert.match(ui,/flipNext\("bottom" as FlipCorner\)/);
  assert.match(ui,/turnToNextPage\(\)/);
  assert.match(ui,/new AudioContext\(\)/);
- assert.match(ui,/aria-pressed=\{soundEnabled\}/);
- assert.match(ui,/soundRef\.current/);
+ assert.doesNotMatch(ui,/aria-pressed=\{soundEnabled\}/);
+ assert.doesNotMatch(ui,/Âm lật: /);
+ assert.match(ui,/viewerRef\.current.soundEnabled/);
+ assert.match(ui,/onPointerDownCapture=\{unlockAudio\}/);
  assert.match(ui,/if\(reduced\)/);
  assert.doesNotMatch(ui,/fb-catalogue-turn--next|@keyframes fb-dl7c-next/);
 });
@@ -242,4 +251,22 @@ test("DL7C-R preserves the requested right-hand leaf through PageFlip init event
  assert.match(ui,/if\(initializing\)\{activeRef\.current=n;setActive\(n\);return;\}/);
  assert.match(ui,/flip\.loadFromHTML\(nodes\);\s*initializing=false/);
  assert.match(ui,/setSelectedPage\(position\);setDetail\(payload\)/);
+});
+
+test("DL7C-S admin-owned settings: no visitor toggles and browser-safe sound",()=>{
+ const web=readFile("app/catalogue/catalogue-flipbook.tsx");
+ const admin=readFile("apps/admin/app/catalogue-book-manager.tsx");
+ const migration=readFile("backend/neon/migrations/20261110_dl7c_admin_viewer_settings.up.sql");
+ assert.match(admin,/Cài đặt sách lật/);
+ assert.match(admin,/Lưu cài đặt/);
+ assert.match(admin,/flipDurationMs/);
+ assert.match(admin,/soundEnabled/);
+ assert.match(admin,/shadowOpacity/);
+ assert.doesNotMatch(web,/setSoundEnabled|toggleAudio|Âm lật:/);
+ assert.match(web,/viewerSettings\.flipDurationMs/);
+ assert.match(web,/viewerSettings\.shadowOpacity/);
+ assert.match(web,/onPointerDownCapture=\{unlockAudio\}/);
+ assert.match(migration,/v_catalogue_viewer_settings WITH \(security_barrier=true\)/);
+ assert.match(migration,/GRANT SELECT ON fbmn_public\.v_catalogue_viewer_settings TO fbmn_public_reader/);
+ assert.doesNotMatch(migration,/GRANT (?:SELECT|UPDATE) ON fbmn_catalog_private\.website_catalogue_viewer_settings TO fbmn_public_reader/);
 });
