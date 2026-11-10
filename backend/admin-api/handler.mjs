@@ -41,7 +41,7 @@ function reply(status, body, corsOrigin) {
   if (corsOrigin) headers.set("Access-Control-Allow-Origin", corsOrigin);
   return new Response(JSON.stringify(body), { status, headers });
 }
-export function createAdminApi({ verifyToken, loadActor, listChannels, recordAudit, catalogueDb, catalogueR2, catalogueBookR2, googleSecret, cmsPublicSurfaceReady = false, allowedOrigins = [] }) {
+export function createAdminApi({ verifyToken, loadActor, listChannels, recordAudit, catalogueDb, catalogueR2, catalogueBookR2, googleSecret, credentialStore, cmsPublicSurfaceReady = false, allowedOrigins = [] }) {
   if (![verifyToken,loadActor,listChannels,recordAudit].every(f => typeof f === "function")) {
     throw new Error("ADM-01 dependencies required");
   }
@@ -112,7 +112,7 @@ export function createAdminApi({ verifyToken, loadActor, listChannels, recordAud
       }
       if (action === "website.layout") {
         const params={request,actor:{...actor,subject},db:catalogueDb};
-        if(url.pathname === "/v1/admin/website/chatbot-config")return handleChatbotConfig({...params,googleSecret});
+        if(url.pathname === "/v1/admin/website/chatbot-config")return handleChatbotConfig({...params,googleSecret,credentialStore});
         return url.pathname === "/v1/admin/website/category-display"
           ? handleCategoryDisplay(params) : url.pathname === "/v1/admin/website/outsourcing-requests"
             ? handleOutsourcingRequests(params) : url.pathname === "/v1/admin/website/contact-requests" ? handleContactRequests(params) : handleHomeLayout(params);

@@ -24,6 +24,57 @@ export function parseConfigFile(raw){
  s=s.replace(/^(?:export\s+default\s+|module\.exports\s*=\s*)/,"").replace(/;\s*$/,"");
  try{return normalizeConfig(JSON.parse(s));}catch{return null;}
 }
+const PROJECT=/^[a-z][a-z0-9-]{4,28}[a-z0-9]$/;
+export function parseServiceAccount(raw){
+ if(typeof raw!=="string"||raw.length>16384)return null;
+ try{
+  const v=JSON.parse(raw.replace(/^\uFEFF/,"").trim().replace(/^(?:export\s+default\s+|module\.exports\s*=\s*)/,"").replace(/;\s*$/,""));
+  if(v?.type!=="service_account"||!PROJECT.test(v.project_id||"")||
+   typeof v.client_email!=="string"||!/^[a-z0-9._-]+@[a-z0-9.-]+\.iam\.gserviceaccount\.com$/i.test(v.client_email)||
+   typeof v.private_key!=="string"||!/^-----BEGIN PRIVATE KEY-----\r?\n[\s\S]+-----END PRIVATE KEY-----\r?\n?$/.test(v.private_key))return null;
+  return {type:"service_account",project_id:v.project_id,client_email:v.client_email,private_key:v.private_key};
+ }catch{return null;}
+}
+function cxHost(location){return location==="global"?"dialogflow.googleapis.com":location+"-dialogflow.googleapis.com";}
+async function listPages(root,field,token,fetcher,signal){
+ const rows=[];let page="";
+ for(let i=0;i<10;i++){
+  const query=new URLSearchParams({pageSize:"100",...(page?{pageToken:page}:{})});
+  const data=await googleJson(root+"?"+query,token,fetcher,signal);
+  rows.push(...(Array.isArray(data[field])?data[field]:[]));
+  page=typeof data.nextPageToken==="string"?data.nextPageToken:"";
+  if(!page)return rows;
+ }
+ throw Error("google_unavailable");
+}
+export async function listCxAgents(projectId,secret,fetcher=fetch){
+ if(!PROJECT.test(projectId))throw Error("invalid_config");
+ const token=await tokenFor(secret,fetcher),signal=AbortSignal.timeout(45000);
+ const locations=await listPages("https://dialogflow.googleapis.com/v3/projects/"+projectId+"/locations","locations",token,fetcher,signal);
+ const regions=[...new Set(["global",...locations.map(x=>x.locationId||x.name?.split("/").pop()).filter(x=>LOCATIONS.has(x))])];
+ const agents=[],failedLocations=[];
+ for(let i=0;i<regions.length;i+=4)await Promise.all(regions.slice(i,i+4).map(async location=>{
+  const parent="projects/"+projectId+"/locations/"+location+"/agents";
+  try{
+   const rows=await listPages("https://"+cxHost(location)+"/v3/"+parent,"agents",token,fetcher,signal);
+   for(const row of rows){
+    const id=row.name?.startsWith(parent+"/")?row.name.slice(parent.length+1):"";
+    if(UUID.test(id))agents.push({id,location,name:typeof row.displayName==="string"?row.displayName.slice(0,200):id});
+   }
+  }catch{failedLocations.push(location);}
+ }));
+ if(failedLocations.length===regions.length)throw Error("google_unavailable");
+ return {agents:agents.sort((a,b)=>a.name.localeCompare(b.name)),failedLocations};
+}
+export async function listCxEnvironments(config,secret,fetcher=fetch){
+ const token=await tokenFor(secret,fetcher),signal=AbortSignal.timeout(25000);
+ const parent="projects/"+config.projectId+"/locations/"+config.location+"/agents/"+config.agentId+"/environments";
+ const rows=await listPages("https://"+cxHost(config.location)+"/v3/"+parent,"environments",token,fetcher,signal);
+ return {environments:rows.flatMap(row=>{
+  const id=row.name?.startsWith(parent+"/")?row.name.slice(parent.length+1):"";
+  return UUID.test(id)?[{id,name:typeof row.displayName==="string"?row.displayName.slice(0,200):id}]:[];
+ })};
+}
 function fromRow(row){
  if(!row)throw Error("config_unavailable");
  return {config:row.config,revision:Number(row.revision)};
@@ -82,7 +133,7 @@ export async function discoverCx(config,secret,fetcher=fetch){
  if(SUPPORTED.includes(current))found.add(current);
  return {models:SUPPORTED.filter(m=>found.has(m)),currentModel:typeof current==="string"&&/^[a-z0-9-]{1,80}$/.test(current)?current:""};
 }
-export async function handleChatbotConfig({request,actor,db,googleSecret,discover=discoverCx}){
+export async function handleChatbotConfig({request,actor,db,googleSecret,credentialStore,discover=discoverCx,listAgents=listCxAgents,listEnvironments=listCxEnvironments}){
  const url=new URL(request.url);
  if(url.pathname!=="/v1/admin/website/chatbot-config")return fail(404,"not_found");
  if(actor?.role!=="owner")return fail(403,"forbidden");
@@ -92,28 +143,46 @@ export async function handleChatbotConfig({request,actor,db,googleSecret,discove
  try{
   if(request.method==="GET"){
    const data=await db(async client=>fromRow((await client.query("SELECT config,revision FROM "+TABLE+" WHERE singleton=true")).rows[0]));
-   return ok({...data,credentialsConfigured:typeof googleSecret==="string"&&googleSecret.length>0});
+   return ok({...data,credentialsConfigured:Boolean(await credentialStore?.read(data.revision)||googleSecret)});
   }
   if(request.headers.get("content-type")?.split(";")[0]!=="application/json")return fail(415,"invalid_content_type");
   if(Number(request.headers.get("content-length")||0)>20000)return fail(413,"too_large");
   const raw=await request.text();if(raw.length>20000)return fail(413,"too_large");
   let body;try{body=JSON.parse(raw);}catch{return fail(400,"invalid_config");}
   if(!body||typeof body!=="object"||Array.isArray(body))return fail(400,"invalid_config");
+  // Uploaded key stays request-local until the Owner commits a validated configuration.
+  const account=body.credential===undefined?null:parseServiceAccount(body.credential);
+  if(body.credential!==undefined&&!account)return fail(400,"invalid_config");
+  const readStored=async()=>{
+   const row=await db(async client=>fromRow((await client.query("SELECT config,revision FROM "+TABLE+" WHERE singleton=true")).rows[0]));
+   return await credentialStore?.read(row.revision)||googleSecret;
+  };
+  const getSecret=async()=>account?JSON.stringify(account):await readStored();
+  if(body.operation==="list_agents"){
+   if(Object.keys(body).some(k=>!["operation","projectId","credential"].includes(k))||!PROJECT.test(body.projectId||"")||(account&&account.project_id!==body.projectId))return fail(400,"invalid_config");
+   const secret=await getSecret();if(!secret)return fail(503,"credentials_missing");
+   return ok(await listAgents(body.projectId,secret));
+  }
   if(body.operation==="import"){
    if(Object.keys(body).some(k=>!["operation","raw"].includes(k)))return fail(400,"invalid_config");
    const config=parseConfigFile(body.raw);return config?ok({config}):fail(400,"invalid_config");
   }
-  if(Object.keys(body).some(k=>!["operation","config","revision"].includes(k)))return fail(400,"invalid_config");
-  const config=normalizeConfig(body.config);if(!config)return fail(400,"invalid_config");
+  if(Object.keys(body).some(k=>!["operation","config","revision","credential"].includes(k)))return fail(400,"invalid_config");
+  const config=normalizeConfig(body.config);if(!config||(account&&account.project_id!==config.projectId))return fail(400,"invalid_config");
+  if(body.operation==="list_environments"){
+   const secret=await getSecret();if(!secret)return fail(503,"credentials_missing");
+   return ok(await listEnvironments(config,secret));
+  }
   if(body.operation==="discover"){
-   if(!googleSecret)return fail(503,"credentials_missing");
-   return ok(await discover(config,googleSecret));
+   const secret=await getSecret();if(!secret)return fail(503,"credentials_missing");
+   return ok(await discover(config,secret));
   }
   if(body.operation!=="save"||!Number.isSafeInteger(body.revision)||body.revision<1)return fail(400,"invalid_config");
+  if(account&&(!credentialStore||!config.model||config.environmentId==="draft"))return fail(400,"invalid_config");
   // Blank model is a saved draft; a selected model must be observed by Google on every save.
   if(config.model){
-   if(!googleSecret)return fail(503,"credentials_missing");
-   const result=await discover(config,googleSecret);
+   const secret=await getSecret();if(!secret)return fail(503,"credentials_missing");
+   const result=await discover(config,secret);
    if(!result.models.includes(config.model))return fail(400,"model_unavailable");
   }
   const data=await db(async client=>{
@@ -121,6 +190,8 @@ export async function handleChatbotConfig({request,actor,db,googleSecret,discove
    try{
     const before=fromRow((await client.query("SELECT config,revision FROM "+TABLE+" WHERE singleton=true FOR UPDATE")).rows[0]);
     if(before.revision!==body.revision)throw Error("revision_conflict");
+    const retained=account?JSON.stringify(account):await credentialStore?.read(before.revision);
+    if(retained)await credentialStore.write(before.revision+1,retained);
     const after=fromRow((await client.query("UPDATE "+TABLE+" SET config=$1::jsonb,revision=revision+1,updated_by=$2,updated_at=now() WHERE singleton=true RETURNING config,revision",[JSON.stringify(config),actor.subject])).rows[0]);
     await client.query("INSERT INTO "+TABLE+"_audit(revision,actor_subject,before_data,after_data) VALUES($1,$2,$3::jsonb,$4::jsonb)",[after.revision,actor.subject,JSON.stringify(before.config),JSON.stringify(after.config)]);
     await client.query("COMMIT");return after;

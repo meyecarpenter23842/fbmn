@@ -1,13 +1,14 @@
 import { createAdminStagingWorker } from "./staging-worker.mjs";
 import {WorkerEntrypoint} from "cloudflare:workers";
 import {Client} from "pg";
+import {createCredentialStore} from "./chatbot-credentials.mjs";
 import {runChat} from "./chatbot-runtime.mjs";
 export default createAdminStagingWorker({});
 // Named RPC entrypoint is only reachable through a Cloudflare service binding.
 export class ChatbotGateway extends WorkerEntrypoint {
  async chat(request,visitor){
   const env=this.env;
-  return runChat({request,visitor,secret:env.DIALOGFLOW_SERVICE_ACCOUNT_JSON,db:async()=>{
+  return runChat({request,visitor,secret:env.DIALOGFLOW_SERVICE_ACCOUNT_JSON,loadSecret:revision=>createCredentialStore(env.CHATBOT_CREDENTIALS_R2,env.CHATBOT_CREDENTIAL_KEY)?.read(revision),db:async()=>{
    if(env.EXPECTED_ADMIN_DB_ROLE!=="fbmn_admin_http_staging"||!env.ADMIN_HYPERDRIVE?.connectionString)throw Error("unavailable");
    const client=new Client({connectionString:env.ADMIN_HYPERDRIVE.connectionString,connectionTimeoutMillis:3500,query_timeout:3500,statement_timeout:3500});
    try{await client.connect();
