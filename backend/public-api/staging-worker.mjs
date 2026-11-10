@@ -68,6 +68,12 @@ export function createStagingWorker({createDbClient}) {
       try {
         const origins=env.PUBLIC_ALLOWED_ORIGINS.split(",").map(s=>s.trim()).filter(Boolean);
         if(url.pathname===OUTSOURCING_ROUTE){
+          if(env.PUBLIC_DL6_ENABLED!=="true"||typeof env.OUTSOURCING_RATE_LIMITER?.limit!=="function")
+            return error(503,"intake_unavailable");
+          let limited;
+          try{limited=await env.OUTSOURCING_RATE_LIMITER.limit({key:"dl6:"+(request.headers.get("CF-Connecting-IP")||"unknown").slice(0,100)});}
+          catch{return error(503,"intake_unavailable");}
+          if(limited?.success!==true)return error(429,"rate_limited");
           return handleOutsourcingRequest({request,enabled:env.PUBLIC_DL6_ENABLED==="true",allowedOrigins:origins,
             submit:async data=>{
               const client=createDbClient({connectionString:env.HYPERDRIVE.connectionString,
