@@ -3,6 +3,7 @@ import {useCallback,useEffect,useMemo,useRef,useState} from "react";
 import type {KeyboardEvent} from "react";
 import Link from "next/link";
 import type {PageFlip,SizeType,FlipCorner} from "page-flip";
+import {canFlipForward,canFlipBackward} from "@/lib/catalogue/spread-navigation";
 
 type Asset={id:string;width:number;height:number};
 type Book={id:string;title:string;edition:string};
@@ -74,6 +75,8 @@ export default function CatalogueFlipbook(){
    ...detail.pages.map((asset,i)=>({asset,label:"Trang "+(i+1)}))];
  },[detail]);
  const zoomLeaf=leaves[zoomIndex]||leaves[active];
+ const canPrev=canFlipBackward(active,portrait,Boolean(detail?.cover));
+ const canNext=canFlipForward(active,leaves.length,portrait,Boolean(detail?.cover));
  useEffect(()=>{soundRef.current=soundEnabled;},[soundEnabled]);
  useEffect(()=>{reducedRef.current=reduced;},[reduced]);
 
@@ -172,6 +175,9 @@ export default function CatalogueFlipbook(){
     const {PageFlip}=await import("page-flip");
     if(cancelled)return;
     host.replaceChildren();
+    const disposable=document.createElement("div");
+    disposable.className="fb-catalogue-engine-root";
+    host.append(disposable);
     const nodes=leaves.map(({asset,label},i)=>{
      const leaf=document.createElement("div");
      leaf.className="fb-catalogue-paper";
@@ -185,7 +191,7 @@ export default function CatalogueFlipbook(){
      leaf.append(img);
      return leaf;
     });
-    flip=new PageFlip(host,{
+    flip=new PageFlip(disposable,{
      width:440,height:610,size:"stretch" as SizeType,minWidth:185,maxWidth:555,
      minHeight:256,maxHeight:770,autoSize:false,
      flippingTime:950,drawShadow:true,maxShadowOpacity:0.26,
@@ -193,7 +199,6 @@ export default function CatalogueFlipbook(){
      mobileScrollSupport:true,useMouseEvents:!reducedRef.current,
      disableFlipByClick:true,startPage:Math.min(startIndex,nodes.length-1)
     });
-    engineRef.current=flip;
     flip.on("flip",event=>{
      if(cancelled)return;
      const n=Number(event.data);
@@ -209,6 +214,7 @@ export default function CatalogueFlipbook(){
     });
     flip.on("changeOrientation",event=>{if(!cancelled)setPortrait(event.data==="portrait");});
     flip.loadFromHTML(nodes);
+    engineRef.current=flip;
     setPortrait(flip.getOrientation()==="portrait");
     // Covers can display only on the right. Keep the manifest index in the URL.
    }catch{if(!cancelled){setError("Không khởi tạo được hiệu ứng lật trang.");}}
@@ -224,12 +230,17 @@ export default function CatalogueFlipbook(){
   const flip=engineRef.current;
   if(!flip)return;
   flip.turnToPage(next);
-  activeRef.current=next;setActive(next);
-  window.history.replaceState(window.history.state,"",deepLink(detail.book.id,next));
+  const visible=flip.getCurrentPageIndex();
+  activeRef.current=visible;setActive(visible);
+  window.history.replaceState(window.history.state,"",deepLink(detail.book.id,visible));
  };
  const turn=(direction:"next"|"prev")=>{
   if(turning||!engineRef.current||!detail)return;
   const book=engineRef.current;
+  const index=book.getCurrentPageIndex();
+  const onePage=book.getOrientation()==="portrait";
+  if(direction==="next"&&!canFlipForward(index,leaves.length,onePage,Boolean(detail.cover)))return;
+  if(direction==="prev"&&!canFlipBackward(index,onePage,Boolean(detail.cover)))return;
   if(reduced){
    direction==="next"?book.turnToNextPage():book.turnToPrevPage();
    const n=book.getCurrentPageIndex();
@@ -307,14 +318,14 @@ export default function CatalogueFlipbook(){
     </div>
     <div className="fb-catalogue-reader" role="region" aria-label={"Sách lật "+detail.book.title}>
      <button type="button" className="fb-glass-button fb-glass-button--secondary fb-catalogue-nav fb-catalogue-nav--prev"
-      aria-label="Trang trước" disabled={turning||active<=0} onClick={()=>turn("prev")}>
+      aria-label="Trang trước" disabled={turning||!canPrev} onClick={()=>turn("prev")}>
       <span className="fb-catalogue-nav-glyph" aria-hidden="true">‹</span></button>
      <div className="fb-catalogue-book-shell">
       <div className="fb-catalogue-book-edge" aria-hidden="true"/>
       <div className="fb-catalogue-book-host" ref={bookRef} aria-label="Kéo mép hoặc góc giấy để lật trang"/>
      </div>
      <button type="button" className="fb-glass-button fb-glass-button--secondary fb-catalogue-nav fb-catalogue-nav--next"
-      aria-label="Trang tiếp" disabled={turning||active>=leaves.length-1} onClick={()=>turn("next")}>
+      aria-label="Trang tiếp" disabled={turning||!canNext} onClick={()=>turn("next")}>
       <span className="fb-catalogue-nav-glyph" aria-hidden="true">›</span></button>
     </div>
     <div className="fb-catalogue-toolbar" role="toolbar" aria-label="Công cụ sách">

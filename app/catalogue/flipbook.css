@@ -32,7 +32,8 @@
 .fb-catalogue-book-shell{position:relative;flex:0 1 1120px;width:min(84vw,1120px);height:clamp(315px,57vw,718px);min-width:0;filter:drop-shadow(0 24px 22px rgba(52,24,69,.24))}
 .fb-catalogue-book-edge{position:absolute;inset:11px 10px -7px;border-radius:3px;background:repeating-linear-gradient(180deg,#f9f7f4 0,#ddd5d3 1px,#fff 2px,#f7f3f0 3px);box-shadow:0 10px 20px rgba(48,23,56,.12),0 1px 3px rgba(57,19,80,.16);pointer-events:none}
 .fb-catalogue-book-host{position:relative;width:100%;height:100%;z-index:1}
-.fb-catalogue-book-host .stf__parent{margin:0 auto}
+.fb-catalogue-engine-root{width:100%;height:100%}
+.fb-catalogue-engine-root .stf__parent{margin:0 auto}
 .fb-catalogue-paper{position:relative;overflow:hidden;width:100%;height:100%;background:#fff;border:1px solid rgba(41,25,37,.1);box-shadow:inset 5px 0 9px rgba(57,27,44,.075),inset -4px 0 8px rgba(57,27,44,.05)}
 .fb-catalogue-paper::after{content:"";position:absolute;inset:0 0 0 auto;width:10px;background:linear-gradient(90deg,transparent,rgba(70,42,51,.13));pointer-events:none}
 .fb-catalogue-paper[data-density="hard"]{border:3px solid #e7dee3;box-shadow:inset 4px 0 8px rgba(40,20,60,.11),0 2px 6px rgba(28,14,34,.14)}

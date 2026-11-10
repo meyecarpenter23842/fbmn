@@ -188,3 +188,30 @@ test("DL7C-R page curl and paper audio are interaction-based and reduced-motion-
  assert.match(ui,/if\(reduced\)/);
  assert.doesNotMatch(ui,/fb-catalogue-turn--next|@keyframes fb-dl7c-next/);
 });
+
+test("DL7C-R never flips beyond final spread or before first (StPageFlip bounds)",async()=>{
+ const {canFlipForward,canFlipBackward,spreadStart}=await import("../lib/catalogue/spread-navigation.ts");
+ assert.equal(canFlipForward(6,8,false,false),false);
+ assert.equal(canFlipForward(7,8,false,false),false);
+ assert.equal(canFlipForward(4,8,false,false),true);
+ assert.equal(canFlipForward(7,9,false,true),false);
+ assert.equal(canFlipForward(8,9,false,true),false);
+ assert.equal(canFlipForward(0,9,false,true),true);
+ assert.equal(canFlipForward(0,1,false,true),false);
+ assert.equal(canFlipForward(7,9,true,true),true);
+ assert.equal(canFlipForward(8,9,true,true),false);
+ assert.equal(canFlipBackward(1,false,false),false);
+ assert.equal(canFlipBackward(1,false,true),true);
+ assert.equal(spreadStart(8,false,true),7);
+ const ui=readFile("app/catalogue/catalogue-flipbook.tsx");
+ assert.match(ui,/if\(direction==="next"&&!canFlipForward\(/);
+ assert.match(ui,/if\(direction==="prev"&&!canFlipBackward\(/);
+});
+test("DL7C-R uses a disposable StPageFlip mount and never destroys React host",()=>{
+ const ui=readFile("app/catalogue/catalogue-flipbook.tsx");
+ const css=readFile("app/catalogue/flipbook.css");
+ assert.match(ui,/const disposable=document\.createElement\("div"\)/);
+ assert.match(ui,/flip=new PageFlip\(disposable/);
+ assert.doesNotMatch(ui,/new PageFlip\(host/);
+ assert.match(css,/\.fb-catalogue-engine-root\{/);
+});
