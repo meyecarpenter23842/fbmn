@@ -3,10 +3,8 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { getDemoChatbotReply } from "@/lib/chatbot/demo-replies";
-import type { ChatbotReply } from "@/lib/chatbot/demo-replies";
 
-type ChatMessage = { id: number; author: "visitor" | "bot"; text: string; reply?: ChatbotReply };
+type ChatMessage = { id: number; author: "visitor" | "bot"; text: string; contact?: boolean };
 
 const quickQuestions = ["Sản phẩm", "Dành cho đại lý", "Liên hệ"];
 const welcomeMessage: ChatMessage = {
@@ -33,7 +31,8 @@ export function ChatbotWidget() {
   const [typing, setTyping] = useState(false);
   const pending = useRef(false);
   const nextId = useRef(1);
-  const timer = useRef<number | null>(null);
+  const session = useRef<string | null>(null);
+  const controller = useRef<AbortController | null>(null);
   const launcher = useRef<HTMLButtonElement>(null);
   const input = useRef<HTMLInputElement>(null);
   const feed = useRef<HTMLDivElement>(null);
@@ -60,10 +59,10 @@ export function ChatbotWidget() {
   }, [open]);
 
   useEffect(() => () => {
-    if (timer.current !== null) window.clearTimeout(timer.current);
+    controller.current?.abort();
   }, []);
 
-  const submitMessage = (raw: string) => {
+  const submitMessage = async (raw: string) => {
     const text = raw.trim().slice(0, 300);
     if (!text || pending.current) return;
     pending.current = true;
@@ -71,18 +70,25 @@ export function ChatbotWidget() {
     setMessages(current => [...current, { id: nextId.current++, author: "visitor", text }]);
     setTyping(true);
 
-    // Demo only: local, curated answer. A future server-side Dialogflow CX
-    // adapter replaces the reply provider, not the widget or chat protocol.
-    const reply = getDemoChatbotReply(text);
-    const delay = Math.min(1600, Math.max(850, 650 + text.length * 14));
-    timer.current = window.setTimeout(() => {
-      setMessages(current => [...current, {
-        id: nextId.current++, author: "bot", text: reply.text, reply,
-      }]);
-      setTyping(false);
-      pending.current = false;
-      timer.current = null;
-    }, delay);
+    const abort=new AbortController();
+    controller.current=abort;
+    session.current??=crypto.randomUUID();
+    try{
+      const response=await fetch("/api/chat",{method:"POST",cache:"no-store",credentials:"same-origin",
+        headers:{"Content-Type":"application/json"},signal:abort.signal,
+        body:JSON.stringify({session:session.current,text})});
+      const result=await response.json() as {ok?:boolean;text?:unknown};
+      if(abort.signal.aborted)return;
+      if(!response.ok||result.ok!==true||typeof result.text!=="string")
+        throw Error(response.status===429?"rate":"unavailable");
+      setMessages(current=>[...current,{id:nextId.current++,author:"bot",text:result.text as string}]);
+    }catch(error){
+      if(!abort.signal.aborted)setMessages(current=>[...current,{id:nextId.current++,author:"bot",
+        text:error instanceof Error&&error.message==="rate"?"Bạn gửi tin nhắn hơi nhanh. Vui lòng thử lại sau ít phút.":"Chatbot hiện chưa kết nối hoặc tạm thời không phản hồi. Anh/chị có thể liên hệ Futurebook để được hỗ trợ.",contact:true}]);
+    }finally{
+      if(!abort.signal.aborted)setTyping(false);
+      pending.current=false;controller.current=null;
+    }
   };
 
   const close = () => {
@@ -91,7 +97,7 @@ export function ChatbotWidget() {
   };
 
   return (
-    <div className="fb-chat" data-chatbot-mode="demo">
+    <div className="fb-chat" data-chatbot-mode="live">
       {open && (
         <section
           className="fb-chat__panel"
@@ -105,7 +111,7 @@ export function ChatbotWidget() {
             <span className="fb-chat__head-avatar"><Avatar small /></span>
             <span className="fb-chat__heading">
               <strong id="fb-chat-title">Futurebook Miền Nam</strong>
-              <small id="fb-chat-mode">Hỗ trợ nhanh · Câu trả lời soạn sẵn</small>
+              <small id="fb-chat-mode">Trợ lý Futurebook · Dialogflow CX</small>
             </span>
             <button type="button" className="fb-chat__close" onClick={close} aria-label="Đóng chatbot">
               <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M5 5l14 14M19 5L5 19"/></svg>
@@ -117,7 +123,7 @@ export function ChatbotWidget() {
                 {message.author === "bot" && <span className="fb-chat__mini-avatar"><Avatar small /></span>}
                 <div className="fb-chat__bubble">
                   <p>{message.text}</p>
-                  {message.reply?.href && <Link href={message.reply.href} onClick={close}>{message.reply.actionLabel} <span aria-hidden="true">→</span></Link>}
+                  {message.contact && <Link href="/lien-he" onClick={close}>Liên hệ Futurebook <span aria-hidden="true">→</span></Link>}
                 </div>
               </div>
             ))}
@@ -143,7 +149,7 @@ export function ChatbotWidget() {
               <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m3 11 18-8-8 18-3-8-7-2zM10 13l11-10"/></svg>
             </button>
           </form>
-          <p className="fb-chat__notice">Tin nhắn chỉ ở phiên trang này, không gửi lên máy chủ. Hỗ trợ theo câu trả lời soạn sẵn.</p>
+          <p className="fb-chat__notice">Tin nhắn được gửi tới Google Dialogflow CX để trả lời. Không nhập mật khẩu, giá NET hoặc thông tin cá nhân. Futurebook chưa lưu lịch sử chat trong hệ thống.</p>
         </section>
       )}
       <button
