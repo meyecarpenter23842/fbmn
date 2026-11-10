@@ -1,7 +1,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import type { ProductGroup, PublicCatalog, PublicProduct } from "@/lib/catalog/schema";
-import type { CatalogFilters } from "@/lib/catalog/query";
+import type { CatalogFilters, ListingProduct } from "@/lib/catalog/query";
 import { GROUP_LABELS, SORT_OPTIONS, filtersToParams, searchCatalog } from "@/lib/catalog/query";
 import { getPublishedProductImageUrl } from "@/lib/catalog/product-image";
 import { SiteHeader } from "@/components/site-header";
@@ -27,7 +27,7 @@ export function CatalogBreadcrumb({ trail }: { trail: Array<{ label: string; hre
   </nav>;
 }
 
-export function ProductCard({ product, glass = false }: { product: PublicProduct; glass?: boolean }) {
+export function ProductCard({ product, glass = false }: { product: ListingProduct; glass?: boolean }) {
   const media = product.media[0];
   const image = media ? getPublishedProductImageUrl(media.r2Key, process.env.NEXT_PUBLIC_MEDIA_BASE_URL) : null;
   const label = product.priceLabel ?? (
@@ -35,7 +35,8 @@ export function ProductCard({ product, glass = false }: { product: PublicProduct
       ? formatRetail(product.variants.find(v => v.price)!.price!.amountVnd)
       : "Liên hệ báo giá"
   );
-  const href = "/san-pham/" + encodeURIComponent(product.slug);
+  const href = "/san-pham/" + encodeURIComponent(product.slug) +
+    (product.listingSku ? "?sku="+encodeURIComponent(product.listingSku) : "");
   // One navigable link per card; no nested link or redundant detail button.
   const content = <Link href={href} prefetch={false}
     aria-label={"Xem sản phẩm " + product.name}
@@ -44,8 +45,8 @@ export function ProductCard({ product, glass = false }: { product: PublicProduct
       <CatalogProductImage src={image} alt={media?.alt ?? product.name} className="catalog-image-compact"/>
     </div>
     <div className={glass ? "fb-song-related-body" : "catalog-product__body"}>
-      <h3>{product.name}</h3>
-      <p>{product.variants.length} quy cách đã xác minh</p>
+      <h3>{product.listingSku ? product.variants[0]?.name || product.name : product.name}</h3>
+      <p>{product.listingSku ? "Mã "+product.listingSku : product.variants.length+" quy cách đã xác minh"}</p>
       <strong className={glass ? "fb-song-related-price" : "catalog-price"}>{label}</strong>
     </div>
   </Link>;
@@ -69,11 +70,12 @@ export function EmptyState({ heading, message, link = "/san-pham" }: {
   </div>;
 }
 
-export function CatalogListing({ data, heading, description, filters, actionPath = "/san-pham" }: {
+export function CatalogListing({ data, heading, description, filters, actionPath = "/san-pham", modeByCategory = {} }: {
   data: PublicCatalog; heading: string; description: string;
   filters: CatalogFilters; actionPath?: string;
+  modeByCategory?: Readonly<Record<string,"family"|"sku">>;
 }) {
-  const results = searchCatalog(data, filters);
+  const results = searchCatalog(data, filters, modeByCategory);
   return <>
     {/* Keep the semantic H1 for SEO/accessibility; filters and results
          are the visible catalogue entry point, not duplicated hero copy. */}
@@ -112,7 +114,7 @@ export function CatalogListing({ data, heading, description, filters, actionPath
       </aside>
       <div className="catalog-results">
         <div className="catalog-results__heading"><h2>Sản phẩm đã xác minh</h2>
-          <span>{results.total} sản phẩm</span></div>
+          <span>{results.total} thẻ sản phẩm</span></div>
         {results.total ? <>
           <div className="catalog-grid">{results.items.map(product => <ProductCard key={product.id} product={product} glass/>)}</div>
           {results.pages > 1 && <nav aria-label="Phân trang sản phẩm" className="catalog-pagination">

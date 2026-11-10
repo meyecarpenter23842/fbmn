@@ -25,8 +25,9 @@ export interface CatalogFilters {
   categoryId?: string;
 }
 
+export type ListingProduct = PublicProduct & { listingSku?: string };
 export interface SearchResult {
-  items: PublicProduct[];
+  items: ListingProduct[];
   total: number;
   page: number;
   pages: number;
@@ -78,46 +79,68 @@ export function filtersToParams(filters: CatalogFilters, page: number = filters.
 }
 
 /** Pure read-model search; only receives toPublicCatalog() DTO, never raw prices. */
-export function searchCatalog(publicCatalog: PublicCatalog, filters: CatalogFilters): SearchResult {
+export function searchCatalog(publicCatalog: PublicCatalog, filters: CatalogFilters,
+  modeByCategory: Readonly<Record<string,"family"|"sku">> = {}): SearchResult {
   const categoryById = new Map(publicCatalog.categories.map(category => [category.id, category]));
   const tokens = foldVietnamese(filters.q).split(" ").filter(Boolean);
-  const visible = publicCatalog.products.filter(product => {
+  // Presentation-only cards. Company SKU records and canonical family URLs never change.
+  const cards: ListingProduct[] = [];
+  for (const product of publicCatalog.products) {
+    const skuMode = (variant: PublicProduct["variants"][number]) =>
+      modeByCategory[variant.categoryId ?? product.categoryId] === "sku";
+    const skuVariants = product.variants.filter(skuMode);
+    const familyVariants = product.variants.filter(variant => !skuMode(variant));
+    if (familyVariants.length) {
+      const familyCategory = skuVariants.length
+        ? (familyVariants.find(v => v.categoryId && v.categoryId !== "p5-uncategorized")?.categoryId
+          ?? familyVariants[0].categoryId ?? product.categoryId)
+        : product.categoryId;
+      cards.push(familyCategory === product.categoryId ? product : {...product,categoryId:familyCategory});
+    }
+    for (const variant of skuVariants) {
+      const categoryId = variant.categoryId ?? product.categoryId;
+      // A SKU card may use its own or genuinely shared images, never a sibling SKU cover.
+      cards.push({...product,id:product.id+"::"+variant.sku,categoryId,
+        variants:[variant],listingSku:variant.sku,
+        media:product.media.filter(media => media.sku === undefined || media.sku === variant.sku)});
+    }
+  }
+  const visible = cards.filter(product => {
     const category = categoryById.get(product.categoryId);
     if (!category) return false;
     if (filters.categoryId && product.categoryId !== filters.categoryId) return false;
     if (filters.group && category.group !== filters.group) return false;
     if (tokens.length) {
       const combined = foldVietnamese([
-        product.name, product.slug, product.description ?? "", category.name,
-        ...product.variants.flatMap(v => [v.name, v.sku]),
+        product.name,product.slug,product.description ?? "",category.name,
+        ...product.variants.flatMap(v => [v.name,v.sku]),
       ].join(" "));
       if (!tokens.every(token => combined.includes(token))) return false;
     }
     return true;
   });
   const sizes = [...new Set(visible.flatMap(product => product.variants
-    .map(variant => variant.specifications.paperSize).filter((value): value is string => Boolean(value))))];
-  sizes.sort((a, b) => a.localeCompare(b, "vi"));
+    .map(v => v.specifications.paperSize).filter((value): value is string => Boolean(value))))];
+  sizes.sort((a,b)=>a.localeCompare(b,"vi"));
   const weights = [...new Set(visible.flatMap(product => product.variants
-    .map(variant => variant.specifications.paperWeightGsm)
-    .filter((value): value is number => value !== undefined && Number.isFinite(value))))].sort((a, b) => a - b);
+    .map(v => v.specifications.paperWeightGsm)
+    .filter((value): value is number => value !== undefined && Number.isFinite(value))))].sort((a,b)=>a-b);
   const matched = visible.filter(product => product.variants.some(variant =>
     (!filters.size || foldVietnamese(variant.specifications.paperSize ?? "") === foldVietnamese(filters.size)) &&
     (filters.gsm === null || variant.specifications.paperWeightGsm === filters.gsm)));
-  matched.sort((a, b) => {
-    if (filters.sort === "sku") {
-      return (a.variants[0]?.sku ?? "").localeCompare(b.variants[0]?.sku ?? "", "vi")
-        || a.slug.localeCompare(b.slug);
-    }
-    const comparison = a.name.localeCompare(b.name, "vi");
-    return (filters.sort === "name_desc" ? -comparison : comparison) || a.slug.localeCompare(b.slug);
+  matched.sort((a,b)=>{
+    if(filters.sort==="sku")return (a.listingSku??a.variants[0]?.sku??"").localeCompare(
+      b.listingSku??b.variants[0]?.sku??"","vi")||a.slug.localeCompare(b.slug);
+    const first=(a.listingSku?a.variants[0]?.name:a.name)??a.name;
+    const second=(b.listingSku?b.variants[0]?.name:b.name)??b.name;
+    const compare=first.localeCompare(second,"vi");
+    return (filters.sort==="name_desc"?-compare:compare)||a.slug.localeCompare(b.slug)
+      ||(a.listingSku??"").localeCompare(b.listingSku??"","vi");
   });
-  const pages = Math.max(1, Math.ceil(matched.length / PAGE_SIZE));
-  const page = Math.max(1, Math.min(filters.page, pages));
-  return {
-    items: matched.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE),
-    total: matched.length, page, pages, sizes, weights,
-  };
+  const pages=Math.max(1,Math.ceil(matched.length/PAGE_SIZE));
+  const page=Math.max(1,Math.min(filters.page,pages));
+  return {items:matched.slice((page-1)*PAGE_SIZE,page*PAGE_SIZE),total:matched.length,
+    page,pages,sizes,weights};
 }
 
 export function getCategoryBySlug(publicCatalog: PublicCatalog, slug: string) {

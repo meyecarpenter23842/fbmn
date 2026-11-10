@@ -52,7 +52,9 @@ function safeVariant(raw: unknown): PublicVariant {
     if (p.kind !== "retail" || p.currency !== "VND") throw new Error("Disallowed public price");
     price = { kind: "retail", amountVnd: integer(p.amountVnd), currency: "VND" };
   }
-  return { sku: str(v.sku, 100), name: str(v.name, 160), specifications: safeSpec(v.specifications), price };
+  return { sku: str(v.sku, 100), name: str(v.name, 160),
+    ...(v.categoryId==null?{}:{categoryId:(()=>{const id=str(v.categoryId,80);if(!/^p5-(?:[0-9a-f-]{36}|uncategorized)$/.test(id))throw Error("Invalid public SKU category");return id;})()}),
+    specifications: safeSpec(v.specifications), price };
 }
 function safeProduct(raw: unknown): PublicProduct {
   const p = obj(raw);
@@ -235,4 +237,19 @@ export async function fetchPublicHomeLayout(input:string,transport:typeof fetch=
  if(categoryLimit>6||productLimit>12)throw new Error("Invalid public layout limits");
  return {categoryIds,featuredSkus,categoryLimit,productLimit,
    sectionOrder:order as ("categories"|"products")[],revision:integer(layout.revision,1)};
+}
+
+/** Owner DL5 settings: allowlisted public category IDs only; never prices or drafts. */
+export async function fetchPublicCategoryDisplay(input:string,transport:typeof fetch=fetch):Promise<Record<string,"sku">> {
+ const envelope=await getData(baseUrl(input),"/v1/public/category-display",transport);
+ const data=obj(envelope.data);
+ const rows=arr(data.modes,200);
+ const result:Record<string,"sku">=Object.create(null) as Record<string,"sku">;
+ for(const item of rows){
+  const entry=obj(item),categoryId=str(entry.categoryId,80);
+  if(!/^p5-(?:[0-9a-f-]{36}|uncategorized)$/.test(categoryId)||entry.mode!=="sku"||result[categoryId])
+   throw Error("Invalid category display config");
+  result[categoryId]="sku";
+ }
+ return result;
 }
