@@ -22,9 +22,15 @@ async function api<T>(body?:object):Promise<T>{
  return reply.data;
 }
 function Cancel(){const close=useProductModalClose();return <button className="fb-ui-button fb-ui-button--secondary" type="button" onClick={close}>Hủy</button>;}
+function CloseAfterSave({ready}:{ready:boolean}){
+ const close=useProductModalClose();
+ // Let ProductModal sync its unlocked and beforeClose refs before requesting its shared exit.
+ useEffect(()=>{if(ready)void Promise.resolve().then(close);},[ready,close]);
+ return null;
+}
 export default function ChatbotConfigManager({owner}:{owner:boolean}){
  const [stored,setStored]=useState<Stored|null>(null),[draft,setDraft]=useState<Config>(empty);
- const [open,setOpen]=useState(false),[busy,setBusy]=useState(false),[error,setError]=useState("");
+ const [open,setOpen]=useState(false),[busy,setBusy]=useState(false),[saved,setSaved]=useState(false),[error,setError]=useState("");
  const [models,setModels]=useState<Models|null>(null),[notice,setNotice]=useState(""),[noticeId,setNoticeId]=useState(0);
  const [variant,setVariant]=useState<"success"|"error">("success");
  const notify=(message:string,v:"success"|"error")=>{setNotice(message);setVariant(v);setNoticeId(n=>n+1);};
@@ -54,14 +60,14 @@ export default function ChatbotConfigManager({owner}:{owner:boolean}){
  async function save(){
   if(!stored)return;setBusy(true);
   try{const result=await api<Stored>({operation:"save",config:draft,revision:stored.revision});
-   setStored({...result,credentialsConfigured:stored.credentialsConfigured});setOpen(false);notify("Đã lưu cấu hình.","success");
+   setStored({...result,credentialsConfigured:stored.credentialsConfigured});setDraft({...empty,...result.config});setSaved(true);setNotice("");
   }catch(e){notify(e instanceof Error?e.message:"Không lưu được cấu hình.","error");}finally{setBusy(false);}
  }
  if(!owner)return <section className="surface dl4-panel"><h1>Cấu hình Chatbot</h1><p>Chỉ Owner được quản lý cấu hình.</p></section>;
  return <div className="dl4-layout">
   <div className="page-title"><div><h1>Cấu hình Chatbot</h1><p>Dialogflow CX · Website Futurebook</p></div>
    <div className="action-row"><button className="fb-ui-button fb-ui-button--secondary" disabled={busy} onClick={()=>void load()}>Tải lại</button>
-   <button className="fb-ui-button fb-ui-button--primary" disabled={!stored||busy} onClick={()=>{setDraft({...empty,...stored?.config});setModels(null);setOpen(true);}}>Chỉnh cấu hình</button></div></div>
+   <button className="fb-ui-button fb-ui-button--primary" disabled={!stored||busy} onClick={()=>{setDraft({...empty,...stored?.config});setModels(null);setSaved(false);setNotice("");setOpen(true);}}>Chỉnh cấu hình</button></div></div>
   {error&&<p role="alert">{error}</p>}
   {!stored&&!error&&<p role="status">Đang tải cấu hình…</p>}
   {stored&&<section className="surface dl4-panel"><h2>Kết nối Google</h2>
@@ -69,9 +75,10 @@ export default function ChatbotConfigManager({owner}:{owner:boolean}){
    <dl className="dl6-request-details">{(Object.keys(labels) as (keyof Config)[]).map(k=><Fragment key={k}><dt>{labels[k]}</dt><dd>{stored.config[k]||"Chưa cấu hình"}</dd></Fragment>)}</dl>
    <p className="content-small-note">Model lưu tại đây là lựa chọn cho Website ở DL10B. Prompt/Playbook quản lý bên Google. DL10A chưa kích hoạt chatbot thật hoặc lưu hội thoại.</p>
   </section>}
-  {open&&<ProductModal title="Cấu hình Dialogflow CX" locked={busy} onClose={()=>setOpen(false)}
-   beforeClose={()=>JSON.stringify(draft)===JSON.stringify({...empty,...stored?.config})||window.confirm("Bỏ thay đổi chưa lưu?")}
-   footer={<><Cancel/><button className="fb-ui-button fb-ui-button--primary" disabled={busy||!draft.projectId||!draft.agentId||!draft.environmentId} onClick={()=>void save()}>Lưu cấu hình</button></>}>
+  {open&&<ProductModal title="Cấu hình Dialogflow CX" locked={busy} onClose={()=>{setOpen(false);setNotice("");if(saved)notify("Đã lưu cấu hình.","success");}}
+   beforeClose={()=>saved||JSON.stringify(draft)===JSON.stringify({...empty,...stored?.config})||window.confirm("Bỏ thay đổi chưa lưu?")}
+   footer={<><Cancel/><button className="fb-ui-button fb-ui-button--primary" disabled={busy||saved||!draft.projectId||!draft.agentId||!draft.environmentId} onClick={()=>void save()}>Lưu cấu hình</button></>}>
+   <CloseAfterSave ready={saved&&!busy}/>
    <div className="form-grid">
     <label>Nhập file JS/JSON<input type="file" accept=".js,.json" disabled={busy} onChange={e=>{const f=e.target.files?.[0];if(f)void importFile(f);e.target.value="";}}/></label>
     <p className="content-small-note">JSON hoặc JS dạng export default / module.exports chứa JSON thuần; không nhập khóa bí mật hoặc mã thực thi.</p>
@@ -84,7 +91,8 @@ export default function ChatbotConfigManager({owner}:{owner:boolean}){
     </select></label>
     {models&&<p role="status">Model hiện tại của Agent: {models.currentModel||"Không trả về"} · {models.models.length} lựa chọn được đối chiếu.</p>}
    </div>
+   <AdminToast message={notice} variant={variant} notificationId={noticeId} onClose={()=>setNotice("")}/>
   </ProductModal>}
-  <AdminToast message={notice} variant={variant} notificationId={noticeId} onClose={()=>setNotice("")}/>
+  {!open&&<AdminToast message={notice} variant={variant} notificationId={noticeId} onClose={()=>setNotice("")}/>}
  </div>;
 }
