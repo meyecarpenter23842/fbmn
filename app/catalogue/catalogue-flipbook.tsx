@@ -8,6 +8,8 @@ import {canFlipForward,canFlipBackward} from "@/lib/catalogue/spread-navigation"
 type Asset={id:string;width:number;height:number};
 type Book={id:string;title:string;edition:string};
 type Detail={book:Book;pages:Asset[];cover:Asset|null};
+type ViewerSettings={flipDurationMs:number;soundEnabled:boolean;shadowOpacity:number};
+const DEFAULT_VIEWER:ViewerSettings={flipDurationMs:950,soundEnabled:false,shadowOpacity:0.26};
 type Leaf={asset:Asset;label:string};
 const UUID=/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i;
 const image=(id:string)=>"/api/catalogue-books/image?asset="+encodeURIComponent(id);
@@ -23,6 +25,10 @@ const validAsset=(x:unknown):x is Asset=>{
  return typeof v.id==="string"&&UUID.test(v.id)&&typeof v.width==="number"&&
  v.width>=64&&v.width<=6000&&typeof v.height==="number"&&v.height>=64&&v.height<=6000;
 };
+const validViewer=(v:ViewerSettings)=>Boolean(v&&Number.isSafeInteger(v.flipDurationMs)&&
+ v.flipDurationMs>=750&&v.flipDurationMs<=1500&&v.flipDurationMs%50===0&&
+ typeof v.soundEnabled==="boolean"&&typeof v.shadowOpacity==="number"&&
+ Number.isFinite(v.shadowOpacity)&&v.shadowOpacity>=0.10&&v.shadowOpacity<=0.50);
 const validDetail=(v:Detail)=>validBook(v?.book)&&Array.isArray(v.pages)&&
  v.pages.length>0&&v.pages.length<=200&&v.pages.every(validAsset)&&
  (v.cover===null||validAsset(v.cover));
@@ -56,7 +62,7 @@ export default function CatalogueFlipbook(){
  const [reduced,setReduced]=useState(false);
  const [fullScreen,setFullScreen]=useState(false);
  const [thumbnails,setThumbnails]=useState(true);
- const [soundEnabled,setSoundEnabled]=useState(false);
+ const [viewerSettings,setViewerSettings]=useState<ViewerSettings>(DEFAULT_VIEWER);
  const [status,setStatus]=useState("");
  const [manualLink,setManualLink]=useState("");
  const sceneRef=useRef<HTMLDivElement>(null);
@@ -65,7 +71,7 @@ export default function CatalogueFlipbook(){
  const zoomRef=useRef<HTMLDialogElement>(null);
  const zoomCloseTimer=useRef<ReturnType<typeof setTimeout>|null>(null);
  const audioRef=useRef<AudioContext|null>(null);
- const soundRef=useRef(false);
+ const viewerRef=useRef<ViewerSettings>(DEFAULT_VIEWER);
  const reducedRef=useRef(false);
  const lastAudioAt=useRef(-1);
  const sequence=useRef(0);
@@ -78,12 +84,12 @@ export default function CatalogueFlipbook(){
  const zoomLeaf=leaves[zoomIndex]||leaves[active];
  const canPrev=canFlipBackward(active,portrait,Boolean(detail?.cover));
  const canNext=canFlipForward(active,leaves.length,portrait,Boolean(detail?.cover));
- useEffect(()=>{soundRef.current=soundEnabled;},[soundEnabled]);
+ useEffect(()=>{viewerRef.current=viewerSettings;},[viewerSettings]);
  useEffect(()=>{reducedRef.current=reduced;},[reduced]);
 
  // Original paper rustle, synthesized locally. No copyrighted audio or autoplay.
  const playPageSound=()=>{
-  if(!soundRef.current||reducedRef.current)return;
+  if(!viewerRef.current.soundEnabled||reducedRef.current)return;
   const ctx=audioRef.current;
   if(!ctx||ctx.state!=="running")return;
   const now=ctx.currentTime;
@@ -113,13 +119,15 @@ export default function CatalogueFlipbook(){
  };
  const soundPlayer=useRef(playPageSound);
  useEffect(()=>{soundPlayer.current=playPageSound;});
- const toggleAudio=async()=>{
-  if(soundEnabled){setSoundEnabled(false);return;}
+ // Browsers require a trusted user gesture to unlock WebAudio.
+ // Admin enables the feature globally; visitors have NO sound-setting control.
+ const unlockAudio=()=>{
+  if(!viewerRef.current.soundEnabled||reducedRef.current)return;
   try{
-   const context=audioRef.current||new AudioContext();
-   audioRef.current=context;
-   await context.resume();setSoundEnabled(true);setStatus("Đã bật tiếng lật giấy.");
-  }catch{setStatus("Trình duyệt hiện không hỗ trợ phát âm thanh lật trang.");}
+   const ctx=audioRef.current||new AudioContext();
+   audioRef.current=ctx;
+   if(ctx.state==="suspended")void ctx.resume().catch(()=>{});
+  }catch{/* Autoplay policy and unsupported devices remain silent. */}
  };
 
  useEffect(()=>{
@@ -151,10 +159,13 @@ export default function CatalogueFlipbook(){
   let alive=true;
   void (async()=>{
    try{
-    const payload=await fetchCatalogue<{books:Book[]}>("/api/catalogue-books");
+    const payload=await fetchCatalogue<{books:Book[];viewerSettings:ViewerSettings}>("/api/catalogue-books");
     if(!alive)return;
-    if(!Array.isArray(payload.books)||payload.books.length>100||!payload.books.every(validBook))
-     throw Error("Danh sách Catalogue không hợp lệ.");
+    if(!Array.isArray(payload.books)||payload.books.length>100||!payload.books.every(validBook)||
+     !validViewer(payload.viewerSettings))
+     throw Error("Danh sách hoặc cài đặt Catalogue không hợp lệ.");
+    setViewerSettings(payload.viewerSettings);
+    viewerRef.current=payload.viewerSettings;
     setBooks(payload.books);
     if(!payload.books.length){setLoading(false);return;}
     const selected=payload.books.find(b=>b.id===new URLSearchParams(location.search).get("book"))||payload.books[0];
@@ -196,7 +207,7 @@ export default function CatalogueFlipbook(){
     flip=new PageFlip(disposable,{
      width:440,height:610,size:"stretch" as SizeType,minWidth:185,maxWidth:555,
      minHeight:256,maxHeight:770,autoSize:false,
-     flippingTime:950,drawShadow:true,maxShadowOpacity:0.26,
+     flippingTime:viewerSettings.flipDurationMs,drawShadow:true,maxShadowOpacity:viewerSettings.shadowOpacity,
      showCover:Boolean(detail.cover),usePortrait:true,swipeDistance:38,
      mobileScrollSupport:true,useMouseEvents:!reducedRef.current,
      disableFlipByClick:false,startPage:Math.min(startIndex,nodes.length-1)
@@ -228,7 +239,7 @@ export default function CatalogueFlipbook(){
   return ()=>{cancelled=true;engineRef.current=null;
    try{flip?.destroy();}catch{/* safe on partial initialization */}
    host.replaceChildren();};
- },[detail,reduced,leaves]);
+ },[detail,reduced,leaves,viewerSettings.flipDurationMs,viewerSettings.shadowOpacity]);
 
  const go=(index:number)=>{
   if(!detail||!leaves.length||turning)return;
@@ -260,8 +271,8 @@ export default function CatalogueFlipbook(){
   if(zoomRef.current?.open)return;
   if(event.altKey||event.metaKey||event.ctrlKey||
    event.target instanceof HTMLInputElement||event.target instanceof HTMLSelectElement)return;
-  if(event.key==="ArrowRight"){event.preventDefault();turn("next");}
-  else if(event.key==="ArrowLeft"){event.preventDefault();turn("prev");}
+  if(event.key==="ArrowRight"){event.preventDefault();unlockAudio();turn("next");}
+  else if(event.key==="ArrowLeft"){event.preventDefault();unlockAudio();turn("prev");}
   else if(event.key==="Home"){event.preventDefault();go(0);}
   else if(event.key==="End"){event.preventDefault();go(leaves.length-1);}
  };
@@ -322,7 +333,8 @@ export default function CatalogueFlipbook(){
       <h2>{detail.book.title}</h2>{detail.book.edition&&<p>{detail.book.edition}</p>}</div>
      <span className="fb-catalogue-count" aria-live="polite">{leaves[selectedPage]?.label}</span>
     </div>
-    <div className="fb-catalogue-reader" role="region" aria-label={"Sách lật "+detail.book.title}>
+    <div className="fb-catalogue-reader" role="region" aria-label={"Sách lật "+detail.book.title}
+     onPointerDownCapture={unlockAudio}>
      <button type="button" className="fb-glass-button fb-glass-button--secondary fb-catalogue-nav fb-catalogue-nav--prev"
       aria-label="Trang trước" disabled={turning||!canPrev} onClick={()=>turn("prev")}>
       <span className="fb-catalogue-nav-glyph" aria-hidden="true">‹</span></button>
@@ -343,10 +355,6 @@ export default function CatalogueFlipbook(){
       onClick={()=>void toggleFullscreen()}>{fullScreen?"⤢":"⛶"} <span>{fullScreen?"Thu nhỏ":"Toàn màn hình"}</span></button>
      <button type="button" className="fb-glass-button fb-glass-button--secondary"
       onClick={()=>void share()}>↗ <span>Chia sẻ trang</span></button>
-     <button type="button" className="fb-glass-button fb-glass-button--secondary"
-      aria-pressed={soundEnabled} onClick={()=>void toggleAudio()}>
-      <span aria-hidden="true">{soundEnabled?"♪":"♩"}</span>
-      <span>Âm lật: {soundEnabled?"Bật":"Tắt"}</span></button>
     </div>
     {status&&<p className="fb-catalogue-status" role="status">{status}</p>}
     {manualLink&&<label className="fb-catalogue-share-fallback">Liên kết trang

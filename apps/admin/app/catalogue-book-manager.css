@@ -39,3 +39,13 @@
 .fb-admin .dl7b-pages-nav{display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap;margin:14px 0;font-size:13px;color:#65536e}
 
 .fb-admin .dl7b-book-nav{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-top:14px;font-size:13px;color:#736580}
+
+/* Admin-only global flipbook settings; controls follow admin design tokens. */
+.fb-admin .dl7b-settings-form{display:grid;grid-template-columns:repeat(2,minmax(190px,1fr));gap:14px;align-items:end}
+.fb-admin .dl7b-settings-form>label{display:grid;gap:8px;font-size:var(--fb-control-font-size,13px);font-weight:700;color:var(--fb-ui-primary-strong)}
+.fb-admin .dl7b-settings-form select{min-width:0;width:100%}
+.fb-admin .dl7b-settings-form .dl7b-settings-toggle{display:flex;align-items:center;gap:10px;min-height:44px}
+.fb-admin .dl7b-settings-toggle input{width:20px;height:20px;accent-color:var(--fb-ui-primary-strong)}
+.fb-admin .dl7b-settings-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.fb-admin .dl7b-settings-error{color:#a52239!important}
+@media(max-width:680px){.fb-admin .dl7b-settings-form{grid-template-columns:1fr}}

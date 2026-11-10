@@ -9,6 +9,8 @@ type Asset={id:string;kind:"page"|"cover";
 type Details={book:Book;assets:Asset[]};
 type ListResult={books:Book[];page:number;totalPages:number;total:number};
 type SavedResult={book:Book;asset?:Asset};
+type ViewerSettings={flipDurationMs:number;soundEnabled:boolean;shadowOpacity:number;revision:number};
+type ViewerDraft=Pick<ViewerSettings,"flipDurationMs"|"soundEnabled"|"shadowOpacity">;
 type Kind=Asset["kind"];
 const MAX_IMAGE=5*1024*1024;
 const STATUS:Record<Book["state"],string>={draft:"Bản nháp",ready:"Sẵn sàng (đã duyệt)",hidden:"Đã ẩn"};
@@ -59,6 +61,7 @@ function apiError(status:number,code?:string){
  if(code==="invalid_image")return "Nội dung WebP không hợp lệ hoặc kích thước ảnh nằm ngoài 64–6000 px.";
  if(code==="invalid_upload")return "Thông tin upload chưa hợp lệ (400 · invalid_upload). Nhấn Tải lại và thử lần nữa.";
  if(code==="invalid_query")return "Yêu cầu ảnh sai tham số (400 · invalid_query).";
+ if(code==="invalid_settings")return "Thông số phải hợp lệ: tốc độ 750–1500ms, độ bóng 0,10–0,50.";
  if(status===400)return "Yêu cầu ảnh bị từ chối (400 · "+(code&&/^[a-z0-9_]{1,50}$/.test(code)?code:"unknown")+").";
  if(status===429)return "API tạm giới hạn thao tác. Vui lòng thử lại sau.";
  if(code==="catalogue_worker_not_deployed")return "Worker DL7B chưa được triển khai.";
@@ -142,6 +145,12 @@ export default function CatalogueBookManager({owner,onBusyChange}:{
  const [detail,setDetail]=useState<Details|null>(null);
  const [loading,setLoading]=useState(true);
  const [busy,setBusy]=useState(false);
+ const [settings,setSettings]=useState<ViewerSettings|null>(null);
+ const [draftSettings,setDraftSettings]=useState<ViewerDraft>({
+  flipDurationMs:950,soundEnabled:false,shadowOpacity:0.26
+ });
+ const [settingsBusy,setSettingsBusy]=useState(false);
+ const [settingsError,setSettingsError]=useState("");
  const [pageOffset,setPageOffset]=useState(0);
  const [readError,setReadError]=useState("");
  const [dialog,setDialog]=useState<"create"|"edit"|null>(null);
@@ -155,6 +164,33 @@ export default function CatalogueBookManager({owner,onBusyChange}:{
  const selectedBook=useRef("");
  const alert=(message:string,variant:"success"|"error")=>{
   setNotice(message);setNoticeType(variant);setNoticeId(i=>i+1);
+ };
+ const loadSettings=useCallback(async()=>{
+  setSettingsError("");
+  try{
+   const response=await requestCatalogue<{settings:ViewerSettings}>("/settings");
+   const value=response.settings;
+   if(!value||!Number.isSafeInteger(value.flipDurationMs)||
+    typeof value.soundEnabled!=="boolean"||typeof value.shadowOpacity!=="number"||
+    !Number.isSafeInteger(value.revision))throw Error("Cấu hình trả về không hợp lệ.");
+   setSettings(value);
+   setDraftSettings({flipDurationMs:value.flipDurationMs,soundEnabled:value.soundEnabled,
+    shadowOpacity:value.shadowOpacity});
+  }catch(e){setSettingsError(e instanceof Error?e.message:"Không đọc được cài đặt sách lật.");}
+ },[]);
+ const saveSettings=async()=>{
+  if(!settings||settingsBusy||busy)return;
+  setSettingsBusy(true);setSettingsError("");
+  try{
+   const result=await requestCatalogue<{settings:ViewerSettings}>("/settings",{
+    ...draftSettings,revision:settings.revision
+   });
+   setSettings(result.settings);
+   setDraftSettings({flipDurationMs:result.settings.flipDurationMs,
+    soundEnabled:result.settings.soundEnabled,shadowOpacity:result.settings.shadowOpacity});
+   alert("Đã lưu cấu hình sách lật. Website sẽ tự áp dụng khi mở/tải lại Catalogue.","success");
+  }catch(e){setSettingsError(e instanceof Error?e.message:"Không lưu được cài đặt.");}
+  finally{setSettingsBusy(false);}
  };
  const load=useCallback(async(preferred?:string,requestedPage=1)=>{
   const seq=++loadId.current;setLoading(true);setReadError("");
@@ -177,9 +213,9 @@ export default function CatalogueBookManager({owner,onBusyChange}:{
  useEffect(()=>{
   if(!owner)return;
   let active=true;
-  void Promise.resolve().then(()=>{if(active)return load();});
+  void Promise.resolve().then(()=>{if(active){void load();void loadSettings();}});
   return ()=>{active=false;loadId.current+=1;};
- },[owner,load]);
+ },[owner,load,loadSettings]);
  useEffect(()=>{onBusyChange?.(busy);return ()=>onBusyChange?.(false);},[busy,onBusyChange]);
  async function mutate(action:string,payload:object,success:string,choose?:string){
   if(busy)return;
@@ -243,7 +279,7 @@ export default function CatalogueBookManager({owner,onBusyChange}:{
   <span>{label}</span><input type="file" accept="image/webp,.webp" disabled={!canEdit||busy}
    aria-label={label} onChange={e=>{const file=e.currentTarget.files?.[0];e.currentTarget.value="";void upload(kind,file);}}/>
  </label>;
- if(!owner)return <section className="surface dl7b-panel"><h1>Kho Catalogue</h1><p>Chỉ Owner được quản lý bộ Catalogue và ảnh nền.</p></section>;
+ if(!owner)return <section className="surface dl7b-panel"><h1>Kho Catalogue</h1><p>Chỉ Owner được quản lý bộ Catalogue và ảnh bìa.</p></section>;
  return <div className="dl7b-screen">
   <header className="page-title"><div><h1>Kho Catalogue</h1>
    <p>Quản lý bộ sách lật, trang và bìa trong R2 <strong>fbmn-catalogue</strong>. Không dùng kho ảnh SKU/CMS; Catalogue dùng nền chung toàn website.</p>
@@ -254,7 +290,48 @@ export default function CatalogueBookManager({owner,onBusyChange}:{
      onClick={()=>{setTitle("");setEdition("");setDialog("create");}}>Tạo bộ Catalogue</button>
    </div>
   </header>
-  <p className="dl7b-note">DL7B chuẩn bị nội dung riêng cho tab Catalogue. Trạng thái “Sẵn sàng” là duyệt nội bộ; sách chưa hiển thị ngoài Website trước khi DL7C kết nối.</p>
+  <section className="surface dl7b-panel" aria-labelledby="dl7c-settings-heading">
+   <div className="dl7b-panel-heading"><div>
+    <h2 id="dl7c-settings-heading">Cài đặt sách lật</h2>
+    <p>Cấu hình chung cho tất cả bộ Catalogue. Khách xem chỉ có các nút đọc sách, không thấy thông số.</p>
+   </div></div>
+   {settingsError&&<p role="alert" className="dl7b-settings-error">{settingsError}</p>}
+   {!settings&&<button type="button" className="fb-ui-button fb-ui-button--secondary"
+    onClick={()=>void loadSettings()}>Tải cài đặt</button>}
+   {settings&&<form className="dl7b-settings-form" onSubmit={e=>{e.preventDefault();void saveSettings();}}>
+    <label>Tốc độ lật trang
+     <select value={draftSettings.flipDurationMs} disabled={settingsBusy||busy}
+      onChange={e=>setDraftSettings(p=>({...p,flipDurationMs:Number(e.target.value)}))}>
+      {Array.from({length:16},(_,i)=>750+i*50).map(ms=>
+       <option value={ms} key={ms}>{ms} ms{ms===950?" · Đề xuất":""}</option>)}
+     </select>
+    </label>
+    <label>Độ bóng khi lật
+     <select value={draftSettings.shadowOpacity.toFixed(2)} disabled={settingsBusy||busy}
+      onChange={e=>setDraftSettings(p=>({...p,shadowOpacity:Number(e.target.value)}))}>
+      {[0.10,0.15,0.20,0.26,0.30,0.35,0.40,0.45,0.50].map(n=>
+       <option value={n.toFixed(2)} key={n}>{Math.round(n*100)}%</option>)}
+     </select>
+    </label>
+    <label className="dl7b-settings-toggle">
+     <input type="checkbox" checked={draftSettings.soundEnabled} disabled={settingsBusy||busy}
+      onChange={e=>setDraftSettings(p=>({...p,soundEnabled:e.target.checked}))}/>
+     <span>Cho phép tiếng giấy khi khách lật trang</span>
+    </label>
+    <div className="dl7b-settings-actions">
+     <button type="submit" className="fb-ui-button fb-ui-button--primary"
+      disabled={settingsBusy||busy||(
+       draftSettings.flipDurationMs===settings.flipDurationMs&&
+       draftSettings.soundEnabled===settings.soundEnabled&&
+       draftSettings.shadowOpacity===settings.shadowOpacity
+      )}>{settingsBusy?"Đang lưu…":"Lưu cài đặt"}</button>
+     <button type="button" className="fb-ui-button fb-ui-button--secondary"
+      disabled={settingsBusy||busy} onClick={()=>void loadSettings()}>Tải lại cấu hình</button>
+    </div>
+    <p>Âm thanh chỉ phát khi trình duyệt cho phép sau thao tác lật của khách. Không phát tự động khi mở trang.</p>
+   </form>}
+  </section>
+  <p className="dl7b-note">Chỉ ảnh trang và bìa được quản lý trong R2 Catalogue. Nền luôn dùng G05 chung toàn website.</p>
   {loading&&<section className="surface dl7b-panel" role="status" aria-busy="true">Đang đọc kho Catalogue…</section>}
   {readError&&<section className="surface dl7b-panel" role="alert"><strong>Chưa kết nối được kho</strong><p>{readError}</p>
    <button type="button" className="fb-ui-button fb-ui-button--secondary" onClick={()=>void load(book?.id,bookPage)}>Thử lại</button></section>}

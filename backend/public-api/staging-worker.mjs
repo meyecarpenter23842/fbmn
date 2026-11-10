@@ -70,6 +70,7 @@ export function createStagingWorker({createDbClient}) {
             request,enabled:env.PUBLIC_DL7C_ENABLED==="true",
             allowedOrigins:origins,r2:env.CATALOGUE_MEDIA_R2,
             listBooks:()=>readModel(env,m=>m.getReadyCatalogueBooks()),
+            getSettings:()=>readModel(env,m=>m.getCatalogueViewerSettings()),
             getBook:id=>readModel(env,m=>m.getReadyCatalogueBook(id)),
             getAssets:id=>readModel(env,m=>m.getReadyCatalogueAssets(id)),
             getKey:id=>readModel(env,m=>m.getReadyCatalogueAssetKey(id)),

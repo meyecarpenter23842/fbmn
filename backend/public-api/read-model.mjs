@@ -21,6 +21,7 @@ const SQL = Object.freeze({
    "FROM fbmn_public.v_cms_web_entries e ORDER BY sort_order,published_at,id LIMIT 501",
   cmsImageKey: "SELECT r2_key FROM fbmn_public.v_cms_web_images WHERE id=$1 AND device=$2 LIMIT 1",
   cmsSlideImageKey: "SELECT r2_key FROM fbmn_public.v_cms_web_banner_slide_images WHERE id=$1 AND device=$2 AND slide_no=$3 LIMIT 1",
+  catalogueViewerSettings: "SELECT flip_duration_ms,sound_enabled,shadow_opacity FROM fbmn_public.v_catalogue_viewer_settings LIMIT 2",
   catalogueBooks: "SELECT id,title,edition FROM fbmn_public.v_catalogue_ready_books ORDER BY updated_at DESC,id LIMIT 101",
   catalogueBook: "SELECT id,title,edition FROM fbmn_public.v_catalogue_ready_books WHERE id=$1::uuid LIMIT 1",
   catalogueAssets: "SELECT id,kind,sort_order,width,height FROM fbmn_public.v_catalogue_ready_assets WHERE book_id=$1::uuid AND kind IN ('page','cover') ORDER BY kind,sort_order,id LIMIT 202",
@@ -272,6 +273,19 @@ export function createReadModel(query,{enableP5=false}={}) {
        slide===1?[id,device]:[id,device,slide]),1);
       return entries.length===1&&/^cms\/[0-9a-f-]{36}\/public_web\/(desktop|mobile)\/[0-9a-f-]{36}\.webp$/i.test(String(entries[0].r2_key))
        ?String(entries[0].r2_key):null;
+    },
+    async getCatalogueViewerSettings(){
+      const result=rows(await query(SQL.catalogueViewerSettings),2);
+      if(result.length!==1)throw Error("Missing viewer settings");
+      const r=result[0];
+      const value={flipDurationMs:Number(r.flip_duration_ms),soundEnabled:r.sound_enabled===true,
+       shadowOpacity:Number(r.shadow_opacity)};
+      if(!Number.isSafeInteger(value.flipDurationMs)||value.flipDurationMs<750||
+       value.flipDurationMs>1500||value.flipDurationMs%50!==0||
+       !Number.isFinite(value.shadowOpacity)||value.shadowOpacity<0.10||
+       value.shadowOpacity>0.50||typeof r.sound_enabled!=="boolean")
+       throw Error("Invalid viewer settings");
+      return value;
     },
     async getReadyCatalogueBooks(){
       const result=rows(await query(SQL.catalogueBooks),101);

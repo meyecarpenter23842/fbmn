@@ -4,8 +4,8 @@ export const dynamic="force-dynamic";
 const PRIVATE={"Cache-Control":"private, no-store","X-Content-Type-Options":"nosniff"};
 const JSON_HEADERS={...PRIVATE,"Content-Type":"application/json; charset=utf-8"};
 const fail=(s:number,c:string)=>Response.json({error:{code:c}},{status:s,headers:JSON_HEADERS});
-const GET_ACTIONS=new Set(["","image"]);
-const POST_ACTIONS=new Set(["create","save","ready","hide","upload","reorder","remove"]);
+const GET_ACTIONS=new Set(["","image","settings"]);
+const POST_ACTIONS=new Set(["settings","create","save","ready","hide","upload","reorder","remove"]);
 const MAX=5*1024*1024;
 function base(){
  try{const u=new URL(process.env.FBMN_ADMIN_API_BASE_URL||"");
@@ -20,7 +20,7 @@ async function proxy(request:Request,params:Promise<{path?:string[]}>,method:"GE
  const u=new URL(request.url),binary=method==="GET"&&action==="image",upload=action==="upload";
  const query=[...u.searchParams.keys()];
  if(method==="GET"){
-  const allowed=action==="image"?new Set(["asset"]):new Set(["id","page"]);
+  const allowed=action==="image"?new Set(["asset"]):action==="settings"?new Set():new Set(["id","page"]);
   if(query.length>1||query.some(x=>!allowed.has(x)))return fail(400,"invalid_query");
   if(action==="image"&&query.length!==1)return fail(400,"invalid_query");
  }else{
