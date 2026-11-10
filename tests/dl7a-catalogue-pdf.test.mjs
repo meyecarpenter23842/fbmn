@@ -154,8 +154,8 @@ test("DL7A migrations and Website reject draft/key exposure and do not destroy p
  const web=read("app/catalogue/catalogue-flipbook.tsx"),
   route=read("app/api/catalogue-books/pdf/route.ts"),
   admin=read("apps/admin/app/catalogue-book-manager.tsx");
- assert.match(web,/item\.pdfDownloadEnabled/);
- assert.match(web,/GlassPanel/);assert.match(route,/Content-Disposition/);
+ assert.match(web,/detail\.book\.pdfDownloadEnabled/);
+ assert.match(web,/GlassButtonLink/);assert.match(route,/Content-Disposition/);
  assert.match(admin,/\/pdf-target/);assert.match(admin,/pdf-settings/);
  assert.match(read("apps/admin/app/api/website/catalogue/[[...path]]/route.ts"),/POST_ACTIONS=new Set\([^\n]*"pdf-settings","pdf-remove"/);
  assert.doesNotMatch(route,/R2_SECRET|ADMIN_TOKEN|NET_PRICE/);

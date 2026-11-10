@@ -55,3 +55,11 @@ test("menu action and popup are global, dismissible and have recognized brand ma
   assert.match(css, /z-index:\s*110/);
   assert.doesNotMatch(ui, /href="https:\/\/(?:apps\.apple\.com|play\.google\.com)/);
 });
+
+ test("automatic app prompt does not obscure the catalogue; manual menu retained",()=>{
+ const ui=read("components/app-download.tsx");
+ assert.match(ui,/isCatalogue=pathname==="\/catalogue"/);
+ assert.match(ui,/if \(open\|\|isCatalogue\) return/);
+ assert.match(ui,/isCatalogue&&open&&source==="automatic"\)dismiss\(\)/);
+ assert.match(ui,/showPopup\("menu"\)/);
+ });

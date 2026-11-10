@@ -2,6 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
+import {usePathname} from "next/navigation";
 import { getAppStoreLink } from "@/lib/app-download/config";
 import {
   APP_PROMPT_INTERVAL_MS,
@@ -64,6 +65,8 @@ function readLastShown(memory: number): number | null {
 }
 
 export function AppDownloadProvider({ children }: { children: ReactNode }) {
+  const pathname=usePathname();
+  const isCatalogue=pathname==="/catalogue";
   const [open, setOpen] = useState(false);
   const [closing, setClosing] = useState(false);
   const dismissTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -109,7 +112,11 @@ export function AppDownloadProvider({ children }: { children: ReactNode }) {
   useEffect(()=>()=>{if(dismissTimeout.current)clearTimeout(dismissTimeout.current);},[]);
 
   useEffect(() => {
-    if (open) return;
+    if(isCatalogue&&open&&source==="automatic")dismiss();
+  },[isCatalogue,open,source,dismiss]);
+
+  useEffect(() => {
+    if (open||isCatalogue) return;
     let timeout: number | undefined;
     const schedule = () => {
       if (timeout !== undefined) window.clearTimeout(timeout);
@@ -138,7 +145,7 @@ export function AppDownloadProvider({ children }: { children: ReactNode }) {
       document.removeEventListener("visibilitychange", schedule);
       window.removeEventListener("storage", onStorage);
     };
-  }, [open, showPopup]);
+  }, [open, showPopup, isCatalogue]);
 
   useEffect(() => {
     if (!open) return;
