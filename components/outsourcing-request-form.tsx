@@ -1,5 +1,6 @@
 "use client";
 import {useState,type FormEvent} from "react";
+import ContentToast from "./content-toast";
 const blank={name:"",email:"",phone:"",productType:"",specifications:"",quantity:"",desiredDate:"",details:""};
 type Fields=typeof blank;
 export default function OutsourcingRequestForm(){
@@ -8,24 +9,25 @@ export default function OutsourcingRequestForm(){
  const [consent,setConsent]=useState(false);
  const [website,setWebsite]=useState("");
  const [busy,setBusy]=useState(false);
- const [state,setState]=useState<"idle"|"success"|"error">("idle");
- const [error,setError]=useState("");
- function edit(field:keyof Fields,value:string){setFields(prev=>({...prev,[field]:value}));if(state!=="idle")setState("idle");}
+ const [notice,setNotice]=useState("");
+ const [noticeVariant,setNoticeVariant]=useState<"success"|"error">("success");
+ const [noticeId,setNoticeId]=useState(0);
+ function edit(field:keyof Fields,value:string){setFields(prev=>({...prev,[field]:value}));}
  async function submit(event:FormEvent<HTMLFormElement>){
   event.preventDefault();if(busy||!startedAt)return;
-  setBusy(true);setState("idle");setError("");
+  setBusy(true);setNotice("");
   try{
    const response=await fetch("/api/gia-cong",{method:"POST",
     headers:{"Content-Type":"application/json"},cache:"no-store",
     body:JSON.stringify({...fields,consent,website,startedAt})});
    const result=await response.json().catch(()=>null) as {ok?:boolean}|null;
    if(response.status===201&&result?.ok===true){
-    setState("success");setFields(blank);setConsent(false);setWebsite("");setStartedAt(Date.now());
-   }else{setState("error");setError(response.status===429?
+    setNoticeVariant("success");setNotice("Yêu cầu đã được ghi nhận. Bộ phận phụ trách sẽ xem xét và phản hồi theo thông tin cung cấp.");setNoticeId(v=>v+1);setFields(blank);setConsent(false);setWebsite("");setStartedAt(Date.now());
+   }else{setNoticeVariant("error");setNotice(response.status===429?
     "Có quá nhiều yêu cầu trong thời gian ngắn. Vui lòng thử lại sau.":
     response.status===400?"Vui lòng kiểm tra thông tin, nội dung và xác nhận đồng ý.":
-    "Hệ thống chưa tiếp nhận được yêu cầu. Anh/chị vui lòng dùng kênh liên hệ đã công bố.");}
-  }catch{setState("error");setError("Không kết nối được dịch vụ tiếp nhận. Vui lòng thử lại sau.");}
+    "Hệ thống chưa tiếp nhận được yêu cầu. Anh/chị vui lòng dùng kênh liên hệ đã công bố.");setNoticeId(v=>v+1);}
+  }catch{setNoticeVariant("error");setNotice("Không kết nối được dịch vụ tiếp nhận. Vui lòng thử lại sau.");setNoticeId(v=>v+1);}
   finally{setBusy(false);}
  }
  return <form className="content-contact-form outsourcing-form" onSubmit={submit}>
@@ -45,8 +47,7 @@ export default function OutsourcingRequestForm(){
    <div className="outsourcing-honeypot" aria-hidden="true"><label>Website<input tabIndex={-1} autoComplete="off" value={website} onChange={e=>setWebsite(e.target.value)}/></label></div>
    <button className="content-button" disabled={busy||!startedAt||!consent} type="submit">
     {busy?"Đang gửi yêu cầu…":"Gửi yêu cầu tư vấn"}</button>
-   {state==="success"&&<p className="outsourcing-feedback" role="status">Yêu cầu đã được ghi nhận. Bộ phận phụ trách sẽ xem xét và phản hồi theo thông tin cung cấp; chưa phải xác nhận nhận gia công hoặc báo giá.</p>}
-   {state==="error"&&<p className="outsourcing-feedback outsourcing-feedback--error" role="alert">{error}</p>}
   </fieldset>
+  <ContentToast message={notice} variant={noticeVariant} notificationId={noticeId} onClose={()=>setNotice("")}/>
  </form>;
 }
