@@ -150,7 +150,7 @@ export function createStagingWorker({createDbClient}) {
           getPublicCms:()=>readModel(env,m=>m.getPublicCms()),
           getPublicHomeLayout:()=>readModel(env,m=>m.getPublicHomeLayout()),
           getPublicCategoryDisplay:()=>readModel(env,m=>m.getPublicCategoryDisplay()),
-          categoryDisplayEnabled:env.PUBLIC_DL4_ENABLED==="true",
+          categoryDisplayEnabled:env.PUBLIC_P5_ENABLED==="true",
           homeLayoutEnabled:env.PUBLIC_DL4_ENABLED==="true",
           cmsEnabled:env.PUBLIC_CMS_ENABLED==="true",
           allowedOrigins:origins,

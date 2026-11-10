@@ -1,6 +1,7 @@
 "use client";
 import {useCallback,useEffect,useState} from "react";
 import AdminToast from "./admin-toast";
+import ProductModal from "./product-modal";
 
 type Mode="family"|"sku";
 type Category={categoryId:string;name:string;skuCount:number;mode:Mode;revision:number};
@@ -28,7 +29,8 @@ async function categoryRequest<T>(body?:object):Promise<T>{
 }
 export default function CategoryDisplayManager({owner}:{owner:boolean}){
  const [categories,setCategories]=useState<Category[]>([]);
- const [draft,setDraft]=useState<Record<string,Mode>>({});
+ const [editing,setEditing]=useState<Category|null>(null);
+ const [editMode,setEditMode]=useState<Mode>("family");
  const [loading,setLoading]=useState(true);
  const [saving,setSaving]=useState("");
  const [error,setError]=useState("");
@@ -40,19 +42,20 @@ export default function CategoryDisplayManager({owner}:{owner:boolean}){
   try{
    const response=await categoryRequest<Reply>();
    setCategories(response.categories);
-   setDraft(Object.fromEntries(response.categories.map(c=>[c.categoryId,c.mode])));
+   setEditing(null);
   }catch(e){setError(e instanceof Error?e.message:"Không tải được chế độ danh mục.");}
   finally{setLoading(false);}
  },[]);
  useEffect(()=>{if(!owner)return;let cancelled=false;void Promise.resolve().then(()=>{if(!cancelled)return load();});return ()=>{cancelled=true;};},[owner,load]);
  async function save(item:Category){
-  if(saving||!draft[item.categoryId]||draft[item.categoryId]===item.mode)return;
+  if(saving||editMode===item.mode)return;
   setSaving(item.categoryId);setError("");
   try{
    const result=await categoryRequest<{category:{categoryId:string;mode:Mode;revision:number}}>({
-    operation:"save",categoryId:item.categoryId,mode:draft[item.categoryId],revision:item.revision
+    operation:"save",categoryId:item.categoryId,mode:editMode,revision:item.revision
    });
    setCategories(prev=>prev.map(c=>c.categoryId===item.categoryId?{...c,...result.category}:c));
+   setEditing(null);
    setNoticeVariant("success");setNotice("Đã lưu chế độ hiển thị danh mục.");setNoticeId(x=>x+1);
   }catch(e){setNoticeVariant("error");setNotice(e instanceof Error?e.message:"Không lưu được.");setNoticeId(x=>x+1);}
   finally{setSaving("");}
@@ -72,17 +75,27 @@ export default function CategoryDisplayManager({owner}:{owner:boolean}){
    {!categories.length&&<p role="status">Chưa có danh mục có SKU đã công khai để cấu hình.</p>}
    <ul className="dl4-list">{categories.map(c=><li key={c.categoryId} className="dl4-item">
     <div><strong>{c.name}</strong><small>{c.skuCount} SKU công khai · Phiên bản {c.revision||"mặc định"}</small></div>
-    <label className="dl4-field">Kiểu thẻ
-     <select value={draft[c.categoryId]??c.mode} disabled={Boolean(saving)} onChange={e=>setDraft(prev=>({...prev,[c.categoryId]:e.target.value as Mode}))}>
-      <option value="family">Family — một thẻ/nhóm</option><option value="sku">SKU — mỗi mã một thẻ</option>
-     </select>
-    </label>
-    <button type="button" className="fb-ui-button fb-ui-button--primary"
-     disabled={Boolean(saving)||draft[c.categoryId]===c.mode}
-     onClick={()=>void save(c)}>{saving===c.categoryId?"Đang lưu…":"Lưu"}</button>
+    <span>{c.mode==="sku"?"SKU — mỗi mã một thẻ":"Family — một thẻ/nhóm"}</span>
+    <button type="button" className="fb-ui-button fb-ui-button--secondary"
+     disabled={Boolean(saving)} onClick={()=>{setEditing(c);setEditMode(c.mode);}}>Chỉnh sửa</button>
    </li>)}</ul>
    <p>Đã lưu thì mở trang danh mục trên Website để kiểm ảnh, lọc và phân trang thực tế. Chế độ Family luôn là lựa chọn an toàn khi API cấu hình gián đoạn.</p>
   </section>}
+  {editing&&<ProductModal title={"Hiển thị danh mục: "+editing.name} locked={Boolean(saving)}
+   onClose={()=>setEditing(null)}
+   footer={<><button type="button" className="fb-ui-button fb-ui-button--secondary"
+    disabled={Boolean(saving)} onClick={()=>setEditing(null)}>Hủy</button>
+    <button type="button" className="fb-ui-button fb-ui-button--primary"
+     disabled={Boolean(saving)||editMode===editing.mode} onClick={()=>void save(editing)}>
+     {saving?"Đang lưu…":"Lưu cấu hình"}</button></>}>
+   <p>Chỉ đổi cách hiển thị của {editing.skuCount} SKU đã công khai; không sửa mã, family hoặc giá.</p>
+   <label className="dl4-field">Kiểu thẻ
+    <select value={editMode} disabled={Boolean(saving)} onChange={e=>setEditMode(e.target.value as Mode)}>
+     <option value="family">Family — một thẻ/nhóm</option>
+     <option value="sku">SKU — mỗi mã một thẻ</option>
+    </select>
+   </label>
+  </ProductModal>}
   <AdminToast message={notice} variant={noticeVariant} notificationId={noticeId} onClose={()=>setNotice("")}/>
  </div>;
 }

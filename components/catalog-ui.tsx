@@ -37,8 +37,9 @@ export function ProductCard({ product, glass = false }: { product: ListingProduc
       ? formatRetail(product.variants.find(v => v.price)!.price!.amountVnd)
       : "Liên hệ báo giá"
   );
+  const targetSku=product.listingSku ?? product.initialSku;
   const href = "/san-pham/" + encodeURIComponent(product.slug) +
-    (product.listingSku ? "?sku="+encodeURIComponent(product.listingSku) : "");
+    (targetSku ? "?sku="+encodeURIComponent(targetSku) : "");
   // One navigable link per card; no nested link or redundant detail button.
   const content = <Link href={href} prefetch={false}
     aria-label={"Xem sản phẩm " + product.name}

@@ -30,6 +30,7 @@ test("DL5 Family is default and SKU mode creates only view cards with exact comp
  assert.deepEqual(expanded.items[1].media.map(p=>p.position),[3]);
  assert.deepEqual(expanded.items.map(item=>item.variants[0].sku),["0001","0002"]);
  assert.equal(searchCatalog(data,filters("",B),mode).items[0].listingSku,undefined);
+ assert.equal(searchCatalog(data,filters("",B),mode).items[0].initialSku,"0003");
  assert.equal(JSON.stringify(data),original);
 });
 test("DL5 search and facets operate on the visible SKU card, not hidden siblings",()=>{
@@ -96,4 +97,9 @@ test("DL5 migration, Website and Admin follow single-source and privacy constrai
  assert.match(detail,/alternates:\{canonical/);
  assert.match(detail,/initialSku=/);
  assert.match(admin,/category-display/);
+ const manager=source("apps/admin/app/category-display-manager.tsx");
+ assert.match(manager,/<ProductModal/);
+ assert.match(manager,/setEditing\(c\)/);
+ assert.match(manager,/Lưu cấu hình/);
+ assert.match(source("backend/public-api/staging-worker.mjs"),/categoryDisplayEnabled:env\.PUBLIC_P5_ENABLED==="true"/);
 });

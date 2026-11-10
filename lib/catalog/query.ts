@@ -25,7 +25,7 @@ export interface CatalogFilters {
   categoryId?: string;
 }
 
-export type ListingProduct = PublicProduct & { listingSku?: string };
+export type ListingProduct = PublicProduct & { listingSku?: string; initialSku?: string };
 export interface SearchResult {
   items: ListingProduct[];
   total: number;
@@ -95,7 +95,7 @@ export function searchCatalog(publicCatalog: PublicCatalog, filters: CatalogFilt
         ? (familyVariants.find(v => v.categoryId && v.categoryId !== "p5-uncategorized")?.categoryId
           ?? familyVariants[0].categoryId ?? product.categoryId)
         : product.categoryId;
-      cards.push(skuVariants.length ? {...product,categoryId:familyCategory,variants:familyVariants,
+      cards.push(skuVariants.length ? {...product,categoryId:familyCategory,initialSku:familyVariants[0].sku,variants:familyVariants,
         media:product.media.filter(media => media.sku === undefined || familyVariants.some(v => v.sku===media.sku))} : product);
     }
     for (const variant of skuVariants) {
