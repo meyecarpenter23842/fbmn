@@ -16,7 +16,7 @@ const SQL = Object.freeze({
   p5ImageKey: "SELECT r2_key FROM fbmn_public.v_p5_image_assets WHERE asset_id=$1 LIMIT 1",
   dealer: "SELECT title,paragraphs,contact_instructions FROM fbmn_public.v_dealer_information LIMIT 2",
   homeLayout: "SELECT category_ids,featured_skus,category_limit,product_limit,section_order,revision FROM fbmn_public.v_web_home_layout LIMIT 2",
-  categoryDisplay: "SELECT category_id,mode FROM fbmn_public.v_web_category_display ORDER BY category_id LIMIT 201",
+  categoryDisplay: "SELECT category_id,mode FROM fbmn_public.v_web_category_display ORDER BY category_id LIMIT 2001",
   cmsEntries: "SELECT e.id,kind,slug,title,summary,paragraphs,cta_url,slot,sort_order,published_at,starts_at,ends_at,popup_delay_seconds,popup_cooldown_minutes,popup_max_per_session,has_desktop,has_mobile,"+
    "(SELECT json_agg(json_build_object('slideNo',s.slide_no,'ordinal',s.ordinal,'enabled',s.enabled,'autoplay',s.autoplay,'effect',s.effect,'intervalMs',s.interval_ms,'durationMs',s.duration_ms) ORDER BY s.ordinal) FROM fbmn_public.v_cms_web_banner_slides s WHERE s.id=e.id) AS hero_slides "+
    "FROM fbmn_public.v_cms_web_entries e ORDER BY sort_order,published_at,id LIMIT 501",
@@ -235,7 +235,7 @@ export function createReadModel(query,{enableP5=false}={}) {
       return {categories,products};
     },
     async getPublicCategoryDisplay() {
-      const items=await execute("categoryDisplay",200);
+      const items=await execute("categoryDisplay",2000);
       return {modes:items.map(row=>({categoryId:String(row.category_id),mode:String(row.mode)}))};
     },
     async getPublicHomeLayout() {
