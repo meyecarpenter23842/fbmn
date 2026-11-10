@@ -121,7 +121,7 @@ async function upload(db,r2,actor,request){
  const fileId=crypto.randomUUID(),key=cataloguePdfKey(id,fileId);
  const hash=Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256",bytes)))
   .map(v=>v.toString(16).padStart(2,"0")).join("");
- let inserted=false,committed=false,oldKey=null;
+ let inserted=false,committed=false,commitAttempted=false,oldKey=null;
  try{
   const saved=await transaction(db,async c=>{
    const before=await lock(c,id,rev);
@@ -141,6 +141,7 @@ async function upload(db,r2,actor,request){
    const pdf=expose(next.rows[0]);
    const book=await record(c,id,actor,"upload",
     {state:before.state,pdf:expose(old.rows[0])},{pdf});
+   commitAttempted=true;
    return {book,pdf};
   });
   committed=true;
@@ -148,7 +149,7 @@ async function upload(db,r2,actor,request){
   return ok(saved);
  }catch(e){
   // After a possibly successful COMMIT, preserve bytes; never risk losing an owned PDF.
-  if(inserted&&!committed&&e?.code!=="08006"&&e?.code!=="08003")await r2.delete(key).catch(()=>{});
+  if(inserted&&!commitAttempted)await r2.delete(key).catch(()=>{});
   return secureError(e);
  }
 }

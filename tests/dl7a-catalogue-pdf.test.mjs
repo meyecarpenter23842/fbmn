@@ -156,6 +156,6 @@ test("DL7A migrations and Website reject draft/key exposure and do not destroy p
   admin=read("apps/admin/app/catalogue-book-manager.tsx");
  assert.match(web,/item\.pdfDownloadEnabled/);
  assert.match(web,/GlassPanel/);assert.match(route,/Content-Disposition/);
- assert.match(admin,/\/pdf-target/);assert.match(admin,/\/pdf-settings/);
+ assert.match(admin,/\/pdf-target/);assert.match(admin,/pdf-settings/);
  assert.doesNotMatch(route,/R2_SECRET|ADMIN_TOKEN|NET_PRICE/);
 });

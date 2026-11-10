@@ -65,7 +65,7 @@ test("DL7C-S Admin proxy whitelists settings only, no sound control in public re
  const {readFileSync}=await import("node:fs");
  const get=path=>readFileSync(new URL("../"+path,import.meta.url),"utf8");
  const proxy=get("apps/admin/app/api/website/catalogue/[[...path]]/route.ts");
- assert.match(proxy,/GET_ACTIONS=new Set\(\["","image","settings"\]\)/);
+ assert.match(proxy,/GET_ACTIONS=new Set\(\["","image","settings","pdf-target"\]\)/);
  assert.match(proxy,/POST_ACTIONS=new Set\(\["settings","create"/);
  const viewer=get("app/catalogue/catalogue-flipbook.tsx");
  assert.doesNotMatch(viewer,/Âm lật: |toggleAudio/);
