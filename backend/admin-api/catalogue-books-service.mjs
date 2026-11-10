@@ -101,8 +101,7 @@ async function queryDetail(db,id){
    " WHERE id=$1::uuid",[id]);
   if(b.rowCount!==1)throw Error("not_found");
   const files=await c.query("SELECT id,kind,sort_order,width,height,byte_size FROM "+ASSETS+
-   " WHERE book_id=$1::uuid AND kind IN ('page','cover') ORDER BY CASE kind WHEN 'cover' THEN 0 WHEN 'background_desktop' THEN 1"+
-   " WHEN 'background_mobile' THEN 2 ELSE 3 END,sort_order,id LIMIT 205",[id]);
+   " WHERE book_id=$1::uuid AND kind IN ('page','cover') ORDER BY CASE kind WHEN 'cover' THEN 0 ELSE 1 END,sort_order,id LIMIT 201",[id]);
   return {book:exposeBook(b.rows[0]),assets:files.rows.map(exposeAsset)};
  });
  return v;
