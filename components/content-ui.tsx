@@ -51,7 +51,7 @@ export function EditorialCover({item}:{item:Pick<PublicArticle,"id"|"hasDesktop"
 }
 
 export function ArticlePreview({ article }: { article: PublicArticle }) {
-  return <article className="content-article-card news-hub-card">
+  return <article className="content-article-card">
     <EditorialCover item={article}/>
     <p className="content-eyebrow">
       <time dateTime={article.publishedAt}>{new Date(article.publishedAt).toLocaleDateString("vi-VN", { timeZone: "UTC" })}</time>
@@ -63,7 +63,7 @@ export function ArticlePreview({ article }: { article: PublicArticle }) {
 }
 
 export function PromotionPreview({ promotion }: { promotion: PublicPromotion }) {
-  return <article className="content-article-card news-hub-card">
+  return <article className="content-article-card">
     <EditorialCover item={promotion}/>
     <p className="content-eyebrow">KHUYẾN MÃI ĐÃ DUYỆT</p>
     <h2><Link href={"/khuyen-mai/" + promotion.slug}>{promotion.title}</Link></h2>

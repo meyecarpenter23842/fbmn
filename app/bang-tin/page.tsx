@@ -5,7 +5,7 @@ import {getPublicContent} from "@/lib/content/adapter";
 import {buildNewsHubItems,type NewsHubFilter} from "@/lib/content/news-hub";
 
 export const dynamic="force-dynamic";
-export const metadata:Metadata={
+export const metadata: Metadata ={
  title:"Bảng tin | Futurebook Miền Nam",
  description:"Tin tức và chương trình khuyến mãi Futurebook Miền Nam đã được xác minh, duyệt và công bố.",
  alternates:{canonical:"/bang-tin"}
