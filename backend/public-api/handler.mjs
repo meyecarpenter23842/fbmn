@@ -213,7 +213,7 @@ export function projectPublicHomeLayout(raw) {
     sectionOrder:[...raw.sectionOrder],revision:raw.revision};
 }
 export function projectPublicCategoryDisplay(raw) {
-  guard(object(raw) && Array.isArray(raw.modes) && raw.modes.length<=200);
+  guard(object(raw) && Array.isArray(raw.modes) && raw.modes.length<=2000);
   const seen=new Set();
   return {modes:raw.modes.map(item=>{
     guard(object(item) && typeof item.categoryId==="string" &&
