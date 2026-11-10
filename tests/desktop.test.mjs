@@ -35,7 +35,7 @@ test("mockup phone, price, code and popularity labels are not offered as true da
   assert.doesNotMatch(source, /19\.500|28\.500|14\.500|32\.500|M483|M494|M885|M439|0901\.567\.890/);
   assert.doesNotMatch(source, />Bán chạy<|>Mới Mở<|>Sản phẩm chính hãng</);
   assert.doesNotMatch(read("app/page.tsx"), /MẪU GIAO DIỆN|previewProducts|ref-demo-badge/);
-  assert.match(read("app/page.tsx"), /chưa có sản phẩm đủ điều kiện công khai/i);
+  assert.match(read("app/page.tsx"), /Danh mục sản phẩm đang được cập nhật/i);
   assert.match(read("components/home-product-card.tsx"), /CatalogProductImage/);
 });
 
