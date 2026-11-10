@@ -30,12 +30,13 @@ test("demo is fully local, doesn't invent backend access or leak user messages",
   const code=read("components/chatbot-widget.tsx");
   const replySource=read("lib/chatbot/demo-replies.ts");
   assert.match(code, /data-chatbot-mode="demo"/);
-  assert.match(code, /Chưa kết nối Dialogflow CX/);
+  assert.match(code, /Hỗ trợ nhanh · Câu trả lời soạn sẵn/);
+  assert.match(code, /không gửi lên máy chủ/);
   assert.doesNotMatch(code+replySource, /fetch\s*\(|localStorage|sessionStorage|Authorization:/);
   assert.equal(getDemoChatbotReply("Sản phẩm").href,"/san-pham");
   assert.equal(getDemoChatbotReply("Dành cho đại lý").href,"/dai-ly");
   assert.equal(getDemoChatbotReply("Liên hệ").href,"/lien-he");
-  assert.match(getDemoChatbotReply("Một câu hỏi chưa có dữ liệu").text, /demo/);
+  assert.match(getDemoChatbotReply("Một câu hỏi chưa có dữ liệu").text, /chưa có trong phần hỗ trợ nhanh/);
 });
 test("app invitation anchors near the header, away from chatbot touch targets", () => {
   const styles=read("app/app-download.css");

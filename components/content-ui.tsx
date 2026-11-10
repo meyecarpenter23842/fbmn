@@ -65,7 +65,7 @@ export function ArticlePreview({ article }: { article: PublicArticle }) {
 export function PromotionPreview({ promotion }: { promotion: PublicPromotion }) {
   return <article className="content-article-card">
     <EditorialCover item={promotion}/>
-    <p className="content-eyebrow">KHUYẾN MÃI ĐÃ DUYỆT</p>
+    <p className="content-eyebrow">KHUYẾN MÃI</p>
     <h2><Link href={"/khuyen-mai/" + promotion.slug}>{promotion.title}</Link></h2>
     <p>{promotion.summary}</p>
     <Link className="content-text-link" href={"/khuyen-mai/" + promotion.slug}>Xem chương trình</Link>
