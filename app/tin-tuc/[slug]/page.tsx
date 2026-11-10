@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { ContentShell, ContentBreadcrumb, WaitingForApproval } from "@/components/content-ui";
+import { ContentShell, ContentBreadcrumb, WaitingForApproval, EditorialCover } from "@/components/content-ui";
 import { getPublicContent } from "@/lib/content/adapter";
 
 export const dynamic = "force-dynamic";
@@ -18,6 +18,7 @@ export default async function NewsDetail({ params }: Props) {
   return <ContentShell>
     <ContentBreadcrumb items={[{ name: "Tin tức", href: "/tin-tuc" }, { name: item?.title ?? "Chưa công khai" }]}/>
     {item ? <article className="content-story">
+      <EditorialCover item={item}/>
       <p className="content-eyebrow"><time dateTime={item.publishedAt}>
         {new Date(item.publishedAt).toLocaleDateString("vi-VN", { timeZone: "UTC" })}</time></p>
       <h1>{item.title}</h1><p className="content-lead">{item.summary}</p>

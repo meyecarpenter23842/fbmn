@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { ContentShell, ContentBreadcrumb, PageHeading, WaitingForApproval, PromotionPreview } from "@/components/content-ui";
 import { getPublicContent } from "@/lib/content/adapter";
 
@@ -10,9 +11,11 @@ export const metadata: Metadata = {
 
 export default async function PromotionsPage() {
   const { promotions } = await getPublicContent();
-  const listed=promotions.filter(promotion=>!promotion.slot||promotion.slot==="promotions.list");
+  // Featured campaigns also belong to the public promotions category.
+  const listed=promotions;
   return <ContentShell>
     <ContentBreadcrumb items={[{ name: "Khuyến mãi" }]}/>
+    <nav className="news-hub-back"><Link href="/bang-tin">← Trở lại Bảng tin</Link></nav>
     <PageHeading eyebrow="CHƯƠNG TRÌNH" title="Khuyến mãi"
       intro="Các chương trình chỉ hiển thị sau khi được duyệt, trong thời gian có hiệu lực và có đầy đủ nội dung xác minh."/>
     {listed.length ? <section className="content-card-grid" aria-label="Danh sách chương trình">
