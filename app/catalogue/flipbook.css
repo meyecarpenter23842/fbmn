@@ -4,22 +4,22 @@
  */
 .fb-catalogue-route{min-height:62vh;color:var(--fb-glass-ink)}
 .fb-catalogue-viewer{position:relative;left:50%;transform:translateX(-50%);width:100vw;max-width:100vw;min-width:0}
-.fb-catalogue-topbar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;max-width:1200px;margin:auto;padding:16px 18px}
+.fb-catalogue-topbar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;max-width:1200px;margin:auto;padding:6px 12px}
 .fb-catalogue-identity{font-size:var(--fb-control-font-size);color:var(--fb-glass-muted)}
 .fb-catalogue-picker{display:flex;align-items:center;gap:10px;min-width:0;font-size:var(--fb-control-font-size);font-weight:700}
 .fb-catalogue-picker select{min-height:var(--fb-field-height);max-width:min(350px,65vw);border:1px solid var(--fb-glass-border-fallback);border-radius:var(--fb-control-radius);padding:0 12px;background:var(--fb-glass-surface-fallback);color:var(--fb-glass-ink);font-size:var(--fb-control-font-size)}
 .fb-catalogue-state{margin:20px auto 80px;max-width:800px;min-height:310px;padding:54px 28px;text-align:center;border:1px solid var(--fb-glass-border);border-radius:var(--fb-glass-panel-radius);background:var(--fb-glass-panel-layer);box-shadow:var(--fb-glass-shadow)}
 .fb-catalogue-state h2{color:var(--color-primary-strong);font-size:24px;margin:0 0 12px}
 .fb-catalogue-state p{line-height:1.6;max-width:500px;margin:0 auto 22px}
-.fb-catalogue-scene{position:relative;isolation:isolate;min-height:620px;background:transparent}
+.fb-catalogue-scene{position:relative;isolation:isolate;min-height:0;background:transparent}
 .fb-catalogue-scene:fullscreen{
  height:100%;overflow-y:auto;
  background-color:var(--fb-glass-page);
  background-image:var(--fb-glass-decorative-image,var(--fb-glass-backdrop-gradient));
  background-position:center;background-repeat:no-repeat;background-size:cover;
 }
-.fb-catalogue-scene-content{max-width:1480px;margin:0 auto;padding:24px 16px 34px}
-.fb-catalogue-heading{display:flex;align-items:end;justify-content:space-between;gap:12px;flex-wrap:wrap;max-width:1120px;margin:0 auto 18px}
+.fb-catalogue-scene-content{max-width:1480px;margin:0 auto;padding:8px 16px 24px}
+.fb-catalogue-heading{display:flex;align-items:end;justify-content:space-between;gap:12px;flex-wrap:wrap;max-width:1120px;margin:0 auto 6px}
 .fb-catalogue-overline{font-size:11px;letter-spacing:.14em;font-weight:800;color:var(--color-primary)}
 .fb-catalogue-heading h2{font-family:var(--fb-glass-display-font);font-size:clamp(20px,2.3vw,28px);color:var(--color-primary-strong);line-height:var(--fb-web-heading-leading);font-weight:var(--fb-web-heading-weight);margin:5px 0}
 .fb-catalogue-heading p{font-size:var(--fb-control-font-size);color:var(--fb-glass-muted);margin:3px 0}
@@ -29,13 +29,13 @@
 .fb-catalogue-nav-glyph{font-size:23px;line-height:1;pointer-events:none}
 .fb-catalogue-nav:focus-visible,.fb-catalogue-thumb:focus-visible{outline:3px solid var(--color-primary);outline-offset:3px}
 /* Physical page stack: no enclosing viewer card or independent R2 backdrop. */
-.fb-catalogue-book-shell{position:relative;flex:0 1 1120px;width:min(84vw,1120px);height:clamp(315px,57vw,718px);min-width:0;filter:drop-shadow(0 24px 22px rgba(52,24,69,.24))}
-.fb-catalogue-book-edge{position:absolute;inset:11px 10px -7px;border-radius:3px;background:repeating-linear-gradient(180deg,#f9f7f4 0,#ddd5d3 1px,#fff 2px,#f7f3f0 3px);box-shadow:0 10px 20px rgba(48,23,56,.12),0 1px 3px rgba(57,19,80,.16);pointer-events:none}
+.fb-catalogue-book-shell{position:relative;flex:0 1 1240px;width:min(90vw,1240px);height:clamp(315px,62vw,820px);min-width:0}
+.fb-catalogue-book-edge{position:absolute;inset:0;background:transparent;border-radius:3px;pointer-events:none}
 .fb-catalogue-book-host{position:relative;width:100%;height:100%;z-index:1}
 .fb-catalogue-engine-root{width:100%;height:100%}
 .fb-catalogue-engine-root .stf__parent{margin:0 auto}
-.fb-catalogue-paper{position:relative;overflow:hidden;width:100%;height:100%;background:#fff;border:1px solid rgba(41,25,37,.1);box-shadow:inset 5px 0 9px rgba(57,27,44,.075),inset -4px 0 8px rgba(57,27,44,.05)}
-.fb-catalogue-paper::after{content:"";position:absolute;inset:0 0 0 auto;width:10px;background:linear-gradient(90deg,transparent,rgba(70,42,51,.13));pointer-events:none}
+.fb-catalogue-paper{position:relative;overflow:hidden;width:100%;height:100%;background:#fff;border:1px solid rgba(41,25,37,.1);box-shadow:0 2px 6px rgba(42,24,48,.14)}
+.fb-catalogue-paper::after{content:"";position:absolute;inset:0 0 0 auto;width:7px;background:linear-gradient(90deg,transparent,rgba(70,42,51,.08));pointer-events:none}
 .fb-catalogue-paper[data-density="hard"]{border:3px solid #e7dee3;box-shadow:inset 4px 0 8px rgba(40,20,60,.11),0 2px 6px rgba(28,14,34,.14)}
 .fb-catalogue-paper img{display:block;width:100%;height:100%;object-fit:contain;background:#fff;user-select:none;-webkit-user-drag:none}
 .fb-catalogue-toolbar{display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap;margin:22px auto 12px}
@@ -56,26 +56,28 @@
 @media(max-width:700px){
  .fb-catalogue-topbar{padding:12px}.fb-catalogue-picker{width:100%;justify-content:space-between}
  .fb-catalogue-picker select{flex:1}
- .fb-catalogue-scene{min-height:520px}
- .fb-catalogue-scene-content{padding:18px 8px 30px}.fb-catalogue-heading{padding:0 10px;margin-bottom:14px}
- .fb-catalogue-book-shell{flex-basis:auto;width:calc(100vw - 106px);height:clamp(290px,120vw,640px)}
+ .fb-catalogue-scene{min-height:0}
+ .fb-catalogue-scene-content{padding:4px 4px 18px}.fb-catalogue-heading{padding:0 10px;margin-bottom:4px}
+ .fb-catalogue-book-shell{flex:1 1 auto;width:100%;height:clamp(290px,132vw,820px)}
  .fb-catalogue-book-edge{inset:8px 3px -5px}
- .fb-catalogue-reader{gap:5px}
+ .fb-catalogue-reader{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+ .fb-catalogue-book-shell{grid-column:1/-1;grid-row:1}
+ .fb-catalogue-nav--prev{grid-column:1;grid-row:2;justify-self:start}
+ .fb-catalogue-nav--next{grid-column:2;grid-row:2;justify-self:end}
  .fb-catalogue-toolbar{gap:6px;padding:0 8px}
  .fb-catalogue-toolbar .fb-glass-button{flex:1 1 calc(50% - 12px);max-width:240px}
  .fb-catalogue-thumb{flex-basis:74px}.fb-catalogue-thumb img{width:60px;height:75px}
 }
-@media(max-width:390px){.fb-catalogue-reader{gap:2px}.fb-catalogue-book-shell{width:calc(100vw - 92px)}}
 @media(prefers-reduced-motion:reduce){.fb-catalogue-thumb{transition:none}}
 
 /* DL7A Catalogue PDF library: layout only; shared GlassPanel/Button own their visual skin. */
-.fb-catalogue-library{display:grid;gap:16px;margin:12px 0 26px;min-width:0}
+.fb-catalogue-library{display:grid;gap:8px;margin:0 auto 8px;padding:0 12px;max-width:1240px;min-width:0}
 .fb-catalogue-library-intro{display:grid;gap:6px}
 .fb-catalogue-library-intro h2{margin:0;color:var(--color-primary-strong);font-size:clamp(21px,2vw,28px)}
 .fb-catalogue-library-intro p{margin:0;color:var(--fb-glass-muted);font-size:14px;line-height:1.65}
-.fb-catalogue-library-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,270px),1fr));gap:14px}
-.fb-catalogue-library-item{display:flex;flex-direction:column;justify-content:space-between;gap:16px;min-width:0}
-.fb-catalogue-library-item h3{font-size:18px;line-height:1.4;margin:6px 0}
+.fb-catalogue-library-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,270px),1fr));gap:8px}
+.fb-catalogue-library-item{display:flex;flex-direction:column;justify-content:space-between;gap:8px;min-width:0}
+.fb-catalogue-library-item h3{font-size:16px;line-height:1.4;margin:0 0 4px}
 .fb-catalogue-library-item p{font-size:13px;line-height:1.5;margin:0}
 .fb-catalogue-library-actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .fb-catalogue-pdf-only{margin:20px auto;padding:16px 0;text-align:center;line-height:1.7}

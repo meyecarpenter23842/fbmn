@@ -2,6 +2,7 @@
 import {useCallback,useEffect,useRef,useState} from "react";
 import AdminToast from "./admin-toast";
 import ProductModal,{useProductModalClose} from "./product-modal";
+import {PaperSound} from "../lib/paper-sound";
 
 type Book={id:string;title:string;edition:string;state:"draft"|"ready"|"hidden";revision:number;updated_at:string};
 type Asset={id:string;kind:"page"|"cover";
@@ -10,8 +11,8 @@ type PdfInfo={byteSize:number;visible:boolean;downloadEnabled:boolean;updatedAt:
 type Details={book:Book;assets:Asset[];pdf:PdfInfo|null};
 type ListResult={books:Book[];page:number;totalPages:number;total:number};
 type SavedResult={book:Book;asset?:Asset};
-type ViewerSettings={flipDurationMs:number;soundEnabled:boolean;shadowOpacity:number;revision:number};
-type ViewerDraft=Pick<ViewerSettings,"flipDurationMs"|"soundEnabled"|"shadowOpacity">;
+type ViewerSettings={flipDurationMs:number;soundEnabled:boolean;soundVolume:number;shadowOpacity:number;revision:number};
+type ViewerDraft=Pick<ViewerSettings,"flipDurationMs"|"soundEnabled"|"soundVolume"|"shadowOpacity">;
 type Kind=Asset["kind"];
 const MAX_IMAGE=5*1024*1024;
 const MAX_PDF=20*1024*1024;
@@ -159,9 +160,11 @@ export default function CatalogueBookManager({owner,onBusyChange}:{
  const [busy,setBusy]=useState(false);
  const [settings,setSettings]=useState<ViewerSettings|null>(null);
  const [draftSettings,setDraftSettings]=useState<ViewerDraft>({
-  flipDurationMs:950,soundEnabled:false,shadowOpacity:0.26
+  flipDurationMs:950,soundEnabled:false,soundVolume:35,shadowOpacity:0.26
  });
  const [settingsBusy,setSettingsBusy]=useState(false);
+ const previewSound=useRef<PaperSound|null>(null);
+ useEffect(()=>()=>{previewSound.current?.dispose();previewSound.current=null;},[]);
  const [settingsError,setSettingsError]=useState("");
  const [pageOffset,setPageOffset]=useState(0);
  const [readError,setReadError]=useState("");
@@ -185,10 +188,10 @@ export default function CatalogueBookManager({owner,onBusyChange}:{
    const response=await requestCatalogue<{settings:ViewerSettings}>("/settings");
    const value=response.settings;
    if(!value||!Number.isSafeInteger(value.flipDurationMs)||
-    typeof value.soundEnabled!=="boolean"||typeof value.shadowOpacity!=="number"||
+    typeof value.soundEnabled!=="boolean"||!Number.isInteger(value.soundVolume)||value.soundVolume<0||value.soundVolume>100||typeof value.shadowOpacity!=="number"||
     !Number.isSafeInteger(value.revision))throw Error("Cấu hình trả về không hợp lệ.");
    setSettings(value);
-   setDraftSettings({flipDurationMs:value.flipDurationMs,soundEnabled:value.soundEnabled,
+   setDraftSettings({flipDurationMs:value.flipDurationMs,soundEnabled:value.soundEnabled,soundVolume:value.soundVolume,
     shadowOpacity:value.shadowOpacity});
   }catch(e){setSettingsError(e instanceof Error?e.message:"Không đọc được cài đặt sách lật.");}
  },[]);
@@ -201,7 +204,7 @@ export default function CatalogueBookManager({owner,onBusyChange}:{
    });
    setSettings(result.settings);
    setDraftSettings({flipDurationMs:result.settings.flipDurationMs,
-    soundEnabled:result.settings.soundEnabled,shadowOpacity:result.settings.shadowOpacity});
+    soundEnabled:result.settings.soundEnabled,soundVolume:result.settings.soundVolume,shadowOpacity:result.settings.shadowOpacity});
    alert("Đã lưu cấu hình sách lật. Website sẽ tự áp dụng khi mở/tải lại Catalogue.","success");
   }catch(e){setSettingsError(e instanceof Error?e.message:"Không lưu được cài đặt.");}
   finally{setSettingsBusy(false);}
@@ -375,11 +378,18 @@ export default function CatalogueBookManager({owner,onBusyChange}:{
       onChange={e=>setDraftSettings(p=>({...p,soundEnabled:e.target.checked}))}/>
      <span>Cho phép tiếng giấy khi khách lật trang</span>
     </label>
-    <div className="dl7b-settings-actions">
+    <label>Âm lượng tiếng giấy ({draftSettings.soundVolume}%)
+      <input type="range" min="0" max="100" step="5" value={draftSettings.soundVolume} disabled={settingsBusy||busy}
+       onChange={e=>setDraftSettings(p=>({...p,soundVolume:Number(e.target.value)}))}/>
+     </label>
+     <div className="dl7b-settings-actions">
+      <button type="button" className="fb-ui-button fb-ui-button--secondary" disabled={settingsBusy||busy||draftSettings.soundVolume===0}
+       onClick={()=>{const player=previewSound.current??(previewSound.current=new PaperSound());void player.play(draftSettings.soundVolume).catch(()=>alert("Không phát được âm thanh thử.","error"));}}>Nghe thử</button>
      <button type="submit" className="fb-ui-button fb-ui-button--primary"
       disabled={settingsBusy||busy||(
        draftSettings.flipDurationMs===settings.flipDurationMs&&
        draftSettings.soundEnabled===settings.soundEnabled&&
+        draftSettings.soundVolume===settings.soundVolume&&
        draftSettings.shadowOpacity===settings.shadowOpacity
       )}>{settingsBusy?"Đang lưu…":"Lưu cài đặt"}</button>
      <button type="button" className="fb-ui-button fb-ui-button--secondary"

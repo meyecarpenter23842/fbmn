@@ -1,0 +1,5 @@
+# DL7C-T — Catalogue polish
+Scope: docs/roadmap.md. Preserve DL7A/DL7B/DL7C-S, shared G05 backdrop, no visitor sound controls.
+Audio: Kenney RPG Audio `bookFlip2.ogg` (CC0), https://kenney.nl/assets/rpg-audio; 0.40s WAV conversion from https://github.com/receptron/jinglescript/blob/756a37787c46c5ea747341d74283459ace76f1b8/samples/sfx/book-flip.wav (source notes in samples/sfx/SOURCES.md). Identical bundled WAV in Website and Admin public/audio; no external fetch. Decode after interaction, gentle gain/fades, no overlap; Admin preview shares player and draft volume. Verify actual sound and cross-browser playback before release.
+Migration adds sound_volume (0–100, default 35) to existing settings and public view; keeps existing speed/on/off/shadow and revisions. Apply migration before Workers, then frontends. Rollback frontends and Workers before down migration.
+Acceptance: CI, Codex review, actual 1440/1280/768/390/360 screenshots, drag/swipe/rapid navigation, keyboard, fullscreen, zoom, PDF, sound on/off/volume and preview, reduced motion. No production acceptance claimed.

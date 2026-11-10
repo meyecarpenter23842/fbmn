@@ -32,17 +32,17 @@ export function validateCatalogueBook(input){
 }
 /** One Owner-managed global flipbook configuration, not a visitor preference. */
 export function validCatalogueViewerSettings(x){
- return x&&typeof x==="object"&&!Array.isArray(x)&&Object.keys(x).sort().join(",")==="flipDurationMs,revision,shadowOpacity,soundEnabled"&&
+ return x&&typeof x==="object"&&!Array.isArray(x)&&Object.keys(x).sort().join(",")==="flipDurationMs,revision,shadowOpacity,soundEnabled,soundVolume"&&
   Number.isSafeInteger(x.flipDurationMs)&&x.flipDurationMs>=750&&x.flipDurationMs<=1500&&x.flipDurationMs%50===0&&
-  typeof x.soundEnabled==="boolean"&&typeof x.shadowOpacity==="number"&&
+  typeof x.soundEnabled==="boolean"&&Number.isInteger(x.soundVolume)&&x.soundVolume>=0&&x.soundVolume<=100&&typeof x.shadowOpacity==="number"&&
   Number.isFinite(x.shadowOpacity)&&x.shadowOpacity>=0.10&&x.shadowOpacity<=0.50&&
   Math.abs(x.shadowOpacity*100-Math.round(x.shadowOpacity*100))<1e-8&&revision(x.revision);
 }
-const exposeViewer=x=>({flipDurationMs:Number(x.flip_duration_ms),soundEnabled:x.sound_enabled===true,
+const exposeViewer=x=>({flipDurationMs:Number(x.flip_duration_ms),soundEnabled:x.sound_enabled===true,soundVolume:Number(x.sound_volume),
  shadowOpacity:Number(x.shadow_opacity),revision:Number(x.revision)});
 async function readViewer(db){
  return db(async c=>{
-  const r=await c.query("SELECT flip_duration_ms,sound_enabled,shadow_opacity,revision FROM "+VIEWER+" WHERE singleton=true");
+  const r=await c.query("SELECT flip_duration_ms,sound_enabled,shadow_opacity,revision,sound_volume FROM "+VIEWER+" WHERE singleton=true");
   if(r.rowCount!==1)throw Error("viewer_unavailable");
   return {settings:exposeViewer(r.rows[0])};
  });
@@ -50,15 +50,15 @@ async function readViewer(db){
 async function saveViewer(db,actor,input){
  if(!validCatalogueViewerSettings(input))throw Error("invalid_settings");
  return transact(db,async c=>{
-  const old=await c.query("SELECT flip_duration_ms,sound_enabled,shadow_opacity,revision FROM "+
+  const old=await c.query("SELECT flip_duration_ms,sound_enabled,shadow_opacity,revision,sound_volume FROM "+
    VIEWER+" WHERE singleton=true FOR UPDATE");
   if(old.rowCount!==1)throw Error("viewer_unavailable");
   const before=exposeViewer(old.rows[0]);
   if(before.revision!==input.revision)throw Error("revision_conflict");
   const updated=await c.query("UPDATE "+VIEWER+
-   " SET flip_duration_ms=$1,sound_enabled=$2,shadow_opacity=$3,revision=revision+1,updated_at=now(),updated_by=$4"+
-   " WHERE singleton=true RETURNING flip_duration_ms,sound_enabled,shadow_opacity,revision",
-   [input.flipDurationMs,input.soundEnabled,input.shadowOpacity,actor]);
+   " SET flip_duration_ms=$1,sound_enabled=$2,shadow_opacity=$3,revision=revision+1,updated_at=now(),updated_by=$4,sound_volume=$5"+
+   " WHERE singleton=true RETURNING flip_duration_ms,sound_enabled,shadow_opacity,revision,sound_volume",
+   [input.flipDurationMs,input.soundEnabled,input.shadowOpacity,actor,input.soundVolume]);
   const after=exposeViewer(updated.rows[0]);
   await c.query("INSERT INTO "+VIEWER_AUDIT+
    "(revision,actor_subject,before_data,after_data) VALUES ($1,$2,$3::jsonb,$4::jsonb)",

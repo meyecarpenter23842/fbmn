@@ -5,7 +5,7 @@ import {handleCatalogueBooks,validCatalogueViewerSettings}
 
 const ROOT="https://admin.example/v1/admin/website/catalogue";
 const r2={get:async()=>null,put:async()=>{},delete:async()=>{}};
-const record={flip_duration_ms:950,sound_enabled:false,shadow_opacity:"0.26",revision:1};
+const record={flip_duration_ms:950,sound_enabled:false,sound_volume:35,shadow_opacity:"0.26",revision:1};
 const logs=[];
 function fakeDb(fn){
  return fn({query:async(sql,args=[])=>{
@@ -14,7 +14,7 @@ function fakeDb(fn){
    return {rowCount:1,rows:[{...record}]};
   if(sql.startsWith("UPDATE fbmn_catalog_private.website_catalogue_viewer_settings")){
    record.flip_duration_ms=args[0];record.sound_enabled=args[1];
-   record.shadow_opacity=args[2];record.revision++;
+   record.shadow_opacity=args[2];record.sound_volume=args[4];record.revision++;
    return {rowCount:1,rows:[{...record}]};
   }
   if(sql.startsWith("INSERT INTO fbmn_catalog_private.website_catalogue_viewer_settings_audit")){
@@ -35,22 +35,22 @@ test("DL7C-S Owner can read one global settings record, no R2 is accessed",async
  const response=await run(req("settings"));
  assert.equal(response.status,200);
  assert.deepEqual((await response.json()).data.settings,{
-  flipDurationMs:950,soundEnabled:false,shadowOpacity:0.26,revision:1
+  flipDurationMs:950,soundEnabled:false,soundVolume:35,shadowOpacity:0.26,revision:1
  });
  assert.equal((await run(req("settings"),"editor")).status,403);
  assert.equal((await run(new Request(ROOT+"/settings?book=invalid"))).status,400);
 });
 test("DL7C-S strict allowlist of values and revisions",()=>{
- const good={flipDurationMs:950,soundEnabled:false,shadowOpacity:0.26,revision:1};
+ const good={flipDurationMs:950,soundEnabled:false,soundVolume:35,shadowOpacity:0.26,revision:1};
  assert.equal(validCatalogueViewerSettings(good),true);
  for(const change of [{flipDurationMs:600},{flipDurationMs:1001},{flipDurationMs:1600},
-  {soundEnabled:"true"},{shadowOpacity:0.56},{shadowOpacity:0.265},
+  {soundEnabled:"true"},{soundVolume:-1},{soundVolume:101},{soundVolume:2.5},{shadowOpacity:0.56},{shadowOpacity:0.265},
   {revision:0},{evil:"hidden"}]){
   assert.equal(validCatalogueViewerSettings({...good,...change}),false,JSON.stringify(change));
  }
 });
 test("DL7C-S update audits and rejects stale revision",async()=>{
- const change={flipDurationMs:1200,soundEnabled:true,shadowOpacity:0.35,revision:1};
+ const change={flipDurationMs:1200,soundEnabled:true,soundVolume:25,shadowOpacity:0.35,revision:1};
  const good=await run(req("settings",change));
  assert.equal(good.status,200);
  assert.deepEqual((await good.json()).data.settings,{...change,revision:2});
