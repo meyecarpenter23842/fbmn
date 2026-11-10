@@ -51,7 +51,7 @@ test("C3 keeps real homepage section order and correct category/layout sources",
 test("C3 uses official header and real editorial list structure, never fake dates/images",()=>{
  for(const label of ["Trang chủ","Giới thiệu","Sản phẩm","Khuyến mãi","Dành cho đại lý","Tin tức","Liên hệ"])
   assert.ok(scene.includes('"'+label+'"'),label);
- assert.match(shell,/fbmn-official-logo\.webp/);
+ assert.match(shell,/fbmn-transparent-logo\.webp/);
  assert.match(scene,/src="\/brand\/fbmn-official-logo\.webp"/);
  assert.match(news,/ArticlePreview/);
  assert.match(promos,/PromotionPreview/);
