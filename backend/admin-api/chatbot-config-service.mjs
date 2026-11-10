@@ -6,7 +6,7 @@ const fail=(status,code)=>Response.json({error:{code}},{status,headers:HEADERS})
 const KEYS=["projectId","location","agentId","environmentId","model"];
 // Google CX Playbooks documented supported models, not a Gemini API catalogue.
 const SUPPORTED=["gemini-2.5-flash","gemini-2.5-flash-lite","gemini-3.1-flash-lite","gemini-3.5-flash-lite"];
-const LOCATIONS=new Set(["global","asia-south1","asia-southeast1","asia-southeast2","asia-northeast1","australia-southeast1","eu","europe-west1","europe-west2","europe-west3","europe-west4","europe-west6","northamerica-northeast1","us","us-central1","us-east1","us-west1"]);
+export const LOCATIONS=new Set(["global","asia-south1","asia-southeast1","asia-southeast2","asia-northeast1","australia-southeast1","eu","europe-west1","europe-west2","europe-west3","europe-west4","europe-west6","northamerica-northeast1","us","us-central1","us-east1","us-west1"]);
 const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 export function normalizeConfig(input){
  if(!input||typeof input!=="object"||Array.isArray(input)||Object.keys(input).some(k=>!KEYS.includes(k)))return null;
@@ -47,12 +47,22 @@ async function listPages(root,field,token,fetcher,signal){
  }
  throw Error("google_unavailable");
 }
-export async function listCxAgents(projectId,secret,fetcher=fetch){
- if(!PROJECT.test(projectId))throw Error("invalid_config");
+export async function listCxAgents(projectId,secret,fetcher=fetch,selectedLocation="all"){
+ if(!PROJECT.test(projectId)||!(selectedLocation==="all"||LOCATIONS.has(selectedLocation)))throw Error("invalid_config");
  const token=await tokenFor(secret,fetcher),signal=AbortSignal.timeout(45000);
- const locations=await listPages("https://dialogflow.googleapis.com/v3/projects/"+projectId+"/locations","locations",token,fetcher,signal);
- const regions=[...new Set(["global",...locations.map(x=>x.locationId||x.name?.split("/").pop()).filter(x=>LOCATIONS.has(x))])];
- const agents=[],failedLocations=[];
+ let regions=[selectedLocation],locationDiscoveryFailed=false;
+ if(selectedLocation==="all"){
+  try{
+   const locations=await listPages("https://dialogflow.googleapis.com/v3/projects/"+projectId+"/locations","locations",token,fetcher,signal);
+   regions=[...new Set(["global",...locations.map(x=>x.locationId||x.name?.split("/").pop()).filter(x=>LOCATIONS.has(x))])];
+  }catch(e){
+   // Location enumeration may not be granted; agent list is independently
+   // authorized. Try known supported locations, not arbitrary caller hosts.
+   if(!["google_permission_denied","google_resource_not_found","google_unavailable"].includes(e?.message))throw e;
+   regions=[...LOCATIONS];locationDiscoveryFailed=true;
+  }
+ }
+ const agents=[],failedLocations=[],errors=[];
  for(let i=0;i<regions.length;i+=4)await Promise.all(regions.slice(i,i+4).map(async location=>{
   const parent="projects/"+projectId+"/locations/"+location+"/agents";
   try{
@@ -61,10 +71,14 @@ export async function listCxAgents(projectId,secret,fetcher=fetch){
     const id=row.name?.startsWith(parent+"/")?row.name.slice(parent.length+1):"";
     if(UUID.test(id))agents.push({id,location,name:typeof row.displayName==="string"?row.displayName.slice(0,200):id});
    }
-  }catch{failedLocations.push(location);}
+  }catch(e){failedLocations.push(location);errors.push(e?.message);}
  }));
- if(failedLocations.length===regions.length)throw Error("google_unavailable");
- return {agents:agents.sort((a,b)=>a.name.localeCompare(b.name)),failedLocations};
+ if(failedLocations.length===regions.length||(!agents.length&&failedLocations.length)){
+  for(const code of ["google_api_disabled","google_auth_failed","google_permission_denied","google_quota","google_timeout","google_network_error","google_resource_not_found"])
+   if(errors.includes(code))throw Error(code);
+  if(failedLocations.length===regions.length)throw Error("google_unavailable");
+ }
+ return {agents:agents.sort((a,b)=>a.name.localeCompare(b.name)),failedLocations,locationDiscoveryFailed};
 }
 export async function listCxEnvironments(config,secret,fetcher=fetch){
  const token=await tokenFor(secret,fetcher),signal=AbortSignal.timeout(25000);
@@ -79,26 +93,55 @@ function fromRow(row){
  if(!row)throw Error("config_unavailable");
  return {config:row.config,revision:Number(row.revision)};
 }
-async function googleJson(url,token,fetcher,signal){
- const response=await fetcher(url,{headers:{Authorization:"Bearer "+token,Accept:"application/json"},redirect:"error",signal});
- if(!response.ok)throw Error("google_unavailable");
- return response.json();
+// Return only allowlisted diagnostic codes: never echo Google's raw error,
+// OAuth tokens, service-account email, private key, or request payload.
+async function googleError(response,stage){
+ if(response.status===429)return Error("google_quota");
+ if(response.status===401)return Error("google_auth_failed");
+ if(stage==="oauth"&&response.status===400)return Error("google_auth_failed");
+ if(response.status===403){
+  let payload;try{payload=await response.json();}catch{}
+  const details=payload?.error?.details;
+  if(Array.isArray(details)&&details.some(d=>d?.reason==="SERVICE_DISABLED"))return Error("google_api_disabled");
+  return Error("google_permission_denied");
+ }
+ if(response.status===404)return Error("google_resource_not_found");
+ return Error("google_unavailable");
 }
-export async function tokenFor(secret,fetcher){
+async function googleJson(url,token,fetcher,signal){
+ let response;
+ try{response=await fetcher(url,{headers:{Authorization:"Bearer "+token,Accept:"application/json"},redirect:"error",signal});}
+ catch(e){throw Error(e?.name==="TimeoutError"||e?.name==="AbortError"?"google_timeout":"google_network_error");}
+ if(!response.ok)throw await googleError(response,"api");
+ try{return await response.json();}catch{throw Error("google_unavailable");}
+}
+const b64url=bytes=>btoa(String.fromCharCode(...bytes)).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"");
+const utf8=new TextEncoder();
+export async function tokenFor(secret,fetcher=fetch){
  let key;
  try{key=JSON.parse(secret);}catch{throw Error("credentials_missing");}
  if(key?.type!=="service_account"||typeof key.client_email!=="string"||typeof key.private_key!=="string")throw Error("credentials_missing");
- const {SignJWT,importPKCS8}=await import("jose");
- const pk=await importPKCS8(key.private_key,"RS256");
- const jwt=await new SignJWT({scope:"https://www.googleapis.com/auth/cloud-platform"})
-  .setProtectedHeader({alg:"RS256"}).setIssuer(key.client_email).setAudience("https://oauth2.googleapis.com/token")
-  .setIssuedAt().setExpirationTime("5m").sign(pk);
- const response=await fetcher("https://oauth2.googleapis.com/token",{method:"POST",redirect:"error",signal:AbortSignal.timeout(8000),
+ // WebCrypto is native to Workers. Import PKCS#8 directly and sign RS256;
+ // avoid runtime dynamic-import/provider ambiguity.
+ let jwt;
+ try{
+  const der=key.private_key.replace(/-----BEGIN PRIVATE KEY-----|-----END PRIVATE KEY-----|\s/g,"");
+  const bytes=Uint8Array.from(atob(der),c=>c.charCodeAt(0));
+  const pk=await crypto.subtle.importKey("pkcs8",bytes,{name:"RSASSA-PKCS1-v1_5",hash:"SHA-256"},false,["sign"]);
+  const now=Math.floor(Date.now()/1000);
+  const input=b64url(utf8.encode(JSON.stringify({alg:"RS256",typ:"JWT"})))+"."+b64url(utf8.encode(JSON.stringify({
+   iss:key.client_email,scope:"https://www.googleapis.com/auth/cloud-platform",aud:"https://oauth2.googleapis.com/token",iat:now,exp:now+300
+  })));
+  jwt=input+"."+b64url(new Uint8Array(await crypto.subtle.sign("RSASSA-PKCS1-v1_5",pk,utf8.encode(input))));
+ }catch{throw Error("google_invalid_key");}
+ let response;
+ try{response=await fetcher("https://oauth2.googleapis.com/token",{method:"POST",redirect:"error",signal:AbortSignal.timeout(12000),
   headers:{"Content-Type":"application/x-www-form-urlencoded"},
-  body:new URLSearchParams({grant_type:"urn:ietf:params:oauth:grant-type:jwt-bearer",assertion:jwt})});
- if(!response.ok)throw Error("google_unavailable");
- const data=await response.json();
- if(typeof data.access_token!=="string"||!data.access_token)throw Error("google_unavailable");
+  body:new URLSearchParams({grant_type:"urn:ietf:params:oauth:grant-type:jwt-bearer",assertion:jwt})});}
+ catch(e){throw Error(e?.name==="TimeoutError"||e?.name==="AbortError"?"google_timeout":"google_network_error");}
+ if(!response.ok)throw await googleError(response,"oauth");
+ let data;try{data=await response.json();}catch{throw Error("google_auth_failed");}
+ if(typeof data.access_token!=="string"||!data.access_token)throw Error("google_auth_failed");
  return data.access_token;
 }
 export async function discoverCx(config,secret,fetcher=fetch){
@@ -159,9 +202,10 @@ export async function handleChatbotConfig({request,actor,db,googleSecret,credent
   };
   const getSecret=async()=>account?JSON.stringify(account):await readStored();
   if(body.operation==="list_agents"){
-   if(Object.keys(body).some(k=>!["operation","projectId","credential"].includes(k))||!PROJECT.test(body.projectId||"")||(account&&account.project_id!==body.projectId))return fail(400,"invalid_config");
+   if(Object.keys(body).some(k=>!["operation","projectId","credential","location"].includes(k))||!PROJECT.test(body.projectId||"")||(account&&account.project_id!==body.projectId))return fail(400,"invalid_config");
    const secret=await getSecret();if(!secret)return fail(503,"credentials_missing");
-   return ok(await listAgents(body.projectId,secret));
+   const location=body.location??"all";if(location!=="all"&&!LOCATIONS.has(location))return fail(400,"invalid_config");
+   return ok(await listAgents(body.projectId,secret,fetch,location));
   }
   if(body.operation==="import"){
    if(Object.keys(body).some(k=>!["operation","raw"].includes(k)))return fail(400,"invalid_config");
@@ -206,4 +250,4 @@ export async function handleChatbotConfig({request,actor,db,googleSecret,credent
   return fail(503,bodyUnavailable(e));
  }
 }
-function bodyUnavailable(e){return e?.message==="google_unavailable"?"google_unavailable":"config_unavailable";}
+function bodyUnavailable(e){return ["google_unavailable","google_invalid_key","google_auth_failed","google_api_disabled","google_permission_denied","google_resource_not_found","google_quota","google_timeout","google_network_error","credentials_storage_unavailable"].includes(e?.message)?e.message:"config_unavailable";}

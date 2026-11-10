@@ -19,7 +19,7 @@ async function api<T>(body?:object):Promise<T>{
  const reply=await res.json().catch(()=>({})) as {data?:T;error?:{code?:string}};
  if(!res.ok||!reply.data){
   const code=reply.error?.code;
-  throw Error(code==="credentials_missing"?"Chưa có tài khoản Google. Hãy nhập file Service Account.":code==="revision_conflict"?"Cấu hình đã thay đổi. Hãy tải lại.":code==="invalid_config"?"Cấu hình không hợp lệ. Chỉ nhận đúng các trường và định dạng hỗ trợ.":code==="model_unavailable"?"Model chưa có trong kết quả Google.":code==="google_unavailable"?"Không xác minh được Google Agent, Environment hoặc danh sách model. Kiểm tra quyền và API.":"Không thể xử lý cấu hình Chatbot.");
+  throw Error(code==="credentials_missing"?"Chưa có tài khoản Google. Hãy nhập file Service Account.":code==="revision_conflict"?"Cấu hình đã thay đổi. Hãy tải lại.":code==="invalid_config"?"Cấu hình không hợp lệ. Chỉ nhận đúng các trường và định dạng hỗ trợ.":code==="model_unavailable"?"Model chưa có trong kết quả Google.":code==="google_invalid_key"?"File Google có private key không hợp lệ. Tạo lại khóa Service Account JSON.":code==="google_auth_failed"?"Google từ chối xác thực Service Account. Kiểm tra khóa đã bị thu hồi hoặc tài khoản bị vô hiệu hóa.":code==="google_api_disabled"?"Google chưa bật Dialogflow API hoặc API cần thiết trong project.":code==="google_permission_denied"?"Service Account thiếu quyền Google IAM để đọc Agent/Environment/model.":code==="google_resource_not_found"?"Không tìm thấy project hoặc tài nguyên Google trong vùng đã chọn.":code==="google_quota"?"Google giới hạn quota. Kiểm tra quota và thử lại.":code==="google_timeout"?"Google phản hồi quá thời gian. Chọn vùng Agent cụ thể rồi thử lại.":code==="google_network_error"?"Backend không kết nối được Google. Thử lại hoặc chọn vùng Agent cụ thể.":code==="config_upstream_unavailable"?"Admin Worker không phản hồi hoặc trả dữ liệu không hợp lệ.":code==="credentials_storage_unavailable"?"Kho khóa mã hóa chưa sẵn sàng.":code==="google_unavailable"?"Không xác minh được Google Agent, Environment hoặc danh sách model. Kiểm tra quyền và API.":"Không thể xử lý cấu hình Chatbot.");
  }
  return reply.data;
 }
@@ -34,6 +34,7 @@ export default function ChatbotConfigManager({owner}:{owner:boolean}){
  const [stored,setStored]=useState<Stored|null>(null),[draft,setDraft]=useState<Config>(empty);
  const [open,setOpen]=useState(false),[busy,setBusy]=useState(false),[saved,setSaved]=useState(false),[error,setError]=useState("");
  const credential=useRef<string>("");
+ const [region,setRegion]=useState("all");
  const [fileName,setFileName]=useState(""),[agents,setAgents]=useState<Agent[]>([]),[environments,setEnvironments]=useState<Environment[]>([]);
  const [models,setModels]=useState<Models|null>(null),[notice,setNotice]=useState(""),[noticeId,setNoticeId]=useState(0);
  const [variant,setVariant]=useState<"success"|"error">("success");
@@ -62,7 +63,7 @@ export default function ChatbotConfigManager({owner}:{owner:boolean}){
  async function loadAgents(){
   setBusy(true);resetDiscovery();
   try{
-   const result=await api<{agents:Agent[];failedLocations:string[]}>(withCredential({operation:"list_agents",projectId:draft.projectId}));
+   const result=await api<{agents:Agent[];failedLocations:string[]}>(withCredential({operation:"list_agents",projectId:draft.projectId,location:region}));
    setAgents(result.agents);setDraft(d=>({...d,agentId:"",environmentId:"draft",model:""}));
    notify(result.agents.length?"Đã tải "+result.agents.length+" Agent."+ (result.failedLocations.length?" Một số vùng không truy cập được.":""):"Không tìm thấy Agent có quyền truy cập.",result.agents.length?"success":"error");
   }catch(e){notify(e instanceof Error?e.message:"Không tải được Agent.","error");}finally{setBusy(false);}
@@ -92,7 +93,7 @@ export default function ChatbotConfigManager({owner}:{owner:boolean}){
  return <div className="dl4-layout">
   <div className="page-title"><div><h1>Cấu hình Chatbot</h1><p>Dialogflow CX · Website Futurebook</p></div>
    <div className="action-row"><button className="fb-ui-button fb-ui-button--secondary" disabled={busy} onClick={()=>void load()}>Tải lại</button>
-   <button className="fb-ui-button fb-ui-button--primary" disabled={!stored||busy} onClick={()=>{setDraft({...empty,...stored?.config});resetDiscovery();credential.current="";setFileName("");setSaved(false);setNotice("");setOpen(true);}}>Chỉnh cấu hình</button></div></div>
+   <button className="fb-ui-button fb-ui-button--primary" disabled={!stored||busy} onClick={()=>{setDraft({...empty,...stored?.config});resetDiscovery();credential.current="";setFileName("");setRegion("all");setSaved(false);setNotice("");setOpen(true);}}>Chỉnh cấu hình</button></div></div>
   {error&&<p role="alert">{error}</p>}
   {!stored&&!error&&<p role="status">Đang tải cấu hình…</p>}
   {stored&&<section className="surface dl4-panel"><h2>Kết nối Google</h2>
@@ -108,6 +109,10 @@ export default function ChatbotConfigManager({owner}:{owner:boolean}){
     <label>Nhập file Google Cloud (JS/JSON)<input type="file" accept=".js,.json" disabled={busy} onChange={e=>{const f=e.target.files?.[0];if(f)void importFile(f);e.target.value="";}}/></label>
     <p className="content-small-note">{fileName?"Đã chọn: "+fileName:"Chọn file Service Account JSON của Google Cloud."} Khóa được mã hóa khi lưu; không hiển thị hoặc ghi vào bảng cấu hình.</p>
     <label>Google Cloud Project ID<input className="fb-ui-field" value={draft.projectId} readOnly disabled={busy}/></label>
+    <label>Vùng tìm Agent<select className="fb-ui-select" value={region} disabled={busy} onChange={e=>{setRegion(e.target.value);resetDiscovery();setDraft(d=>({...d,agentId:"",environmentId:"draft",model:""}));}}>
+    <option value="all">Tất cả vùng</option>
+    {["global","asia-south1","asia-southeast1","asia-southeast2","asia-northeast1","australia-southeast1","eu","europe-west1","europe-west2","europe-west3","europe-west4","europe-west6","northamerica-northeast1","us","us-central1","us-east1","us-west1"].map(x=><option key={x} value={x}>{x}</option>)}
+    </select></label>
     <button className="fb-ui-button fb-ui-button--secondary" disabled={busy||!draft.projectId} onClick={()=>void loadAgents()}>Load Agent</button>
     <label>Agent<select className="fb-ui-select" value={draft.agentId?draft.location+"/"+draft.agentId:""} disabled={busy||!agents.length} onChange={e=>{
       const a=agents.find(x=>x.location+"/"+x.id===e.target.value);if(!a)return;

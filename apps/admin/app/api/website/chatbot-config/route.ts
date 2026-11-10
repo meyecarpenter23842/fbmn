@@ -29,11 +29,11 @@ async function proxy(request:Request,method:"GET"|"POST"){
    ...(body!==undefined?{body}:{})});
   if(![200,400,401,403,404,405,409,413,415,429,503].includes(upstream.status)||
      !upstream.headers.get("content-type")?.includes("application/json"))
-    return fail(503,"config_unavailable");
+    return fail(503,"config_upstream_unavailable");
   const raw=await upstream.text();if(raw.length>500000)return fail(503,"config_unavailable");
   if(upstream.status===404&&method==="GET")return fail(503,"config_worker_not_deployed");
   return new Response(raw,{status:upstream.status,headers:HEADERS});
- }catch{return fail(503,"config_unavailable");}
+ }catch{return fail(503,"config_upstream_unavailable");}
 }
 export async function GET(request:Request){return proxy(request,"GET");}
 export async function POST(request:Request){return proxy(request,"POST");}
