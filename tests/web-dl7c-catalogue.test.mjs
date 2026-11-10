@@ -223,3 +223,15 @@ test("DL7C-R zoom targets selected leaf, including right-hand spread page",()=>{
  assert.match(ui,/onClick=\{\(\)=>openZoom\(selectedPage\)\}/);
  assert.match(ui,/i===selectedPage\?" is-active"/);
 });
+
+test("DL7C-R allows prior-page button/keyboard when StPageFlip corner is outside hit zone",()=>{
+ const ui=readFile("app/catalogue/catalogue-flipbook.tsx");
+ assert.match(ui,/disableFlipByClick:false/);
+ assert.match(ui,/flipPrev\("bottom" as FlipCorner\)/);
+ assert.match(ui,/event\.key==="ArrowLeft"/);
+});
+test("DL7C-R links and shares the selected page, including right-hand spread page",()=>{
+ const ui=readFile("app/catalogue/catalogue-flipbook.tsx");
+ assert.match(ui,/window\.history\.replaceState\(window\.history\.state,"",deepLink\(detail\.book\.id,next\)\)/);
+ assert.match(ui,/const url=deepLink\(detail\.book\.id,selectedPage\)/);
+});

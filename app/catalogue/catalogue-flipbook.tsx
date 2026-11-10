@@ -198,7 +198,7 @@ export default function CatalogueFlipbook(){
      flippingTime:950,drawShadow:true,maxShadowOpacity:0.26,
      showCover:Boolean(detail.cover),usePortrait:true,swipeDistance:38,
      mobileScrollSupport:true,useMouseEvents:!reducedRef.current,
-     disableFlipByClick:true,startPage:Math.min(startIndex,nodes.length-1)
+     disableFlipByClick:false,startPage:Math.min(startIndex,nodes.length-1)
     });
     flip.on("flip",event=>{
      if(cancelled)return;
@@ -233,7 +233,7 @@ export default function CatalogueFlipbook(){
   flip.turnToPage(next);
   const visible=flip.getCurrentPageIndex();
   activeRef.current=visible;setActive(visible);setSelectedPage(next);
-  window.history.replaceState(window.history.state,"",deepLink(detail.book.id,visible));
+  window.history.replaceState(window.history.state,"",deepLink(detail.book.id,next));
  };
  const turn=(direction:"next"|"prev")=>{
   if(turning||!engineRef.current||!detail)return;
@@ -283,7 +283,7 @@ export default function CatalogueFlipbook(){
  };
  const share=async()=>{
   if(!detail)return;
-  const url=deepLink(detail.book.id,active);
+  const url=deepLink(detail.book.id,selectedPage);
   setManualLink("");setStatus("");
   try{
    if(navigator.share)await navigator.share({title:detail.book.title,url});
