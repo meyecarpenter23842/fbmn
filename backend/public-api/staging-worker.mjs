@@ -11,6 +11,7 @@ const ROUTES = new Set(["/v1/public/categories", "/v1/public/products", "/v1/pub
 const DECORATIVE_ROUTE = "/v1/public/decorative-background";
 const CMS_IMAGE_ROUTE="/v1/public/cms/image";
 const CATALOGUE_IMAGE_ROUTE="/v1/public/catalogue-image";
+const CATALOGUE_PDF_ROUTE="/v1/public/catalogue-pdf";
 const CATALOGUE_BOOKS_ROUTE="/v1/public/catalogue-books";
 const OUTSOURCING_ROUTE="/v1/public/outsourcing-requests";
 const DECORATIVE_KEY = "banners/G04/backdrop-v1.webp";
@@ -48,8 +49,9 @@ export function createStagingWorker({createDbClient}) {
       const isDecorative=url.pathname===DECORATIVE_ROUTE;
       const isCmsImage=url.pathname===CMS_IMAGE_ROUTE;
       const isCatalogueImage=url.pathname===CATALOGUE_IMAGE_ROUTE;
-      const isCatalogueRequest=isCatalogueImage||url.pathname===CATALOGUE_BOOKS_ROUTE;
-      const isImage=url.pathname==="/v1/public/image"||isDecorative||isCmsImage||isCatalogueImage;
+      const isCataloguePdf=url.pathname===CATALOGUE_PDF_ROUTE;
+      const isCatalogueRequest=isCatalogueImage||isCataloguePdf||url.pathname===CATALOGUE_BOOKS_ROUTE;
+      const isImage=url.pathname==="/v1/public/image"||isDecorative||isCmsImage||isCatalogueImage||isCataloguePdf;
       // Vercel's image proxy pools many visitors behind a small number of
       // egress IPs. Use a separate bounded per-image budget for public WebP,
       // never spoofable X-Forwarded-For. Other API traffic keeps its old limit.
@@ -59,7 +61,7 @@ export function createStagingWorker({createDbClient}) {
       try {
         const actor=(request.headers.get("CF-Connecting-IP")||"unknown").slice(0,100);
         const key=isImage?"media:"+actor+":"+(isDecorative?"g04-backdrop":
-          (isCatalogueImage?url.searchParams.get("asset"):url.searchParams.get("id"))?.slice(0,40)):
+          (isCataloguePdf?url.searchParams.get("book"):isCatalogueImage?url.searchParams.get("asset"):url.searchParams.get("id"))?.slice(0,40)):
           actor+":"+(ROUTES.has(url.pathname)?url.pathname:"other");
         rate=await (isImage?env.IMAGE_RATE_LIMITER:env.RATE_LIMITER).limit({key});
       } catch {
@@ -90,12 +92,13 @@ export function createStagingWorker({createDbClient}) {
         if(isCatalogueRequest){
           return handlePublicCatalogueRequest({
             request,enabled:env.PUBLIC_DL7C_ENABLED==="true",
-            allowedOrigins:origins,r2:env.CATALOGUE_MEDIA_R2,
+            pdfEnabled:env.PUBLIC_DL7A_PDF_ENABLED==="true",allowedOrigins:origins,r2:env.CATALOGUE_MEDIA_R2,
             listBooks:()=>readModel(env,m=>m.getReadyCatalogueBooks()),
             getSettings:()=>readModel(env,m=>m.getCatalogueViewerSettings()),
             getBook:id=>readModel(env,m=>m.getReadyCatalogueBook(id)),
             getAssets:id=>readModel(env,m=>m.getReadyCatalogueAssets(id)),
             getKey:id=>readModel(env,m=>m.getReadyCatalogueAssetKey(id)),
+            getPdf:(id,download)=>readModel(env,m=>m.getReadyCataloguePdf(id,download)),
           });
         }
         if(isDecorative){

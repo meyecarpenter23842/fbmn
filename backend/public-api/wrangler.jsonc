@@ -13,6 +13,7 @@
     "PUBLIC_CMS_ENABLED": "true",
     "PUBLIC_DL4_ENABLED": "true",
     "PUBLIC_DL7C_ENABLED": "true",
+    "PUBLIC_DL7A_PDF_ENABLED": "false",
     "PUBLIC_DL6_ENABLED": "false"
   },
   "hyperdrive": [

@@ -2,11 +2,12 @@
 import {useCallback,useEffect,useMemo,useRef,useState} from "react";
 import type {KeyboardEvent} from "react";
 import Link from "next/link";
+import {GlassButton,GlassButtonLink,GlassPanel} from "@/components/glass-ui";
 import type {PageFlip,SizeType,FlipCorner} from "page-flip";
 import {canFlipForward,canFlipBackward} from "@/lib/catalogue/spread-navigation";
 
 type Asset={id:string;width:number;height:number};
-type Book={id:string;title:string;edition:string};
+type Book={id:string;title:string;edition:string;hasPages:boolean;hasPdf:boolean;pdfDownloadEnabled:boolean};
 type Detail={book:Book;pages:Asset[];cover:Asset|null};
 type ViewerSettings={flipDurationMs:number;soundEnabled:boolean;shadowOpacity:number};
 const DEFAULT_VIEWER:ViewerSettings={flipDurationMs:950,soundEnabled:false,shadowOpacity:0.26};
@@ -17,7 +18,9 @@ const validBook=(x:unknown):x is Book=>{
  if(!x||typeof x!=="object")return false;
  const v=x as Record<string,unknown>;
  return typeof v.id==="string"&&UUID.test(v.id)&&typeof v.title==="string"&&
- v.title.length>0&&v.title.length<=120&&typeof v.edition==="string"&&v.edition.length<=80;
+ v.title.length>0&&v.title.length<=120&&typeof v.edition==="string"&&v.edition.length<=80&&
+ typeof v.hasPages==="boolean"&&typeof v.hasPdf==="boolean"&&
+ typeof v.pdfDownloadEnabled==="boolean"&&(!v.pdfDownloadEnabled||v.hasPdf);
 };
 const validAsset=(x:unknown):x is Asset=>{
  if(!x||typeof x!=="object")return false;
@@ -30,7 +33,7 @@ const validViewer=(v:ViewerSettings)=>Boolean(v&&Number.isSafeInteger(v.flipDura
  typeof v.soundEnabled==="boolean"&&typeof v.shadowOpacity==="number"&&
  Number.isFinite(v.shadowOpacity)&&v.shadowOpacity>=0.10&&v.shadowOpacity<=0.50);
 const validDetail=(v:Detail)=>validBook(v?.book)&&Array.isArray(v.pages)&&
- v.pages.length>0&&v.pages.length<=200&&v.pages.every(validAsset)&&
+ (v.pages.length>0||v.book.hasPdf)&&v.pages.length<=200&&v.pages.every(validAsset)&&
  (v.cover===null||validAsset(v.cover));
 async function fetchCatalogue<T>(path:string):Promise<T>{
  const res=await fetch(path,{cache:"no-store",headers:{Accept:"application/json"}});
@@ -148,7 +151,7 @@ export default function CatalogueFlipbook(){
    if(!validDetail(payload))throw Error("Bộ Catalogue chưa có đủ trang hợp lệ.");
    if(idSequence!==sequence.current)return;
    const count=payload.pages.length+(payload.cover?1:0);
-   const position=Math.min(Math.max(0,requested-1),count-1);
+   const position=Math.min(Math.max(0,requested-1),Math.max(0,count-1));
    activeRef.current=position;setActive(position);setSelectedPage(position);setDetail(payload);
    window.history.replaceState(window.history.state,"",deepLink(payload.book.id,position));
   }catch(e){if(idSequence===sequence.current){setDetail(null);
@@ -178,7 +181,7 @@ export default function CatalogueFlipbook(){
  // StPageFlip owns its DOM. React never moves the engine's page elements.
  useEffect(()=>{
   const host=bookRef.current;
-  if(!host||!detail)return;
+  if(!host||!detail||leaves.length===0)return;
   let cancelled=false;
   let initializing=true;
   let flip:PageFlip|null=null;
@@ -307,7 +310,31 @@ export default function CatalogueFlipbook(){
    else setManualLink(url);
   }catch(e){if(!(e instanceof DOMException&&e.name==="AbortError"))setManualLink(url);}
  };
+ const pdfHref=(b:Book,download=false)=>"/api/catalogue-books/pdf?book="+
+  encodeURIComponent(b.id)+(download?"&download=1":"");
  return <div className="fb-catalogue-viewer" onKeyDown={keyboard}>
+  {!loading&&!error&&books.length>0&&<section className="fb-catalogue-library"
+   aria-labelledby="fb-catalogue-library-title">
+   <div className="fb-catalogue-library-intro">
+    <h2 id="fb-catalogue-library-title">Danh sách bộ và phiên bản Catalogue</h2>
+    <p>Chọn bộ Catalogue đã công bố để lật sách, xem PDF hoặc tải bản PDF khi được cho phép.</p>
+   </div>
+   <div className="fb-catalogue-library-grid">
+    {books.map(item=><GlassPanel key={item.id} className="fb-catalogue-library-item">
+      <div><p className="fb-catalogue-overline">CATALOGUE FUTUREBOOK</p>
+       <h3>{item.title}</h3>
+       <p>{item.edition||"Phiên bản hiện hành"}</p></div>
+      <div className="fb-catalogue-library-actions">
+       {item.hasPages&&<GlassButton variant={detail?.book.id===item.id?"primary":"secondary"}
+        disabled={loading} onClick={()=>void loadBook(item.id)}>Lật sách</GlassButton>}
+       {item.hasPdf&&<GlassButtonLink variant="secondary" href={pdfHref(item)}
+        target="_blank" rel="noopener noreferrer">Xem PDF</GlassButtonLink>}
+       {item.hasPdf&&item.pdfDownloadEnabled&&<GlassButtonLink variant="secondary"
+        href={pdfHref(item,true)} download>Tải PDF</GlassButtonLink>}
+      </div>
+    </GlassPanel>)}
+   </div>
+  </section>}
   <div className="fb-catalogue-topbar">
    <div className="fb-catalogue-identity">Catalogue tương tác</div>
    {books.length>0&&<label className="fb-catalogue-picker"><span>Bộ Catalogue</span>
@@ -331,9 +358,9 @@ export default function CatalogueFlipbook(){
     <div className="fb-catalogue-heading">
      <div><span className="fb-catalogue-overline">FUTUREBOOK MIỀN NAM · CATALOGUE</span>
       <h2>{detail.book.title}</h2>{detail.book.edition&&<p>{detail.book.edition}</p>}</div>
-     <span className="fb-catalogue-count" aria-live="polite">{leaves[selectedPage]?.label}</span>
+     <span className="fb-catalogue-count" aria-live="polite">{leaves[selectedPage]?.label||"Bản PDF"}</span>
     </div>
-    <div className="fb-catalogue-reader" role="region" aria-label={"Sách lật "+detail.book.title}
+    {leaves.length>0?<div className="fb-catalogue-reader" role="region" aria-label={"Sách lật "+detail.book.title}
      onPointerDownCapture={unlockAudio}>
      <button type="button" className="fb-glass-button fb-glass-button--secondary fb-catalogue-nav fb-catalogue-nav--prev"
       aria-label="Trang trước" disabled={turning||!canPrev} onClick={()=>turn("prev")}>
@@ -345,8 +372,8 @@ export default function CatalogueFlipbook(){
      <button type="button" className="fb-glass-button fb-glass-button--secondary fb-catalogue-nav fb-catalogue-nav--next"
       aria-label="Trang tiếp" disabled={turning||!canNext} onClick={()=>turn("next")}>
       <span className="fb-catalogue-nav-glyph" aria-hidden="true">›</span></button>
-    </div>
-    <div className="fb-catalogue-toolbar" role="toolbar" aria-label="Công cụ sách">
+    </div>:<p className="fb-catalogue-pdf-only">Bộ này được phát hành dưới dạng PDF. Chọn “Xem PDF” bên trên để mở tài liệu.</p>}
+    {leaves.length>0&&<div className="fb-catalogue-toolbar" role="toolbar" aria-label="Công cụ sách">
      <button type="button" className="fb-glass-button fb-glass-button--secondary"
       onClick={()=>setThumbnails(x=>!x)} aria-expanded={thumbnails}>☷ <span>Mục lục</span></button>
      <button type="button" className="fb-glass-button fb-glass-button--secondary"
@@ -355,11 +382,11 @@ export default function CatalogueFlipbook(){
       onClick={()=>void toggleFullscreen()}>{fullScreen?"⤢":"⛶"} <span>{fullScreen?"Thu nhỏ":"Toàn màn hình"}</span></button>
      <button type="button" className="fb-glass-button fb-glass-button--secondary"
       onClick={()=>void share()}>↗ <span>Chia sẻ trang</span></button>
-    </div>
+    </div>}
     {status&&<p className="fb-catalogue-status" role="status">{status}</p>}
     {manualLink&&<label className="fb-catalogue-share-fallback">Liên kết trang
      <input readOnly value={manualLink} onFocus={e=>e.target.select()}/></label>}
-    {thumbnails&&<div className="fb-catalogue-index" aria-label="Chọn trang Catalogue">
+    {leaves.length>0&&thumbnails&&<div className="fb-catalogue-index" aria-label="Chọn trang Catalogue">
      {leaves.map((leaf,i)=><button key={leaf.asset.id} type="button"
        className={"fb-catalogue-thumb"+(i===selectedPage?" is-active":"")}
        aria-current={i===selectedPage?"page":undefined} onClick={()=>go(i)}>
@@ -367,16 +394,16 @@ export default function CatalogueFlipbook(){
        <span>{leaf.label}</span>
       </button>)}
     </div>}
-    <p className="fb-catalogue-hint">Kéo góc trang để lật · Phím ← → để chuyển trang{portrait?" · Chế độ một trang":""}</p>
+    {leaves.length>0&&<p className="fb-catalogue-hint">Kéo góc trang để lật · Phím ← → để chuyển trang{portrait?" · Chế độ một trang":""}</p>}
    </div>
-   <dialog ref={zoomRef} className="fb-catalogue-zoom fb-glass-dialog-motion" aria-label="Xem trang phóng to"
+   {leaves.length>0&&<dialog ref={zoomRef} className="fb-catalogue-zoom fb-glass-dialog-motion" aria-label="Xem trang phóng to"
     onCancel={e=>{if(!reduced){e.preventDefault();closeZoom();}}}>
     <div className="fb-glass-dialog-header"><h2 className="fb-glass-dialog-header__title">{zoomLeaf?.label||"Trang Catalogue"}</h2>
      <button type="button" className="fb-glass-button fb-glass-button--secondary" onClick={closeZoom}>Đóng ×</button>
     </div>
     {zoomLeaf&&<div className="fb-catalogue-zoom-image"><img src={image(zoomLeaf.asset.id)}
      alt={zoomLeaf.label+" — "+detail.book.title} width={zoomLeaf.asset.width} height={zoomLeaf.asset.height}/></div>}
-   </dialog>
+   </dialog>}
   </div>}
  </div>;
 }

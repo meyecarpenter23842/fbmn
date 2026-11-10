@@ -49,3 +49,9 @@
 .fb-admin .dl7b-settings-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 .fb-admin .dl7b-settings-error{color:#a52239!important}
 @media(max-width:680px){.fb-admin .dl7b-settings-form{grid-template-columns:1fr}}
+
+/* DL7A PDF control layout only. Global Admin contract owns field/button/checkbox geometry. */
+.dl7a-pdf-options{display:grid;gap:12px;margin:14px 0}
+.dl7a-pdf-options label{display:flex;align-items:center;gap:9px;line-height:1.5;font-size:13px}
+.dl7a-pdf-options input[type="checkbox"]{flex:none}
+.dl7a-pdf-warning{margin:15px 0 0;font-size:13px;line-height:1.6;color:var(--fb-ui-muted,#667085)}

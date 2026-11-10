@@ -4,7 +4,7 @@ export const dynamic="force-dynamic";
 const PRIVATE={"Cache-Control":"private, no-store","X-Content-Type-Options":"nosniff"};
 const JSON_HEADERS={...PRIVATE,"Content-Type":"application/json; charset=utf-8"};
 const fail=(s:number,c:string)=>Response.json({error:{code:c}},{status:s,headers:JSON_HEADERS});
-const GET_ACTIONS=new Set(["","image","settings"]);
+const GET_ACTIONS=new Set(["","image","settings","pdf-target"]);
 const POST_ACTIONS=new Set(["settings","create","save","ready","hide","upload","reorder","remove"]);
 const MAX=5*1024*1024;
 function base(){
@@ -20,7 +20,7 @@ async function proxy(request:Request,params:Promise<{path?:string[]}>,method:"GE
  const u=new URL(request.url),binary=method==="GET"&&action==="image",upload=action==="upload";
  const query=[...u.searchParams.keys()];
  if(method==="GET"){
-  const allowed=action==="image"?new Set(["asset"]):action==="settings"?new Set():new Set(["id","page"]);
+  const allowed=action==="image"?new Set(["asset"]):["settings","pdf-target"].includes(action)?new Set():new Set(["id","page"]);
   if(query.length>1||query.some(x=>!allowed.has(x)))return fail(400,"invalid_query");
   if(action==="image"&&query.length!==1)return fail(400,"invalid_query");
  }else{
@@ -44,6 +44,8 @@ async function proxy(request:Request,params:Promise<{path?:string[]}>,method:"GE
  if(Number(request.headers.get("content-length")||0)>limit)return fail(413,"too_large");
  const url=base();
  if(!url)return fail(503,"catalogue_unavailable");
+ if(action==="pdf-target"&&method==="GET")
+  return Response.json({data:{url:url+"/v1/admin/website/catalogue/pdf-upload"}},{headers:JSON_HEADERS});
  let body:string|Blob|undefined;
  if(method==="POST"){
   if(upload){

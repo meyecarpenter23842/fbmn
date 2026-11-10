@@ -6,13 +6,15 @@ import ProductModal,{useProductModalClose} from "./product-modal";
 type Book={id:string;title:string;edition:string;state:"draft"|"ready"|"hidden";revision:number;updated_at:string};
 type Asset={id:string;kind:"page"|"cover";
  sort_order:number;width:number;height:number;byte_size:number};
-type Details={book:Book;assets:Asset[]};
+type PdfInfo={byteSize:number;visible:boolean;downloadEnabled:boolean;updatedAt:string};
+type Details={book:Book;assets:Asset[];pdf:PdfInfo|null};
 type ListResult={books:Book[];page:number;totalPages:number;total:number};
 type SavedResult={book:Book;asset?:Asset};
 type ViewerSettings={flipDurationMs:number;soundEnabled:boolean;shadowOpacity:number;revision:number};
 type ViewerDraft=Pick<ViewerSettings,"flipDurationMs"|"soundEnabled"|"shadowOpacity">;
 type Kind=Asset["kind"];
 const MAX_IMAGE=5*1024*1024;
+const MAX_PDF=20*1024*1024;
 const STATUS:Record<Book["state"],string>={draft:"Bản nháp",ready:"Sẵn sàng (đã duyệt)",hidden:"Đã ẩn"};
 const MIME="image/webp";
 
@@ -56,7 +58,10 @@ function apiError(status:number,code?:string){
  if(status===409)return "Dữ liệu đã thay đổi; nhấn Tải lại rồi thử lại.";
  if(status===403)return "Chỉ Owner được quản lý Catalogue.";
  if(status===422)return "Phải tải ít nhất một trang trước khi đánh dấu Sẵn sàng.";
- if(status===413||code==="too_large")return "Ảnh vượt giới hạn dung lượng 5 MB.";
+ if(code==="invalid_pdf")return "Tệp PDF không hợp lệ; cần đúng chữ ký %PDF- và kết thúc %%EOF.";
+ if(code==="pdf_required")return "Cần tải PDF lên bộ trước khi cài quyền hiển thị.";
+ if(code==="invalid_pdf_settings")return "Chỉ bật Tải PDF khi đã bật công khai PDF.";
+ if(status===413||code==="too_large")return "Tệp vượt giới hạn dung lượng được phép.";
  if(status===415||code==="invalid_content_type")return "Trình duyệt gửi sai Content-Type ảnh WebP.";
  if(code==="invalid_image")return "Nội dung WebP không hợp lệ hoặc kích thước ảnh nằm ngoài 64–6000 px.";
  if(code==="invalid_upload")return "Thông tin upload chưa hợp lệ (400 · invalid_upload). Nhấn Tải lại và thử lần nữa.";
@@ -77,6 +82,13 @@ async function isWebpFile(file:File):Promise<boolean>{
  const data=new DataView(header.buffer,header.byteOffset,header.byteLength);
  if(data.getUint32(4,true)+8!==file.size)return false;
  return ["VP8 ","VP8L","VP8X"].includes(four(12));
+}
+
+async function isPdfFile(file:File):Promise<boolean>{
+ if(file.size<100||file.size>MAX_PDF)return false;
+ const first=new TextDecoder("ascii").decode(await file.slice(0,8).arrayBuffer());
+ const last=new TextDecoder("ascii").decode(await file.slice(Math.max(0,file.size-1024)).arrayBuffer());
+ return /^%PDF-[12]\.\d/.test(first)&&/%%EOF\s*$/.test(last);
 }
 
 async function requestCatalogue<T>(path="",body?:object,file?:File,headers?:Record<string,string>):Promise<T>{
@@ -155,6 +167,8 @@ export default function CatalogueBookManager({owner,onBusyChange}:{
  const [readError,setReadError]=useState("");
  const [dialog,setDialog]=useState<"create"|"edit"|null>(null);
  const [deleteFile,setDeleteFile]=useState<Asset|null>(null);
+ const [deletePdf,setDeletePdf]=useState(false);
+ const [pdfDraft,setPdfDraft]=useState({visible:false,downloadEnabled:false});
  const [title,setTitle]=useState("");
  const [edition,setEdition]=useState("");
  const [notice,setNotice]=useState("");
@@ -206,6 +220,8 @@ export default function CatalogueBookManager({owner,onBusyChange}:{
    setPageOffset(prev=>changed?0:Math.min(prev,maxOffset));
    setBookPage(all.page);setBookTotalPages(all.totalPages);setBookTotal(all.total);
    setBooks(all.books);setDetail(data);
+   setPdfDraft({visible:data?.pdf?.visible===true,
+    downloadEnabled:data?.pdf?.downloadEnabled===true});
   }catch(e){
    if(seq===loadId.current)setReadError(e instanceof Error?e.message:"Không tải được Catalogue.");
   }finally{if(seq===loadId.current)setLoading(false);}
@@ -229,6 +245,7 @@ export default function CatalogueBookManager({owner,onBusyChange}:{
   finally{setBusy(false);}
  }
  const book=detail?.book,assets=detail?.assets||[];
+ const pdf=detail?.pdf||null;
  const pages=assets.filter(f=>f.kind==="page").sort(sortAssets);
  const visiblePages=pages.slice(pageOffset,pageOffset+12);
  const cover=assets.find(f=>f.kind==="cover");
@@ -266,6 +283,46 @@ export default function CatalogueBookManager({owner,onBusyChange}:{
    alert(kind==="page"?"Đã thêm trang vào kho R2.":"Đã lưu ảnh vào kho R2 Catalogue.","success");
   }catch(e){alert(e instanceof Error?e.message:"Không tải được ảnh.","error");}
   finally{setBusy(false);}
+ };
+ const uploadPdf=async(file?:File)=>{
+  if(!file||!book||busy||!canEdit)return;
+  if(!(await isPdfFile(file))){
+   alert("PDF cần hợp lệ, dung lượng tối đa 20 MB. Không đổi đuôi tệp hoặc tải tài liệu chưa duyệt.","error");
+   return;
+  }
+  setBusy(true);
+  try{
+   const jwt=await token();
+   const target=await fetch("/api/website/catalogue/pdf-target",{
+    method:"GET",cache:"no-store",credentials:"same-origin",
+    headers:{Authorization:"Bearer "+jwt,Accept:"application/json"}
+   });
+   const targetJson=(await target.json().catch(()=>({}))) as {data?:{url?:string};error?:{code?:string}};
+   if(!target.ok||typeof targetJson.data?.url!=="string")
+    throw Error(apiError(target.status,targetJson.error?.code));
+   const address=new URL(targetJson.data.url);
+   if(address.protocol!=="https:"||address.username||address.password||address.search||address.hash||
+      address.pathname!=="/v1/admin/website/catalogue/pdf-upload")
+    throw Error("Địa chỉ Worker upload PDF chưa hợp lệ.");
+   const response=await fetch(address.toString(),{
+    method:"POST",mode:"cors",cache:"no-store",
+    headers:{Authorization:"Bearer "+jwt,"Content-Type":"application/pdf",
+     "X-Catalogue-Book-Id":book.id,"X-Catalogue-Revision":String(book.revision)},
+    body:file
+   });
+   const result=(await response.json().catch(()=>({}))) as {data?:SavedResult;error?:{code?:string}};
+   if(!response.ok||!result.data?.book)
+    throw Error(apiError(response.status,result.error?.code));
+   await load(book.id);
+   alert("Đã tải PDF lên kho R2 riêng. Mặc định PDF chưa công khai; hãy kiểm tra và lưu quyền hiển thị.","success");
+  }catch(e){alert(e instanceof Error?e.message:"Không tải được PDF; chưa ghi dữ liệu.","error");}
+  finally{setBusy(false);}
+ };
+ const savePdfPermissions=async()=>{
+  if(!book||!pdf||!canEdit||busy)return;
+  await mutate("pdf-settings",{id:book.id,revision:book.revision,
+   visible:pdfDraft.visible,downloadEnabled:pdfDraft.downloadEnabled},
+   "Đã lưu quyền công khai PDF. Chỉ bộ Sẵn sàng mới hiển thị cho khách.");
  };
  const move=async(index:number,delta:number)=>{
   if(!book||!canEdit)return;
@@ -331,7 +388,7 @@ export default function CatalogueBookManager({owner,onBusyChange}:{
     <p>Âm thanh chỉ phát khi trình duyệt cho phép sau thao tác lật của khách. Không phát tự động khi mở trang.</p>
    </form>}
   </section>
-  <p className="dl7b-note">Chỉ ảnh trang và bìa được quản lý trong R2 Catalogue. Nền luôn dùng G05 chung toàn website.</p>
+  <p className="dl7b-note">Trang/bìa WebP và PDF theo bộ/phiên bản dùng bucket R2 Catalogue riêng. Nền dùng G05 chung toàn website.</p>
   {loading&&<section className="surface dl7b-panel" role="status" aria-busy="true">Đang đọc kho Catalogue…</section>}
   {readError&&<section className="surface dl7b-panel" role="alert"><strong>Chưa kết nối được kho</strong><p>{readError}</p>
    <button type="button" className="fb-ui-button fb-ui-button--secondary" onClick={()=>void load(book?.id,bookPage)}>Thử lại</button></section>}
@@ -362,12 +419,12 @@ export default function CatalogueBookManager({owner,onBusyChange}:{
         onClick={()=>{setTitle(book.title);setEdition(book.edition);setDialog("edit");}}>Sửa thông tin</button>
        {book.state==="ready"?
         <button type="button" className="fb-ui-button fb-ui-button--secondary" disabled={busy}
-         onClick={()=>void mutate("hide",{id:book.id,revision:book.revision},"Đã ẩn bộ Catalogue.")}>Ẩn bộ để sửa ảnh</button>:
-        <button type="button" className="fb-ui-button fb-ui-button--primary" disabled={busy||!pages.length}
-         onClick={()=>void mutate("ready",{id:book.id,revision:book.revision},"Bộ đã sẵn sàng cho DL7C.")}>Đánh dấu sẵn sàng</button>}
+         onClick={()=>void mutate("hide",{id:book.id,revision:book.revision},"Đã ẩn bộ Catalogue và thu hồi quyền xem/tải PDF.")}>Ẩn bộ để chỉnh sửa</button>:
+        <button type="button" className="fb-ui-button fb-ui-button--primary" disabled={busy||(!pages.length&&!pdf?.visible)}
+         onClick={()=>void mutate("ready",{id:book.id,revision:book.revision},"Đã phát hành bộ Catalogue.")}>Đánh dấu sẵn sàng</button>}
       </div>
      </div>
-     <p>{book.state==="ready"?"Bộ đang công khai và bị khóa chỉnh sửa. Chọn Ẩn bộ để sửa ảnh, tải bìa/nền rồi đánh dấu Sẵn sàng lại.":"Có thể cập nhật ảnh khi là bản nháp hoặc đã ẩn. Đánh dấu Sẵn sàng sau khi kiểm tra đủ ảnh."}</p>
+     <p>{book.state==="ready"?"Bộ đang công khai và bị khóa chỉnh sửa. Chọn Ẩn bộ để chỉnh ảnh/PDF/quyền tải, sau đó đánh dấu Sẵn sàng lại.":"Có thể cập nhật ảnh khi là bản nháp hoặc đã ẩn. Đánh dấu Sẵn sàng sau khi kiểm tra đủ ảnh."}</p>
     </section>
     <section className="surface dl7b-panel">
      <div className="dl7b-panel-heading"><div><h2>Trang sách</h2><p>{pages.length} / 200 trang · WebP riêng theo bộ</p></div>{fileInput("page","Thêm trang WebP")}</div>
@@ -386,6 +443,43 @@ export default function CatalogueBookManager({owner,onBusyChange}:{
       <span>Đang xem {pageOffset+1}–{Math.min(pages.length,pageOffset+12)} / {pages.length}</span>
       <button type="button" className="fb-ui-button fb-ui-button--secondary" disabled={pageOffset+12>=pages.length} onClick={()=>setPageOffset(v=>v+12)}>Trang sau</button>
      </div>}
+    </section>
+    <section className="surface dl7b-panel" aria-labelledby="dl7a-pdf-heading">
+     <div className="dl7b-panel-heading">
+      <div><h2 id="dl7a-pdf-heading">Catalogue PDF · {book.edition||"Phiên bản hiện hành"}</h2>
+       <p>PDF tối đa 20 MB · bucket fbmn-catalogue · không làm thay đổi sách lật.</p></div>
+      <label className="dl7b-file-input">
+       <span>{pdf?"Thay PDF":"Tải PDF"}</span>
+       <input type="file" accept="application/pdf,.pdf" disabled={!canEdit||busy}
+        aria-label="Tải tệp Catalogue PDF" onChange={e=>{
+         const file=e.currentTarget.files?.[0];e.currentTarget.value="";
+         void uploadPdf(file);
+        }}/>
+      </label>
+     </div>
+     {!pdf?<p>Chưa gắn PDF cho bộ này. Bộ vẫn có thể hiển thị bằng sách lật WebP.</p>:<>
+      <p>Đã lưu PDF · {(pdf.byteSize/1024/1024).toFixed(2)} MB ·
+       {pdf.visible?" Đã chọn công khai":" Chưa công khai"} ·
+       {pdf.downloadEnabled?" Có nút tải":" Không hiện nút tải"}</p>
+      <div className="dl7a-pdf-options">
+       <label><input type="checkbox" checked={pdfDraft.visible} disabled={!canEdit||busy}
+        onChange={e=>setPdfDraft({visible:e.target.checked,downloadEnabled:e.target.checked?pdfDraft.downloadEnabled:false})}/>
+        <span>Công khai PDF khi bộ ở trạng thái Sẵn sàng</span></label>
+       <label><input type="checkbox" checked={pdfDraft.downloadEnabled} disabled={!canEdit||busy||!pdfDraft.visible}
+        onChange={e=>setPdfDraft(p=>({...p,downloadEnabled:e.target.checked}))}/>
+        <span>Hiện nút Tải PDF cho khách</span></label>
+      </div>
+      <div className="dl7b-actions">
+       <button type="button" className="fb-ui-button fb-ui-button--primary"
+        disabled={!canEdit||busy||(pdfDraft.visible===pdf.visible&&pdfDraft.downloadEnabled===pdf.downloadEnabled)}
+        onClick={()=>void savePdfPermissions()}>Lưu quyền PDF</button>
+       <button type="button" className="fb-ui-button fb-ui-button--secondary"
+        disabled={!canEdit||busy} onClick={()=>setDeletePdf(true)}>Xóa PDF khỏi bộ</button>
+      </div>
+     </>}
+     <p className="dl7a-pdf-warning">Chỉ đưa tài liệu đã được duyệt để phát hành. Không tải PDF giá NET,
+      tồn kho hoặc dữ liệu đại lý lên kho công khai. Việc tắt nút Tải không ngăn người xem lưu
+      lại tài liệu đã mở trong trình duyệt.</p>
     </section>
     <section className="surface dl7b-panel">
      <h2>Ảnh bìa</h2><div className="dl7b-single">
@@ -415,6 +509,17 @@ export default function CatalogueBookManager({owner,onBusyChange}:{
     })()}>Xác nhận xóa</button></>}>
    <p>Ảnh sẽ bị bỏ khỏi bộ Catalogue. Không ảnh hưởng đến kho ảnh sản phẩm, CMS hoặc tab khác.</p>
   </ProductModal>}
+  {deletePdf&&book&&<ProductModal title="Xóa Catalogue PDF?" locked={busy}
+   onClose={()=>setDeletePdf(false)}
+   footer={<><ModalCancel busy={busy}/>
+    <button type="button" className="fb-ui-button fb-ui-button--primary" disabled={busy}
+     onClick={()=>void (async()=>{
+      const ok=await mutate("pdf-remove",{id:book.id,revision:book.revision},
+       "Đã gỡ PDF khỏi bộ. Trang sách WebP vẫn được giữ.");
+      if(ok)setDeletePdf(false);
+     })()}>Xác nhận xóa PDF</button></>}>
+    <p>PDF của bộ sẽ được gỡ khỏi kho R2. Hành động này không xóa các trang và bìa WebP.</p>
+   </ProductModal>}
   <AdminToast message={notice} variant={noticeType} notificationId={noticeId} onClose={()=>setNotice("")}/>
  </div>;
 }

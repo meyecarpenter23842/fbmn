@@ -54,6 +54,7 @@ export function createAdminApi({ verifyToken, loadActor, listChannels, recordAud
       const corsOrigin = origin && origins.has(origin) ? origin : null;
       if (origin && !corsOrigin) return error(403, "origin_forbidden", null);
       const url = new URL(request.url);
+      const isPdfUpload=url.pathname==="/v1/admin/website/catalogue/pdf-upload";
       const action = (url.pathname === "/v1/admin/website/catalogue" || url.pathname.startsWith("/v1/admin/website/catalogue/")) ? "website.catalogue" :
         (url.pathname === "/v1/admin/website/home-layout" || url.pathname === "/v1/admin/website/category-display" || url.pathname === "/v1/admin/website/outsourcing-requests") ? "website.layout" : (url.pathname === "/v1/admin/cms" || url.pathname.startsWith("/v1/admin/cms/")) ? "cms.manage" :
         url.pathname.startsWith("/v1/admin/catalogue/") ? "catalogue.manage" :
@@ -63,8 +64,10 @@ export function createAdminApi({ verifyToken, loadActor, listChannels, recordAud
         if (!corsOrigin) return error(403, "origin_forbidden", null);
         const resp = new Response(null, { status: 204, headers: {
           "Access-Control-Allow-Origin": corsOrigin,
-          "Access-Control-Allow-Methods": "GET, OPTIONS",
-          "Access-Control-Allow-Headers": "Authorization, Content-Type",
+          "Access-Control-Allow-Methods": isPdfUpload?"POST, OPTIONS":"GET, OPTIONS",
+          "Access-Control-Allow-Headers": isPdfUpload
+            ?"Authorization, Content-Type, X-Catalogue-Book-Id, X-Catalogue-Revision"
+            :"Authorization, Content-Type",
           "Cache-Control": "no-store", "Vary": "Origin",
         } });
         return resp;
@@ -92,7 +95,18 @@ export function createAdminApi({ verifyToken, loadActor, listChannels, recordAud
         return error(403, "forbidden", corsOrigin);
       }
       if (action === "website.catalogue") {
-        return handleCatalogueBooks({request,actor:{...actor,subject},db:catalogueDb,r2:catalogueBookR2});
+        const response=await handleCatalogueBooks({request,actor:{...actor,subject},
+          db:catalogueDb,r2:catalogueBookR2});
+        // Owner PDF streams come directly from the authenticated Worker (up to 20 MiB);
+        // unlike small WebP uploads they cannot pass through Vercel's request-size cap.
+        // Only the exact PDF intake route exposes a credentialed CORS response.
+        if(isPdfUpload&&corsOrigin){
+          const headers=new Headers(response.headers);
+          headers.set("Access-Control-Allow-Origin",corsOrigin);
+          headers.set("Vary","Origin");
+          return new Response(response.body,{status:response.status,headers});
+        }
+        return response;
       }
       if (action === "website.layout") {
         const params={request,actor:{...actor,subject},db:catalogueDb};

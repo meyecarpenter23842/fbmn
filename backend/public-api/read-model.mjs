@@ -23,10 +23,11 @@ const SQL = Object.freeze({
   cmsImageKey: "SELECT r2_key FROM fbmn_public.v_cms_web_images WHERE id=$1 AND device=$2 LIMIT 1",
   cmsSlideImageKey: "SELECT r2_key FROM fbmn_public.v_cms_web_banner_slide_images WHERE id=$1 AND device=$2 AND slide_no=$3 LIMIT 1",
   catalogueViewerSettings: "SELECT flip_duration_ms,sound_enabled,shadow_opacity FROM fbmn_public.v_catalogue_viewer_settings LIMIT 2",
-  catalogueBooks: "SELECT id,title,edition FROM fbmn_public.v_catalogue_ready_books ORDER BY updated_at DESC,id LIMIT 101",
-  catalogueBook: "SELECT id,title,edition FROM fbmn_public.v_catalogue_ready_books WHERE id=$1::uuid LIMIT 1",
+  catalogueBooks: "SELECT b.id,b.title,b.edition,EXISTS(SELECT 1 FROM fbmn_public.v_catalogue_ready_assets a WHERE a.book_id=b.id AND a.kind='page') AS has_pages,EXISTS(SELECT 1 FROM fbmn_public.v_catalogue_ready_pdfs p WHERE p.book_id=b.id) AS has_pdf,EXISTS(SELECT 1 FROM fbmn_public.v_catalogue_ready_pdfs p WHERE p.book_id=b.id AND p.download_enabled=true) AS pdf_download_enabled FROM fbmn_public.v_catalogue_ready_books b ORDER BY b.updated_at DESC,b.id LIMIT 101",
+  catalogueBook: "SELECT b.id,b.title,b.edition,EXISTS(SELECT 1 FROM fbmn_public.v_catalogue_ready_assets a WHERE a.book_id=b.id AND a.kind='page') AS has_pages,EXISTS(SELECT 1 FROM fbmn_public.v_catalogue_ready_pdfs p WHERE p.book_id=b.id) AS has_pdf,EXISTS(SELECT 1 FROM fbmn_public.v_catalogue_ready_pdfs p WHERE p.book_id=b.id AND p.download_enabled=true) AS pdf_download_enabled FROM fbmn_public.v_catalogue_ready_books b WHERE b.id=$1::uuid LIMIT 1",
   catalogueAssets: "SELECT id,kind,sort_order,width,height FROM fbmn_public.v_catalogue_ready_assets WHERE book_id=$1::uuid AND kind IN ('page','cover') ORDER BY kind,sort_order,id LIMIT 202",
   catalogueAssetKey: "SELECT r2_key,byte_size FROM fbmn_public.v_catalogue_ready_assets WHERE id=$1::uuid AND kind IN ('page','cover') LIMIT 1",
+  cataloguePdf: "SELECT r2_key,byte_size,mime_type FROM fbmn_public.v_catalogue_ready_pdfs WHERE book_id=$1::uuid AND ($2::boolean=false OR download_enabled=true) LIMIT 1",
 });
 function rows(value, max) {
   if (!Array.isArray(value) || value.length > max) throw new Error("Invalid SQL read result");
@@ -295,12 +296,15 @@ export function createReadModel(query,{enableP5=false}={}) {
     async getReadyCatalogueBooks(){
       const result=rows(await query(SQL.catalogueBooks),101);
       if(result.length>100)throw Error("Too many public books");
-      return result.map(b=>({id:String(b.id),title:String(b.title),edition:String(b.edition)}));
+      return result.map(b=>({id:String(b.id),title:String(b.title),edition:String(b.edition),
+       hasPages:b.has_pages===true,hasPdf:b.has_pdf===true,pdfDownloadEnabled:b.pdf_download_enabled===true}));
     },
     async getReadyCatalogueBook(id){
       if(!/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(id))return null;
       const result=rows(await query(SQL.catalogueBook,[id]),1);
-      return result.length===1?{id:String(result[0].id),title:String(result[0].title),edition:String(result[0].edition)}:null;
+      return result.length===1?{id:String(result[0].id),title:String(result[0].title),edition:String(result[0].edition),
+       hasPages:result[0].has_pages===true,hasPdf:result[0].has_pdf===true,
+       pdfDownloadEnabled:result[0].pdf_download_enabled===true}:null;
     },
     async getReadyCatalogueAssets(id){
       if(!/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(id))return [];
@@ -313,6 +317,13 @@ export function createReadModel(query,{enableP5=false}={}) {
       if(!/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(id))return null;
       const result=rows(await query(SQL.catalogueAssetKey,[id]),1);
       return result.length===1?{key:String(result[0].r2_key),bytes:Number(result[0].byte_size)}:null;
+    },
+    async getReadyCataloguePdf(id,download=false){
+      if(!/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(id)||
+         typeof download!=="boolean")return null;
+      const result=rows(await query(SQL.cataloguePdf,[id,download]),1);
+      return result.length===1?{key:String(result[0].r2_key),
+       bytes:Number(result[0].byte_size),mime:String(result[0].mime_type)}:null;
     },
     async getPublicContent() {
       const [articles,promotions,companies,dealers] = await Promise.all([
