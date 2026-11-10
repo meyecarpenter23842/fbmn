@@ -60,14 +60,14 @@
  .fb-catalogue-scene-content{padding:4px 4px 18px}.fb-catalogue-heading{padding:0 10px;margin-bottom:4px}
  .fb-catalogue-book-shell{flex:1 1 auto;width:100%;height:clamp(290px,132vw,820px)}
  .fb-catalogue-book-edge{inset:8px 3px -5px}
- .fb-catalogue-reader{position:relative;gap:0}
- .fb-catalogue-reader>.fb-catalogue-nav{position:absolute;bottom:8px;z-index:10}
- .fb-catalogue-nav--prev{left:6px}.fb-catalogue-nav--next{right:6px}
+ .fb-catalogue-reader{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+ .fb-catalogue-book-shell{grid-column:1/-1;grid-row:1}
+ .fb-catalogue-nav--prev{grid-column:1;grid-row:2;justify-self:start}
+ .fb-catalogue-nav--next{grid-column:2;grid-row:2;justify-self:end}
  .fb-catalogue-toolbar{gap:6px;padding:0 8px}
  .fb-catalogue-toolbar .fb-glass-button{flex:1 1 calc(50% - 12px);max-width:240px}
  .fb-catalogue-thumb{flex-basis:74px}.fb-catalogue-thumb img{width:60px;height:75px}
 }
-@media(max-width:390px){.fb-catalogue-reader{gap:0}}
 @media(prefers-reduced-motion:reduce){.fb-catalogue-thumb{transition:none}}
 
 /* DL7A Catalogue PDF library: layout only; shared GlassPanel/Button own their visual skin. */

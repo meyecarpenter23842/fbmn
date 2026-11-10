@@ -1,7 +1,5 @@
-/** Recorded paper turn: planish, Turning a page (2007), public domain.
- * https://commons.wikimedia.org/wiki/File:Turning_a_page.ogg
- */
-const PAPER_URL="https://upload.wikimedia.org/wikipedia/commons/6/6b/Turning_a_page.ogg";
+/** Kenney RPG Audio — bookFlip2, CC0. See docs/web-dl7ct-catalogue-polish.md. */
+const PAPER_URL="/audio/catalogue-page-turn.wav";
 export class PaperSound {
  private ctx:AudioContext|null=null;
  private buffer:AudioBuffer|null=null;
@@ -15,7 +13,7 @@ export class PaperSound {
   if(ctx.state==="suspended")await ctx.resume();
   if(this.buffer)return;
   if(!this.pending)this.pending=(async()=>{
-   const res=await fetch(PAPER_URL,{credentials:"omit",referrerPolicy:"no-referrer"});
+   const res=await fetch(PAPER_URL,{credentials:"same-origin"});
    if(!res.ok)throw Error("Paper recording unavailable");
    const buffer=await ctx.decodeAudioData(await res.arrayBuffer());
    if(this.disposed)throw Error("Sound player closed");
@@ -32,14 +30,7 @@ export class PaperSound {
   this.stop();
   const source=ctx.createBufferSource(),gain=ctx.createGain();
   source.buffer=buffer;
-  const samples=buffer.getChannelData(0);
-  let peak=0;for(let i=0;i<samples.length;i++)peak=Math.max(peak,Math.abs(samples[i]));
-  const threshold=peak*0.035;
-  let start=0,end=samples.length-1;
-  while(start<end&&Math.abs(samples[start])<threshold)start++;
-  while(end>start&&Math.abs(samples[end])<threshold)end--;
-  const offset=Math.max(0,start/buffer.sampleRate-0.025);
-  const duration=Math.min(1.35,Math.max(0.05,(end-start)/buffer.sampleRate+0.08),buffer.duration-offset);
+  const duration=buffer.duration;
   if(duration<=0)return;
   const now=ctx.currentTime;
   gain.gain.setValueAtTime(0,now);
@@ -47,8 +38,9 @@ export class PaperSound {
   gain.gain.setTargetAtTime(0,now+Math.max(0.025,duration-0.09),0.02);
   source.connect(gain);gain.connect(ctx.destination);this.source=source;
   source.onended=()=>{source.disconnect();gain.disconnect();if(this.source===source)this.source=null;};
-  source.start(now,offset,duration);
+  source.start(now);
  }
+ silence(){this.generation++;this.stop();}
  private stop(){if(this.source){try{this.source.stop();}catch{/* already ended */}this.source=null;}}
  dispose(){this.disposed=true;this.generation++;this.stop();void this.ctx?.close().catch(()=>{});this.ctx=null;this.buffer=null;}
 }

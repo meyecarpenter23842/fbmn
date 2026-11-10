@@ -270,3 +270,19 @@ test("DL7C-S admin-owned settings: no visitor toggles and browser-safe sound",()
  assert.match(migration,/GRANT SELECT ON fbmn_public\.v_catalogue_viewer_settings TO fbmn_public_reader/);
  assert.doesNotMatch(migration,/GRANT (?:SELECT|UPDATE) ON fbmn_catalog_private\.website_catalogue_viewer_settings TO fbmn_public_reader/);
 });
+
+ test("DL7C-T phones retain portrait sizing and corner gestures; same-origin WAV",()=>{
+ const ui=readFile("app/catalogue/catalogue-flipbook.tsx");
+ const css=readFile("app/catalogue/flipbook.css");
+ assert.match(ui,/minWidth:220,maxWidth:640/);
+ assert.ok(390<220*2);
+ assert.match(css,/grid-column:1\/-1;grid-row:1/);
+ assert.match(css,/grid-column:2;grid-row:2;justify-self:end/);
+ const audio=readFile("apps/admin/lib/paper-sound.ts");
+ assert.match(audio,/PAPER_URL="\/audio\/catalogue-page-turn.wav"/);
+ const web=readFileSync(new URL("../public/audio/catalogue-page-turn.wav",import.meta.url));
+ const admin=readFileSync(new URL("../apps/admin/public/audio/catalogue-page-turn.wav",import.meta.url));
+ assert.equal(web.toString("ascii",0,4),"RIFF");
+ assert.equal(web.toString("ascii",8,12),"WAVE");
+ assert.deepEqual(web,admin);
+});

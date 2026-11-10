@@ -91,7 +91,7 @@ export default function CatalogueFlipbook(){
  const canPrev=canFlipBackward(active,portrait,Boolean(detail?.cover));
  const canNext=canFlipForward(active,leaves.length,portrait,Boolean(detail?.cover));
  useEffect(()=>{viewerRef.current=viewerSettings;},[viewerSettings]);
- useEffect(()=>{reducedRef.current=reduced;},[reduced]);
+ useEffect(()=>{reducedRef.current=reduced;if(reduced)audioRef.current?.silence();},[reduced]);
 
  // A real paper recording shared with the Admin preview.
  const unlockAudio=()=>{
@@ -117,6 +117,7 @@ export default function CatalogueFlipbook(){
   audioRef.current?.dispose();audioRef.current=null;},[]);
  const loadBook=useCallback(async(id:string,requested=1)=>{
   const idSequence=++sequence.current;
+  audioRef.current?.silence();
   setLoading(true);setError("");setTurning(false);turnLock.current=false;
   try{
    const payload=await fetchCatalogue<Detail>("/api/catalogue-books?id="+encodeURIComponent(id));
@@ -180,8 +181,8 @@ export default function CatalogueFlipbook(){
      return leaf;
     });
     flip=new PageFlip(disposable,{
-     width:440,height:610,size:"stretch" as SizeType,minWidth:140,maxWidth:640,
-     minHeight:194,maxHeight:887,autoSize:false,
+     width:440,height:610,size:"stretch" as SizeType,minWidth:220,maxWidth:640,
+     minHeight:305,maxHeight:887,autoSize:false,
      flippingTime:viewerSettings.flipDurationMs,drawShadow:true,maxShadowOpacity:viewerSettings.shadowOpacity,
      showCover:Boolean(detail.cover),usePortrait:true,swipeDistance:38,
      mobileScrollSupport:true,useMouseEvents:!reducedRef.current,
