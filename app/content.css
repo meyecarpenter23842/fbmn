@@ -6,13 +6,13 @@
 .content-breadcrumb a { color: var(--color-primary-strong); font-weight: 700; }
 .content-heading { max-width: 850px; padding: 10px 0 30px; }
 .content-eyebrow { color: var(--color-primary); font-weight: 900; font-size: 11px; letter-spacing: .12em; margin: 0 0 12px; }
-.content-heading h1, .content-story h1 { color: var(--color-primary-strong); font-size: clamp(28px, 3.8vw, 45px); font-weight: 800; letter-spacing: -.035em; line-height: 1.14; margin: 0 0 14px;  font-family: var(--fb-glass-display-font);}
+.content-heading h1, .content-story h1 { color: var(--color-primary-strong); font-size: clamp(24px, 3vw, 34px); font-weight: var(--fb-web-heading-weight); letter-spacing: -.012em; line-height: var(--fb-web-heading-leading); margin: 0 0 14px;  font-family: var(--fb-glass-display-font);}
 .content-heading > p:last-child { color: var(--fb-glass-muted); line-height: 1.7; font-size: 15px; max-width: 740px; }
 .content-intro-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; align-items: stretch; margin: 5px 0 40px; }
 .content-intro-panel, .content-outline-panel { border-radius: 24px; padding: clamp(20px, 3vw, 32px); min-width: 0; box-shadow: var(--fb-glass-shadow); -webkit-backdrop-filter: blur(var(--fb-glass-ui-blur)); backdrop-filter: blur(var(--fb-glass-ui-blur)); background: var(--fb-glass-panel-layer); border: 1px solid var(--fb-glass-border);}
 .content-intro-panel { background: var(--fb-glass-panel-layer); border: 1px solid var(--fb-glass-border); }
 .content-outline-panel { background: #fff; border: 1px solid #e9dff0; box-shadow: 0 3px 18px #4817760b; }
-.content-intro-grid h2, .content-section h2 { color: var(--color-primary-strong); font-size: 23px; margin: 0 0 12px; line-height: 1.2;  font-family: var(--fb-glass-display-font); font-weight: 800;}
+.content-intro-grid h2, .content-section h2 { color: var(--color-primary-strong); font-size: 22px; margin: 0 0 12px; line-height: var(--fb-web-heading-leading); font-family: var(--fb-glass-display-font); font-weight: var(--fb-web-heading-weight);}
 .content-intro-grid h3 { color: #5c2886; font-size: 17px; }
 .content-intro-grid p, .content-information-card p { color: var(--fb-glass-muted); font-size: 14px; line-height: 1.75; }
 .content-intro-panel > p, .content-outline-panel > p { margin: 0 0 18px; }
@@ -55,12 +55,12 @@
  .content-heading { padding-bottom: 21px; }
  .content-intro-grid { grid-template-columns: 1fr; gap: 13px; margin-bottom: 26px; }
  .content-card-grid { grid-template-columns: 1fr; gap: 12px; }
- .content-intro-grid h2, .content-section h2 { font-size: 21px; }
+ .content-intro-grid h2, .content-section h2 { font-size: 19px; }
  .content-footer .content-wrap { flex-direction: column; align-items: flex-start; }
 }
 @media (max-width: 390px) {
  .content-wrap { width: min(100% - 26px, 1180px); }
- .content-heading h1 { font-size: 29px; }
+ .content-heading h1 { font-size: 24px; }
  .content-heading > p:last-child { font-size: 13px; }
 }
 @media (prefers-reduced-motion: reduce) {
@@ -98,7 +98,7 @@
 /* DL7A unified editorial board on the shared Premium Purple Glass surfaces. */
 .news-hub{min-width:0;margin:12px 0 34px;}
 .news-hub-heading{display:flex;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;gap:16px;margin-bottom:22px;}
-.news-hub-heading h2{font-family:var(--fb-glass-display-font,Georgia,serif);font-size:clamp(23px,2.6vw,33px);color:var(--color-primary-strong);margin:0 0 8px;}
+.news-hub-heading h2{font-family:var(--fb-glass-display-font);font-size:clamp(20px,2.3vw,26px);line-height:var(--fb-web-heading-leading);font-weight:var(--fb-web-heading-weight);color:var(--color-primary-strong);margin:0 0 8px;}
 .news-hub-heading p:last-child{margin:0;color:var(--fb-glass-muted);line-height:1.65;font-size:14px;}
 .news-hub-filters{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
 .news-hub-back a:focus-visible,.news-hub-legacy-links a:focus-visible{outline:2px solid var(--color-primary);outline-offset:3px;}

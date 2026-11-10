@@ -48,7 +48,11 @@
      The fully opaque defaults remain legible without backdrop-filter. */
   --fb-glass-surface-layer: var(--fb-glass-surface-fallback);
   --fb-glass-panel-layer: var(--fb-glass-surface-fallback);
-  --fb-glass-display-font: Georgia, "Times New Roman", serif;
+  /* DL7E: one Vietnamese-capable sans-serif stack; no external font fetch. */
+  --fb-web-font: system-ui, -apple-system, "Segoe UI", Arial, sans-serif;
+  --fb-glass-display-font: var(--fb-web-font);
+  --fb-web-heading-weight: 700;
+  --fb-web-heading-leading: 1.3;
   --fb-glass-stroke: rgba(100, 62, 132, .15);
   --fb-glass-ui-blur: 16px;
   --fb-motion-glass-card: 200ms;
@@ -63,8 +67,8 @@
 @media (max-width: 780px) { :root { --fb-glass-ui-blur: 9px; } }
 * { box-sizing: border-box; }
 html { scroll-behavior: smooth; }
-body { margin: 0; color: var(--color-ink); background: #fff; font-family: Arial, "Helvetica Neue", sans-serif; -webkit-font-smoothing: antialiased; }
-button, input { font: inherit; }
+body { margin: 0; color: var(--color-ink); background: #fff; font-family: var(--fb-web-font); line-height: 1.55; -webkit-font-smoothing: antialiased; }
+button, input, select, textarea { font: inherit; }
 button { cursor: pointer; }
 button:disabled { cursor: not-allowed; }
 a { color: inherit; text-decoration: none; }
