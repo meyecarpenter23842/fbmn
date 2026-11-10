@@ -243,7 +243,7 @@ export async function fetchPublicHomeLayout(input:string,transport:typeof fetch=
 export async function fetchPublicCategoryDisplay(input:string,transport:typeof fetch=fetch):Promise<Record<string,"sku">> {
  const envelope=await getData(baseUrl(input),"/v1/public/category-display",transport);
  const data=obj(envelope.data);
- const rows=arr(data.modes,200);
+ const rows=arr(data.modes,2000);
  const result:Record<string,"sku">=Object.create(null) as Record<string,"sku">;
  for(const item of rows){
   const entry=obj(item),categoryId=str(entry.categoryId,80);
