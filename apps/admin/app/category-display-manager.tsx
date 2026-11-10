@@ -1,11 +1,16 @@
 "use client";
 import {useCallback,useEffect,useState} from "react";
 import AdminToast from "./admin-toast";
-import ProductModal from "./product-modal";
+import ProductModal,{useProductModalClose} from "./product-modal";
 
 type Mode="family"|"sku";
 type Category={categoryId:string;name:string;skuCount:number;mode:Mode;revision:number};
 type Reply={categories:Category[]};
+function CategoryModalCancel({saving}:{saving:boolean}){
+ const close=useProductModalClose();
+ return <button type="button" className="fb-ui-button fb-ui-button--secondary"
+  disabled={saving} onClick={close}>Đóng</button>;
+}
 async function categoryRequest<T>(body?:object):Promise<T>{
  const auth=await fetch("/api/auth/token",{credentials:"same-origin",cache:"no-store"});
  if(!auth.ok)throw Error("Phiên đăng nhập đã hết hạn.");
@@ -55,7 +60,7 @@ export default function CategoryDisplayManager({owner}:{owner:boolean}){
     operation:"save",categoryId:item.categoryId,mode:editMode,revision:item.revision
    });
    setCategories(prev=>prev.map(c=>c.categoryId===item.categoryId?{...c,...result.category}:c));
-   setEditing(null);
+   setEditing(prev=>prev?.categoryId===item.categoryId?{...prev,...result.category}:prev);
    setNoticeVariant("success");setNotice("Đã lưu chế độ hiển thị danh mục.");setNoticeId(x=>x+1);
   }catch(e){setNoticeVariant("error");setNotice(e instanceof Error?e.message:"Không lưu được.");setNoticeId(x=>x+1);}
   finally{setSaving("");}
@@ -83,8 +88,7 @@ export default function CategoryDisplayManager({owner}:{owner:boolean}){
   </section>}
   {editing&&<ProductModal title={"Hiển thị danh mục: "+editing.name} locked={Boolean(saving)}
    onClose={()=>setEditing(null)}
-   footer={<><button type="button" className="fb-ui-button fb-ui-button--secondary"
-    disabled={Boolean(saving)} onClick={()=>setEditing(null)}>Hủy</button>
+   footer={<><CategoryModalCancel saving={Boolean(saving)}/>
     <button type="button" className="fb-ui-button fb-ui-button--primary"
      disabled={Boolean(saving)||editMode===editing.mode} onClick={()=>void save(editing)}>
      {saving?"Đang lưu…":"Lưu cấu hình"}</button></>}>
