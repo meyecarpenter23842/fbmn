@@ -1,3 +1,4 @@
+import {createCredentialStore} from "./chatbot-credentials.mjs";
 import { createRemoteJWKSet } from "jose";
 import { verifyManagedNeonJwt } from "./verify-jwt.mjs";
 import { Client } from "pg";
@@ -72,6 +73,7 @@ export function createAdminStagingWorker({ createDbClient = opts => new Client(o
         recordAudit: ({subject,action,outcome}) => db(async client => { await client.query(AUDIT,[subject,action,outcome]); }),
         catalogueDb: db,
         googleSecret: env.DIALOGFLOW_SERVICE_ACCOUNT_JSON,
+        credentialStore:createCredentialStore(env.CHATBOT_CREDENTIALS_R2,env.CHATBOT_CREDENTIAL_KEY),
         catalogueR2: env.ADMIN_MEDIA_R2,
         catalogueBookR2: env.CATALOGUE_MEDIA_R2,
         cmsPublicSurfaceReady: env.ADMIN_CMS_PUBLIC_READY==="true",

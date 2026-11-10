@@ -31,15 +31,17 @@ export async function detectCx({config,secret,session,text,fetcher=fetch,getToke
  if(!reply)throw Error("chat_unavailable");
  return reply;
 }
-export async function runChat({request,visitor,db,secret,detect=detectCx}){
+export async function runChat({request,visitor,db,secret,loadSecret,detect=detectCx}){
  const checked=parseChatRequest(request);
- if(!checked||!HEX.test(visitor)||typeof db!=="function"||!secret)return {ok:false};
+ if(!checked||!HEX.test(visitor)||typeof db!=="function"||(!secret&&!loadSecret))return {ok:false};
  try{
   const row=await db();
   const config=normalizeConfig(row?.config),revision=Number(row?.revision);
   if(!config||!config.model||config.environmentId==="draft")return {ok:false};
   const session=await cxSessionId(visitor,checked.session,revision);
-  const text=await detect({config,secret,session,text:checked.text});
+  const credential=loadSecret?await loadSecret(revision)||secret:secret;
+  if(!credential)return {ok:false};
+  const text=await detect({config,secret:credential,session,text:checked.text});
   return {ok:true,text};
  }catch{return {ok:false};}
 }
