@@ -28,8 +28,8 @@ function fromRow(row){
  if(!row)throw Error("config_unavailable");
  return {config:row.config,revision:Number(row.revision)};
 }
-async function googleJson(url,token,fetcher){
- const response=await fetcher(url,{headers:{Authorization:"Bearer "+token,Accept:"application/json"},redirect:"error",signal:AbortSignal.timeout(8000)});
+async function googleJson(url,token,fetcher,signal){
+ const response=await fetcher(url,{headers:{Authorization:"Bearer "+token,Accept:"application/json"},redirect:"error",signal});
  if(!response.ok)throw Error("google_unavailable");
  return response.json();
 }
@@ -51,24 +51,25 @@ async function tokenFor(secret,fetcher){
  return data.access_token;
 }
 export async function discoverCx(config,secret,fetcher=fetch){
+ const signal=AbortSignal.timeout(25000);
  const token=await tokenFor(secret,fetcher);
  const host=config.location==="global"?"dialogflow.googleapis.com":config.location+"-dialogflow.googleapis.com";
  const path="projects/"+config.projectId+"/locations/"+config.location+"/agents/"+config.agentId;
  const root="https://"+host+"/v3beta1/"+path;
- const agent=await googleJson(root,token,fetcher);
+ const agent=await googleJson(root,token,fetcher,signal);
  if(agent.name!==path)throw Error("google_unavailable");
  if(config.environmentId!=="draft"){
-  const env=await googleJson(root+"/environments/"+config.environmentId,token,fetcher);
+  const env=await googleJson(root+"/environments/"+config.environmentId,token,fetcher,signal);
   if(env.name!==path+"/environments/"+config.environmentId)throw Error("google_unavailable");
  }
  const lang=typeof agent.defaultLanguageCode==="string"?agent.defaultLanguageCode:"vi";
- const settings=await googleJson(root+"/generativeSettings?languageCode="+encodeURIComponent(lang),token,fetcher);
+ const settings=await googleJson(root+"/generativeSettings?languageCode="+encodeURIComponent(lang),token,fetcher,signal);
  // Model Garden is a real Google API; intersect with CX Playbook support, never advertise all Vertex models.
  const found=new Set();
  let page="";
  for(let i=0;i<10;i++){
   const query=new URLSearchParams({pageSize:"100",...(page?{pageToken:page}:{})});
-  const data=await googleJson("https://aiplatform.googleapis.com/v1beta1/publishers/google/models?"+query,token,fetcher);
+  const data=await googleJson("https://aiplatform.googleapis.com/v1beta1/publishers/google/models?"+query,token,fetcher,signal);
   for(const model of Array.isArray(data.publisherModels)?data.publisherModels:[]){
    const name=typeof model.name==="string"?model.name.split("/").pop().split("@")[0]:"";
    if(SUPPORTED.includes(name))found.add(name);

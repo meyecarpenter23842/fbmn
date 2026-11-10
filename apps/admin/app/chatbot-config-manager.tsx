@@ -38,7 +38,7 @@ export default function ChatbotConfigManager({owner}:{owner:boolean}){
    // Reject credential-shaped and non-literal files locally; never send raw keys to a server.
    let candidate:unknown;
    try{candidate=JSON.parse(raw.replace(/^\uFEFF/,"").trim().replace(/^(?:export\s+default\s+|module\.exports\s*=\s*)/,"").replace(/;\s*$/,""));}catch{throw Error("File phải chứa JSON thuần hoặc một export JSON.");}
-   if(!candidate||typeof candidate!=="object"||Array.isArray(candidate)||Object.keys(candidate).some(k=>!(k in labels)||!Object.hasOwn(labels,k)))throw Error("File có trường ngoài cấu hình. Không nhập khóa bí mật.");
+   if(!candidate||typeof candidate!=="object"||Array.isArray(candidate)||Object.keys(candidate).some(k=>!Object.prototype.hasOwnProperty.call(labels,k)))throw Error("File có trường ngoài cấu hình. Không nhập khóa bí mật.");
    if(Object.values(candidate).some(v=>typeof v!=="string"||v.length>100||/PRIVATE KEY|Bearer\s|ya29\./i.test(v)))throw Error("File có giá trị không hợp lệ hoặc chứa thông tin bí mật.");
    const result=await api<{config:Config}>({operation:"import",raw:JSON.stringify(candidate)});
    setDraft(result.config);setModels(null);notify("Đã đọc cấu hình. Chưa lưu.", "success");
