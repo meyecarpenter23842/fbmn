@@ -9,12 +9,13 @@ import CatalogueSideWorkspace from "./catalogue-side-workspace";
 import CmsManager from "./cms-manager";
 import HomeLayoutManager from "./home-layout-manager";
 import CategoryDisplayManager from "./category-display-manager";
+import ContactRequestsManager from "./contact-requests-manager";
 import OutsourcingRequestsManager from "./outsourcing-requests-manager";
 import CatalogueBookManager from "./catalogue-book-manager";
 import AdminTelemetry from "./admin-telemetry";
 
 type AuthState = "checking" | "anonymous" | "authorised" | "forbidden" | "unavailable";
-type Section = "dashboard" | "products" | "structure" | "pricing" | "import-products" | "new-product" | "media" | "categories" | "banners" | "content" | "home-layout" | "category-display" | "outsourcing-requests" | "catalogue-books" | "customers" | "accounts" | "settings";
+type Section = "dashboard" | "products" | "structure" | "pricing" | "import-products" | "new-product" | "media" | "categories" | "banners" | "content" | "home-layout" | "category-display" | "outsourcing-requests" | "contact-requests" | "catalogue-books" | "customers" | "accounts" | "settings";
 type GlyphName = "home" | "box" | "folder" | "image" | "layers" | "file" | "users" | "user" | "settings" | "search" | "bell" | "chevron" | "plus" | "upload" | "save" | "eye" | "edit" | "copy" | "trash" | "check" | "alert" | "logout" | "grid" | "arrow-left" | "link" | "book" | "sparkle" | "menu" | "globe" | "close" | "shield" | "filter" | "refresh";
 type SessionData = { role: string; channels: string[] };
 type Channel = { code: string; label: string };
@@ -79,6 +80,7 @@ const websiteSections: Array<{key:Section;label:string;icon:GlyphName}> = [
   {key:"content",label:"Tin tức & Khuyến mãi",icon:"file"},
   {key:"catalogue-books",label:"Kho Catalogue",icon:"book"},
   {key:"outsourcing-requests",label:"Yêu cầu gia công",icon:"file"},
+  {key:"contact-requests",label:"Liên hệ & đăng ký đại lý",icon:"file"},
 ];
 
 function Brand() {
@@ -272,7 +274,7 @@ export default function AdminPage() {
       setProductMenuExpanded(true);
     if(["banners","content"].includes(to))
       setWebsiteMenuExpanded(true);
-    if(["category-display","outsourcing-requests"].includes(to))setWebsiteMenuExpanded(true);
+    if(["category-display","outsourcing-requests","contact-requests"].includes(to))setWebsiteMenuExpanded(true);
     if(to==="catalogue-books")setWebsiteMenuExpanded(true);
     setMenuOpen(false);setNotice("");
   }
@@ -292,7 +294,7 @@ export default function AdminPage() {
   function removePhoto(id:number){setPhotos(prev=>{const found=prev.find(p=>p.id===id);if(found){URL.revokeObjectURL(found.url);photoUrls.current=photoUrls.current.filter(u=>u!==found.url);}return prev.filter(p=>p.id!==id);});if(selectedPhoto===id)setSelectedPhoto(null);if(coverId===id)setCoverId(null);}
   const activePhoto=photos.find(p=>p.id===selectedPhoto)||photos[0];
   const roleLabel=session?.role?.toUpperCase() || "";
-  const sectionName:Record<Section,string>={dashboard:"Tổng quan",products:"Danh sách sản phẩm",structure:"Danh mục & nhóm mẫu",pricing:"Giá & bảng giá","import-products":"Nhập / cập nhật Excel","new-product":"Thêm sản phẩm",media:"Thư viện hình ảnh",categories:"Danh mục",banners:"Banner & Popup",content:"Tin tức & Khuyến mãi","home-layout":"Trang chủ & bố cục","category-display":"Danh mục & hiển thị sản phẩm","outsourcing-requests":"Yêu cầu gia công","catalogue-books":"Kho Catalogue",customers:"Khách hàng",accounts:"Tài khoản",settings:"Cài đặt"};
+  const sectionName:Record<Section,string>={dashboard:"Tổng quan",products:"Danh sách sản phẩm",structure:"Danh mục & nhóm mẫu",pricing:"Giá & bảng giá","import-products":"Nhập / cập nhật Excel","new-product":"Thêm sản phẩm",media:"Thư viện hình ảnh",categories:"Danh mục",banners:"Banner & Popup",content:"Tin tức & Khuyến mãi","home-layout":"Trang chủ & bố cục","category-display":"Danh mục & hiển thị sản phẩm","outsourcing-requests":"Yêu cầu gia công","contact-requests":"Liên hệ & đăng ký đại lý","catalogue-books":"Kho Catalogue",customers:"Khách hàng",accounts:"Tài khoản",settings:"Cài đặt"};
   return <div className="admin-app">
     <div className={"workspace "+(authState!=="authorised"?"workspace-locked":"")}>
       <aside className={"sidebar "+(menuOpen?"sidebar-open":"")}>
@@ -339,7 +341,7 @@ export default function AdminPage() {
           <div className="side-menu-divider" aria-hidden="true"/>
           <div className="side-group">
             <button type="button" className={"side-group-heading"+(
-              ["banners","content","home-layout","category-display","catalogue-books","outsourcing-requests"].includes(section)?" active":"")}
+              ["banners","content","home-layout","category-display","catalogue-books","outsourcing-requests","contact-requests"].includes(section)?" active":"")}
               aria-controls="website-navigation" aria-expanded={websiteMenuExpanded}
               onClick={()=>setWebsiteMenuExpanded(value=>!value)}
               disabled={authState!=="authorised"}>
@@ -364,11 +366,11 @@ export default function AdminPage() {
       </aside>
       <div className="work-area">
         <header className="topbar"><button type="button" className="mobile-menu" onClick={()=>setMenuOpen(v=>!v)} aria-label="Mở menu"><Glyph name="menu"/></button>
-          <div className="breadcrumbs"><Glyph name="home" size={21}/><span className="crumb-sep">›</span><span>{["products","structure","media","import-products"].includes(section)?"Sản phẩm":section==="catalogue-books"?"Website Futurebook":["category-display","outsourcing-requests"].includes(section)?"Website Futurebook":["banners","content","home-layout"].includes(section)?"Website Futurebook":"Quản trị"}</span><span className="crumb-sep">›</span><b>{sectionName[section]}</b></div>
+          <div className="breadcrumbs"><Glyph name="home" size={21}/><span className="crumb-sep">›</span><span>{["products","structure","media","import-products"].includes(section)?"Sản phẩm":section==="catalogue-books"?"Website Futurebook":["category-display","outsourcing-requests","contact-requests"].includes(section)?"Website Futurebook":["banners","content","home-layout"].includes(section)?"Website Futurebook":"Quản trị"}</span><span className="crumb-sep">›</span><b>{sectionName[section]}</b></div>
           <div className="top-actions"><div className="profile-avatar">{name.slice(0,1).toUpperCase()||"F"}</div><div className="profile-text"><b>{name || "Futurebook Admin"}</b><small>{session?roleLabel:"Yêu cầu đăng nhập"}</small></div><button type="button" className="top-icon" onClick={()=>void signOut()} disabled={authState!=="authorised"} title="Đăng xuất"><Glyph name="logout" size={18}/></button></div>
         </header>
         <main className="workspace-main">
-          {authState==="authorised" && <><AdminTelemetry section={section}/>
+          {authState==="authorised" && <>{section!=="contact-requests"&&<AdminTelemetry section={section}/>}
             {section==="products" && <CatalogueManager
               onImport={()=>navigate("import-products")}
               onStructure={pane=>{setStructureTab(pane);navigate("structure");}}/>}
@@ -381,6 +383,7 @@ export default function AdminPage() {
             {section==="home-layout"&&<HomeLayoutManager owner={session?.role==="owner"}/>}
             {section==="category-display"&&<CategoryDisplayManager owner={session?.role==="owner"}/>}
             {section==="outsourcing-requests"&&<OutsourcingRequestsManager owner={session?.role==="owner"}/>}
+            {section==="contact-requests"&&<ContactRequestsManager owner={session?.role==="owner"}/>}
             {section==="catalogue-books"&&<CatalogueBookManager owner={session?.role==="owner"} onBusyChange={setWorkspaceOperationBusy}/>}
             {section==="banners"&&<CmsManager mode="marketing" owner={session?.role==="owner"}/>}
             {section==="content"&&<CmsManager mode="editorial" owner={session?.role==="owner"}/>}
