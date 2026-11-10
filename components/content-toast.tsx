@@ -1,5 +1,6 @@
 "use client";
 import {useEffect,useRef} from "react";
+import styles from "./content-toast.module.css";
 export default function ContentToast({message,variant,notificationId,onClose}:{
  message:string;variant:"success"|"error";notificationId:number;onClose:()=>void;
 }){
@@ -11,7 +12,7 @@ export default function ContentToast({message,variant,notificationId,onClose}:{
   return ()=>window.clearTimeout(timeout);
  },[message,notificationId]);
  if(!message)return null;
- return <div className={"content-toast content-toast--"+variant}
+ return <div className={[styles.toast,variant==="error"?styles.error:styles.success].join(" ")}
   role={variant==="error"?"alert":"status"} aria-live={variant==="error"?"assertive":"polite"}
   aria-atomic="true">
   <span>{message}</span>
