@@ -124,6 +124,21 @@ Owner chốt hai ảnh tham chiếu Premium Purple Glass: **glassmorphism trong 
 
 ---
 
+## 0.3. OWNER 10/11/2026 — HOÀN THIỆN WEBSITE SAU DL7
+
+Thực hiện theo thứ tự DL7D/DL7E → DL7C-T → DL9 → DL10A/B/C → DL8 nghiệm thu cuối. Đây là bổ sung vào roadmap duy nhất; không đổi SKU, NET, menu sáu mục, nền G05 chung hay Admin ngoài phạm vi. Từng PR repo phụ, CI/Codex sạch rồi đồng bộ; chỉ deploy/migration theo phép Owner.
+
+| Lô | Phạm vi | Nghiệm thu |
+|---|---|---|
+| DL7D — Nội dung & nhận diện | Địa chỉ 1092A Lê Đức Anh (QL01A), P. Tân Tạo, Ho Chi Minh City, Vietnam, 700000; email info@fbmn.vn. Đồng nhất Website, bỏ text demo/đối chiếu Fanpage, footer bỏ Khám phá/Hỗ trợ, logo gốc nền trong suốt. | Không bịa hotline; giữ logo, màu, đường dẫn, chức năng thật; footer gọn mobile. |
+| DL7E — Typography | Sửa nguồn font/tokens dùng chung, hỗ trợ tiếng Việt, tiêu đề/nội dung cân đối, tương phản trên Glass V2; giữ kích thước control theo UI Contract. | Kiểm toàn Website 1440/1280/768/390/360, dấu tiếng Việt, không tràn/cắt chữ; không đổi Admin. |
+| DL7C-T — Catalogue | Bỏ tiêu đề/mô tả lặp, sách lớn gọn trên nền G05, thay tiếng mô phỏng bằng âm giấy thật có quyền dùng; Admin chỉnh tốc độ/âm lượng/bật tắt/nghe thử. | Test âm thanh, touch/keyboard, mobile, reduced motion; không nền riêng. |
+| DL9 — Liên hệ | Dropdown 34 tỉnh/thành theo mã hành chính hiện hành; email/SĐT, đối tượng khách, chọn nhiều sản phẩm quan tâm; lưu Neon, Admin quản lý, báo email khi đã cấu hình. | Gửi thật, chống spam, quyền, validation, không báo thành công giả; dùng lại luồng DL6 khi phù hợp. |
+| DL10A/B/C — Chatbot CX | Admin nhập cấu hình JS/JSON an toàn (không chạy script tùy ý), kết nối Agent/environment, load/chọn model được API hỗ trợ; Playbook/prompt quản lý Google. Website chat qua backend, lưu hội thoại Neon, Admin xem/xóa. | Kiểm quyền, secrets server-only, model thực tế, giới hạn request, PII/NET, xóa hội thoại; không giả kết nối. |
+
+DL8 nghiệm thu cuối sau các lô mới. DL7D/DL7E là phạm vi Owner yêu cầu thực hiện trước; DL9/DL10 và DL7C-T không nằm trong PR runtime bước 1.
+
+
 ## 1. Mục tiêu và hiện trạng đã xác minh
 
 **Mục tiêu:** Một Web Admin và một bộ backend trung tâm cho Website công khai, App Đại lý/NPP và App Người tiêu dùng (End-user); iOS/Android sẽ làm **frontend native thật sau**, không xây lại logic nghiệp vụ hoặc database cho từng nền tảng.
