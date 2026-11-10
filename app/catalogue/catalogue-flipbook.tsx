@@ -108,7 +108,7 @@ export default function CatalogueFlipbook(){
   src.onended=()=>{src.disconnect();filter.disconnect();gain.disconnect();};
  };
  const soundPlayer=useRef(playPageSound);
- soundPlayer.current=playPageSound;
+ useEffect(()=>{soundPlayer.current=playPageSound;});
  const toggleAudio=async()=>{
   if(soundEnabled){setSoundEnabled(false);return;}
   try{
