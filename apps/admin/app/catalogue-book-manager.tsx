@@ -4,7 +4,7 @@ import AdminToast from "./admin-toast";
 import ProductModal,{useProductModalClose} from "./product-modal";
 
 type Book={id:string;title:string;edition:string;state:"draft"|"ready"|"hidden";revision:number;updated_at:string};
-type Asset={id:string;kind:"page"|"cover"|"background_desktop"|"background_mobile";
+type Asset={id:string;kind:"page"|"cover";
  sort_order:number;width:number;height:number;byte_size:number};
 type Details={book:Book;assets:Asset[]};
 type ListResult={books:Book[];page:number;totalPages:number;total:number};
@@ -196,8 +196,6 @@ export default function CatalogueBookManager({owner,onBusyChange}:{
  const pages=assets.filter(f=>f.kind==="page").sort(sortAssets);
  const visiblePages=pages.slice(pageOffset,pageOffset+12);
  const cover=assets.find(f=>f.kind==="cover");
- const desktop=assets.find(f=>f.kind==="background_desktop");
- const mobile=assets.find(f=>f.kind==="background_mobile");
  const canEdit=Boolean(book&&book.state!=="ready");
  const onSave=async()=>{
   const data={title:title.trim(),edition:edition.trim()};
@@ -248,7 +246,7 @@ export default function CatalogueBookManager({owner,onBusyChange}:{
  if(!owner)return <section className="surface dl7b-panel"><h1>Kho Catalogue</h1><p>Chỉ Owner được quản lý bộ Catalogue và ảnh nền.</p></section>;
  return <div className="dl7b-screen">
   <header className="page-title"><div><h1>Kho Catalogue</h1>
-   <p>Quản lý bộ sách lật, trang và ảnh nền riêng trong R2 <strong>fbmn-catalogue</strong>. Không dùng kho ảnh SKU/CMS.</p>
+   <p>Quản lý bộ sách lật, trang và bìa trong R2 <strong>fbmn-catalogue</strong>. Không dùng kho ảnh SKU/CMS; Catalogue dùng nền chung toàn website.</p>
    </div><div className="action-row">
     <button type="button" className="fb-ui-button fb-ui-button--secondary" disabled={busy||loading}
      onClick={()=>void load(book?.id,bookPage)}>Tải lại</button>
@@ -317,17 +315,6 @@ export default function CatalogueBookManager({owner,onBusyChange}:{
       <div className="dl7b-image">{cover?<CatalogueImage id={cover.id} alt="Ảnh bìa Catalogue"/>:<span className="dl7b-image-empty">Chưa có ảnh bìa</span>}</div>
       <div>{fileInput("cover",cover?"Thay ảnh bìa":"Chọn ảnh bìa")}
        {cover&&<button type="button" className="fb-ui-button fb-ui-button--secondary" disabled={!canEdit||busy} onClick={()=>setDeleteFile(cover)}>Xóa ảnh bìa</button>}</div>
-     </div>
-    </section>
-    <section className="surface dl7b-panel">
-     <h2>Ảnh nền riêng tab Catalogue</h2><p>Hai lớp độc lập: nền lấy từ <code>backgrounds/</code>, sách từ <code>books/</code> trong bucket Catalogue. Không thay nền chung các tab khác.</p>
-     <div className="dl7b-backgrounds">
-      {([["background_desktop","Desktop",desktop],["background_mobile","Mobile",mobile]] as const).map(([kind,label,asset])=>
-       <div className="dl7b-background" key={kind}><h3>{label}</h3>
-        <div className="dl7b-image">{asset?<CatalogueImage id={asset.id} alt={"Nền "+label}/>:<span className="dl7b-image-empty">Chưa cấu hình</span>}</div>
-        {fileInput(kind,asset?"Thay nền "+label:"Thêm nền "+label)}
-        {asset&&<button type="button" className="fb-ui-button fb-ui-button--secondary" disabled={!canEdit||busy} onClick={()=>setDeleteFile(asset)}>Xóa nền {label}</button>}
-       </div>)}
      </div>
     </section>
    </div>}

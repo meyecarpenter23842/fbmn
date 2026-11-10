@@ -1,13 +1,12 @@
 // DL7C: approved flipbook only. Never accept client-supplied R2 paths or keys.
 const UUID=/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i;
 const MAX_IMAGE=5*1024*1024;
-const KINDS=new Set(["page","cover","background_desktop","background_mobile"]);
 const HEADERS={"Cache-Control":"no-store","X-Content-Type-Options":"nosniff","Vary":"Origin"};
 const fail=(status,code)=>Response.json({error:{code}},{status,headers:HEADERS});
 const ok=(data)=>Response.json({data},{headers:HEADERS});
 
 export function cataloguePublicAssetKey(key){
- return typeof key==="string"&&/^(books\/[0-9a-f-]{36}\/(pages|covers)\/[0-9a-f-]{36}|backgrounds\/(desktop|mobile)\/[0-9a-f-]{36}\/[0-9a-f-]{36})\.webp$/.test(key);
+ return typeof key==="string"&&/^books\/[0-9a-f-]{36}\/(pages|covers)\/[0-9a-f-]{36}\.webp$/.test(key);
 }
 export function parseCataloguePublicQuery(url){
  const u=url instanceof URL?url:new URL(url);
@@ -44,17 +43,14 @@ export async function handlePublicCatalogueRequest({request,enabled,allowedOrigi
    const book=await getBook(parsed.id);
    if(!book)return fail(404,"not_found");
    const assets=await getAssets(parsed.id);
-   if(!Array.isArray(assets)||assets.length>203)return fail(503,"catalogue_unavailable");
+   if(!Array.isArray(assets)||assets.length>201)return fail(503,"catalogue_unavailable");
    const pages=assets.filter(a=>a.kind==="page").sort((a,b)=>a.sortOrder-b.sortOrder||a.id.localeCompare(b.id));
    if(!pages.length||pages.length>200)return fail(404,"not_found");
    const cover=assets.find(a=>a.kind==="cover");
-   const desktop=assets.find(a=>a.kind==="background_desktop");
-   const mobile=assets.find(a=>a.kind==="background_mobile");
    const assetDTO=a=>({id:a.id,width:a.width,height:a.height});
    return ok({book:{id:book.id,title:book.title,edition:book.edition},
     pages:pages.map(assetDTO),
-    cover:cover?assetDTO(cover):null,
-    backgrounds:{desktop:desktop?assetDTO(desktop):null,mobile:mobile?assetDTO(mobile):null}});
+    cover:cover?assetDTO(cover):null});
   }
   if(typeof getKey!=="function"||!r2?.get)return fail(503,"catalogue_unavailable");
   const record=await getKey(parsed.asset);

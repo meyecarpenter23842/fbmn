@@ -7,7 +7,7 @@ const BOOKS="fbmn_catalog_private.website_catalogue_books";
 const ASSETS="fbmn_catalog_private.website_catalogue_assets";
 const AUDIT="fbmn_catalog_private.website_catalogue_audit";
 const UUID=/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i;
-const KINDS=new Set(["page","cover","background_desktop","background_mobile"]);
+const KINDS=new Set(["page","cover"]);
 const LIMIT=5*1024*1024, MAX_PAGES=200;
 const HEADERS={"Cache-Control":"private, no-store","X-Content-Type-Options":"nosniff"};
 const fail=(status,code)=>Response.json({error:{code}},{status,headers:HEADERS});
@@ -21,9 +21,7 @@ const one=(u,key)=>u.searchParams.size===1&&u.searchParams.getAll(key).length===
 export function catalogueObjectKey(bookId,kind,fileId){
  if(!validId(bookId)||!validId(fileId)||!KINDS.has(kind))return null;
  if(kind==="page")return "books/"+bookId+"/pages/"+fileId+".webp";
- if(kind==="cover")return "books/"+bookId+"/covers/"+fileId+".webp";
- return "backgrounds/"+(kind==="background_desktop"?"desktop":"mobile")+
-  "/"+bookId+"/"+fileId+".webp";
+ return "books/"+bookId+"/covers/"+fileId+".webp";
 }
 export function validateCatalogueBook(input){
  return input&&typeof input==="object"&&!Array.isArray(input)&&
@@ -103,7 +101,7 @@ async function queryDetail(db,id){
    " WHERE id=$1::uuid",[id]);
   if(b.rowCount!==1)throw Error("not_found");
   const files=await c.query("SELECT id,kind,sort_order,width,height,byte_size FROM "+ASSETS+
-   " WHERE book_id=$1::uuid ORDER BY CASE kind WHEN 'cover' THEN 0 WHEN 'background_desktop' THEN 1"+
+   " WHERE book_id=$1::uuid AND kind IN ('page','cover') ORDER BY CASE kind WHEN 'cover' THEN 0 WHEN 'background_desktop' THEN 1"+
    " WHEN 'background_mobile' THEN 2 ELSE 3 END,sort_order,id LIMIT 205",[id]);
   return {book:exposeBook(b.rows[0]),assets:files.rows.map(exposeAsset)};
  });
@@ -160,7 +158,7 @@ async function mutate(db,r2,actor,action,data){
    }else if(action==="remove"){
     if(!validId(data.assetId))throw Error("invalid_book");
     const row=await c.query("DELETE FROM "+ASSETS+
-     " WHERE id=$1::uuid AND book_id=$2::uuid RETURNING kind,r2_key",
+     " WHERE id=$1::uuid AND book_id=$2::uuid AND kind IN ('page','cover') RETURNING kind,r2_key",
      [data.assetId,id]);
     if(row.rowCount!==1)throw Error("not_found");
     removedKey=row.rows[0].r2_key;

@@ -56,7 +56,7 @@ test("DL7C manifest includes only DTO metadata and excludes R2 key and NET",asyn
  const body=(await detail.json()).data;
  assert.equal(body.pages[0].id,ASSET);
  assert.equal(body.cover,null);
- assert.deepEqual(body.backgrounds,{desktop:null,mobile:null});
+ assert.equal("backgrounds" in body,false);
  assert.equal(/r2_key|byte_size|net|draft/i.test(JSON.stringify(body)),false);
  assert.equal(detail.headers.get("Cache-Control"),"no-store");
  assert.equal((await api(req("catalogue-books?id=123e4567-e89b-42d3-a456-426614174010"))).status,404);
@@ -118,11 +118,13 @@ test("DL7C only swaps Catalogue tab; no PDF viewer frame, no open R2 key",()=>{
  assert.match(ui,/prefers-reduced-motion/);
  assert.match(ui,/requestFullscreen/);
  assert.match(ui,/navigator\.share/);
- assert.match(ui,/onTouchEnd/);
+ assert.match(ui,/useMouseEvents/);
+ assert.match(ui,/swipeDistance:38/);
  assert.match(ui,/ArrowRight/);
  assert.match(ui,/window\.history\.replaceState/);
- assert.match(css,/perspective:1600px/);
- assert.match(css,/background-image:[^;]*var\(--dl7c-bg-desktop/);
+ assert.match(css,/\.fb-catalogue-paper\{/);
+ assert.match(css,/\.fb-catalogue-scene\{[^}]*background:transparent/);
+ assert.doesNotMatch(css,/--dl7c-bg-desktop|--dl7c-bg-mobile/);
  assert.match(css,/max-width:700px/);
  assert.doesNotMatch(page+ui,/<iframe|PDFViewer|<embed/);
 });
@@ -132,7 +134,7 @@ test("DL7C zoom uses shared dialog timing, reduced motion and deferred close",()
  const css=readFile("app/glass-foundation.css");
  assert.match(ui,/className="fb-catalogue-zoom fb-glass-dialog-motion"/);
  assert.match(ui,/zoomCloseTimer\.current=setTimeout/);
- assert.match(ui,/onCancel=\{event=>/);
+ assert.match(ui,/onCancel=\{e=>/);
  assert.match(css,/\.fb-glass-dialog-motion\[open\]:not\(\[data-closing="true"\]\)/);
  assert.match(css,/--fb-motion-dialog-open/);
  assert.match(css,/--fb-motion-dialog-close/);
@@ -150,9 +152,39 @@ test("DL7C thumbnail navigation uses mandatory readable control-size token",()=>
 test("DL7C navigation remains shared 36px/44px Glass control and modal owns arrow keys",()=>{
  const ui=readFile("app/catalogue/catalogue-flipbook.tsx");
  const css=readFile("app/catalogue/flipbook.css");
- assert.match(ui,/if\(zoom\.current\?\.open\)return/);
+ assert.match(ui,/if\(zoomRef\.current\?\.open\)return/);
  assert.match(ui,/fb-glass-button fb-glass-button--secondary fb-catalogue-nav fb-catalogue-nav--prev/);
  assert.match(ui,/fb-glass-button fb-glass-button--secondary fb-catalogue-nav fb-catalogue-nav--next/);
  assert.match(css,/\.fb-catalogue-nav\{flex:0 0 auto\}/);
  assert.doesNotMatch(css,/\.fb-catalogue-nav\{[^}]*\b(?:width|height|border-radius|background):/);
+});
+
+test("DL7C-R uses a single G05 site backdrop and retires per-book backgrounds",()=>{
+ const layout=readFile("app/layout.tsx");
+ const admin=readFile("apps/admin/app/catalogue-book-manager.tsx");
+ const worker=readFile("backend/public-api/catalogue-books-public.mjs");
+ const flipbook=readFile("app/catalogue/catalogue-flipbook.tsx");
+ const css=readFile("app/catalogue/flipbook.css");
+ assert.match(layout,/<GlassPageBackdrop/);
+ assert.doesNotMatch(admin,/Ảnh nền riêng tab Catalogue|Thêm nền Desktop|Thêm nền Mobile/);
+ assert.doesNotMatch(worker,/backgrounds:\s*\{/);
+ assert.doesNotMatch(flipbook,/detail\?\.backgrounds|dl7c-bg-desktop|dl7c-bg-mobile/);
+ assert.match(css,/\.fb-catalogue-scene\{[^}]*background:transparent/);
+ assert.equal(cataloguePublicAssetKey("backgrounds/desktop/"+ID+"/"+ASSET+".webp"),false);
+});
+test("DL7C-R page curl and paper audio are interaction-based and reduced-motion-safe",()=>{
+ const ui=readFile("app/catalogue/catalogue-flipbook.tsx");
+ const pkg=JSON.parse(readFile("package.json"));
+ assert.equal(pkg.dependencies["page-flip"],"2.0.7");
+ assert.equal(pkg.devDependencies["@types/page-flip"],"2.0.4");
+ assert.match(ui,/const \{PageFlip\}=await import\("page-flip"\)/);
+ assert.match(ui,/flippingTime:950/);
+ assert.match(ui,/maxShadowOpacity:0\.26/);
+ assert.match(ui,/flipNext\("bottom"\)/);
+ assert.match(ui,/turnToNextPage\(\)/);
+ assert.match(ui,/new AudioContext\(\)/);
+ assert.match(ui,/aria-pressed=\{soundEnabled\}/);
+ assert.match(ui,/soundRef\.current/);
+ assert.match(ui,/if\(reduced\)/);
+ assert.doesNotMatch(ui,/fb-catalogue-turn--next|@keyframes fb-dl7c-next/);
 });

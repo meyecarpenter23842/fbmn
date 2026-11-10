@@ -33,7 +33,7 @@ async function proxy(request:Request,params:Promise<{path?:string[]}>,method:"GE
    const id=request.headers.get("x-catalogue-book-id")||"",rev=request.headers.get("x-catalogue-revision")||"",
     kind=request.headers.get("x-catalogue-kind")||"";
    if(!/^[a-f0-9-]{36}$/i.test(id)||!/^[1-9][0-9]{0,9}$/.test(rev)||
-    !["page","cover","background_desktop","background_mobile"].includes(kind))
+    !["page","cover"].includes(kind))
     return fail(400,"invalid_upload");
   }
  }
