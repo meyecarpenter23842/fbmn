@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { fanpageContactReference } from "../lib/content/contact-reference.ts";
+import { officialContact } from "../lib/content/official-contact.ts";
 
 const read = file => readFileSync(new URL("../" + file, import.meta.url), "utf8");
 
@@ -13,10 +13,9 @@ test("all website shells share one structured footer", () => {
     assert.doesNotMatch(source, /<footer className="(?:ref-footer|catalog-footer|content-footer)"/);
   }
   assert.match(siteFooter, /className="site-footer__brand-link"/);
-  assert.match(siteFooter, /brand\/fbmn-official-logo\.webp/);
+  assert.match(siteFooter, /brand\/fbmn-transparent-logo\.webp/);
   assert.match(siteFooter, /href="\/lien-he#thong-tin-lien-he"/);
-  assert.match(siteFooter, /href="\/dai-ly"/);
-  assert.match(siteFooter, /href="\/san-pham"/);
+  assert.doesNotMatch(siteFooter, /aria-label="(?:Khám phá Futurebook|Hỗ trợ khách hàng)"/);
 });
 
 test("footer logo always smaller than menu/header logo", () => {
@@ -29,16 +28,17 @@ test("footer logo always smaller than menu/header logo", () => {
   assert.match(read("app/layout.tsx"), /\.\/site-footer\.css/);
 });
 
-test("contact reference is sourced and not misrepresented as official business record", () => {
-  assert.equal(fanpageContactReference.status, "reference");
-  assert.equal(fanpageContactReference.email, "info@futurebook.vn");
-  assert.equal(fanpageContactReference.phone, "090 154 77 45");
-  assert.match(fanpageContactReference.source, /Fanpage/);
-  assert.ok(!("hours" in fanpageContactReference));
-  const footer = read("components/site-footer.tsx");
-  assert.match(footer, /Liên hệ tham khảo từ Fanpage/);
-  const contact = read("app/lien-he/page.tsx");
-  assert.match(contact, /đang được đối chiếu/);
+test("Owner-approved contact is shared across public pages", () => {
+  assert.equal(officialContact.email, "info@fbmn.vn");
+  assert.equal(officialContact.emailHref, "mailto:info@fbmn.vn");
+  assert.equal(officialContact.address, "1092A Lê Đức Anh (QL01A), P. Tân Tạo, Ho Chi Minh City, Vietnam, 700000");
+  for (const path of ["components/site-footer.tsx", "app/lien-he/page.tsx", "app/gioi-thieu/page.tsx"]) {
+    const source = read(path);
+    assert.match(source, /officialContact as contact/);
+    assert.match(source, /contact\.address/);
+    assert.match(source, /contact\.email/);
+    assert.doesNotMatch(source, /Fanpage|đang được đối chiếu|1717B|info@futurebook\.vn/);
+  }
 });
 
 test("official social links: Facebook active, YouTube and TikTok pending", () => {

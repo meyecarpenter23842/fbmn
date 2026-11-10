@@ -22,7 +22,7 @@ import CmsPopupRuntime from "@/components/cms-popup-runtime";
 
 export const metadata: Metadata = {
   title: "Futurebook Miền Nam",
-  description: "Website Futurebook Miền Nam đang được xây dựng.",
+  description: "Tập vở, sổ, giấy và văn phòng phẩm Futurebook Miền Nam. Khám phá sản phẩm, catalogue và liên hệ hợp tác.",
   robots: { index: false, follow: false },
   icons: { icon: [{ url: "/brand/fbmn-mark.svg?v=20261104", type: "image/svg+xml" }], shortcut: "/favicon.ico", apple: "/brand/fbmn-mark.svg?v=20261104" },
 };

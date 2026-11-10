@@ -65,7 +65,7 @@ test("G05 home, catalogue, editorial and footer share glass styling but retain t
   assert.match(content, /\.content-intro-panel\s*\{[^}]*var\(--fb-glass-panel-layer\)/);
   assert.match(categories, /\.category-nav__link\s*\{[^}]*var\(--fb-glass-surface-layer\)/);
   assert.match(footer, /\.site-footer\s*\{[^}]*linear-gradient\(118deg,#391950/);
-  assert.match(read("components/site-footer.tsx"), /aria-label="Khám phá Futurebook"/);
+  assert.doesNotMatch(read("components/site-footer.tsx"), /aria-label="Khám phá Futurebook"/);
 });
 
 test("G05 does not fabricate commerce capabilities, claims, prices or product photos", () => {
@@ -81,7 +81,7 @@ test("G05 does not fabricate commerce capabilities, claims, prices or product ph
   assert.match(detail, /getPublicCatalog\(\)/);
   assert.match(detail, /generateMetadata/);
   assert.doesNotMatch(home+detail, /mockup\.com|unsplash\.com|imagegen|NET_PRICE/);
-  assert.match(read("app/lien-he/page.tsx"), /fieldset disabled/);
+  assert.match(read("app/lien-he/page.tsx"), /href=\{contact\.emailHref\}/);
   assert.doesNotMatch(layout, /apps\/admin|admin-controls\.css|MobileBottomNavigation/);
 });
 

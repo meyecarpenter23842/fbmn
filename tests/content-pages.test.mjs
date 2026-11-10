@@ -92,8 +92,8 @@ test("PR07 routes and responsive nav exist; no fake contact submission", () => {
     assert.match(source,/robots: \{ index: false \}/);
   }
   const contact=read("app/lien-he/page.tsx");
-  assert.match(contact,/<fieldset disabled>/);
-  assert.match(contact,/type="button" className="content-button" disabled/);
+  assert.match(contact,/href=\{contact\.emailHref\}/);
+  assert.doesNotMatch(contact,/<form|<fieldset/);
   assert.doesNotMatch(contact,/type="submit"|action=|onSubmit=|\/api\/contact/);
   const header=read("components/site-header.tsx");
   for(const slug of ["san-pham","gia-cong","bang-tin","catalogue","lien-he"]) {
@@ -103,7 +103,7 @@ test("PR07 routes and responsive nav exist; no fake contact submission", () => {
     assert.match(read("app/"+slug+"/page.tsx"),/ContentShell/,slug);
   }
   assert.match(read("app/page.tsx"),/<SiteFooter\s*\/>/);
-  assert.match(read("components/site-footer.tsx"),/aria-label="Khám phá Futurebook"/);
+  assert.doesNotMatch(read("components/site-footer.tsx"),/aria-label="Khám phá Futurebook"/);
   const css=read("app/content.css");
   assert.match(css,/@media \(max-width: 800px\)/);
   assert.doesNotMatch(css,/position:\s*fixed|bottom-nav/);

@@ -18,7 +18,7 @@ const desktopNavigation = [
 function Brand() {
   return (
     <Link className="ref-brand" href="/#home" aria-label="Futurebook Miền Nam — Trang chủ">
-      <Image src="/brand/fbmn-official-logo.webp" alt="Logo chính thức Futurebook Miền Nam" width={300} height={84} priority className="ref-brand__official-image" />
+      <Image src="/brand/fbmn-transparent-logo.webp" alt="Logo chính thức Futurebook Miền Nam" width={300} height={84} priority className="ref-brand__official-image" />
     </Link>
   );
 }

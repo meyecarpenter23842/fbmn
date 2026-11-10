@@ -52,8 +52,8 @@ test("DL1 dealer-friendly landing pages use honest approved links and existing S
  }
  const contact=source("app/lien-he/page.tsx");
  assert.match(contact,/id="thong-tin-lien-he"/);
- assert.match(contact,/fieldset disabled/);
- assert.match(contact,/Fanpage/);
+ assert.match(contact,/href=\{contact\.emailHref\}/);
+ assert.doesNotMatch(contact,/Fanpage/);
  for(const old of ["app/dai-ly/page.tsx","app/gioi-thieu/page.tsx","app/tin-tuc/page.tsx","app/khuyen-mai/page.tsx"])
   assert.match(source(old),/<ContentShell>/,old);
  assert.match(source("app/dai-ly/page.tsx"),/href="\/lien-he#thong-tin-lien-he"/);
@@ -66,10 +66,7 @@ test("DL1 theme, mobile access, reduced motion and secondary app discovery remai
  assert.match(css,/\.ref-navigation__link--active/);
  assert.match(css,/\.ref-navigation--open/);
  assert.match(css,/prefers-reduced-motion: reduce/);
- assert.match(footer,/href="\/gia-cong"/);
- assert.match(footer,/href="\/bang-tin"/);
- assert.match(footer,/href="\/catalogue"/);
- assert.match(footer,/href="\/dai-ly"/);
- assert.match(footer,/href="\/gioi-thieu"/);
+ assert.match(footer,/href="\/lien-he#thong-tin-lien-he"/);
+ assert.doesNotMatch(footer,/Khám phá Futurebook|Hỗ trợ khách hàng/);
  assert.doesNotMatch(header+footer,/NET_PRICE|r2_key|pricebook/i);
 });
