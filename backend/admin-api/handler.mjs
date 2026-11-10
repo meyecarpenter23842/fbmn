@@ -3,6 +3,7 @@ import { handleCatalogue } from "./catalogue-service.mjs";
 import { handleCms } from "./cms-service.mjs";
 import { handleHomeLayout } from "./home-layout-service.mjs";
 import {handleCategoryDisplay} from "./category-display-service.mjs";
+import {handleChatbotConfig} from "./chatbot-config-service.mjs";
 import {handleContactRequests} from "./contact-requests-service.mjs";
 import {handleOutsourcingRequests} from "./outsourcing-requests-service.mjs";
 import { handleCatalogueBooks } from "./catalogue-books-service.mjs";
@@ -40,7 +41,7 @@ function reply(status, body, corsOrigin) {
   if (corsOrigin) headers.set("Access-Control-Allow-Origin", corsOrigin);
   return new Response(JSON.stringify(body), { status, headers });
 }
-export function createAdminApi({ verifyToken, loadActor, listChannels, recordAudit, catalogueDb, catalogueR2, catalogueBookR2, cmsPublicSurfaceReady = false, allowedOrigins = [] }) {
+export function createAdminApi({ verifyToken, loadActor, listChannels, recordAudit, catalogueDb, catalogueR2, catalogueBookR2, googleSecret, cmsPublicSurfaceReady = false, allowedOrigins = [] }) {
   if (![verifyToken,loadActor,listChannels,recordAudit].every(f => typeof f === "function")) {
     throw new Error("ADM-01 dependencies required");
   }
@@ -57,7 +58,7 @@ export function createAdminApi({ verifyToken, loadActor, listChannels, recordAud
       const url = new URL(request.url);
       const isPdfUpload=url.pathname==="/v1/admin/website/catalogue/pdf-upload";
       const action = (url.pathname === "/v1/admin/website/catalogue" || url.pathname.startsWith("/v1/admin/website/catalogue/")) ? "website.catalogue" :
-        (url.pathname === "/v1/admin/website/home-layout" || url.pathname === "/v1/admin/website/category-display" || url.pathname === "/v1/admin/website/outsourcing-requests" || url.pathname === "/v1/admin/website/contact-requests") ? "website.layout" : (url.pathname === "/v1/admin/cms" || url.pathname.startsWith("/v1/admin/cms/")) ? "cms.manage" :
+        (url.pathname === "/v1/admin/website/home-layout" || url.pathname === "/v1/admin/website/category-display" || url.pathname === "/v1/admin/website/outsourcing-requests" || url.pathname === "/v1/admin/website/contact-requests" || url.pathname === "/v1/admin/website/chatbot-config") ? "website.layout" : (url.pathname === "/v1/admin/cms" || url.pathname.startsWith("/v1/admin/cms/")) ? "cms.manage" :
         url.pathname.startsWith("/v1/admin/catalogue/") ? "catalogue.manage" :
         url.pathname.startsWith("/v1/admin/pricing/") ? "pricing.private" : ROUTES.get(url.pathname);
       if (!action) return error(404, "not_found", corsOrigin);
@@ -111,6 +112,7 @@ export function createAdminApi({ verifyToken, loadActor, listChannels, recordAud
       }
       if (action === "website.layout") {
         const params={request,actor:{...actor,subject},db:catalogueDb};
+        if(url.pathname === "/v1/admin/website/chatbot-config")return handleChatbotConfig({...params,googleSecret});
         return url.pathname === "/v1/admin/website/category-display"
           ? handleCategoryDisplay(params) : url.pathname === "/v1/admin/website/outsourcing-requests"
             ? handleOutsourcingRequests(params) : url.pathname === "/v1/admin/website/contact-requests" ? handleContactRequests(params) : handleHomeLayout(params);
