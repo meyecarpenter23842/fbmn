@@ -3,6 +3,7 @@ import { handleCatalogue } from "./catalogue-service.mjs";
 import { handleCms } from "./cms-service.mjs";
 import { handleHomeLayout } from "./home-layout-service.mjs";
 import {handleCategoryDisplay} from "./category-display-service.mjs";
+import {handleOutsourcingRequests} from "./outsourcing-requests-service.mjs";
 import { handleCatalogueBooks } from "./catalogue-books-service.mjs";
 import { handlePricebook } from "./pricebook-service.mjs";
 import { handleBulkPricebook } from "./pricebook-bulk-service.mjs";
@@ -54,7 +55,7 @@ export function createAdminApi({ verifyToken, loadActor, listChannels, recordAud
       if (origin && !corsOrigin) return error(403, "origin_forbidden", null);
       const url = new URL(request.url);
       const action = (url.pathname === "/v1/admin/website/catalogue" || url.pathname.startsWith("/v1/admin/website/catalogue/")) ? "website.catalogue" :
-        (url.pathname === "/v1/admin/website/home-layout" || url.pathname === "/v1/admin/website/category-display") ? "website.layout" : (url.pathname === "/v1/admin/cms" || url.pathname.startsWith("/v1/admin/cms/")) ? "cms.manage" :
+        (url.pathname === "/v1/admin/website/home-layout" || url.pathname === "/v1/admin/website/category-display" || url.pathname === "/v1/admin/website/outsourcing-requests") ? "website.layout" : (url.pathname === "/v1/admin/cms" || url.pathname.startsWith("/v1/admin/cms/")) ? "cms.manage" :
         url.pathname.startsWith("/v1/admin/catalogue/") ? "catalogue.manage" :
         url.pathname.startsWith("/v1/admin/pricing/") ? "pricing.private" : ROUTES.get(url.pathname);
       if (!action) return error(404, "not_found", corsOrigin);
@@ -96,7 +97,8 @@ export function createAdminApi({ verifyToken, loadActor, listChannels, recordAud
       if (action === "website.layout") {
         const params={request,actor:{...actor,subject},db:catalogueDb};
         return url.pathname === "/v1/admin/website/category-display"
-          ? handleCategoryDisplay(params) : handleHomeLayout(params);
+          ? handleCategoryDisplay(params) : url.pathname === "/v1/admin/website/outsourcing-requests"
+            ? handleOutsourcingRequests(params) : handleHomeLayout(params);
       }
       if (action === "cms.manage") {
         return handleCms({request,actor:{...actor,subject},db:catalogueDb,r2:catalogueR2,publicSurfaceReady:cmsPublicSurfaceReady});

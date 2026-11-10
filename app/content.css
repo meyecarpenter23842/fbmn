@@ -86,3 +86,11 @@
 @media (prefers-reduced-motion: reduce) {
   .content-information-card, .content-article-card { transition: none; transform: none; }
 }
+
+/* DL6 outsourcing uses the shared editorial surface, form controls and purple tokens. */
+.outsourcing-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;}
+.outsourcing-fields label,.outsourcing-form fieldset>label:not(.content-consent){display:grid;gap:6px;min-width:0;}
+.outsourcing-form .outsourcing-honeypot{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);}
+.content-contact-form label,.content-contact-form .content-consent{font-size:13px;}
+@media(max-width:780px){.outsourcing-fields{grid-template-columns:1fr;}}
+

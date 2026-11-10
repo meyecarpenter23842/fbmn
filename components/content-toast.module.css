@@ -1,0 +1,13 @@
+/* DL6 scoped Website toast; fixed overlay is not a mobile navigation dock. */
+.toast{position:fixed;top:22px;right:18px;z-index:90;width:min(360px,calc(100vw - 32px));
+ display:flex;align-items:flex-start;justify-content:space-between;gap:12px;
+ border-radius:var(--fb-control-radius);border:1px solid var(--fb-glass-border);
+ background:#fff;box-shadow:var(--fb-glass-shadow);padding:12px 13px;
+ color:var(--fb-glass-ink);font-size:13px;line-height:1.55;}
+.success{border-left:3px solid var(--color-primary);}
+.error{border-left:3px solid #b42318;}
+.toast button{display:inline-flex;align-items:center;justify-content:center;
+ flex:none;border:0;background:transparent;cursor:pointer;color:inherit;
+ width:26px;height:26px;font-size:20px;border-radius:var(--fb-control-radius);}
+.toast button:focus-visible{outline:2px solid var(--color-primary);outline-offset:2px;}
+@media(max-width:600px){.toast{top:12px;right:12px;}}

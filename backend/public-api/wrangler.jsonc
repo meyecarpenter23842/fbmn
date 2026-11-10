@@ -7,12 +7,13 @@
   ],
   "workers_dev": false,
   "vars": {
-    "PUBLIC_ALLOWED_ORIGINS": "https://fbmn-web.vercel.app",
+    "PUBLIC_ALLOWED_ORIGINS": "https://fbmn-web.vercel.app,https://fbmn.vn,https://www.fbmn.vn,https://fbmn.com.vn,https://www.fbmn.com.vn",
     "EXPECTED_DB_ROLE": "fbmn_p5_public_login",
     "PUBLIC_P5_ENABLED": "true",
     "PUBLIC_CMS_ENABLED": "true",
     "PUBLIC_DL4_ENABLED": "true",
-    "PUBLIC_DL7C_ENABLED": "true"
+    "PUBLIC_DL7C_ENABLED": "true",
+    "PUBLIC_DL6_ENABLED": "false"
   },
   "hyperdrive": [
     {
@@ -38,6 +39,11 @@
         "limit": 60,
         "period": 60
       }
+    },
+    {
+      "name": "OUTSOURCING_RATE_LIMITER",
+      "namespace_id": "20261110",
+      "simple": { "limit": 4, "period": 60 }
     },
     {
       "name": "IMAGE_RATE_LIMITER",
