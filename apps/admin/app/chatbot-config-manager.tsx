@@ -1,5 +1,5 @@
 "use client";
-import {useEffect,useState,useCallback} from "react";
+import {Fragment,useEffect,useState,useCallback} from "react";
 import ProductModal,{useProductModalClose} from "./product-modal";
 import AdminToast from "./admin-toast";
 type Config={projectId:string;location:string;agentId:string;environmentId:string;model:string};
@@ -34,7 +34,13 @@ export default function ChatbotConfigManager({owner}:{owner:boolean}){
  async function importFile(file:File){
   setBusy(true);try{
    if(file.size>16384||!/\.(js|json)$/i.test(file.name))throw Error("Chỉ nhận file JS/JSON tối đa 16 KB.");
-   const result=await api<{config:Config}>({operation:"import",raw:await file.text()});
+   const raw=await file.text();
+   // Reject credential-shaped and non-literal files locally; never send raw keys to a server.
+   let candidate:unknown;
+   try{candidate=JSON.parse(raw.replace(/^\uFEFF/,"").trim().replace(/^(?:export\s+default\s+|module\.exports\s*=\s*)/,"").replace(/;\s*$/,""));}catch{throw Error("File phải chứa JSON thuần hoặc một export JSON.");}
+   if(!candidate||typeof candidate!=="object"||Array.isArray(candidate)||Object.keys(candidate).some(k=>!(k in labels)||!Object.hasOwn(labels,k)))throw Error("File có trường ngoài cấu hình. Không nhập khóa bí mật.");
+   if(Object.values(candidate).some(v=>typeof v!=="string"||v.length>100||/PRIVATE KEY|Bearer\s|ya29\./i.test(v)))throw Error("File có giá trị không hợp lệ hoặc chứa thông tin bí mật.");
+   const result=await api<{config:Config}>({operation:"import",raw:JSON.stringify(candidate)});
    setDraft(result.config);setModels(null);notify("Đã đọc cấu hình. Chưa lưu.", "success");
   }catch(e){notify(e instanceof Error?e.message:"Không đọc được file.","error");}finally{setBusy(false);}
  }
@@ -60,7 +66,7 @@ export default function ChatbotConfigManager({owner}:{owner:boolean}){
   {!stored&&!error&&<p role="status">Đang tải cấu hình…</p>}
   {stored&&<section className="surface dl4-panel"><h2>Kết nối Google</h2>
    <p>{stored.credentialsConfigured?"Đã có biến bí mật ở backend; chưa xác minh kết nối.":"Chưa có tài khoản Google ở backend."}</p>
-   <dl className="dl6-request-details">{(Object.keys(labels) as (keyof Config)[]).map(k=><div key={k}><dt>{labels[k]}</dt><dd>{stored.config[k]||"Chưa cấu hình"}</dd></div>)}</dl>
+   <dl className="dl6-request-details">{(Object.keys(labels) as (keyof Config)[]).map(k=><Fragment key={k}><dt>{labels[k]}</dt><dd>{stored.config[k]||"Chưa cấu hình"}</dd></Fragment>)}</dl>
    <p className="content-small-note">Model lưu tại đây là lựa chọn cho Website ở DL10B. Prompt/Playbook quản lý bên Google. DL10A chưa kích hoạt chatbot thật hoặc lưu hội thoại.</p>
   </section>}
   {open&&<ProductModal title="Cấu hình Dialogflow CX" locked={busy} onClose={()=>setOpen(false)}

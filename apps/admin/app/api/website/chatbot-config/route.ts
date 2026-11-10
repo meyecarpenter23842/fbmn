@@ -1,5 +1,5 @@
 // DL10A Owner-only same-origin configuration relay.
-export const runtime="nodejs";export const dynamic="force-dynamic";
+export const maxDuration=120;export const runtime="nodejs";export const dynamic="force-dynamic";
 const HEADERS={"Cache-Control":"private, no-store","Content-Type":"application/json; charset=utf-8",
  "X-Content-Type-Options":"nosniff"};
 const fail=(status:number,code:string)=>Response.json({error:{code}},{status,headers:HEADERS});

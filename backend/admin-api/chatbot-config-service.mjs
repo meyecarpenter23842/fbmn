@@ -1,5 +1,4 @@
 // DL10A: Owner-only configuration; no conversations, no public access.
-import {SignJWT,importPKCS8} from "jose";
 const TABLE="fbmn_catalog_private.website_chatbot_config";
 const HEADERS={"Cache-Control":"private, no-store","X-Content-Type-Options":"nosniff"};
 const ok=data=>Response.json({data},{headers:HEADERS});
@@ -38,6 +37,7 @@ async function tokenFor(secret,fetcher){
  let key;
  try{key=JSON.parse(secret);}catch{throw Error("credentials_missing");}
  if(key?.type!=="service_account"||typeof key.client_email!=="string"||typeof key.private_key!=="string")throw Error("credentials_missing");
+ const {SignJWT,importPKCS8}=await import("jose");
  const pk=await importPKCS8(key.private_key,"RS256");
  const jwt=await new SignJWT({scope:"https://www.googleapis.com/auth/cloud-platform"})
   .setProtectedHeader({alg:"RS256"}).setIssuer(key.client_email).setAudience("https://oauth2.googleapis.com/token")
