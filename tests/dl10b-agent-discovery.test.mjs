@@ -13,6 +13,7 @@ test("credential storage encrypts and authenticates revision; ciphertext only",a
  assert.ok(!new TextDecoder().decode(map.get("chatbot/credential-2")).includes("PRIVATE KEY"));
  assert.deepEqual(JSON.parse(await store.read(2)),account);
  map.set("chatbot/credential-3",map.get("chatbot/credential-2"));await assert.rejects(store.read(3));
+ await store.write(4,"");assert.equal(await store.read(4),"");
 });
 test("owner lists agents using imported credentials without echoing key",async()=>{
  const request=new Request("https://example.test/v1/admin/website/chatbot-config",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({operation:"list_agents",projectId:account.project_id,credential:JSON.stringify(account)})});

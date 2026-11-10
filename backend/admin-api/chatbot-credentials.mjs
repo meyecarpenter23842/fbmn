@@ -13,7 +13,7 @@ export function createCredentialStore(bucket,secret){
    const obj=await bucket.get(path(revision));if(!obj)return undefined;
    if(obj.size>20000)throw Error("credentials_storage_unavailable");
    const bytes=new Uint8Array(await obj.arrayBuffer());
-   if(bytes.length<29)throw Error("credentials_storage_unavailable");
+   if(bytes.length<28)throw Error("credentials_storage_unavailable");
    return decoder.decode(await crypto.subtle.decrypt({name:"AES-GCM",iv:bytes.slice(0,12),additionalData:encoder.encode(path(revision))},await keyFor(secret),bytes.slice(12)));
   },
   async write(revision,value){
