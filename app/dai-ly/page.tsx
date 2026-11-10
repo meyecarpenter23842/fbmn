@@ -5,7 +5,7 @@ import { getPublicContent } from "@/lib/content/adapter";
 
 export const metadata: Metadata = {
   title: "Dành cho đại lý | Futurebook Miền Nam",
-  description: "Thông tin tham khảo và hướng dẫn liên hệ về hợp tác phân phối Futurebook Miền Nam.",
+  description: "Liên hệ hợp tác phân phối Futurebook Miền Nam.",
 };
 
 export default async function DealerPage() {
@@ -13,11 +13,11 @@ export default async function DealerPage() {
   return <ContentShell>
     <ContentBreadcrumb items={[{ name: "Dành cho đại lý" }]}/>
     <PageHeading eyebrow="HỢP TÁC PHÂN PHỐI" title="Dành cho đại lý"
-      intro="Tìm hiểu cách tra cứu sản phẩm và quy trình tiếp nhận thông tin hợp tác khi kênh liên hệ chính thức được xác minh."/>
+      intro="Khám phá sản phẩm và liên hệ hợp tác phân phối."/>
     <section className="content-intro-grid" aria-label="Thông tin đại lý">
       <div className="content-intro-panel">
         <h2>Khám phá danh mục Futurebook</h2>
-        <p>Tra cứu nhóm sản phẩm và quy cách đã được xác minh trên website. Giá NET, giá đại lý, chiết khấu và chính sách theo hợp đồng không được công khai.</p>
+        <p>Tra cứu nhóm sản phẩm và quy cách để chọn hàng phù hợp nhu cầu kinh doanh.</p>
         <Link href="/san-pham" className="content-button">Xem sản phẩm</Link>
       </div>
       <div className="content-outline-panel">
@@ -26,7 +26,7 @@ export default async function DealerPage() {
           <h3>{dealerInformation.title}</h3>
           {dealerInformation.paragraphs.map((paragraph, index) => <p key={index}>{paragraph}</p>)}
           <p>{dealerInformation.contactInstructions}</p>
-        </> : <p>Chính sách đại lý, khu vực phân phối, điều kiện hợp tác và kênh đăng ký đang chờ phê duyệt. Website chưa công bố mức chiết khấu hoặc cam kết kinh doanh.</p>}
+        </> : <p>Liên hệ Futurebook Miền Nam để trao đổi về khu vực phân phối, báo giá sỉ và điều kiện hợp tác.</p>}
         <Link className="content-text-link" href="/lien-he#thong-tin-lien-he">Thông tin liên hệ dành cho đại lý</Link>
       </div>
     </section>

@@ -99,7 +99,11 @@ test("website uses the owner-approved logo and verified hero media fallback on b
   const home = read("app/page.tsx");
   const styles = read("app/rebaseline.css");
   const component = read("components/verified-media-image.tsx");
-  assert.ok(header.includes('src="/brand/fbmn-official-logo.webp"'));
+  assert.ok(header.includes('src="/brand/fbmn-transparent-logo.webp"'));
+  const logo = readFileSync(new URL("../public/brand/fbmn-transparent-logo.webp", import.meta.url));
+  assert.ok(logo.byteLength > 1000);
+  assert.equal(logo.toString("ascii", 12, 16), "VP8X");
+  assert.ok(logo[20] & 0x10, "transparent logo must carry WebP alpha");
   assert.ok(readFileSync(new URL("../public/brand/fbmn-official-logo.webp", import.meta.url)).byteLength > 1000);
   assert.match(home, /asset=\{approvedSiteMedia.heroBanner\}/);
   assert.match(home, /NotebookArt cover="sky"/);

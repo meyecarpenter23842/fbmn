@@ -15,24 +15,24 @@ export function getDemoChatbotReply(message: string): ChatbotReply {
   if (!normalized) return { text: "Anh chọn một chủ đề hoặc nhập câu hỏi để bắt đầu nhé." };
   if (/sản phẩm|san pham|tập|vở|sổ|văn phòng phẩm|catalog/i.test(normalized)) {
     return {
-      text: "Anh có thể xem các nhóm tập vở, sổ và văn phòng phẩm ở trang Sản phẩm. Giá và tồn kho sẽ được cập nhật khi có dữ liệu được duyệt.",
+      text: "Anh có thể xem các nhóm tập vở, sổ và văn phòng phẩm ở trang Sản phẩm. Liên hệ Futurebook để được tư vấn giá và tình trạng hàng.",
       href: "/san-pham", actionLabel: "Xem sản phẩm",
     };
   }
   if (/đại lý|dai ly|phân phối|npp|hợp tác/i.test(normalized)) {
     return {
-      text: "Thông tin hợp tác và kênh đại lý được giới thiệu tại trang Dành cho đại lý. Chatbot chưa có quyền báo giá NET hoặc chính sách phân phối.",
+      text: "Thông tin hợp tác và kênh đại lý được giới thiệu tại trang Dành cho đại lý. Liên hệ Futurebook để trao đổi báo giá sỉ và điều kiện hợp tác.",
       href: "/dai-ly", actionLabel: "Dành cho đại lý",
     };
   }
   if (/liên hệ|lien he|điện thoại|hotline|email|địa chỉ/i.test(normalized)) {
     return {
-      text: "Anh có thể xem thông tin liên hệ được công bố trên website tại trang Liên hệ.",
+      text: "Anh có thể xem địa chỉ và email của Futurebook tại trang Liên hệ.",
       href: "/lien-he", actionLabel: "Trang liên hệ",
     };
   }
   return {
-    text: "Đây là chatbot demo, chưa kết nối Dialogflow CX nên em chưa thể trả lời tự động câu hỏi này. Anh có thể xem danh mục sản phẩm hoặc trang liên hệ để tìm hiểu thêm.",
+    text: "Câu hỏi này chưa có trong phần hỗ trợ nhanh. Anh có thể liên hệ Futurebook để được tư vấn trực tiếp.",
     href: "/lien-he", actionLabel: "Liên hệ Futurebook",
   };
 }

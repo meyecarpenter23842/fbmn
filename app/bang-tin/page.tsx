@@ -8,7 +8,7 @@ import {buildNewsHubItems,type NewsHubFilter} from "@/lib/content/news-hub";
 export const dynamic="force-dynamic";
 export const metadata: Metadata ={
  title:"Bảng tin | Futurebook Miền Nam",
- description:"Tin tức và chương trình khuyến mãi Futurebook Miền Nam đã được xác minh, duyệt và công bố.",
+ description:"Tin tức và chương trình khuyến mãi Futurebook Miền Nam.",
  alternates:{canonical:"/bang-tin"}
 };
 type Props={searchParams:Promise<{loai?:string}>};
@@ -24,12 +24,12 @@ export default async function NewsHubPage({searchParams}:Props){
  return <ContentShell>
   <ContentBreadcrumb items={[{name:"Bảng tin"}]}/>
   <PageHeading eyebrow="CẬP NHẬT FUTUREBOOK" title="Bảng tin Futurebook Miền Nam"
-   intro="Tin tức, thông báo và chương trình đã công bố"/>
+   intro="Tin tức, thông báo và chương trình khuyến mãi"/>
   <section className="news-hub" aria-labelledby="news-hub-heading">
    <div className="news-hub-heading">
     <div><p className="content-eyebrow">THÔNG TIN & ƯU ĐÃI</p>
      <h2 id="news-hub-heading">Bảng tin Futurebook</h2>
-     <p>Chỉ hiển thị nội dung đã được xác minh, phê duyệt và còn hiệu lực.</p>
+     
     </div>
     <nav className="news-hub-filters" aria-label="Lọc bài viết">
      {FILTERS.map(item=><GlassChipLink key={item.value} href={item.href}
@@ -40,10 +40,10 @@ export default async function NewsHubPage({searchParams}:Props){
     {items.map(item=>item.kind==="news"?
      <ArticlePreview article={item.article} key={"news:"+item.slug}/>:
      <PromotionPreview promotion={item.promotion} key={"promotion:"+item.slug}/>)}
-   </div>:<WaitingForApproval title="Chưa có bài viết được công bố">
-    {active==="news"?"Tin tức được xuất bản sẽ xuất hiện tại đây.":
-     active==="promotions"?"Chưa có chương trình khuyến mãi đã duyệt đang còn hiệu lực.":
-     "Bảng tin sẽ cập nhật khi có tin tức hoặc chương trình được phê duyệt. Không hiển thị dữ liệu mẫu."}
+   </div>:<WaitingForApproval title="Chưa có bài viết">
+    {active==="news"?"Tin tức mới sẽ được cập nhật tại đây.":
+     active==="promotions"?"Hiện chưa có chương trình khuyến mãi.":
+     "Bảng tin sẽ cập nhật khi có tin tức hoặc chương trình mới."}
    </WaitingForApproval>}
    <nav className="news-hub-legacy-links" aria-label="Đường dẫn nội dung">
     <Link href="/tin-tuc">Xem riêng trang Tin tức</Link>

@@ -12,7 +12,7 @@ const quickQuestions = ["Sản phẩm", "Dành cho đại lý", "Liên hệ"];
 const welcomeMessage: ChatMessage = {
   id: 0,
   author: "bot",
-  text: "Chào anh! Em là trợ lý Futurebook Miền Nam (bản demo). Anh muốn tìm hiểu sản phẩm, đại lý hay liên hệ ạ?",
+  text: "Chào anh/chị! Futurebook Miền Nam hỗ trợ tra cứu sản phẩm, hợp tác đại lý và thông tin liên hệ.",
 };
 
 function Avatar({ small = false }: { small?: boolean }) {
@@ -105,7 +105,7 @@ export function ChatbotWidget() {
             <span className="fb-chat__head-avatar"><Avatar small /></span>
             <span className="fb-chat__heading">
               <strong id="fb-chat-title">Futurebook Miền Nam</strong>
-              <small id="fb-chat-mode">Trợ lý trực tuyến · Demo</small>
+              <small id="fb-chat-mode">Hỗ trợ nhanh · Câu trả lời soạn sẵn</small>
             </span>
             <button type="button" className="fb-chat__close" onClick={close} aria-label="Đóng chatbot">
               <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M5 5l14 14M19 5L5 19"/></svg>
@@ -143,7 +143,7 @@ export function ChatbotWidget() {
               <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m3 11 18-8-8 18-3-8-7-2zM10 13l11-10"/></svg>
             </button>
           </form>
-          <p className="fb-chat__notice">Chưa kết nối Dialogflow CX · Tin nhắn chỉ ở phiên trang này, không gửi lên máy chủ.</p>
+          <p className="fb-chat__notice">Tin nhắn chỉ ở phiên trang này, không gửi lên máy chủ. Hỗ trợ theo câu trả lời soạn sẵn.</p>
         </section>
       )}
       <button

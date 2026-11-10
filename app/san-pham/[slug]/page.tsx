@@ -26,7 +26,7 @@ export default async function ProductPage({ params, searchParams }: Props) {
   if (!product) return <CatalogShell><div className="catalog-wrap">
     <CatalogBreadcrumb trail={[{ label: "Sản phẩm", href: "/san-pham" }, { label: "Chi tiết" }]}/>
     <EmptyState heading="Sản phẩm chưa được công khai"
-      message="Sản phẩm này chưa được xác minh hoặc chưa được xuất bản. Không có dữ liệu hay giá mẫu được hiển thị."/>
+      message="Sản phẩm hiện không có trong danh mục. Vui lòng xem các sản phẩm khác."/>
   </div></CatalogShell>;
   const category = catalog.categories.find(item => item.id === product.categoryId);
   const images=product.media.flatMap(media=>{

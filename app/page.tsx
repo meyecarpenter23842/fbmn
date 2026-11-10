@@ -36,7 +36,7 @@ export default async function HomePage() {
               </div>
               <a className="ref-cta" href="#categories">Xem sản phẩm <Icon name="arrow" size={19}/></a>
             </div>
-            <div className={"ref-hero__visual"+(hasCmsHero?" ref-hero__visual--cms":"")} aria-label={hasCmsHero?"Banner Futurebook đã công bố":"Bố cục minh họa tập vở Futurebook"}>
+            <div className={"ref-hero__visual"+(hasCmsHero?" ref-hero__visual--cms":"")} aria-label={hasCmsHero?"Banner Futurebook":"Hình giới thiệu tập vở Futurebook"}>
               <div className="ref-hero__rays" aria-hidden="true" />
               {hasCmsHero?<CmsBannerSlot items={cms} slot="home.hero"/>:<>
               <VerifiedMediaImage asset={approvedSiteMedia.heroBanner} priority
@@ -72,7 +72,7 @@ export default async function HomePage() {
           <CmsFeaturedSlot items={cms} slot="home.news_featured"/>
           <CmsFeaturedSlot items={cms} slot="home.promotion_featured"/>
           <section className="ref-trust" id="agency" aria-label="Thông tin hỗ trợ khách hàng và đại lý">
-            <div><Icon name="package" size={28}/><span><strong>Danh mục sản phẩm</strong><small>Dữ liệu công khai đã duyệt</small></span></div>
+            <div><Icon name="package" size={28}/><span><strong>Danh mục sản phẩm</strong><small>Tập vở, giấy và văn phòng phẩm</small></span></div>
             <div><Icon name="shield" size={28}/><span><strong>Thông tin rõ ràng</strong><small>Nguồn catalogue chính thức</small></span></div>
             <div><Icon name="book" size={28}/><span><strong>Hỗ trợ đại lý</strong><small>Chính sách đang cập nhật</small></span></div>
             <div><Icon name="heart" size={28}/><span><strong>Kết nối Futurebook</strong><small>Xem trang liên hệ</small></span></div>
@@ -110,7 +110,7 @@ async function HomePublicCatalogue() {
   if (!products.length) return <section id="categories" className="ref-categories" aria-label="Trạng thái danh mục">
     <div className="ref-catalog-state" role="status">
       <strong>Danh mục sản phẩm đang được cập nhật</strong>
-      <p>Hiện chưa có sản phẩm đủ điều kiện công khai. Trang chủ không hiển thị mẫu hoặc SKU minh họa.</p>
+      <p>Danh mục sản phẩm đang được cập nhật.</p>
       <Link href="/san-pham">Xem trang Sản phẩm</Link>
     </div>
   </section>;

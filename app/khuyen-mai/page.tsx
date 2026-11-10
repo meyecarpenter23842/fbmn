@@ -6,7 +6,7 @@ import { getPublicContent } from "@/lib/content/adapter";
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
   title: "Khuyến mãi | Futurebook Miền Nam",
-  description: "Thông tin chương trình Futurebook Miền Nam được phê duyệt và còn hiệu lực.",
+  description: "Các chương trình khuyến mãi Futurebook Miền Nam.",
 };
 
 export default async function PromotionsPage() {
@@ -17,7 +17,7 @@ export default async function PromotionsPage() {
     <ContentBreadcrumb items={[{ name: "Khuyến mãi" }]}/>
     <nav className="news-hub-back"><Link href="/bang-tin">← Trở lại Bảng tin</Link></nav>
     <PageHeading eyebrow="CHƯƠNG TRÌNH" title="Khuyến mãi"
-      intro="Các chương trình chỉ hiển thị sau khi được duyệt, trong thời gian có hiệu lực và có đầy đủ nội dung xác minh."/>
+      intro="Các chương trình khuyến mãi hiện hành của Futurebook Miền Nam."/>
     {listed.length ? <section className="content-card-grid" aria-label="Danh sách chương trình">
       {listed.map(promotion => <PromotionPreview promotion={promotion} key={promotion.slug}/>)}
     </section> : <WaitingForApproval title="Chưa có chương trình được công bố">

@@ -65,18 +65,14 @@ test("G07.2 remove redundant visible page introductions while retaining SEO H1, 
   assert.match(read("app/tin-tuc/[slug]/page.tsx"),/<h1>\{item\.title\}<\/h1>/);
 });
 
-test("G07.2 footer remains verified and functional, with compact visual hierarchy",()=>{
-  assert.match(footer,/brand\/fbmn-official-logo\.webp/);
+test("DL7D supersedes G07.2 footer groups while keeping brand, contact and social links",()=>{
+  assert.match(footer,/brand\/fbmn-transparent-logo\.webp/);
   assert.match(footer,/<FooterSocialLinks \/>/);
-  assert.match(footer,/fanpageContactReference as contact/);
-  assert.match(footer,/Liên hệ tham khảo từ Fanpage/);
-  for(const href of ["/san-pham","/gia-cong","/bang-tin","/catalogue","/gioi-thieu","/tin-tuc","/khuyen-mai","/dai-ly","/lien-he#thong-tin-lien-he"]){
-    assert.ok(footer.includes('href="'+href+'"'),href);
-  }
-  assert.match(footerCSS,/\.site-footer__wrap\s*\{[^}]*padding:\s*30px 0 14px/);
+  assert.match(footer,/officialContact as contact/);
+  assert.match(footer,/href="\/lien-he#thong-tin-lien-he"/);
+  assert.doesNotMatch(footer,/Khám phá Futurebook|Hỗ trợ khách hàng|Fanpage/);
   assert.match(footerCSS,/\.site-footer__logo\s*\{[^}]*width:\s*140px/);
-  assert.match(footerCSS,/\.site-footer__links\s*\{[^}]*gap:\s*7px/);
-  assert.match(footerCSS,/@media \(max-width: 700px\)[\s\S]*?\.site-footer__grid\s*\{[^}]*grid-template-columns:\s*repeat\(2/);
+  assert.match(footerCSS,/@media \(max-width: 700px\)[\s\S]*?\.site-footer__grid\s*\{[^}]*grid-template-columns:\s*minmax\(0,1fr\)/);
   assert.match(footerCSS,/\.site-footer__social-icon--facebook/);
   assert.match(footerCSS,/\.site-footer__social-icon--youtube/);
   assert.match(footerCSS,/\.site-footer__social-icon--tiktok/);
