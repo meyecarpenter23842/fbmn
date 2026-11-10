@@ -36,3 +36,13 @@
 .fb-admin .dl4-stage--mobile .dl4-stage-grid{grid-template-columns:1fr}
 @media(max-width:1050px){.fb-admin .dl4-columns{grid-template-columns:1fr}.fb-admin .dl4-preview{position:static}}
 @media(max-width:780px){.fb-admin .dl4-panel{padding:12px}.fb-admin .dl4-item .fb-ui-button{width:44px}}
+
+/* DL10C composition: existing control and modal primitives own styling. */
+.fb-admin .dl10c-filters{display:flex;flex-wrap:wrap;align-items:end;gap:12px;margin-bottom:18px}
+.fb-admin .dl10c-filters label{display:grid;gap:6px;flex:1 1 150px;min-width:0;font-size:13px}
+.fb-admin .dl10c-filters input{width:100%;min-width:0}
+.fb-admin .dl10c-summary{min-width:0;overflow-wrap:anywhere}
+.fb-admin .dl10c-session{overflow-wrap:anywhere}
+.fb-admin .dl10c-messages{display:grid;gap:16px;min-width:0}
+.fb-admin .dl10c-messages p{display:grid;gap:4px;white-space:pre-wrap;overflow-wrap:anywhere;margin:8px 0}
+@media(max-width:780px){.fb-admin .dl10c-item{align-items:flex-start;flex-wrap:wrap}.fb-admin .dl10c-filters label{flex-basis:100%}}
