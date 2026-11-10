@@ -5,7 +5,7 @@ const PRIVATE={"Cache-Control":"private, no-store","X-Content-Type-Options":"nos
 const JSON_HEADERS={...PRIVATE,"Content-Type":"application/json; charset=utf-8"};
 const fail=(s:number,c:string)=>Response.json({error:{code:c}},{status:s,headers:JSON_HEADERS});
 const GET_ACTIONS=new Set(["","image","settings","pdf-target"]);
-const POST_ACTIONS=new Set(["settings","create","save","ready","hide","upload","reorder","remove"]);
+const POST_ACTIONS=new Set(["settings","create","save","ready","hide","upload","reorder","remove","pdf-settings","pdf-remove"]);
 const MAX=5*1024*1024;
 function base(){
  try{const u=new URL(process.env.FBMN_ADMIN_API_BASE_URL||"");
