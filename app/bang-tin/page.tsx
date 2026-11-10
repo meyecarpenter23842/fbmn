@@ -1,5 +1,6 @@
 import type {Metadata} from "next";
 import Link from "next/link";
+import {GlassChipLink} from "@/components/glass-ui";
 import {ContentShell,ContentBreadcrumb,PageHeading,WaitingForApproval,ArticlePreview,PromotionPreview} from "@/components/content-ui";
 import {getPublicContent} from "@/lib/content/adapter";
 import {buildNewsHubItems,type NewsHubFilter} from "@/lib/content/news-hub";
@@ -31,9 +32,8 @@ export default async function NewsHubPage({searchParams}:Props){
      <p>Chỉ hiển thị nội dung đã được xác minh, phê duyệt và còn hiệu lực.</p>
     </div>
     <nav className="news-hub-filters" aria-label="Lọc bài viết">
-     {FILTERS.map(item=><Link key={item.value} href={item.href}
-      className={"news-hub-filter"+(active===item.value?" is-active":"")}
-      aria-current={active===item.value?"page":undefined}>{item.label}</Link>)}
+     {FILTERS.map(item=><GlassChipLink key={item.value} href={item.href}
+      selected={active===item.value}>{item.label}</GlassChipLink>)}
     </nav>
    </div>
    {items.length?<div className="content-card-grid" aria-live="polite">

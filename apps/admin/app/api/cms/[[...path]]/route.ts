@@ -27,9 +27,20 @@ async function proxy(request:Request,params:Promise<{path?:string[]}>,method:"GE
   const keys=[...url.searchParams.keys()];
   const allowed=["entry","assets","slides"].includes(action)?new Set(["id"]):
    action==="slide-image"?new Set(["id","slide","device"]):
-   isImage?new Set(["id","channel","device"]):action==="capability"?new Set():new Set(["mode","page"]);
+   isImage?new Set(["id","channel","device"]):action==="capability"?new Set():new Set(["mode","page","kind","status","search"]);
   if(keys.length!==new Set(keys).size||keys.some(k=>!allowed.has(k)))
    return fail(400,"invalid_query");
+  if(action===""){
+   const mode=url.searchParams.get("mode")??"editorial";
+   const kind=url.searchParams.get("kind"),status=url.searchParams.get("status");
+   const search=url.searchParams.get("search");
+   if((mode!=="editorial"&&(kind!==null||status!==null||search!==null))||
+      (kind!==null&&!["article","promotion"].includes(kind))||
+      (status!==null&&!["draft","published","hidden"].includes(status))||
+      (search!==null&&(search.length<1||search.length>80||search!==search.trim()||
+        /[\\x00-\\x1f\\x7f]/.test(search))))
+    return fail(400,"invalid_query");
+  }
  }else{
   if(request.headers.get("origin")!==url.origin || request.headers.get("sec-fetch-site")==="cross-site")
    return fail(403,"origin_forbidden");

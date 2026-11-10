@@ -62,3 +62,44 @@ test("DL7A CMS rejects invalid kinds/statuses/queries before querying DB",async(
   const r=await hit(query);assert.equal(r.status,400,query);assert.equal(r.recorded,null,query);
  }
 });
+
+test("DL7A same-origin Admin CMS relay forwards validated filters and rejects unwanted parameters",async()=>{
+ const {GET}=await import("../apps/admin/app/api/cms/[[...path]]/route.ts");
+ const savedBase=process.env.FBMN_ADMIN_API_BASE_URL;
+ const originalFetch=globalThis.fetch;
+ const target="https://api.example.test";
+ const urls=[];
+ try{
+  process.env.FBMN_ADMIN_API_BASE_URL=target;
+  globalThis.fetch=async(input,options)=>{
+   urls.push(String(input));
+   assert.equal(options.method,"GET");
+   assert.equal(options.headers.Authorization,"Bearer abc.def.ghi");
+   return Response.json({data:{items:[],page:1,hasNext:false}});
+  };
+  const query="?mode=editorial&page=1&kind=article&status=draft&search=Giay";
+  const request=new Request("https://admin.fbmn.vn/api/cms"+query,{
+   headers:{Authorization:"Bearer abc.def.ghi"}});
+  const result=await GET(request,{params:Promise.resolve({path:[]})});
+  assert.equal(result.status,200);
+  assert.deepEqual(urls,[target+"/v1/admin/cms"+query]);
+  const denied=await GET(new Request("https://admin.fbmn.vn/api/cms?mode=marketing&search=Giay",{
+   headers:{Authorization:"Bearer abc.def.ghi"}}),{params:Promise.resolve({path:[]})});
+  assert.equal(denied.status,400);assert.equal(urls.length,1);
+  const unknown=await GET(new Request("https://admin.fbmn.vn/api/cms?kind=pricing",{
+   headers:{Authorization:"Bearer abc.def.ghi"}}),{params:Promise.resolve({path:[]})});
+  assert.equal(unknown.status,400);assert.equal(urls.length,1);
+ }finally{
+  globalThis.fetch=originalFetch;
+  if(savedBase===undefined)delete process.env.FBMN_ADMIN_API_BASE_URL;
+  else process.env.FBMN_ADMIN_API_BASE_URL=savedBase;
+ }
+});
+test("DL7A Website filter uses the official shared GlassChipLink controls",()=>{
+ const hub=read("app/bang-tin/page.tsx"),foundation=read("app/glass-foundation.css");
+ const css=read("app/content.css");
+ assert.match(hub,/import \{GlassChipLink\} from "@\/components\/glass-ui"/);
+ assert.match(hub,/<GlassChipLink key=\{item.value\}/);
+ assert.match(foundation,/\.fb-glass-chip\[data-selected="true"\]/);
+ assert.doesNotMatch(css,/\.news-hub-filter\{/);
+});
