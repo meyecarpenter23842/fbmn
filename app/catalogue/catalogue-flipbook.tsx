@@ -169,6 +169,7 @@ export default function CatalogueFlipbook(){
   const host=bookRef.current;
   if(!host||!detail)return;
   let cancelled=false;
+  let initializing=true;
   let flip:PageFlip|null=null;
   const startIndex=activeRef.current;
   void (async()=>{
@@ -204,6 +205,9 @@ export default function CatalogueFlipbook(){
      if(cancelled)return;
      const n=Number(event.data);
      if(!Number.isInteger(n)||n<0||n>=nodes.length)return;
+     // loadFromHTML emits flip synchronously with the spread's first leaf.
+     // Keep the originally requested right-hand leaf and deep link intact.
+     if(initializing){activeRef.current=n;setActive(n);return;}
      activeRef.current=n;setActive(n);setSelectedPage(n);setTurning(false);
      window.history.replaceState(window.history.state,"",deepLink(detail.book.id,n));
     });
@@ -215,6 +219,7 @@ export default function CatalogueFlipbook(){
     });
     flip.on("changeOrientation",event=>{if(!cancelled)setPortrait(event.data==="portrait");});
     flip.loadFromHTML(nodes);
+    initializing=false;
     engineRef.current=flip;
     setPortrait(flip.getOrientation()==="portrait");
     // Covers can display only on the right. Keep the manifest index in the URL.

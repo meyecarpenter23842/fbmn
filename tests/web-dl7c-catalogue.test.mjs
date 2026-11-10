@@ -235,3 +235,11 @@ test("DL7C-R links and shares the selected page, including right-hand spread pag
  assert.match(ui,/window\.history\.replaceState\(window\.history\.state,"",deepLink\(detail\.book\.id,next\)\)/);
  assert.match(ui,/const url=deepLink\(detail\.book\.id,selectedPage\)/);
 });
+
+test("DL7C-R preserves the requested right-hand leaf through PageFlip init event",()=>{
+ const ui=readFile("app/catalogue/catalogue-flipbook.tsx");
+ assert.match(ui,/let initializing=true/);
+ assert.match(ui,/if\(initializing\)\{activeRef\.current=n;setActive\(n\);return;\}/);
+ assert.match(ui,/flip\.loadFromHTML\(nodes\);\s*initializing=false/);
+ assert.match(ui,/setSelectedPage\(position\);setDetail\(payload\)/);
+});
