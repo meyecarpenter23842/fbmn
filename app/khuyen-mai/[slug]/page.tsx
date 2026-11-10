@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { ContentShell, ContentBreadcrumb, WaitingForApproval } from "@/components/content-ui";
+import { ContentShell, ContentBreadcrumb, WaitingForApproval, EditorialCover } from "@/components/content-ui";
 import { getPublicContent } from "@/lib/content/adapter";
 
 export const dynamic = "force-dynamic";
@@ -18,6 +18,7 @@ export default async function PromotionDetail({ params }: Props) {
   return <ContentShell>
     <ContentBreadcrumb items={[{ name: "Khuyến mãi", href: "/khuyen-mai" }, { name: item?.title ?? "Chưa công khai" }]}/>
     {item ? <article className="content-story">
+      <EditorialCover item={item}/>
       <p className="content-eyebrow">CHƯƠNG TRÌNH ĐÃ PHÊ DUYỆT</p>
       <h1>{item.title}</h1><p className="content-lead">{item.summary}</p>
       <p>{item.detail}</p>

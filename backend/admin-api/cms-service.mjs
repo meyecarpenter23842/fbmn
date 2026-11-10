@@ -89,7 +89,7 @@ function errorFor(e) {
  return fail(e?.code==="23505"?409:503,e?.code==="23505"?"slug_conflict":"cms_unavailable");
 }
 // Fetch lightweight summaries in bounded pages; full prose is loaded only on edit.
-async function list(db,mode,page){
+async function list(db,mode,page,{kind=null,status=null,search=null}={}){
  const result=await db(client=>client.query(
   "SELECT id::text,kind,slug,title,summary,channel_targets,sort_order,"+
   "starts_at,ends_at,source_ref,placements,popup_delay_seconds,popup_cooldown_minutes,popup_max_per_session,status,revision,created_at,updated_at,"+
@@ -98,8 +98,12 @@ async function list(db,mode,page){
   "(SELECT count(*)::integer FROM (SELECT slide_no FROM "+EXTRA+" m WHERE m.entry_id=c.id GROUP BY slide_no HAVING count(DISTINCT device)<>2) x) AS incomplete_slide_count "+
   "FROM "+TABLE+" c WHERE (($1::text='marketing' AND kind IN ('banner','popup')) "+
   "OR ($1::text='editorial' AND kind IN ('article','promotion'))) "+
+  "AND ($3::text IS NULL OR kind=$3::text) "+
+  "AND ($4::text IS NULL OR status=$4::text) "+
+  "AND ($5::text IS NULL OR strpos(lower(title),lower($5::text))>0 "+
+     "OR strpos(lower(slug),lower($5::text))>0) "+
   "ORDER BY updated_at DESC,id LIMIT 51 OFFSET $2",
-  [mode,(page-1)*50]));
+  [mode,(page-1)*50,kind,status,search]));
  return ok({items:result.rows.slice(0,50),page,hasNext:result.rows.length>50});
 }
 async function detail(db,id){
@@ -213,12 +217,21 @@ export async function handleCms({request,actor,db,r2,publicSurfaceReady=false}){
    if(!IDENTIFIER.test(id))return fail(400,"invalid_id");
    try{return await detail(db,id);}catch{return fail(503,"cms_unavailable");}
   }
-  if(action!=="" || keys.some(k=>k!=="mode"&&k!=="page"))return fail(400,"invalid_query");
+  if(action!=="" || keys.some(k=>!["mode","page","kind","status","search"].includes(k)))return fail(400,"invalid_query");
   const mode=u.searchParams.get("mode")??"editorial";
   const rawPage=u.searchParams.get("page")??"1";
   if(!["marketing","editorial"].includes(mode) || !/^[1-9]\d{0,3}$/.test(rawPage))
    return fail(400,"invalid_query");
-  try{return await list(db,mode,Number(rawPage));}catch{return fail(503,"cms_unavailable");}
+  const kind=u.searchParams.get("kind"),status=u.searchParams.get("status"),
+   search=u.searchParams.get("search");
+  if((mode!=="editorial"&&(kind!==null||status!==null||search!==null))||
+     (kind!==null&&!["article","promotion"].includes(kind))||
+     (status!==null&&!["draft","published","hidden"].includes(status))||
+     (search!==null&&(search!==search.trim()||search.length<1||search.length>80||
+       /[\x00-\x1f\x7f]/.test(search))))
+   return fail(400,"invalid_query");
+  try{return await list(db,mode,Number(rawPage),{kind,status,search});}
+  catch{return fail(503,"cms_unavailable");}
  }
  if(request.method!=="POST")return fail(405,"method_not_allowed");
  if(u.search)return fail(400,"invalid_query");

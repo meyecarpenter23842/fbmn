@@ -1,28 +1,54 @@
-import type { Metadata } from "next";
+import type {Metadata} from "next";
 import Link from "next/link";
-import { ContentShell, ContentBreadcrumb, PageHeading } from "@/components/content-ui";
+import {GlassChipLink} from "@/components/glass-ui";
+import {ContentShell,ContentBreadcrumb,PageHeading,WaitingForApproval,ArticlePreview,PromotionPreview} from "@/components/content-ui";
+import {getPublicContent} from "@/lib/content/adapter";
+import {buildNewsHubItems,type NewsHubFilter} from "@/lib/content/news-hub";
 
-export const metadata: Metadata = {
-  title: "Bảng tin | Futurebook Miền Nam",
-  description: "Đi tới tin tức, thông báo và chương trình Futurebook Miền Nam đã được xác minh và xuất bản.",
+export const dynamic="force-dynamic";
+export const metadata: Metadata ={
+ title:"Bảng tin | Futurebook Miền Nam",
+ description:"Tin tức và chương trình khuyến mãi Futurebook Miền Nam đã được xác minh, duyệt và công bố.",
+ alternates:{canonical:"/bang-tin"}
 };
-
-export default function NewsHubPage() {
-  return <ContentShell>
-    <ContentBreadcrumb items={[{ name: "Bảng tin" }]}/>
-    <PageHeading eyebrow="CẬP NHẬT FUTUREBOOK" title="Bảng tin Futurebook Miền Nam"
-      intro="Xem các thông tin và chương trình đã được công bố."/>
-    <section className="content-intro-grid" aria-label="Các nhóm nội dung Bảng tin">
-      <div className="content-intro-panel">
-        <h2>Tin tức & thông báo</h2>
-        <p>Thông tin sản phẩm, bài viết và các cập nhật đã được xác minh, phê duyệt xuất bản.</p>
-        <Link className="content-button" href="/tin-tuc">Xem tin tức</Link>
-      </div>
-      <div className="content-outline-panel">
-        <h2>Chương trình khuyến mãi</h2>
-        <p>Các chương trình đã được công bố và còn hiệu lực. Không hiển thị mức ưu đãi hoặc chính sách chưa được duyệt.</p>
-        <Link className="content-button" href="/khuyen-mai">Xem chương trình</Link>
-      </div>
-    </section>
-  </ContentShell>;
+type Props={searchParams:Promise<{loai?:string}>};
+const FILTERS:{value:NewsHubFilter;label:string;href:string}[]=[
+ {value:"all",label:"Tất cả",href:"/bang-tin"},
+ {value:"news",label:"Tin tức",href:"/bang-tin?loai=tin-tuc"},
+ {value:"promotions",label:"Khuyến mãi",href:"/bang-tin?loai=khuyen-mai"}
+];
+export default async function NewsHubPage({searchParams}:Props){
+ const [{loai},content]=await Promise.all([searchParams,getPublicContent()]);
+ const active:NewsHubFilter=loai==="tin-tuc"?"news":loai==="khuyen-mai"?"promotions":"all";
+ const items=buildNewsHubItems(content,active);
+ return <ContentShell>
+  <ContentBreadcrumb items={[{name:"Bảng tin"}]}/>
+  <PageHeading eyebrow="CẬP NHẬT FUTUREBOOK" title="Bảng tin Futurebook Miền Nam"
+   intro="Tin tức, thông báo và chương trình đã công bố"/>
+  <section className="news-hub" aria-labelledby="news-hub-heading">
+   <div className="news-hub-heading">
+    <div><p className="content-eyebrow">THÔNG TIN & ƯU ĐÃI</p>
+     <h2 id="news-hub-heading">Bảng tin Futurebook</h2>
+     <p>Chỉ hiển thị nội dung đã được xác minh, phê duyệt và còn hiệu lực.</p>
+    </div>
+    <nav className="news-hub-filters" aria-label="Lọc bài viết">
+     {FILTERS.map(item=><GlassChipLink key={item.value} href={item.href}
+      selected={active===item.value}>{item.label}</GlassChipLink>)}
+    </nav>
+   </div>
+   {items.length?<div className="content-card-grid" aria-live="polite">
+    {items.map(item=>item.kind==="news"?
+     <ArticlePreview article={item.article} key={"news:"+item.slug}/>:
+     <PromotionPreview promotion={item.promotion} key={"promotion:"+item.slug}/>)}
+   </div>:<WaitingForApproval title="Chưa có bài viết được công bố">
+    {active==="news"?"Tin tức được xuất bản sẽ xuất hiện tại đây.":
+     active==="promotions"?"Chưa có chương trình khuyến mãi đã duyệt đang còn hiệu lực.":
+     "Bảng tin sẽ cập nhật khi có tin tức hoặc chương trình được phê duyệt. Không hiển thị dữ liệu mẫu."}
+   </WaitingForApproval>}
+   <nav className="news-hub-legacy-links" aria-label="Đường dẫn nội dung">
+    <Link href="/tin-tuc">Xem riêng trang Tin tức</Link>
+    <Link href="/khuyen-mai">Xem riêng trang Khuyến mãi</Link>
+   </nav>
+  </section>
+ </ContentShell>;
 }

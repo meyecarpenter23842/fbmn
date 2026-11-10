@@ -414,8 +414,14 @@ export default function CmsManager({mode,owner}:{
  mode:"marketing"|"editorial";owner:boolean
 }){
  const [items,setItems]=useState<CmsSummary[]>([]);
+ const latestRequest=useRef(0);
  const [page,setPage]=useState(1);
  const [hasNext,setHasNext]=useState(false);
+ const [editorialKind,setEditorialKind]=useState<"all"|"article"|"promotion">("all");
+ const [editorialStatus,setEditorialStatus]=useState<"all"|"draft"|"published"|"hidden">("all");
+ const [searchInput,setSearchInput]=useState("");
+ const [appliedSearch,setAppliedSearch]=useState("");
+ const [createKind,setCreateKind]=useState<CmsKind>("article");
  const [opening,setOpening]=useState(false);
  const [loading,setLoading]=useState(false);
  const [loadError,setLoadError]=useState("");
@@ -442,11 +448,11 @@ export default function CmsManager({mode,owner}:{
  const [editing,setEditing]=useState<CmsItem|null|undefined>(undefined);
  const editorDirtyRef=useRef(false);
  const [message,setMessage]=useState("");
- const openEditor=async(item:CmsSummary|null)=>{
+ const openEditor=async(item:CmsSummary|null,newKind?:CmsKind)=>{
   if(opening)return;
   editorDirtyRef.current=false;
   setEditorStep(0);
-  if(!item){setEditing(null);return;}
+  if(!item){if(newKind)setCreateKind(newKind);setEditing(null);return;}
   setOpening(true);
   try{
    const record=await cmsApi<{item:CmsItem}>("entry?id="+encodeURIComponent(item.id));
@@ -459,23 +465,33 @@ export default function CmsManager({mode,owner}:{
  const [toastId,setToastId]=useState(0);
  const refresh=useCallback(async()=>{
   if(!owner)return;
+  const requestId=++latestRequest.current;
   setLoading(true);
   try{
-   const web=await websiteCmsPage<CmsSummary>(page,backendPage=>
-    cmsApi<CmsSourcePage<CmsSummary>>("?mode="+mode+"&page="+backendPage));
+   const web=await websiteCmsPage<CmsSummary>(page,backendPage=>{
+    const q=new URLSearchParams({mode,page:String(backendPage)});
+    if(mode==="editorial"){
+     if(editorialKind!=="all")q.set("kind",editorialKind);
+     if(editorialStatus!=="all")q.set("status",editorialStatus);
+     if(appliedSearch)q.set("search",appliedSearch);
+    }
+    return cmsApi<CmsSourcePage<CmsSummary>>("?"+q.toString());
+   });
+   if(requestId!==latestRequest.current)return;
    setItems(web.items);setHasNext(web.hasNext);setLoadError("");
   }
   catch(e){
+   if(requestId!==latestRequest.current)return;
    const reason=e instanceof Error?e.message:"Không tải được CMS.";
    setLoadError(reason);setItems([]);setHasNext(false);
    setError(reason);setToastId(v=>v+1);
   }
-  finally{setLoading(false);}
- },[owner,mode,page]);
+  finally{if(requestId===latestRequest.current)setLoading(false);}
+ },[owner,mode,page,editorialKind,editorialStatus,appliedSearch]);
  useEffect(()=>{const task=window.setTimeout(()=>{void refresh();},0);return()=>window.clearTimeout(task);},[refresh]);
  const visible=items;
- const kind:CmsKind=mode==="marketing"?"banner":"article";
- const title=mode==="marketing"?"Banner & Popup":"Tin tức & Khuyến mãi";
+ const kind:CmsKind=mode==="marketing"?"banner":createKind;
+ const title=mode==="marketing"?"Banner & Popup":"Bảng tin — Tin tức & Khuyến mãi";
  const notify=(text:string,problem=false)=>{if(problem)setError(text);else setMessage(text);setToastId(v=>v+1);};
  const change=async(item:CmsSummary,action:"publish"|"hide")=>{
   if(busy||(action==="publish"&&!publishReady)|| !window.confirm(action==="publish"?
@@ -495,11 +511,41 @@ export default function CmsManager({mode,owner}:{
   <AdminToast message={error||message} variant={error?"error":"success"}
    notificationId={toastId} onClose={()=>{setMessage("");setError("");}}/>
   <div className="page-title cms-heading"><div><h1>{title}</h1>
-   <p>Chọn vị trí và ảnh Desktop/Mobile riêng cho Website Futurebook. Lưu nháp không tự xuất bản.</p></div>
-   <button type="button" className="fb-ui-button fb-ui-button--primary" onClick={()=>void openEditor(null)}>
-    Thêm nội dung
-   </button>
+   <p>{mode==="editorial"?"Quản lý chung bài Tin tức và Khuyến mãi. Lưu nháp, kiểm chứng nguồn rồi xuất bản; không tự công bố.":"Chọn vị trí và ảnh Desktop/Mobile riêng cho Website Futurebook. Lưu nháp không tự xuất bản."}</p></div>
+   <div className="cms-heading-actions">
+    {mode==="editorial"?<>
+     <button type="button" className="fb-ui-button fb-ui-button--primary"
+      disabled={busy||opening} onClick={()=>void openEditor(null,"article")}>Thêm tin tức</button>
+     <button type="button" className="fb-ui-button fb-ui-button--secondary"
+      disabled={busy||opening} onClick={()=>void openEditor(null,"promotion")}>Thêm khuyến mãi</button>
+    </>:<button type="button" className="fb-ui-button fb-ui-button--primary"
+      disabled={busy||opening} onClick={()=>void openEditor(null)}>Thêm nội dung</button>}
+   </div>
   </div>
+  {mode==="editorial"&&<form className="cms-editorial-filters" role="search" aria-label="Tìm và lọc bài viết"
+   onSubmit={e=>{e.preventDefault();setPage(1);setAppliedSearch(searchInput.trim());}}>
+   <label>Loại bài viết
+    <select className="fb-ui-select" value={editorialKind} disabled={loading||busy}
+     onChange={e=>{setPage(1);setEditorialKind(e.target.value as typeof editorialKind);}}>
+     <option value="all">Tất cả</option><option value="article">Tin tức</option>
+     <option value="promotion">Khuyến mãi</option>
+    </select>
+   </label>
+   <label>Trạng thái
+    <select className="fb-ui-select" value={editorialStatus} disabled={loading||busy}
+     onChange={e=>{setPage(1);setEditorialStatus(e.target.value as typeof editorialStatus);}}>
+     <option value="all">Tất cả</option><option value="draft">Bản nháp</option>
+     <option value="published">Đã xuất bản</option><option value="hidden">Đã ẩn</option>
+    </select>
+   </label>
+   <label>Tìm theo tiêu đề hoặc slug
+    <input className="fb-ui-field" type="search" maxLength={80} value={searchInput}
+     onChange={e=>setSearchInput(e.target.value)} placeholder="Nhập từ khóa" />
+   </label>
+   <button type="submit" className="fb-ui-button fb-ui-button--secondary" disabled={loading||busy}>Tìm</button>
+   <button type="button" className="fb-ui-button fb-ui-button--secondary" disabled={loading||busy}
+    onClick={()=>{setPage(1);setEditorialKind("all");setEditorialStatus("all");setSearchInput("");setAppliedSearch("");}}>Xóa lọc</button>
+  </form>}
   <div className="cms-table-wrap">
    <table className="cms-table">
     <thead><tr><th>Tiêu đề</th><th>Loại</th><th>Vị trí Website</th><th>Trạng thái</th><th>Thao tác</th></tr></thead>

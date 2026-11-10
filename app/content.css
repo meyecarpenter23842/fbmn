@@ -94,3 +94,19 @@
 .content-contact-form label,.content-contact-form .content-consent{font-size:13px;}
 @media(max-width:780px){.outsourcing-fields{grid-template-columns:1fr;}}
 
+
+/* DL7A unified editorial board on the shared Premium Purple Glass surfaces. */
+.news-hub{min-width:0;margin:12px 0 34px;}
+.news-hub-heading{display:flex;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;gap:16px;margin-bottom:22px;}
+.news-hub-heading h2{font-family:var(--fb-glass-display-font,Georgia,serif);font-size:clamp(23px,2.6vw,33px);color:var(--color-primary-strong);margin:0 0 8px;}
+.news-hub-heading p:last-child{margin:0;color:var(--fb-glass-muted);line-height:1.65;font-size:14px;}
+.news-hub-filters{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.news-hub-back a:focus-visible,.news-hub-legacy-links a:focus-visible{outline:2px solid var(--color-primary);outline-offset:3px;}
+.news-hub-cover{display:block;overflow:hidden;border-radius:var(--fb-control-radius);margin:0 0 14px;background:rgba(255,255,255,.56);aspect-ratio:16/9;}
+.news-hub-cover img{display:block;width:100%;height:100%;object-fit:contain;}
+.content-story>.news-hub-cover{aspect-ratio:16/7;margin-bottom:20px;}
+.news-hub-legacy-links{display:flex;flex-wrap:wrap;gap:10px 20px;margin-top:26px;font-size:13px;}
+.news-hub-legacy-links a,.news-hub-back a{color:var(--color-primary-strong);font-weight:650;text-underline-offset:3px;}
+.news-hub-back{margin-bottom:10px;font-size:13px;}
+@media(max-width:780px){.news-hub-filters{width:100%;}.news-hub-heading{align-items:flex-start;}
+ .content-story>.news-hub-cover{aspect-ratio:16/9;}}

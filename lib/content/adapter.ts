@@ -20,12 +20,14 @@ export async function getPublicContent(): Promise<PublicContent> {
     return {
      ...base,
      articles:entries.filter(entry=>entry.kind==="article").map(entry=>({
+      id:entry.id,hasDesktop:entry.hasDesktop,hasMobile:entry.hasMobile,
       slug:entry.slug,title:entry.title,summary:entry.summary,
       paragraphs:entry.paragraphs,publishedAt:entry.publishedAt,slot:entry.slot as "news.list"|"home.news_featured"
      })),
      promotions:entries.filter(entry=>entry.kind==="promotion")
       .filter(entry=>entry.endsAt!==null).map(entry=>({
-       slug:entry.slug,title:entry.title,summary:entry.summary,
+       id:entry.id,hasDesktop:entry.hasDesktop,hasMobile:entry.hasMobile,
+       publishedAt:entry.publishedAt,slug:entry.slug,title:entry.title,summary:entry.summary,
        detail:entry.paragraphs.join("\n\n"),endsAt:entry.endsAt as string,
        slot:entry.slot as "promotions.list"|"home.promotion_featured"
       }))

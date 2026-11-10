@@ -241,3 +241,15 @@
 /* Editorial warning, never blocks an otherwise valid Owner upload. */
 .cms-image-ratio-warning{display:block;margin:6px 0 4px;
  font-size:12px;line-height:1.5;color:#925118;font-weight:600}
+
+/* DL7A: editorial filters and create actions reuse shared Admin field/button geometry. */
+.cms-heading-actions{display:flex;align-items:center;flex-wrap:wrap;gap:8px;}
+.cms-editorial-filters{display:flex;align-items:end;flex-wrap:wrap;gap:10px;margin:14px 0 18px;
+ padding:12px 14px;background:var(--fb-ui-surface,#fff);border:1px solid var(--fb-ui-border,#e4e7ef);
+ border-radius:var(--fb-ui-radius-card,14px);}
+.cms-editorial-filters label{display:grid;min-width:135px;gap:6px;flex:1 1 150px;font-size:13px;
+ font-weight:650;color:var(--fb-ui-ink,#20223b);}
+.cms-editorial-filters label:has(input){flex:2 1 220px;}
+.cms-editorial-filters :is(.fb-ui-field,.fb-ui-select){width:100%;}
+@media(max-width:780px){.cms-heading-actions{width:100%;}.cms-heading-actions .fb-ui-button{flex:1 1 160px;}
+ .cms-editorial-filters>button{flex:1 1 110px;}}

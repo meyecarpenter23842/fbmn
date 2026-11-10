@@ -60,6 +60,9 @@ export interface PublicCompanyDetails {
   hours?: string;
 }
 export interface PublicArticle {
+  id?: string;
+  hasDesktop?: boolean;
+  hasMobile?: boolean;
   slug: string;
   title: string;
   summary: string;
@@ -68,6 +71,10 @@ export interface PublicArticle {
   slot?: "news.list" | "home.news_featured";
 }
 export interface PublicPromotion {
+  id?: string;
+  hasDesktop?: boolean;
+  hasMobile?: boolean;
+  publishedAt?: string;
   slug: string;
   title: string;
   summary: string;

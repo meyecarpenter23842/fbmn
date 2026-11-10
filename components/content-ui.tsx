@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { SiteHeader } from "@/components/site-header";
@@ -39,8 +40,19 @@ export function WaitingForApproval({ title, children }: { title: string; childre
   </section>;
 }
 
+export function EditorialCover({item}:{item:Pick<PublicArticle,"id"|"hasDesktop"|"hasMobile"|"title">}){
+  if(!item.id||!item.hasDesktop)return null;
+  const base="/api/cms-image?id="+encodeURIComponent(item.id);
+  return <picture className="news-hub-cover">
+   {item.hasMobile&&<source media="(max-width: 780px)" srcSet={base+"&device=mobile"}/>}
+   <Image src={base+"&device=desktop"} alt={item.title} width={720} height={420}
+    sizes="(max-width: 780px) 100vw, 45vw" unoptimized/>
+  </picture>;
+}
+
 export function ArticlePreview({ article }: { article: PublicArticle }) {
   return <article className="content-article-card">
+    <EditorialCover item={article}/>
     <p className="content-eyebrow">
       <time dateTime={article.publishedAt}>{new Date(article.publishedAt).toLocaleDateString("vi-VN", { timeZone: "UTC" })}</time>
     </p>
@@ -52,7 +64,8 @@ export function ArticlePreview({ article }: { article: PublicArticle }) {
 
 export function PromotionPreview({ promotion }: { promotion: PublicPromotion }) {
   return <article className="content-article-card">
-    <p className="content-eyebrow">CHƯƠNG TRÌNH ĐÃ DUYỆT</p>
+    <EditorialCover item={promotion}/>
+    <p className="content-eyebrow">KHUYẾN MÃI ĐÃ DUYỆT</p>
     <h2><Link href={"/khuyen-mai/" + promotion.slug}>{promotion.title}</Link></h2>
     <p>{promotion.summary}</p>
     <Link className="content-text-link" href={"/khuyen-mai/" + promotion.slug}>Xem chương trình</Link>
