@@ -67,3 +67,16 @@
 }
 @media(max-width:390px){.fb-catalogue-reader{gap:2px}.fb-catalogue-book-shell{width:calc(100vw - 92px)}}
 @media(prefers-reduced-motion:reduce){.fb-catalogue-thumb{transition:none}}
+
+/* DL7A Catalogue PDF library: layout only; shared GlassPanel/Button own their visual skin. */
+.fb-catalogue-library{display:grid;gap:16px;margin:12px 0 26px;min-width:0}
+.fb-catalogue-library-intro{display:grid;gap:6px}
+.fb-catalogue-library-intro h2{margin:0;color:var(--color-primary-strong);font-size:clamp(21px,2vw,28px)}
+.fb-catalogue-library-intro p{margin:0;color:var(--fb-glass-muted);font-size:14px;line-height:1.65}
+.fb-catalogue-library-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,270px),1fr));gap:14px}
+.fb-catalogue-library-item{display:flex;flex-direction:column;justify-content:space-between;gap:16px;min-width:0}
+.fb-catalogue-library-item h3{font-size:18px;line-height:1.4;margin:6px 0}
+.fb-catalogue-library-item p{font-size:13px;line-height:1.5;margin:0}
+.fb-catalogue-library-actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.fb-catalogue-pdf-only{margin:20px auto;padding:16px 0;text-align:center;line-height:1.7}
+@media(max-width:780px){.fb-catalogue-library-actions{gap:10px}}

@@ -1,6 +1,7 @@
 // DL7B Owner-only catalogue BOOK media. Not SKU catalogue, not CMS and not public data.
 // All objects use a distinct private R2 binding CATALOGUE_MEDIA_R2 (bucket fbmn-catalogue).
 import {imageSize} from "./media-service.mjs";
+import {handleCataloguePdf,queryCataloguePdf} from "./catalogue-pdf-service.mjs";
 
 const ROOT="/v1/admin/website/catalogue";
 const BOOKS="fbmn_catalog_private.website_catalogue_books";
@@ -140,7 +141,8 @@ async function queryDetail(db,id){
   if(b.rowCount!==1)throw Error("not_found");
   const files=await c.query("SELECT id,kind,sort_order,width,height,byte_size FROM "+ASSETS+
    " WHERE book_id=$1::uuid AND kind IN ('page','cover') ORDER BY CASE kind WHEN 'cover' THEN 0 ELSE 1 END,sort_order,id LIMIT 201",[id]);
-  return {book:exposeBook(b.rows[0]),assets:files.rows.map(exposeAsset)};
+  return {book:exposeBook(b.rows[0]),assets:files.rows.map(exposeAsset),
+   pdf:await queryCataloguePdf(c,id)};
  });
  return v;
 }
@@ -176,7 +178,11 @@ async function mutate(db,r2,actor,action,data){
    }else if(action==="ready"){
     const n=await c.query("SELECT count(*)::integer AS n FROM "+ASSETS+
      " WHERE book_id=$1::uuid AND kind='page'",[id]);
-    if(Number(n.rows[0].n)<1)throw Error("pages_required");
+    if(Number(n.rows[0].n)<1){
+     const p=await c.query("SELECT 1 FROM fbmn_catalog_private.website_catalogue_pdfs"+
+      " WHERE book_id=$1::uuid AND visible=true LIMIT 1",[id]);
+     if(p.rowCount!==1)throw Error("pages_required");
+    }
     await c.query("UPDATE "+BOOKS+" SET state='ready' WHERE id=$1::uuid",[id]);
     afterData={state:"ready"};
    }else if(action==="hide"){
@@ -276,8 +282,10 @@ export async function handleCatalogueBooks({request,actor,db,r2}){
  const u=new URL(request.url);
  if(u.pathname!==ROOT&&!u.pathname.startsWith(ROOT+"/"))return fail(404,"not_found");
  const action=u.pathname===ROOT?"":u.pathname.slice(ROOT.length+1);
- if(action.includes("/")||!["","image","settings","create","save","ready","hide","upload","reorder","remove"].includes(action))
+ if(action.includes("/")||!["","image","settings","create","save","ready","hide","upload","reorder","remove","pdf-upload","pdf-settings","pdf-remove"].includes(action))
   return fail(404,"not_found");
+ if(["pdf-upload","pdf-settings","pdf-remove"].includes(action))
+  return handleCataloguePdf({request,action,actor,db,r2});
  try{
   if(request.method==="GET"&&action===""){
    if(!u.search)return ok(await queryList(db));
