@@ -8,8 +8,8 @@ const ID="123e4567-e89b-42d3-a456-426614174000",FILE="123e4567-e89b-42d3-a456-42
 test("DL7B R2 keys strictly separate book pages and catalogue-only backgrounds",()=>{
  assert.equal(catalogueObjectKey(ID,"page",FILE),"books/"+ID+"/pages/"+FILE+".webp");
  assert.equal(catalogueObjectKey(ID,"cover",FILE),"books/"+ID+"/covers/"+FILE+".webp");
- assert.equal(catalogueObjectKey(ID,"background_desktop",FILE),"backgrounds/desktop/"+ID+"/"+FILE+".webp");
- assert.equal(catalogueObjectKey(ID,"background_mobile",FILE),"backgrounds/mobile/"+ID+"/"+FILE+".webp");
+ assert.equal(catalogueObjectKey(ID,"background_desktop",FILE),null);
+ assert.equal(catalogueObjectKey(ID,"background_mobile",FILE),null);
  for(const kind of ["sku","../../products","pdf"])assert.equal(catalogueObjectKey(ID,kind,FILE),null);
  assert.equal(catalogueObjectKey("../secrets","page",FILE),null);
 });

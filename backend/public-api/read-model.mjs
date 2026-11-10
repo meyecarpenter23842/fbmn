@@ -23,8 +23,8 @@ const SQL = Object.freeze({
   cmsSlideImageKey: "SELECT r2_key FROM fbmn_public.v_cms_web_banner_slide_images WHERE id=$1 AND device=$2 AND slide_no=$3 LIMIT 1",
   catalogueBooks: "SELECT id,title,edition FROM fbmn_public.v_catalogue_ready_books ORDER BY updated_at DESC,id LIMIT 101",
   catalogueBook: "SELECT id,title,edition FROM fbmn_public.v_catalogue_ready_books WHERE id=$1::uuid LIMIT 1",
-  catalogueAssets: "SELECT id,kind,sort_order,width,height FROM fbmn_public.v_catalogue_ready_assets WHERE book_id=$1::uuid ORDER BY kind,sort_order,id LIMIT 204",
-  catalogueAssetKey: "SELECT r2_key,byte_size FROM fbmn_public.v_catalogue_ready_assets WHERE id=$1::uuid LIMIT 1",
+  catalogueAssets: "SELECT id,kind,sort_order,width,height FROM fbmn_public.v_catalogue_ready_assets WHERE book_id=$1::uuid AND kind IN ('page','cover') ORDER BY kind,sort_order,id LIMIT 202",
+  catalogueAssetKey: "SELECT r2_key,byte_size FROM fbmn_public.v_catalogue_ready_assets WHERE id=$1::uuid AND kind IN ('page','cover') LIMIT 1",
 });
 function rows(value, max) {
   if (!Array.isArray(value) || value.length > max) throw new Error("Invalid SQL read result");
@@ -285,8 +285,8 @@ export function createReadModel(query,{enableP5=false}={}) {
     },
     async getReadyCatalogueAssets(id){
       if(!/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(id))return [];
-      const result=rows(await query(SQL.catalogueAssets,[id]),204);
-      if(result.length>203)throw Error("Too many public pages");
+      const result=rows(await query(SQL.catalogueAssets,[id]),202);
+      if(result.length>201)throw Error("Too many public pages");
       return result.map(a=>({id:String(a.id),kind:String(a.kind),sortOrder:Number(a.sort_order),
        width:Number(a.width),height:Number(a.height)}));
     },
