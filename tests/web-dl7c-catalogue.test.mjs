@@ -295,3 +295,29 @@ test("DL7C-S admin-owned settings: no visitor toggles and browser-safe sound",()
   assert.ok(line?.includes("readerRef.current?.focus({preventScroll:true})"));
  }
 });
+
+ test("DL7C-T opens one cover leaf without adding or losing approved images",()=>{
+ const ui=readFile("app/catalogue/catalogue-flipbook.tsx");
+ const css=readFile("app/catalogue/flipbook.css");
+ assert.match(ui,/showCover:true/);
+ assert.match(ui,/if\(i===0\)leaf\.dataset\.density="hard"/);
+ assert.match(ui,/detail\.cover\?\[\{asset:detail\.cover,label:"Bìa"\}\]:\[\]/);
+ assert.match(ui,/detail\.pages\.map/);
+ assert.match(ui,/hasOpeningCover=leaves\.length>0/);
+ assert.match(ui,/data-closed=\{!portrait&&active===0&&!turning/);
+ assert.match(css,/translateX\(-25%\)/);
+ assert.doesNotMatch(ui,/fb-catalogue-library|<GlassPanel/);
+ assert.match(ui,/books\.length>1\|\|detail\.book\.hasPdf/);
+ assert.match(ui,/detail\.book\.pdfDownloadEnabled&&<GlassButtonLink/);
+ });
+ test("DL7C-T Owner can find cover and PDF before page list and global settings",()=>{
+ const admin=readFile("apps/admin/app/catalogue-book-manager.tsx");
+ const cover=admin.indexOf("<h2>Ảnh bìa sách</h2>");
+ const pdf=admin.indexOf("Tệp PDF của bộ Catalogue");
+ const pages=admin.indexOf("<h2>Trang sách</h2>");
+ const settings=admin.indexOf('aria-labelledby="dl7c-settings-heading"');
+ assert.ok(cover>0&&cover<pdf&&pdf<pages&&pages<settings);
+ assert.match(admin,/fileInput\("cover",cover\?"Thay ảnh bìa":"Chọn ảnh bìa WebP"\)/);
+ assert.match(admin,/trang đầu làm bìa tạm/);
+ assert.match(admin,/Lưu quyền PDF/);
+ });

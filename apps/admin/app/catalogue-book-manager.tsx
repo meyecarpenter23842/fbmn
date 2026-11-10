@@ -350,6 +350,111 @@ export default function CatalogueBookManager({owner,onBusyChange}:{
      onClick={()=>{setTitle("");setEdition("");setDialog("create");}}>Tạo bộ Catalogue</button>
    </div>
   </header>
+  <p className="dl7b-note">Trang/bìa WebP và PDF theo bộ/phiên bản dùng bucket R2 Catalogue riêng. Nền dùng G05 chung toàn website.</p>
+  {loading&&<section className="surface dl7b-panel" role="status" aria-busy="true">Đang đọc kho Catalogue…</section>}
+  {readError&&<section className="surface dl7b-panel" role="alert"><strong>Chưa kết nối được kho</strong><p>{readError}</p>
+   <button type="button" className="fb-ui-button fb-ui-button--secondary" onClick={()=>void load(book?.id,bookPage)}>Thử lại</button></section>}
+  {!loading&&!readError&&<div className="dl7b-grid">
+   <section className="surface dl7b-panel">
+    <h2>Danh sách bộ</h2>
+    {!books.length&&<p>Chưa có bộ Catalogue. Chọn “Tạo bộ Catalogue” để bắt đầu.</p>}
+    <p>Đang quản lý {bookTotal} bộ · Trang {bookPage}/{bookTotalPages}</p>
+    <ul className="dl7b-books">{books.map(b=><li key={b.id}>
+     <button type="button" className={"dl7b-book"+(b.id===book?.id?" is-selected":"")}
+      aria-pressed={b.id===book?.id} onClick={()=>void load(b.id,bookPage)}>
+      <strong>{b.title}</strong><small>{b.edition||"Chưa đặt phiên bản"} · {STATUS[b.state]}</small>
+     </button>
+    </li>)}</ul>
+    {bookTotalPages>1&&<nav className="dl7b-book-nav" aria-label="Phân trang các bộ Catalogue">
+     <button type="button" className="fb-ui-button fb-ui-button--secondary"
+      disabled={bookPage<=1||busy} onClick={()=>void load(undefined,bookPage-1)}>Trước</button>
+     <span>Trang {bookPage}/{bookTotalPages}</span>
+     <button type="button" className="fb-ui-button fb-ui-button--secondary"
+      disabled={bookPage>=bookTotalPages||busy} onClick={()=>void load(undefined,bookPage+1)}>Sau</button>
+    </nav>}
+   </section>
+   {book&&<div className="dl7b-details">
+    <section className="surface dl7b-panel">
+     <div className="dl7b-panel-heading"><div><h2>{book.title}</h2><p>{book.edition||"Chưa đặt phiên bản"} · {STATUS[book.state]} · Revision {book.revision}</p></div>
+      <div className="dl7b-actions">
+       <button type="button" className="fb-ui-button fb-ui-button--secondary" disabled={!canEdit||busy}
+        onClick={()=>{setTitle(book.title);setEdition(book.edition);setDialog("edit");}}>Sửa thông tin</button>
+       {book.state==="ready"?
+        <button type="button" className="fb-ui-button fb-ui-button--secondary" disabled={busy}
+         onClick={()=>void mutate("hide",{id:book.id,revision:book.revision},"Đã ẩn bộ Catalogue và thu hồi quyền xem/tải PDF.")}>Ẩn bộ để chỉnh sửa</button>:
+        <button type="button" className="fb-ui-button fb-ui-button--primary" disabled={busy||(!pages.length&&!pdf?.visible)}
+         onClick={()=>void mutate("ready",{id:book.id,revision:book.revision},"Đã phát hành bộ Catalogue.")}>Đánh dấu sẵn sàng</button>}
+      </div>
+     </div>
+     <p>{book.state==="ready"?"Bộ đang công khai và bị khóa chỉnh sửa. Chọn Ẩn bộ để chỉnh ảnh/PDF/quyền tải, sau đó đánh dấu Sẵn sàng lại.":"Có thể cập nhật ảnh khi là bản nháp hoặc đã ẩn. Đánh dấu Sẵn sàng sau khi kiểm tra đủ ảnh."}</p>
+    </section>
+    <section className="surface dl7b-panel">
+     <h2>Ảnh bìa sách</h2>
+     <p>{cover?"Ảnh này là bìa riêng mở đầu cuốn sách.":pages.length?"Chưa có bìa riêng. Website đang dùng trang đầu làm bìa tạm; hãy chọn ảnh bìa chính thức.":"Chọn ảnh bìa riêng để mở sách từ bìa."}</p>
+     {!canEdit&&<p>Bộ đang công khai. Chọn “Ẩn bộ để chỉnh sửa” ở trên để đặt hoặc thay bìa, sau đó đánh dấu sẵn sàng lại.</p>}
+     <div className="dl7b-single">
+      <div className="dl7b-image">{cover?<CatalogueImage id={cover.id} alt="Ảnh bìa Catalogue"/>:<span className="dl7b-image-empty">Chưa có ảnh bìa</span>}</div>
+      <div>{fileInput("cover",cover?"Thay ảnh bìa":"Chọn ảnh bìa WebP")}
+       {cover&&<button type="button" className="fb-ui-button fb-ui-button--secondary" disabled={!canEdit||busy} onClick={()=>setDeleteFile(cover)}>Xóa ảnh bìa</button>}</div>
+     </div>
+    </section>
+    <section className="surface dl7b-panel" aria-labelledby="dl7a-pdf-heading">
+     <div className="dl7b-panel-heading">
+      <div><h2 id="dl7a-pdf-heading">Tệp PDF của bộ Catalogue</h2>
+       <p>Tải PDF chính thức (tối đa 20 MB), bật Công khai và Hiện nút Tải PDF để khách xem/tải trên Website.</p></div>
+      <label className="dl7b-file-input">
+       <span>{pdf?"Thay PDF":"Chọn tệp PDF"}</span>
+       <input type="file" accept="application/pdf,.pdf" disabled={!canEdit||busy}
+        aria-label="Tải tệp Catalogue PDF" onChange={e=>{
+         const file=e.currentTarget.files?.[0];e.currentTarget.value="";
+         void uploadPdf(file);
+        }}/>
+      </label>
+     </div>
+     {!pdf?<p>Chưa gắn PDF cho bộ này. Bộ vẫn có thể hiển thị bằng sách lật WebP.</p>:<>
+      <p>Đã lưu PDF · {(pdf.byteSize/1024/1024).toFixed(2)} MB ·
+       {pdf.visible?" Đã chọn công khai":" Chưa công khai"} ·
+       {pdf.downloadEnabled?" Có nút tải":" Không hiện nút tải"}</p>
+      <div className="dl7a-pdf-options">
+       <label><input type="checkbox" checked={pdfDraft.visible} disabled={!canEdit||busy}
+        onChange={e=>setPdfDraft({visible:e.target.checked,downloadEnabled:e.target.checked?pdfDraft.downloadEnabled:false})}/>
+        <span>Công khai PDF khi bộ ở trạng thái Sẵn sàng</span></label>
+       <label><input type="checkbox" checked={pdfDraft.downloadEnabled} disabled={!canEdit||busy||!pdfDraft.visible}
+        onChange={e=>setPdfDraft(p=>({...p,downloadEnabled:e.target.checked}))}/>
+        <span>Hiện nút Tải PDF cho khách</span></label>
+      </div>
+      <div className="dl7b-actions">
+       <button type="button" className="fb-ui-button fb-ui-button--primary"
+        disabled={!canEdit||busy||(pdfDraft.visible===pdf.visible&&pdfDraft.downloadEnabled===pdf.downloadEnabled)}
+        onClick={()=>void savePdfPermissions()}>Lưu quyền PDF</button>
+       <button type="button" className="fb-ui-button fb-ui-button--secondary"
+        disabled={!canEdit||busy} onClick={()=>setDeletePdf(true)}>Xóa PDF khỏi bộ</button>
+      </div>
+     </>}
+     <p className="dl7a-pdf-warning">Chỉ đưa tài liệu đã được duyệt để phát hành. Không tải PDF giá NET,
+      tồn kho hoặc dữ liệu đại lý lên kho công khai. Việc tắt nút Tải không ngăn người xem lưu
+      lại tài liệu đã mở trong trình duyệt.</p>
+    </section>
+    <section className="surface dl7b-panel">
+     <div className="dl7b-panel-heading"><div><h2>Trang sách</h2><p>{pages.length} / 200 trang · WebP riêng theo bộ</p></div>{fileInput("page","Thêm trang WebP")}</div>
+     {!pages.length&&<p>Chưa có trang nào. Thêm ảnh từng trang theo đúng thứ tự đọc.</p>}
+     <ol className="dl7b-pages">{visiblePages.map((p,localIndex)=>{const i=pageOffset+localIndex;return <li key={p.id}>
+      <div className="dl7b-image"><CatalogueImage id={p.id} alt={"Trang "+(i+1)}/></div>
+      <div className="dl7b-page-caption"><strong>Trang {i+1}</strong><small>{p.width} × {p.height}</small></div>
+      <div className="dl7b-order">
+       <button type="button" className="fb-ui-button fb-ui-button--secondary" aria-label={"Đưa trang "+(i+1)+" lên"} disabled={!canEdit||busy||i===0} onClick={()=>void move(i,-1)}>↑</button>
+       <button type="button" className="fb-ui-button fb-ui-button--secondary" aria-label={"Đưa trang "+(i+1)+" xuống"} disabled={!canEdit||busy||i===pages.length-1} onClick={()=>void move(i,1)}>↓</button>
+       <button type="button" className="fb-ui-button fb-ui-button--secondary" aria-label={"Xóa trang "+(i+1)} disabled={!canEdit||busy} onClick={()=>setDeleteFile(p)}>×</button>
+      </div>
+     </li>;})}</ol>
+     {pages.length>12&&<div className="dl7b-pages-nav">
+      <button type="button" className="fb-ui-button fb-ui-button--secondary" disabled={pageOffset===0} onClick={()=>setPageOffset(v=>Math.max(0,v-12))}>Trang trước</button>
+      <span>Đang xem {pageOffset+1}–{Math.min(pages.length,pageOffset+12)} / {pages.length}</span>
+      <button type="button" className="fb-ui-button fb-ui-button--secondary" disabled={pageOffset+12>=pages.length} onClick={()=>setPageOffset(v=>v+12)}>Trang sau</button>
+     </div>}
+    </section>
+   </div>}
+  </div>}
   <section className="surface dl7b-panel" aria-labelledby="dl7c-settings-heading">
    <div className="dl7b-panel-heading"><div>
     <h2 id="dl7c-settings-heading">Cài đặt sách lật</h2>
@@ -398,108 +503,6 @@ export default function CatalogueBookManager({owner,onBusyChange}:{
     <p>Âm thanh chỉ phát khi trình duyệt cho phép sau thao tác lật của khách. Không phát tự động khi mở trang.</p>
    </form>}
   </section>
-  <p className="dl7b-note">Trang/bìa WebP và PDF theo bộ/phiên bản dùng bucket R2 Catalogue riêng. Nền dùng G05 chung toàn website.</p>
-  {loading&&<section className="surface dl7b-panel" role="status" aria-busy="true">Đang đọc kho Catalogue…</section>}
-  {readError&&<section className="surface dl7b-panel" role="alert"><strong>Chưa kết nối được kho</strong><p>{readError}</p>
-   <button type="button" className="fb-ui-button fb-ui-button--secondary" onClick={()=>void load(book?.id,bookPage)}>Thử lại</button></section>}
-  {!loading&&!readError&&<div className="dl7b-grid">
-   <section className="surface dl7b-panel">
-    <h2>Danh sách bộ</h2>
-    {!books.length&&<p>Chưa có bộ Catalogue. Chọn “Tạo bộ Catalogue” để bắt đầu.</p>}
-    <p>Đang quản lý {bookTotal} bộ · Trang {bookPage}/{bookTotalPages}</p>
-    <ul className="dl7b-books">{books.map(b=><li key={b.id}>
-     <button type="button" className={"dl7b-book"+(b.id===book?.id?" is-selected":"")}
-      aria-pressed={b.id===book?.id} onClick={()=>void load(b.id,bookPage)}>
-      <strong>{b.title}</strong><small>{b.edition||"Chưa đặt phiên bản"} · {STATUS[b.state]}</small>
-     </button>
-    </li>)}</ul>
-    {bookTotalPages>1&&<nav className="dl7b-book-nav" aria-label="Phân trang các bộ Catalogue">
-     <button type="button" className="fb-ui-button fb-ui-button--secondary"
-      disabled={bookPage<=1||busy} onClick={()=>void load(undefined,bookPage-1)}>Trước</button>
-     <span>Trang {bookPage}/{bookTotalPages}</span>
-     <button type="button" className="fb-ui-button fb-ui-button--secondary"
-      disabled={bookPage>=bookTotalPages||busy} onClick={()=>void load(undefined,bookPage+1)}>Sau</button>
-    </nav>}
-   </section>
-   {book&&<div className="dl7b-details">
-    <section className="surface dl7b-panel">
-     <div className="dl7b-panel-heading"><div><h2>{book.title}</h2><p>{book.edition||"Chưa đặt phiên bản"} · {STATUS[book.state]} · Revision {book.revision}</p></div>
-      <div className="dl7b-actions">
-       <button type="button" className="fb-ui-button fb-ui-button--secondary" disabled={!canEdit||busy}
-        onClick={()=>{setTitle(book.title);setEdition(book.edition);setDialog("edit");}}>Sửa thông tin</button>
-       {book.state==="ready"?
-        <button type="button" className="fb-ui-button fb-ui-button--secondary" disabled={busy}
-         onClick={()=>void mutate("hide",{id:book.id,revision:book.revision},"Đã ẩn bộ Catalogue và thu hồi quyền xem/tải PDF.")}>Ẩn bộ để chỉnh sửa</button>:
-        <button type="button" className="fb-ui-button fb-ui-button--primary" disabled={busy||(!pages.length&&!pdf?.visible)}
-         onClick={()=>void mutate("ready",{id:book.id,revision:book.revision},"Đã phát hành bộ Catalogue.")}>Đánh dấu sẵn sàng</button>}
-      </div>
-     </div>
-     <p>{book.state==="ready"?"Bộ đang công khai và bị khóa chỉnh sửa. Chọn Ẩn bộ để chỉnh ảnh/PDF/quyền tải, sau đó đánh dấu Sẵn sàng lại.":"Có thể cập nhật ảnh khi là bản nháp hoặc đã ẩn. Đánh dấu Sẵn sàng sau khi kiểm tra đủ ảnh."}</p>
-    </section>
-    <section className="surface dl7b-panel">
-     <div className="dl7b-panel-heading"><div><h2>Trang sách</h2><p>{pages.length} / 200 trang · WebP riêng theo bộ</p></div>{fileInput("page","Thêm trang WebP")}</div>
-     {!pages.length&&<p>Chưa có trang nào. Thêm ảnh từng trang theo đúng thứ tự đọc.</p>}
-     <ol className="dl7b-pages">{visiblePages.map((p,localIndex)=>{const i=pageOffset+localIndex;return <li key={p.id}>
-      <div className="dl7b-image"><CatalogueImage id={p.id} alt={"Trang "+(i+1)}/></div>
-      <div className="dl7b-page-caption"><strong>Trang {i+1}</strong><small>{p.width} × {p.height}</small></div>
-      <div className="dl7b-order">
-       <button type="button" className="fb-ui-button fb-ui-button--secondary" aria-label={"Đưa trang "+(i+1)+" lên"} disabled={!canEdit||busy||i===0} onClick={()=>void move(i,-1)}>↑</button>
-       <button type="button" className="fb-ui-button fb-ui-button--secondary" aria-label={"Đưa trang "+(i+1)+" xuống"} disabled={!canEdit||busy||i===pages.length-1} onClick={()=>void move(i,1)}>↓</button>
-       <button type="button" className="fb-ui-button fb-ui-button--secondary" aria-label={"Xóa trang "+(i+1)} disabled={!canEdit||busy} onClick={()=>setDeleteFile(p)}>×</button>
-      </div>
-     </li>;})}</ol>
-     {pages.length>12&&<div className="dl7b-pages-nav">
-      <button type="button" className="fb-ui-button fb-ui-button--secondary" disabled={pageOffset===0} onClick={()=>setPageOffset(v=>Math.max(0,v-12))}>Trang trước</button>
-      <span>Đang xem {pageOffset+1}–{Math.min(pages.length,pageOffset+12)} / {pages.length}</span>
-      <button type="button" className="fb-ui-button fb-ui-button--secondary" disabled={pageOffset+12>=pages.length} onClick={()=>setPageOffset(v=>v+12)}>Trang sau</button>
-     </div>}
-    </section>
-    <section className="surface dl7b-panel" aria-labelledby="dl7a-pdf-heading">
-     <div className="dl7b-panel-heading">
-      <div><h2 id="dl7a-pdf-heading">Catalogue PDF · {book.edition||"Phiên bản hiện hành"}</h2>
-       <p>PDF tối đa 20 MB · bucket fbmn-catalogue · không làm thay đổi sách lật.</p></div>
-      <label className="dl7b-file-input">
-       <span>{pdf?"Thay PDF":"Tải PDF"}</span>
-       <input type="file" accept="application/pdf,.pdf" disabled={!canEdit||busy}
-        aria-label="Tải tệp Catalogue PDF" onChange={e=>{
-         const file=e.currentTarget.files?.[0];e.currentTarget.value="";
-         void uploadPdf(file);
-        }}/>
-      </label>
-     </div>
-     {!pdf?<p>Chưa gắn PDF cho bộ này. Bộ vẫn có thể hiển thị bằng sách lật WebP.</p>:<>
-      <p>Đã lưu PDF · {(pdf.byteSize/1024/1024).toFixed(2)} MB ·
-       {pdf.visible?" Đã chọn công khai":" Chưa công khai"} ·
-       {pdf.downloadEnabled?" Có nút tải":" Không hiện nút tải"}</p>
-      <div className="dl7a-pdf-options">
-       <label><input type="checkbox" checked={pdfDraft.visible} disabled={!canEdit||busy}
-        onChange={e=>setPdfDraft({visible:e.target.checked,downloadEnabled:e.target.checked?pdfDraft.downloadEnabled:false})}/>
-        <span>Công khai PDF khi bộ ở trạng thái Sẵn sàng</span></label>
-       <label><input type="checkbox" checked={pdfDraft.downloadEnabled} disabled={!canEdit||busy||!pdfDraft.visible}
-        onChange={e=>setPdfDraft(p=>({...p,downloadEnabled:e.target.checked}))}/>
-        <span>Hiện nút Tải PDF cho khách</span></label>
-      </div>
-      <div className="dl7b-actions">
-       <button type="button" className="fb-ui-button fb-ui-button--primary"
-        disabled={!canEdit||busy||(pdfDraft.visible===pdf.visible&&pdfDraft.downloadEnabled===pdf.downloadEnabled)}
-        onClick={()=>void savePdfPermissions()}>Lưu quyền PDF</button>
-       <button type="button" className="fb-ui-button fb-ui-button--secondary"
-        disabled={!canEdit||busy} onClick={()=>setDeletePdf(true)}>Xóa PDF khỏi bộ</button>
-      </div>
-     </>}
-     <p className="dl7a-pdf-warning">Chỉ đưa tài liệu đã được duyệt để phát hành. Không tải PDF giá NET,
-      tồn kho hoặc dữ liệu đại lý lên kho công khai. Việc tắt nút Tải không ngăn người xem lưu
-      lại tài liệu đã mở trong trình duyệt.</p>
-    </section>
-    <section className="surface dl7b-panel">
-     <h2>Ảnh bìa</h2><div className="dl7b-single">
-      <div className="dl7b-image">{cover?<CatalogueImage id={cover.id} alt="Ảnh bìa Catalogue"/>:<span className="dl7b-image-empty">Chưa có ảnh bìa</span>}</div>
-      <div>{fileInput("cover",cover?"Thay ảnh bìa":"Chọn ảnh bìa")}
-       {cover&&<button type="button" className="fb-ui-button fb-ui-button--secondary" disabled={!canEdit||busy} onClick={()=>setDeleteFile(cover)}>Xóa ảnh bìa</button>}</div>
-     </div>
-    </section>
-   </div>}
-  </div>}
   {dialog&&<ProductModal title={dialog==="create"?"Tạo bộ Catalogue":"Sửa bộ Catalogue"}
    locked={busy} onClose={()=>setDialog(null)}
    footer={<><ModalCancel busy={busy}/>

@@ -2,7 +2,7 @@
 import {useCallback,useEffect,useMemo,useRef,useState} from "react";
 import type {KeyboardEvent} from "react";
 import Link from "next/link";
-import {GlassButton,GlassButtonLink,GlassPanel} from "@/components/glass-ui";
+import {GlassButtonLink} from "@/components/glass-ui";
 import type {PageFlip,SizeType,FlipCorner} from "page-flip";
 import {canFlipForward,canFlipBackward} from "@/lib/catalogue/spread-navigation";
 import {PaperSound} from "@/lib/catalogue/paper-sound";
@@ -89,8 +89,11 @@ export default function CatalogueFlipbook(){
    ...detail.pages.map((asset,i)=>({asset,label:"Trang "+(i+1)}))];
  },[detail]);
  const zoomLeaf=leaves[zoomIndex]||leaves[active];
- const canPrev=canFlipBackward(active,portrait,Boolean(detail?.cover));
- const canNext=canFlipForward(active,leaves.length,portrait,Boolean(detail?.cover));
+ // Every image-based book starts closed. Until an Owner uploads a dedicated cover,
+ // the first already-approved page serves as the opening leaf without duplicating it.
+ const hasOpeningCover=leaves.length>0;
+ const canPrev=canFlipBackward(active,portrait,hasOpeningCover);
+ const canNext=canFlipForward(active,leaves.length,portrait,hasOpeningCover);
  useEffect(()=>{viewerRef.current=viewerSettings;},[viewerSettings]);
  useEffect(()=>{reducedRef.current=reduced;if(reduced)audioRef.current?.silence();},[reduced]);
 
@@ -173,7 +176,7 @@ export default function CatalogueFlipbook(){
      leaf.className="fb-catalogue-paper";
      leaf.setAttribute("role","group");
      leaf.setAttribute("aria-label",label);
-     if(i===0&&detail.cover)leaf.dataset.density="hard";
+     if(i===0)leaf.dataset.density="hard";
      const img=document.createElement("img");
      img.src=image(asset.id);img.alt=label+" — "+detail.book.title;
      img.width=asset.width;img.height=asset.height;
@@ -185,7 +188,7 @@ export default function CatalogueFlipbook(){
      width:440,height:610,size:"stretch" as SizeType,minWidth:220,maxWidth:640,
      minHeight:305,maxHeight:887,autoSize:false,
      flippingTime:viewerSettings.flipDurationMs,drawShadow:true,maxShadowOpacity:viewerSettings.shadowOpacity,
-     showCover:Boolean(detail.cover),usePortrait:true,swipeDistance:38,
+     showCover:true,usePortrait:true,swipeDistance:38,
      mobileScrollSupport:true,useMouseEvents:!reducedRef.current,
      disableFlipByClick:false,startPage:Math.min(startIndex,nodes.length-1)
     });
@@ -233,8 +236,8 @@ export default function CatalogueFlipbook(){
   const book=engineRef.current;
   const index=book.getCurrentPageIndex();
   const onePage=book.getOrientation()==="portrait";
-  if(direction==="next"&&!canFlipForward(index,leaves.length,onePage,Boolean(detail.cover)))return;
-  if(direction==="prev"&&!canFlipBackward(index,onePage,Boolean(detail.cover)))return;
+  if(direction==="next"&&!canFlipForward(index,leaves.length,onePage,hasOpeningCover))return;
+  if(direction==="prev"&&!canFlipBackward(index,onePage,hasOpeningCover))return;
   if(reduced){
    direction==="next"?book.turnToNextPage():book.turnToPrevPage();
    const n=book.getCurrentPageIndex();
@@ -287,31 +290,19 @@ export default function CatalogueFlipbook(){
  const pdfHref=(b:Book,download=false)=>"/api/catalogue-books/pdf?book="+
   encodeURIComponent(b.id)+(download?"&download=1":"");
  return <div className="fb-catalogue-viewer" onKeyDown={keyboard}>
-  {!loading&&!error&&books.length>0&&<section className="fb-catalogue-library"
-   aria-labelledby="fb-catalogue-library-title">
-   <h2 id="fb-catalogue-library-title" className="sr-only">Danh sách Catalogue</h2>
-   <div className="fb-catalogue-library-grid">
-    {books.map(item=><GlassPanel key={item.id} className="fb-catalogue-library-item">
-      <div><h3>{item.title}</h3>
-       <p>{item.edition||"Phiên bản hiện hành"}</p></div>
-      <div className="fb-catalogue-library-actions">
-       {item.hasPages!==false&&<GlassButton variant={detail?.book.id===item.id?"primary":"secondary"}
-        disabled={loading} onClick={()=>void loadBook(item.id)}>Lật sách</GlassButton>}
-       {item.hasPdf&&<GlassButtonLink variant="secondary" href={pdfHref(item)}
-        target="_blank" rel="noopener noreferrer">Xem PDF</GlassButtonLink>}
-       {item.hasPdf&&item.pdfDownloadEnabled&&<GlassButtonLink variant="secondary"
-        href={pdfHref(item,true)} download>Tải PDF</GlassButtonLink>}
-      </div>
-    </GlassPanel>)}
-   </div>
-  </section>}
-  <div className="fb-catalogue-topbar">
-   {books.length>0&&<label className="fb-catalogue-picker"><span>Bộ Catalogue</span>
-    <select value={detail?.book.id||books[0].id} disabled={loading}
-     onChange={e=>void loadBook(e.target.value)}>
-     {books.map(b=><option value={b.id} key={b.id}>{b.title}{b.edition?" · "+b.edition:""}</option>)}
-    </select></label>}
-  </div>
+  {!loading&&!error&&detail&&(books.length>1||detail.book.hasPdf)&&
+   <div className="fb-catalogue-topbar">
+    {books.length>1&&<label className="fb-catalogue-picker"><span>Bộ Catalogue</span>
+     <select value={detail.book.id} onChange={e=>void loadBook(e.target.value)}>
+      {books.map(b=><option value={b.id} key={b.id}>{b.title}{b.edition?" · "+b.edition:""}</option>)}
+     </select></label>}
+    {detail.book.hasPdf&&<div className="fb-catalogue-pdf-actions">
+     <GlassButtonLink variant="secondary" href={pdfHref(detail.book)}
+      target="_blank" rel="noopener noreferrer">Xem PDF</GlassButtonLink>
+     {detail.book.pdfDownloadEnabled&&<GlassButtonLink variant="secondary"
+      href={pdfHref(detail.book,true)} download>Tải PDF</GlassButtonLink>}
+    </div>}
+   </div>}
   {loading&&<div className="fb-catalogue-state" role="status">Đang mở Catalogue…</div>}
   {!loading&&error&&<div className="fb-catalogue-state" role="alert">
    <h2>Chưa thể mở cuốn sách</h2><p>{error}</p>
@@ -328,7 +319,7 @@ export default function CatalogueFlipbook(){
      <h2 className="sr-only">{detail.book.title}</h2>
      <span className="fb-catalogue-count" aria-live="polite">{leaves[selectedPage]?.label||"Bản PDF"}</span>
     </div>
-    {leaves.length>0?<div ref={readerRef} tabIndex={0} className="fb-catalogue-reader" role="region" aria-label={"Sách lật "+detail.book.title}
+    {leaves.length>0?<div ref={readerRef} tabIndex={0} className="fb-catalogue-reader" data-closed={!portrait&&active===0&&!turning?"true":"false"} role="region" aria-label={"Sách lật "+detail.book.title}
      onPointerDownCapture={unlockAudio}>
      <button type="button" className="fb-glass-button fb-glass-button--secondary fb-catalogue-nav fb-catalogue-nav--prev"
       aria-label="Trang trước" disabled={turning||!canPrev} onClick={()=>{unlockAudio();turn("prev");}}>
@@ -340,7 +331,7 @@ export default function CatalogueFlipbook(){
      <button type="button" className="fb-glass-button fb-glass-button--secondary fb-catalogue-nav fb-catalogue-nav--next"
       aria-label="Trang tiếp" disabled={turning||!canNext} onClick={()=>{unlockAudio();turn("next");}}>
       <span className="fb-catalogue-nav-glyph" aria-hidden="true">›</span></button>
-    </div>:<p className="fb-catalogue-pdf-only">Bộ này được phát hành dưới dạng PDF. Chọn “Xem PDF” bên trên để mở tài liệu.</p>}
+    </div>:<p className="fb-catalogue-pdf-only">Chọn “Xem PDF” để mở Catalogue.</p>}
     {leaves.length>0&&<div className="fb-catalogue-toolbar" role="toolbar" aria-label="Công cụ sách">
      <button type="button" className="fb-glass-button fb-glass-button--secondary"
       onClick={()=>setThumbnails(x=>!x)} aria-expanded={thumbnails}>☷ <span>Mục lục</span></button>
