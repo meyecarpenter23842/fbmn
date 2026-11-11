@@ -1,95 +1,169 @@
-name: DL12D CEO Release (manual)
+name: DL12D CEO deploy by Owner issue comment
 on:
-  workflow_dispatch:
-    inputs:
-      target:
-        description: "Vercel destination"
-        required: true
-        type: choice
-        default: preview
-        options: [preview, production]
+  issue_comment:
+    types: [created]
+
 permissions:
   contents: read
+  issues: read
+  pull-requests: read
+  checks: read
+  actions: read
+
 concurrency:
-  group: dl12d-ceo-deploy
+  group: fbmn-ceo-issue-release
   cancel-in-progress: false
+
 jobs:
-  release:
-    if: github.repository == 'meyecarpenter23842/fbmn' && github.ref == 'refs/heads/main'
+  authorize:
+    if: >-
+      github.repository == 'meyecarpenter23842/fbmn' &&
+      github.event.issue.number == 72 &&
+      github.event.issue.pull_request == null &&
+      (github.event.comment.user.login == 'alibaba240185' ||
+       github.event.comment.user.login == 'meyecarpenter23842') &&
+      (github.event.comment.body == '/deploy ceo preview' ||
+       github.event.comment.body == '/deploy ceo production')
     runs-on: ubuntu-24.04
-    timeout-minutes: 35
+    timeout-minutes: 6
+    outputs:
+      sha: ${{ steps.auth.outputs.sha }}
+      target: ${{ steps.auth.outputs.target }}
+      pr: ${{ steps.auth.outputs.pr }}
+    steps:
+      - name: Load trusted authorizer from main
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: main
+          persist-credentials: false
+      - name: Verify Owner, control Issue, required CI, Codex and synchronized source trees
+        id: auth
+        run: node scripts/authorize-ceo-issue-deploy.mjs
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          REQUESTED_BY: ${{ github.event.comment.user.login }}
+          DEPLOY_COMMAND: ${{ github.event.comment.body }}
+          IS_PULL_REQUEST: ${{ github.event.issue.pull_request != null }}
+
+  deploy:
+    name: Deploy only fbmn-ceo
+    needs: authorize
+    runs-on: ubuntu-24.04
+    timeout-minutes: 38
     environment: ceo-release
     env:
       VERCEL_ORG_ID: team_hUFtVIsg2fKzwGlfi2Lrw1du
       VERCEL_PROJECT_ID: prj_aR7k1l9K9CRhIE7Ao1yAaIKnL26B
-      VERCEL_CLI_VERSION: 65.14.0
+      VERCEL_CLI_VERSION: '65.14.0'
       NEXT_TELEMETRY_DISABLED: '1'
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - name: Checkout the approved development main commit, not PR source
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
+          ref: ${{ needs.authorize.outputs.sha }}
           persist-credentials: false
+      - name: Revalidate sync, CI and review before accessing secrets
+        run: node scripts/authorize-ceo-issue-deploy.mjs
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          REQUESTED_BY: ${{ github.event.comment.user.login }}
+          DEPLOY_COMMAND: ${{ github.event.comment.body }}
+          IS_PULL_REQUEST: ${{ github.event.issue.pull_request != null }}
+          EXPECTED_SHA: ${{ needs.authorize.outputs.sha }}
       - uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.47.9'
           channel: stable
           cache: true
-      - name: Flutter analyze and tests
+      - name: Analyze, test and build Flutter Web
         working-directory: apps/ceo/flutter
         run: |
+          set -euo pipefail
           flutter pub get
           flutter analyze
           flutter test
-      - name: Build Flutter PWA
-        working-directory: apps/ceo/flutter
-        run: flutter build web --release --base-href=/ceo/
-      - name: Package tested Flutter into CEO gateway
+          flutter build web --release --base-href=/ceo/
+      - name: Include Flutter PWA in same-origin CEO gateway
         run: |
           set -euo pipefail
           mkdir -p apps/ceo/gateway/public/ceo
           cp -a apps/ceo/flutter/build/web/. apps/ceo/gateway/public/ceo/
           test -s apps/ceo/gateway/public/ceo/index.html
+          test -s apps/ceo/gateway/public/ceo/main.dart.js
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: '24'
-      - name: Gateway verification
+      - name: Verify Owner gateway
         working-directory: apps/ceo/gateway
         run: |
+          set -euo pipefail
           npm install --no-audit --no-fund
           npm run lint
           npm run typecheck
           npm test
-      - name: Validate release credential
+      - name: Require existing GitHub Vercel token secret
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-        run: test -n "$VERCEL_TOKEN" || { echo "GitHub Actions secret VERCEL_TOKEN is missing"; exit 1; }
-      - name: Install pinned Vercel CLI
-        run: npm install -g "vercel@${VERCEL_CLI_VERSION}"
-      - name: Prepare Vercel link in repository root
+        run: test -n "$VERCEL_TOKEN" || { echo 'GitHub secret VERCEL_TOKEN missing'; exit 1; }
+      - name: Install approved Vercel CLI
+        run: npm install -g "vercel@$VERCEL_CLI_VERSION" --no-audit --no-fund
+      - name: Link only the CEO project at monorepo root
         run: |
           mkdir -p .vercel
           printf '{"orgId":"%s","projectId":"%s"}\n' "$VERCEL_ORG_ID" "$VERCEL_PROJECT_ID" > .vercel/project.json
-      - name: Pull Vercel environment
-        run: |
-          if [ "${{ inputs.target }}" = production ]; then environment=production; else environment=preview; fi
-          vercel pull --yes --environment "$environment" --scope alibaba240185
+      - name: Pull selected CEO Vercel environment
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-      - name: Vercel build — reuse verified Flutter files
+          DEPLOY_TARGET: ${{ needs.authorize.outputs.target }}
         run: |
-          if [ "${{ inputs.target }}" = production ]; then
+          set -euo pipefail
+          vercel pull --yes --environment="$DEPLOY_TARGET" --scope alibaba240185
+      - name: Vercel build reviewed Flutter plus Next gateway
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          DEPLOY_TARGET: ${{ needs.authorize.outputs.target }}
+          FBMN_CEO_PREBUILT: '1'
+        run: |
+          set -euo pipefail
+          if [ "$DEPLOY_TARGET" = production ]; then
             vercel build --prod --scope alibaba240185
           else
             vercel build --scope alibaba240185
           fi
+      - name: Final verification that main still matches upstream
+        run: node scripts/authorize-ceo-issue-deploy.mjs
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          REQUESTED_BY: ${{ github.event.comment.user.login }}
+          DEPLOY_COMMAND: ${{ github.event.comment.body }}
+          IS_PULL_REQUEST: ${{ github.event.issue.pull_request != null }}
+          EXPECTED_SHA: ${{ needs.authorize.outputs.sha }}
+      - name: Deploy only CEO project to approved target
+        id: publish
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-          FBMN_CEO_PREBUILT: '1'
-      - name: Deploy selected target
+          DEPLOY_TARGET: ${{ needs.authorize.outputs.target }}
         run: |
-          if [ "${{ inputs.target }}" = production ]; then
-            vercel deploy --prebuilt --prod --yes --scope alibaba240185
+          set -euo pipefail
+          if [ "$DEPLOY_TARGET" = production ]; then
+            url="$(vercel deploy --prebuilt --prod --yes --scope alibaba240185)"
           else
-            vercel deploy --prebuilt --yes --scope alibaba240185
+            url="$(vercel deploy --prebuilt --yes --scope alibaba240185)"
           fi
+          DEPLOY_URL="$url" node --input-type=module -e '
+            const u = new URL(process.env.DEPLOY_URL);
+            if (u.protocol !== "https:" || !u.hostname.endsWith(".vercel.app")) process.exit(1);
+          '
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+      - name: Record release
         env:
-          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          DEPLOY_URL: ${{ steps.publish.outputs.url }}
+          APPROVED_SHA: ${{ needs.authorize.outputs.sha }}
+          RELEASE_TARGET: ${{ needs.authorize.outputs.target }}
+          REVIEW_PR: ${{ needs.authorize.outputs.pr }}
+        run: |
+          printf 'Project: **fbmn-ceo**\nTarget: **%s**\nSHA: %s\nReview PR: #%s\nURL: %s\n' \
+            "$RELEASE_TARGET" "$APPROVED_SHA" "$REVIEW_PR" "$DEPLOY_URL" >> "$GITHUB_STEP_SUMMARY"
