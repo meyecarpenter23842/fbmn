@@ -34,11 +34,18 @@ class CeoRequest{
  final String id,name,email,phone,company,province,customerGroup,
    productType,specifications,quantity,desiredDate,details,message,createdAt,status;
  final List<String> interests;
- const CeoRequest({required this.id,required this.name,required this.email,required this.phone,
+ final String? viewedAt;
+ const CeoRequest({this.viewedAt,required this.id,required this.name,required this.email,required this.phone,
   required this.company,required this.province,required this.customerGroup,required this.productType,
   required this.specifications,required this.quantity,required this.desiredDate,required this.details,
   required this.message,required this.createdAt,required this.status,required this.interests});
  bool get pending=>status=="new";
+ bool get unread=>pending&&viewedAt==null;
+ CeoRequest markViewedAt(String timestamp)=>CeoRequest(
+  id:id,name:name,email:email,phone:phone,company:company,province:province,
+  customerGroup:customerGroup,productType:productType,specifications:specifications,
+  quantity:quantity,desiredDate:desiredDate,details:details,message:message,
+  createdAt:createdAt,status:status,interests:interests,viewedAt:timestamp);
  factory CeoRequest.fromJson(Object? input) {
   final j=_object(input);
   return CeoRequest(
@@ -47,6 +54,7 @@ class CeoRequest{
    productType:_str(j["productType"]),specifications:_str(j["specifications"]),
    quantity:_str(j["quantity"]),desiredDate:_str(j["desiredDate"]),details:_str(j["details"]),
    message:_str(j["message"]),createdAt:_str(j["createdAt"]),status:_str(j["status"]),
+   viewedAt:j["viewedAt"] is String ? j["viewedAt"] as String : null,
    interests:_array(j["interests"]).whereType<String>().toList(growable:false));
  }
 }

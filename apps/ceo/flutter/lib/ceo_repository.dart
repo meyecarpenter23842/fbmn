@@ -12,6 +12,7 @@ abstract class CeoRepository{
  Future<List<CeoTurn>> turns(String session);
  Future<CeoPage<CeoRequest>> contactRequests([int page=1]);
  Future<CeoPage<CeoRequest>> outsourcingRequests([int page=1]);
+ Future<String> markViewed(String kind,String id);
  void dispose();
 }
 class CeoApiException implements Exception{
@@ -103,6 +104,19 @@ class CeoApi implements CeoRepository {
   final j=await _data("/api/ceo/outsourcing-requests?page=$page");
   return CeoPage((j["requests"] as List? ?? const [])
     .map(CeoRequest.fromJson).toList(growable:false),j["page"] as int? ?? page,j["hasMore"]==true);
+ }
+ @override Future<String> markViewed(String kind,String id)async{
+  if(!["contact","outsourcing"].contains(kind)||
+     !RegExp(r'^[0-9a-fA-F-]{36}' r'$').hasMatch(id)){
+   throw const CeoApiException(400);
+  }
+  final jwt=await _ownerJwt();
+  final response=await _request("POST","/api/ceo/reads",
+   json:{"kind":kind,"id":id},bearer:jwt);
+  final data=response["data"];
+  final stamp=data is Map<String,dynamic> ? data["viewedAt"] : null;
+  if(stamp is! String||DateTime.tryParse(stamp)==null)throw const CeoApiException(503);
+  return stamp;
  }
  @override void dispose()=>_client.close();
 }

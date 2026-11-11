@@ -35,6 +35,21 @@ void main(){
   expect(calls.where((x)=>x=='GET /api/auth/token').length,3);
   repo.dispose();
  });
+ test('Read receipt posts to same-origin Owner endpoint with short-lived JWT',()async{
+  final repo=CeoApi(client:MockClient((r)async{
+   if(r.url.path=='/api/auth/token')return json(200,{'token':jwt});
+   if(r.url.path=='/api/ceo/reads'){
+    expect(r.method,'POST');
+    expect(r.headers['authorization'],'Bearer $jwt');
+    expect(jsonDecode(r.body),{'kind':'contact','id':'11111111-1111-4111-8111-111111111111'});
+    return json(200,{'data':{'viewedAt':'2026-11-11T14:00:00.000Z'}});
+   }
+   throw StateError('unexpected route');
+  }));
+  expect(await repo.markViewed('contact','11111111-1111-4111-8111-111111111111'),
+   '2026-11-11T14:00:00.000Z');
+  repo.dispose();
+ });
  test('Missing browser token means unauthenticated, not missing Owner grant',()async{
   final repo=CeoApi(client:MockClient((r)async{
    if(r.url.path=='/api/auth/sign-in/email')return json(200,{'data':{}});
