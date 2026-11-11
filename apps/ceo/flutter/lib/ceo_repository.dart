@@ -18,7 +18,7 @@ class CeoApiException implements Exception{
  final int status;
  const CeoApiException(this.status);
  @override String toString()=>switch(status){
-  401=>"Phiên đăng nhập đã hết hạn.",
+  401=>"Phiên đăng nhập chưa được xác nhận. Vui lòng đăng nhập lại.",
   403=>"Tài khoản không có quyền Owner.",
   503=>"Dịch vụ tạm thời không kết nối.",
   _=>"Chưa tải được dữ liệu. Vui lòng thử lại."};
@@ -27,9 +27,10 @@ class CeoApi implements CeoRepository {
  final http.Client _client;
  CeoApi({http.Client? client}):_client=client??platform.createClient();
  Uri _url(String path)=>Uri.base.resolve(path);
- Future<Map<String,dynamic>> _request(String method,String path,{Map<String,dynamic>? json}) async{
+ Future<Map<String,dynamic>> _request(String method,String path,{Map<String,dynamic>? json,String? bearer}) async{
   final headers=<String,String>{"Accept":"application/json"};
   if(json!=null)headers["Content-Type"]="application/json";
+  if(bearer!=null)headers["Authorization"]="Bearer $bearer";
   http.Response response;
   try{
    final request=http.Request(method,_url(path))..headers.addAll(headers);
@@ -44,25 +45,65 @@ class CeoApi implements CeoRepository {
   }catch(_){/* fail-closed on wrong response */}
   throw const CeoApiException(503);
  }
+ static final _jwtPattern=RegExp(r'^[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+
+ @override Future<CeoPage<CeoConversation>> conversations([int page=1]) async{
+  final j=await _data("/api/ceo/chat-history?page=$page");
+  return CeoPage((j["conversations"] as List? ?? const [])
+    .map(CeoConversation.fromJson).toList(growable:false),j["page"] as int? ?? page,j["hasMore"]==true);
+ }
+ @override Future<List<CeoTurn>> turns(String session) async{
+  if(!RegExp(r'^[a-f0-9]{36}$').hasMatch(session))throw const CeoApiException(400);
+  final j=await _data("/api/ceo/chat-history?session=$session&page=1");
+  return (j["turns"] as List? ?? const []).map(CeoTurn.fromJson).toList(growable:false);
+ }
+ @override Future<CeoPage<CeoRequest>> contactRequests([int page=1]) async{
+  final j=await _data("/api/ceo/contact-requests?page=$page");
+  return CeoPage((j["requests"] as List? ?? const [])
+    .map(CeoRequest.fromJson).toList(growable:false),j["page"] as int? ?? page,j["hasMore"]==true);
+ }
+ @override Future<CeoPage<CeoRequest>> outsourcingRequests([int page=1]) async{
+  final j=await _data("/api/ceo/outsourcing-requests?page=$page");
+  return CeoPage((j["requests"] as List? ?? const [])
+    .map(CeoRequest.fromJson).toList(growable:false),j["page"] as int? ?? page,j["hasMore"]==true);
+ }
+ @override void dispose()=>_client.close();
+}
+);
+ /// Fetch a fresh, short-lived managed Neon JWT over the same origin, following
+ /// the existing Admin browser flow. Never persist it in storage or in state.
+ Future<String> _ownerJwt() async{
+  final response=await _request("GET","/api/auth/token");
+  final data=response["data"];
+  final token=data is Map<String,dynamic>?data["token"]:null;
+  if(token is! String||token.length>12000||!_jwtPattern.hasMatch(token)){
+   throw const CeoApiException(401);
+  }
+  return token;
+ }
  @override Future<void> signIn(String email,String password) async{
   await _request("POST","/api/auth/sign-in/email",json:{
    "email":email.trim().toLowerCase(),"password":password,"rememberMe":false});
-  if(!await ownerSession())throw const CeoApiException(403);
+  // A missing/expired browser session is 401, not an invented Owner denial.
+  if(!await ownerSession())throw const CeoApiException(401);
  }
  @override Future<void> signOut() async{
   await _request("POST","/api/auth/sign-out",json:{});
  }
  @override Future<bool> ownerSession() async{
   try{
-   final response=await _request("GET","/api/ceo/session");
+   final jwt=await _ownerJwt();
+   final response=await _request("GET","/api/ceo/session",bearer:jwt);
    return (response["data"] as Map<String,dynamic>?)?["role"]=="owner";
   }on CeoApiException catch(e){
-   if(e.status==401||e.status==403)return false;
+   if(e.status==401)return false;
+   // 403 genuinely means Worker rejected the grant. 503 means service issue.
+   // Neither should be rewritten as a generic missing Owner role.
    rethrow;
   }
  }
  Future<Map<String,dynamic>> _data(String route) async{
-  final j=await _request("GET",route);
+  final jwt=await _ownerJwt();
+  final j=await _request("GET",route,bearer:jwt);
   final data=j["data"];
   if(data is Map<String,dynamic>)return data;
   throw const CeoApiException(503);
