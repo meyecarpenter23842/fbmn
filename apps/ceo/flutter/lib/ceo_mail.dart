@@ -144,7 +144,7 @@ class _CeoMailPanelState extends State<CeoMailPanel>{
          style:const TextStyle(fontSize:11.5,color:ceoMuted)),
        ])),
        const Icon(Icons.chevron_right,color:ceoMuted,size:18),
-      ]))))),
+      ])))),
      if(loading&&page!=null)const Center(child:Padding(
       padding:EdgeInsets.all(10),child:CircularProgressIndicator())),
      if(page?.hasMore==true)OutlinedButton(onPressed:loading?null:()=>load(more:true),
