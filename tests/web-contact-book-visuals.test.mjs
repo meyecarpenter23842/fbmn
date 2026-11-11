@@ -28,7 +28,7 @@ test("outsourcing illustration is decorative and does not increase card height",
   assert.match(css, /\.content-outline-panel--outsourcing\s*\{[^}]*overflow:\s*hidden/);
   assert.doesNotMatch(css, /\.content-outline-panel--outsourcing\s*\{[^}]*(?:min-height|height):/);
   assert.match(svg, /<svg[^>]*viewBox="0 0 780 450"/);
-  assert.doesNotMatch(svg, /<script|https?:\/\//);
+  assert.doesNotMatch(svg, /<script|<image[^>]+href=/i);
 });
 
 test("no new public API, pricing or unverified service promises in this visual update", () => {
