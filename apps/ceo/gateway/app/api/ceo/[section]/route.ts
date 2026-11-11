@@ -9,7 +9,7 @@ export async function GET(request:Request,context:{params:Promise<{section:strin
  const url=new URL(request.url);
  const target=ceoReadTarget(section,url.search);
  if(!target)return fail(400,"invalid_query");
- const gate=await requireOwner();
+ const gate=await requireOwner(request);
  if(gate.status!==200||!gate.token)return fail(gate.status,"owner_required");
  const origin=workerOrigin();
  if(!origin)return fail(503,"service_unavailable");
