@@ -30,7 +30,8 @@ export async function GET(request:Request){
    return fail(remote.status===404?404:503);
   }
   // Count a validated PDF 200, not merely a click on the download button.
-  after(async()=>{await capturePdfServed(download?"web_pdf_download_served":"web_pdf_view_served",book);});
+  if(request.headers.get("dnt")!=="1"&&request.headers.get("sec-gpc")!=="1")
+   after(async()=>{await capturePdfServed(download?"web_pdf_download_served":"web_pdf_view_served",book);});
   return new Response(remote.body,{status:200,headers:{...HEADERS,
    "Content-Type":"application/pdf","Content-Length":length,
    "Content-Disposition":(download?"attachment":"inline")+

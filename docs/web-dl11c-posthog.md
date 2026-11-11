@@ -18,7 +18,7 @@ The public Website uses web_* events and ephemeral session-scoped anonymous IDs.
 ## Shared event properties (strict allowlist)
 event, anonymous session_id UUIDv4, traffic_source, optional utm_medium and utm_campaign. Event-specific properties: page_type, category_key, product_key, sku, book_id. Server adds constant app='futurebook_website', PostHog personless settings, $ip=null and geoip disabled. The PDF server event contains only book_id and constant app; it never reads cookies, client IP, referrer, form values or UA.
 
-No posthog-js, auto-capture, replay, heatmap, fingerprint, localStorage, cookie, URL query or arbitrary custom properties. GPC and Do-Not-Track suppress client events. Analytics never blocks form/chat workflows. Strict origin/JSON/schema/size checks on POST /api/analytics. Key is server-side only.
+No posthog-js, auto-capture, replay, heatmap, fingerprint, localStorage, cookie, URL query or arbitrary custom properties. GPC and Do-Not-Track suppress client events and server-side PDF served events. Missing browser cryptography disables tracking instead of interrupting business workflows. Analytics never blocks form/chat workflows. Strict origin/JSON/schema/size checks on POST /api/analytics. Key is server-side only.
 
 ## Vercel production
 - FBMN_WEB_POSTHOG_ENABLED=1

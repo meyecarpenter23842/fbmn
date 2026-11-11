@@ -20,8 +20,9 @@ export default function WebAnalytics(){
  useEffect(()=>{
   // One pageview per router pathname change; suppress StrictMode duplicate mounts.
   // Query strings, fragment identifiers, referrers and form content are never captured.
-  if(!pathname||pathname==="/policy"||previousPath===pathname)return;
+  if(!pathname||previousPath===pathname)return;
   previousPath=pathname;
+  if(pathname==="/policy")return;
   const info=classify(pathname);
   trackWebEvent("web_page_view",{page_type:info.page_type});
   if("category_key" in info&&info.category_key)

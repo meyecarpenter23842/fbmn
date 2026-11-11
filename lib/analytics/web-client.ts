@@ -53,9 +53,12 @@ function emit(event:WebEvent,s:Session,details:ClientDetails={}){
   credentials:"omit",cache:"no-store",keepalive:true,body:JSON.stringify(record)}).catch(()=>{});
 }
 export function trackWebEvent(event:WebEvent,details:ClientDetails={}){
+ try{
  if(typeof window==="undefined"||window.location.pathname==="/policy")return;
+ if(!globalThis.crypto?.randomUUID)return;
  if(navigator.doNotTrack==="1"||(navigator as Navigator & {globalPrivacyControl?:boolean}).globalPrivacyControl===true)return;
  const {value,fresh}=loadSession();
  if(fresh)emit("web_session_start",value);
  emit(event,value,details);
+ }catch{/* Analytics is strictly best-effort; never break forms, chat or catalogue. */}
 }
