@@ -302,7 +302,7 @@ void main(){
   await tester.tap(find.text('Soạn thư'));
   await tester.pumpAndSettle();
   expect(find.text('Soạn email Futurebook'),findsOneWidget);
-  expect(find.textContaining('Logo'),findsOneWidget);
+  expect(find.textContaining('logo'),findsOneWidget);
   expect(tester.takeException(),isNull);
  });
 
