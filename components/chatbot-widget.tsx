@@ -47,7 +47,7 @@ function ChatbotConversation() {
   const nextId = useRef(1);
   const session = useRef<string | null>(null);
   const controller = useRef<AbortController | null>(null);
-  const closingTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const closingTimer = useRef<number | null>(null);
   const launcher = useRef<HTMLButtonElement>(null);
   const input = useRef<HTMLInputElement>(null);
   const feed = useRef<HTMLDivElement>(null);
