@@ -11,7 +11,7 @@
 - Cloudflare Admin Worker có Cron mỗi 5 phút, gọi API dispatch Vercel bằng secret riêng; Vercel dùng VAPID aes128gcm phát Web Push.
 - Event: lần đầu có hội thoại mới, yêu cầu liên hệ hoặc yêu cầu gia công. Không spam mỗi tin nhắn trong cùng hội thoại.
 - Payload chỉ chứa loại event, UUID/session ID và số yêu cầu trạng thái new. Không có tên, SĐT, email, nội dung chat.
-- Badge hiển thị trạng thái yêu cầu new; không gán nhãn chưa đọc vì chưa có read receipts. Badge tab hiển thị số new trong trang đầu.
+- Badge đỏ có số trên chuông menu và tab Gia công/Liên hệ, lấy tổng yêu cầu `status=new` của các trang đã tải (không phải toàn bộ inbox và không phải số chưa đọc). Chuông không có badge khi tổng bằng 0, dùng `99+` khi vượt 99. Màu đỏ theo token `ceoBadgeRed` dùng chung. Không gán nhãn chưa đọc cho hội thoại khi chưa có read receipts.
 - Notification click mở /ceo/index.html?tab=contact|outsourcing|chat&id=... sau khi Owner đăng nhập; tìm đúng phiếu (tối đa 5 trang), nếu không còn thì báo không tìm thấy.
 - Khi logout thu hồi subscription trên thiết bị, dù API ngắt quãng vẫn unsubscribe tại browser.
 
