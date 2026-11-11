@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'ceo_models.dart';
 import 'ceo_repository.dart';
+import 'ceo_ui_tokens.dart';
 
 void main() => runApp(const CeoApp());
 const brand = Color(0xFF6D249E);
@@ -31,18 +32,12 @@ class _CeoAppState extends State<CeoApp>{
   catch(e){if(mounted)setState((){owner=false;notice=userError(e);});}
  }
  @override void dispose(){if(widget.repository==null)api.dispose();super.dispose();}
- @override Widget build(BuildContext context)=>MaterialApp(
+ @override Widget build(BuildContext context)=>LayoutBuilder(builder:(context,size)=>MaterialApp(
   title:'Futurebook CEO',debugShowCheckedModeBanner:false,
-  theme:ThemeData(useMaterial3:true,scaffoldBackgroundColor:const Color(0xFFF7F8FC),
-   colorScheme:ColorScheme.fromSeed(seedColor:brand),
-   inputDecorationTheme:InputDecorationTheme(filled:true,fillColor:Colors.white,
-    border:OutlineInputBorder(borderRadius:BorderRadius.circular(10))),
-   cardTheme:CardThemeData(elevation:0,color:Colors.white,
-    shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(16),
-      side:const BorderSide(color:Color(0xFFE5D7F1))))),
+  theme:ceoTheme(size.maxWidth),
   home:owner==null?const Scaffold(body:Center(child:CircularProgressIndicator())):
    owner!?CeoHome(api:api,onSignOut:()=>setState(()=>owner=false)):
-    CeoLogin(api:api,notice:notice,onSignIn:()=>setState(()=>owner=true),onRetry:check));
+    CeoLogin(api:api,notice:notice,onSignIn:()=>setState(()=>owner=true),onRetry:check)));
 }
 
 class CeoLogin extends StatefulWidget {
@@ -69,7 +64,7 @@ class _CeoLoginState extends State<CeoLogin>{
   constraints:const BoxConstraints(maxWidth:460),
   child:SingleChildScrollView(padding:const EdgeInsets.all(24),child:Form(key:form,
    child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
-    const Icon(Icons.auto_stories_rounded,color:brand,size:52),
+    Image.asset('assets/brand/fbmn-official-logo.webp',height:64,fit:BoxFit.contain),
     const SizedBox(height:12),
     const Text('FUTUREBOOK MIỀN NAM',textAlign:TextAlign.center,
      style:TextStyle(color:brand,letterSpacing:2,fontSize:13,fontWeight:FontWeight.bold)),
@@ -93,7 +88,7 @@ class _CeoLoginState extends State<CeoLogin>{
     if(widget.notice.isNotEmpty)Text(widget.notice,style:const TextStyle(color:Colors.red)),
     if(error.isNotEmpty)Text(error,style:const TextStyle(color:Colors.red)),
     const SizedBox(height:12),
-    FilledButton(onPressed:sending?null:submit,style:FilledButton.styleFrom(minimumSize:const Size.fromHeight(44)),
+    FilledButton(onPressed:sending?null:submit,
      child:sending?const CircularProgressIndicator():const Text('Đăng nhập')),
     TextButton(onPressed:sending?null:widget.onRetry,child:const Text('Kiểm tra lại phiên')),
    ]))))));
@@ -109,14 +104,16 @@ class _CeoHomeState extends State<CeoHome>{
  int selected=0;
  bool loading=false;
  String error='';
+ bool pendingRefresh=false;
  CeoPage<CeoConversation>? conversations;
  CeoPage<CeoRequest>? outsourcing,contacts;
  @override void initState(){super.initState();Future.microtask(refresh);}
  Future<void> refresh()async{
-  if(loading)return;
+  if(loading){pendingRefresh=true;return;}
+  final tabAtStart=selected;
   setState((){loading=true;error='';});
   try{
-   if(selected==0){
+   if(tabAtStart==0){
     final result=await Future.wait<Object>([
       widget.api.conversations(),widget.api.outsourcingRequests(),widget.api.contactRequests()]);
     if(mounted){setState((){
@@ -124,14 +121,21 @@ class _CeoHomeState extends State<CeoHome>{
       outsourcing=result[1] as CeoPage<CeoRequest>;
       contacts=result[2] as CeoPage<CeoRequest>;
     });}
-   }else if(selected==1){final v=await widget.api.conversations();
+   }else if(tabAtStart==1){final v=await widget.api.conversations();
     if(mounted)setState(()=>conversations=v);}
-   else if(selected==2){final v=await widget.api.outsourcingRequests();
+   else if(tabAtStart==2){final v=await widget.api.outsourcingRequests();
     if(mounted)setState(()=>outsourcing=v);}
-   else if(selected==3){final v=await widget.api.contactRequests();
+   else if(tabAtStart==3){final v=await widget.api.contactRequests();
     if(mounted)setState(()=>contacts=v);}
   }catch(e){if(mounted)setState(()=>error=userError(e));}
-  finally{if(mounted)setState(()=>loading=false);}
+  finally{endLoad(tabAtStart);}
+ }
+ void endLoad(int previousTab){
+  if(!mounted)return;
+  final reload=selected!=4&&pendingRefresh&&selected!=previousTab;
+  pendingRefresh=false;
+  setState(()=>loading=false);
+  if(reload)Future.microtask(refresh);
  }
  void choose(int value){
   if(value==selected)return;
@@ -140,6 +144,7 @@ class _CeoHomeState extends State<CeoHome>{
  }
  Future<void> more()async{
   if(loading)return;
+  final tabAtStart=selected;
   setState(()=>loading=true);
   try{
    if(selected==1&&conversations?.hasMore==true){
@@ -153,7 +158,7 @@ class _CeoHomeState extends State<CeoHome>{
     if(mounted)setState(()=>contacts=CeoPage([...contacts!.items,...v.items],v.page,v.hasMore));
    }
   }catch(e){if(mounted)setState(()=>error=userError(e));}
-  finally{if(mounted)setState(()=>loading=false);}
+  finally{endLoad(tabAtStart);}
  }
  Future<void> logout()async{
   if(loading)return;

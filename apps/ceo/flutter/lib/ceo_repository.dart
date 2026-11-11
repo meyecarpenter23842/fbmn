@@ -32,9 +32,9 @@ class CeoApi implements CeoRepository {
   if(json!=null)headers["Content-Type"]="application/json";
   http.Response response;
   try{
-   response=await _client.send(http.Request(method,_url(path))
-     ..headers.addAll(headers)
-     ..body=(json==null?"":jsonEncode(json))).then(http.Response.fromStream)
+   final request=http.Request(method,_url(path))..headers.addAll(headers);
+   if(json!=null)request.body=jsonEncode(json);
+   response=await _client.send(request).then(http.Response.fromStream)
      .timeout(const Duration(seconds:15));
   }catch(_){throw const CeoApiException(503);}
   if(response.statusCode<200||response.statusCode>=300)throw CeoApiException(response.statusCode);
