@@ -19,6 +19,7 @@ import { publicDecorativeBackground } from "@/lib/media/decorative-background";
 import { AppDownloadProvider } from "@/components/app-download";
 import { ChatbotWidget } from "@/components/chatbot-widget";
 import CmsPopupRuntime from "@/components/cms-popup-runtime";
+import WebAnalytics from "@/components/web-analytics";
 
 export const metadata: Metadata = {
   title: "Futurebook Miền Nam",
@@ -34,7 +35,7 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
         <AppDownloadProvider>
           <GlassPageBackdrop className="fb-glass-site"
             decorativeReadPath={publicDecorativeBackground.website ?? undefined}>
-            {children}<ChatbotWidget />
+            {children}<WebAnalytics/><ChatbotWidget />
             {process.env.FBMN_CMS_PUBLIC_ENABLED==="true"&&<CmsPopupRuntime/>}
           </GlassPageBackdrop>
         </AppDownloadProvider>

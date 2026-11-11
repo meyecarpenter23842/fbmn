@@ -1,5 +1,7 @@
 // DL7A: same-origin streaming PDF relay. The Public Worker rechecks ready/visible/download rights.
 import {catalogueWorkerOrigin} from "@/lib/catalogue/worker-origin";
+import {after} from "next/server";
+import {capturePdfServed} from "@/lib/analytics/posthog-server";
 export const dynamic="force-dynamic";
 export const runtime="nodejs";
 const UUID=/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i;
@@ -27,6 +29,9 @@ export async function GET(request:Request){
    await remote.body?.cancel();
    return fail(remote.status===404?404:503);
   }
+  // Count a validated PDF 200, not merely a click on the download button.
+  if(request.headers.get("dnt")!=="1"&&request.headers.get("sec-gpc")!=="1")
+   after(async()=>{await capturePdfServed(download?"web_pdf_download_served":"web_pdf_view_served",book);});
   return new Response(remote.body,{status:200,headers:{...HEADERS,
    "Content-Type":"application/pdf","Content-Length":length,
    "Content-Disposition":(download?"attachment":"inline")+

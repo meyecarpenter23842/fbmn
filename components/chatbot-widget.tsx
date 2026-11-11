@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import {trackWebEvent} from "@/lib/analytics/web-client";
 
 type ChatMessage = { id: number; author: "visitor" | "bot"; text: string; contact?: boolean };
 
@@ -165,7 +166,7 @@ function ChatbotConversation() {
         aria-label={open ? "Đóng chat Futurebook" : "Mở chat Futurebook"}
         aria-expanded={open}
         aria-controls="fb-chat-panel"
-        onClick={() => open ? close() : setOpen(true)}
+        onClick={() => {if(open)close();else{setOpen(true);trackWebEvent("web_chat_open");}}}
       >
         {open ? (
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" aria-hidden="true"><path d="M5 5l14 14M19 5 5 19"/></svg>

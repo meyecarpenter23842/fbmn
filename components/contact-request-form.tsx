@@ -2,6 +2,7 @@
 import {useState,type FormEvent} from "react";
 import {PROVINCES,CUSTOMER_GROUPS,INTERESTS} from "@/lib/contact/dl9-validation";
 import ContentToast from "./content-toast";
+import {trackWebEvent} from "@/lib/analytics/web-client";
 const blank={name:"",company:"",email:"",phone:"",province:"",customerGroup:"",interests:[] as string[],message:""};
 export default function ContactRequestForm(){
  const [fields,setFields]=useState(blank),[consent,setConsent]=useState(false),[website,setWebsite]=useState("");
@@ -14,10 +15,11 @@ export default function ContactRequestForm(){
   if(!fields.email.trim()&&!fields.phone.trim()){notify("Vui lòng nhập email hoặc số điện thoại.","error");return;}
   if(!fields.interests.length){notify("Vui lòng chọn ít nhất một nhóm sản phẩm.","error");return;}
   setBusy(true);
+  trackWebEvent("web_contact_submit_attempt");
   try{
    const r=await fetch("/api/contact",{method:"POST",headers:{"Content-Type":"application/json"},cache:"no-store",body:JSON.stringify({...fields,consent,website,startedAt})});
    const result=await r.json().catch(()=>null) as {ok?:boolean}|null;
-   if(r.status===201&&result?.ok===true){notify("Đã gửi yêu cầu. Futurebook Miền Nam sẽ liên hệ theo thông tin anh/chị cung cấp.","success");setFields(blank);setConsent(false);setWebsite("");setStartedAt(Date.now());}
+   if(r.status===201&&result?.ok===true){trackWebEvent("web_contact_submit_success");notify("Đã gửi yêu cầu. Futurebook Miền Nam sẽ liên hệ theo thông tin anh/chị cung cấp.","success");setFields(blank);setConsent(false);setWebsite("");setStartedAt(Date.now());}
    else notify(r.status===429?"Vui lòng thử lại sau ít phút.":r.status===400?"Vui lòng kiểm tra thông tin liên hệ và các lựa chọn.":"Chưa gửi được yêu cầu. Vui lòng thử lại hoặc gửi email liên hệ.","error");
   }catch{notify("Không kết nối được dịch vụ. Vui lòng thử lại.","error");}finally{setBusy(false);}
  }
