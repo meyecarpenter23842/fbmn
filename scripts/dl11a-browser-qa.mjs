@@ -117,6 +117,14 @@ try{for(const width of [1440,1280,1024,801,768,390,360]){
    visual.dispatchEvent(new Event("resize"));
   });
   await page.setViewportSize({width,height:520});
+  // This test overrides visualViewport with EventTarget; keep the mock in sync
+  // after resizing the *layout* viewport, like the browser would normally do.
+  await page.evaluate(()=>{
+   const visual=window.visualViewport;
+   visual.height=window.innerHeight;
+   visual.dispatchEvent(new Event("resize"));
+  });
+  await page.waitForTimeout(100);
   const short=await chat.evaluate(el=>({top:el.getBoundingClientRect().top,bottom:el.getBoundingClientRect().bottom,h:innerHeight}));
   assert.ok(short.top>=0&&short.bottom<=short.h+1,"chat sheet escapes short viewport "+JSON.stringify({width,short}));
   await chat.getByRole("button",{name:"Đóng chatbot"}).click();
