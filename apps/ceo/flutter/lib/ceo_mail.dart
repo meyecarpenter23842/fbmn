@@ -19,9 +19,9 @@ class CeoMailPanel extends StatefulWidget{
  final CeoRepository api;
  final String box;
  const CeoMailPanel({super.key,required this.api,required this.box});
- @override State<CeoMailPanel> createState()=>_CeoMailPanelState();
+ @override State<CeoMailPanel> createState()=>CeoMailPanelState();
 }
-class _CeoMailPanelState extends State<CeoMailPanel>{
+class CeoMailPanelState extends State<CeoMailPanel>{
  CeoMailPage? page;
  bool loading=false;
  String error='',notice='';

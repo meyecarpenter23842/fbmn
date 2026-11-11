@@ -115,6 +115,8 @@ class _CeoHomeState extends State<CeoHome>{
  final TextEditingController searchController=TextEditingController();
  String requestFilter='all';
  String contactSection='requests';
+ final inboxKey=GlobalKey<CeoMailPanelState>();
+ final sentKey=GlobalKey<CeoMailPanelState>();
  final Map<String,String> confirmedViews={};
  final Set<String> viewWrites={};
  String pushState='unknown';
@@ -329,6 +331,10 @@ class _CeoHomeState extends State<CeoHome>{
   finally{viewWrites.remove(key);}
  }
  Future<void> refresh()async{
+  if(selected==3&&contactSection!='requests'){
+   await (contactSection=='inbox'?inboxKey.currentState:sentKey.currentState)?.load();
+   return;
+  }
   if(loading){pendingRefresh=true;return;}
   final tabAtStart=selected;
   setState((){loading=true;error='';});
@@ -473,7 +479,7 @@ class _CeoHomeState extends State<CeoHome>{
       onSelected:(_)=>setState(()=>contactSection=tab.$1)),
    ]))),
   Expanded(child:contactSection=='requests'?requests(contacts,false):
-   CeoMailPanel(key:ValueKey(contactSection),api:widget.api,box:contactSection)),
+   CeoMailPanel(key:contactSection=='inbox'?inboxKey:sentKey,api:widget.api,box:contactSection)),
  ]);
 
  Widget overview(){

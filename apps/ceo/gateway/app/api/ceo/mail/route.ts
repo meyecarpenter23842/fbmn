@@ -40,7 +40,7 @@ export async function POST(request:Request){
  if(!parsed)return fail(400,"invalid_body");
  let to=parsed.to,subject=parsed.subject,replyHeaders:Record<string,string>|undefined;
  if(parsed.replyId){
-  const parent=await resendRequest("/emails/receiving/"+parsed.replyId);
+  const parent=await resendRequest("/emails/receiving/"+parsed.replyId+"?html_format=cid");
   if(parent.status!==200||!parent.payload||!mailVisible(parent.payload,"inbox"))
    return fail(parent.status===200?404:parent.status,"reply_not_found");
   to=recipientForReply(parent.payload);

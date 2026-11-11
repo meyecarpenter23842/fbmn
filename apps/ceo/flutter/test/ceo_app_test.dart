@@ -84,7 +84,10 @@ class FakeChatRepo extends FakeRepo {
 
 
 class FakeMailRepo extends FakePendingRepo {
- @override Future<CeoMailPage> mailList(String box,{String? after})async=>
+ int fetches=0;
+ @override Future<CeoMailPage> mailList(String box,{String? after})async{
+  fetches++;
+  return
   CeoMailPage([CeoMailItem(
    id:'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
    from:box=='inbox'?'Đại lý <sender@example.com>':'Futurebook <info@fbmn.vn>',
@@ -93,6 +96,7 @@ class FakeMailRepo extends FakePendingRepo {
    text:'Nội dung thử',to:box=='inbox'?const ['info@fbmn.vn']:
    const ['sender@example.com'],attachments:const [],
   )],null,false);
+ }
 }
 void main(){
  testWidgets('Anonymous session cannot see any Owner inbox', (tester)async{
@@ -289,6 +293,20 @@ void main(){
   expect(tester.takeException(),isNull);
   await tester.pumpWidget(const SizedBox.shrink());
   await tester.binding.setSurfaceSize(null);
+ });
+
+ testWidgets('CEO-MAIL01 global header refresh reloads visible mailbox', (tester)async{
+  final repo=FakeMailRepo();
+  await tester.pumpWidget(CeoApp(repository:repo));
+  await tester.pumpAndSettle();
+  await tester.tap(find.text('Liên hệ').last);
+  await tester.pumpAndSettle();
+  await tester.tap(find.byKey(const ValueKey('ceo-contact-inbox')));
+  await tester.pumpAndSettle();
+  final before=repo.fetches;
+  await tester.tap(find.byTooltip('Tải lại dữ liệu'));
+  await tester.pumpAndSettle();
+  expect(repo.fetches,greaterThan(before));
  });
 
  testWidgets('CEO-MAIL01 supports compose dialog and provider sent list', (tester)async{

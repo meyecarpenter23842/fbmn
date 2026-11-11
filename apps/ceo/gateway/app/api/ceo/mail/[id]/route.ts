@@ -13,7 +13,7 @@ export async function GET(request:Request,ctx:{params:Promise<{id:string}>}){
  const gate=await requireOwner(request);
  if(gate.status!==200||!gate.subject)return fail(gate.status,"owner_required");
  const path=query.box==="inbox"?"/emails/receiving/":"/emails/";
- const response=await resendRequest(path+query.id);
+ const response=await resendRequest(path+query.id+(query.box==="inbox"?"?html_format=cid":""));
  if(response.status!==200||!response.payload)return fail(response.status,"mail_service_unavailable");
  if(!mailVisible(response.payload,query.box))return fail(404,"not_found");
  const item=response.payload;
