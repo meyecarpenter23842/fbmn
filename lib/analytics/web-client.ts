@@ -54,7 +54,7 @@ function emit(event:WebEvent,s:Session,details:ClientDetails={}){
 }
 export function trackWebEvent(event:WebEvent,details:ClientDetails={}){
  if(typeof window==="undefined"||window.location.pathname==="/policy")return;
- if(navigator.doNotTrack==="1"||navigator.globalPrivacyControl===true)return;
+ if(navigator.doNotTrack==="1"||(navigator as Navigator & {globalPrivacyControl?:boolean}).globalPrivacyControl===true)return;
  const {value,fresh}=loadSession();
  if(fresh)emit("web_session_start",value);
  emit(event,value,details);

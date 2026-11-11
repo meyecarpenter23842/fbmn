@@ -6,6 +6,7 @@ import {GlassButtonLink} from "@/components/glass-ui";
 import type {PageFlip,SizeType,FlipCorner} from "page-flip";
 import {canFlipForward,canFlipBackward} from "@/lib/catalogue/spread-navigation";
 import {PaperSound} from "@/lib/catalogue/paper-sound";
+import {trackWebEvent} from "@/lib/analytics/web-client";
 
 type Asset={id:string;width:number;height:number};
 type Book={id:string;title:string;edition:string;hasPages?:boolean;hasPdf?:boolean;pdfDownloadEnabled?:boolean};
@@ -132,6 +133,7 @@ export default function CatalogueFlipbook(){
    const count=payload.pages.length+(payload.cover?1:0);
    const position=Math.min(Math.max(0,requested-1),Math.max(0,count-1));
    activeRef.current=position;setActive(position);setSelectedPage(position);setDetail(payload);
+   trackWebEvent("web_catalogue_view",{book_id:payload.book.id});
    window.history.replaceState(window.history.state,"",deepLink(payload.book.id,position));
   }catch(e){if(idSequence===sequence.current){setDetail(null);
    setError(e instanceof Error?e.message:"Không mở được Catalogue.");}}
@@ -300,9 +302,11 @@ export default function CatalogueFlipbook(){
      </select></label>}
     {!loading&&!error&&detail?.book.hasPdf&&<div className="fb-catalogue-pdf-actions">
      <GlassButtonLink variant="secondary" href={pdfHref(detail.book)}
+      onClick={()=>trackWebEvent("web_pdf_view_request",{book_id:detail.book.id})}
       target="_blank" rel="noopener noreferrer">Xem PDF</GlassButtonLink>
      {detail.book.pdfDownloadEnabled&&<GlassButtonLink variant="secondary"
-      href={pdfHref(detail.book,true)} download>Tải PDF</GlassButtonLink>}
+      href={pdfHref(detail.book,true)} download
+      onClick={()=>trackWebEvent("web_pdf_download_request",{book_id:detail.book.id})}>Tải PDF</GlassButtonLink>}
     </div>}
    </div>}
   {loading&&<div className="fb-catalogue-state" role="status">Đang mở Catalogue…</div>}

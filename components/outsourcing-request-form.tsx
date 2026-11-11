@@ -1,6 +1,7 @@
 "use client";
 import {useState,type FormEvent} from "react";
 import ContentToast from "./content-toast";
+import {trackWebEvent} from "@/lib/analytics/web-client";
 const blank={name:"",email:"",phone:"",productType:"",specifications:"",quantity:"",desiredDate:"",details:""};
 type Fields=typeof blank;
 export default function OutsourcingRequestForm(){
@@ -16,12 +17,14 @@ export default function OutsourcingRequestForm(){
  async function submit(event:FormEvent<HTMLFormElement>){
   event.preventDefault();if(busy||!startedAt)return;
   setBusy(true);setNotice("");
+  trackWebEvent("web_outsourcing_submit_attempt");
   try{
    const response=await fetch("/api/gia-cong",{method:"POST",
     headers:{"Content-Type":"application/json"},cache:"no-store",
     body:JSON.stringify({...fields,consent,website,startedAt})});
    const result=await response.json().catch(()=>null) as {ok?:boolean}|null;
    if(response.status===201&&result?.ok===true){
+    trackWebEvent("web_outsourcing_submit_success");
     setNoticeVariant("success");setNotice("Yêu cầu đã được ghi nhận. Bộ phận phụ trách sẽ xem xét và phản hồi theo thông tin cung cấp.");setNoticeId(v=>v+1);setFields(blank);setConsent(false);setWebsite("");setStartedAt(Date.now());
    }else{setNoticeVariant("error");setNotice(response.status===429?
     "Có quá nhiều yêu cầu trong thời gian ngắn. Vui lòng thử lại sau.":

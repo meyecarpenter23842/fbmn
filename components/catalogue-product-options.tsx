@@ -8,6 +8,7 @@ import {availableVariantFacets,moveVariantFacet,variantAudience,variantPaperForm
 import PublishedImageGallery from "./published-image-gallery";
 import {CatalogProductImage} from "./catalog-product-image";
 import {GlassPanel,GlassChip,GlassButton,GlassButtonLink} from "./glass-ui";
+import {trackWebEvent} from "@/lib/analytics/web-client";
 
 function BookIcon(){return <svg aria-hidden="true" viewBox="0 0 24 24" fill="none"
   stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
@@ -47,6 +48,7 @@ export default function CatalogueProductOptions({product,photos,glass=false,init
   const [sku,setSku]=useState(initialSku && product.variants.some(v=>v.sku===initialSku)?initialSku:product.variants[0].sku);
   const [photoIndex,setPhotoIndex]=useState(0);
   const selectSku=(nextSku:string)=>{setSku(nextSku);setPhotoIndex(0);};
+  useEffect(()=>{trackWebEvent("web_sku_view",{product_key:product.slug,sku});},[product.slug,sku]);
   const [audience,setAudience]=useState("");
   const [format,setFormat]=useState("");
   const zoomDialogRef=useRef<HTMLDialogElement>(null);
