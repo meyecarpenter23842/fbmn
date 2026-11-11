@@ -1,7 +1,7 @@
 import "server-only";
 import {ceoAuth} from "./auth-server";
 import {readBearerJwt} from "./bearer-jwt.mjs";
-type Gate={status:number;token?:string};
+type Gate={status:number;token?:string;subject?:string};
 const JWT=/^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/;
 export function workerOrigin():string|null{
  try{const url=new URL(process.env.FBMN_ADMIN_API_BASE_URL||"");
@@ -35,6 +35,14 @@ export async function requireOwner(request?:Request):Promise<Gate>{
   if(response.status===403)return {status:403};
   if(response.status!==200)return {status:503};
   const data=await response.json() as {data?:{role?:unknown}};
-  return data?.data?.role==="owner"?{status:200,token:jwt}:{status:403};
+  if(data?.data?.role!=="owner")return {status:403};
+  // Worker has verified the JWT signature and Owner DB grant.
+  // The token sub is used only to associate/revoke this owner's devices.
+  try{
+   const claims=JSON.parse(Buffer.from(jwt.split(".")[1],"base64url").toString("utf8")) as {sub?:unknown};
+   if(typeof claims.sub!=="string"||claims.sub.length<1||claims.sub.length>200)
+    return {status:401};
+   return {status:200,token:jwt,subject:claims.sub};
+  }catch{return {status:401};}
  }catch{return {status:503};}
 }

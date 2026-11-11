@@ -8,11 +8,13 @@ DO $guard$ BEGIN
 END $guard$;
 CREATE TABLE fbmn_catalog_private.ceo_push_subscriptions(
  endpoint text PRIMARY KEY CHECK(length(endpoint) BETWEEN 30 AND 2048),
+ owner_subject text NOT NULL CHECK(length(owner_subject) BETWEEN 1 AND 200),
  p256dh text NOT NULL CHECK(length(p256dh) BETWEEN 80 AND 128),
  auth text NOT NULL CHECK(length(auth) BETWEEN 16 AND 48),
  created_at timestamptz NOT NULL DEFAULT now(),
  last_seen_at timestamptz NOT NULL DEFAULT now()
 );
+CREATE INDEX ceo_push_subscriptions_owner ON fbmn_catalog_private.ceo_push_subscriptions(owner_subject);
 CREATE INDEX ceo_push_subscriptions_recent
  ON fbmn_catalog_private.ceo_push_subscriptions(last_seen_at DESC);
 CREATE TABLE fbmn_catalog_private.ceo_push_events(
@@ -29,6 +31,8 @@ CREATE INDEX ceo_push_events_ready
  WHERE delivered_at IS NULL;
 REVOKE ALL ON fbmn_catalog_private.ceo_push_subscriptions,fbmn_catalog_private.ceo_push_events FROM PUBLIC;
 GRANT USAGE ON SCHEMA fbmn_catalog_private TO fbmn_ceo_push_login;
+GRANT USAGE ON SCHEMA fbmn_admin TO fbmn_ceo_push_login;
+GRANT SELECT(auth_subject,role,enabled) ON fbmn_admin.principals TO fbmn_ceo_push_login;
 GRANT SELECT,INSERT,UPDATE,DELETE ON fbmn_catalog_private.ceo_push_subscriptions TO fbmn_ceo_push_login;
 GRANT SELECT,INSERT,UPDATE,DELETE ON fbmn_catalog_private.ceo_push_events TO fbmn_ceo_push_login;
 -- Events are IDs/timestamps/status only, not customer name/contact/chat body.

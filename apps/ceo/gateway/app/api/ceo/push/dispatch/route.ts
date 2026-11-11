@@ -34,14 +34,18 @@ export async function GET(request:Request){
     "WITH claimed AS (SELECT event_key FROM fbmn_catalog_private.ceo_push_events"+
     " WHERE delivered_at IS NULL AND attempts<5"+
     " AND (claimed_until IS NULL OR claimed_until<now())"+
-    " ORDER BY occurred_at LIMIT 20 FOR UPDATE SKIP LOCKED)"+
+    " ORDER BY occurred_at LIMIT 6 FOR UPDATE SKIP LOCKED)"+
     " UPDATE fbmn_catalog_private.ceo_push_events AS e"+
     " SET claimed_until=now()+interval '4 minutes',attempts=attempts+1"+
     " FROM claimed c WHERE e.event_key=c.event_key"+
     " RETURNING e.event_key,e.kind,e.ref,e.occurred_at");
    const subs=await db.query<{endpoint:string;p256dh:string;auth:string;created_at:Date}>(
-    "SELECT endpoint,p256dh,auth,created_at FROM fbmn_catalog_private.ceo_push_subscriptions"+
-    " WHERE last_seen_at>=now()-interval '180 days' ORDER BY created_at LIMIT 200");
+    "SELECT s.endpoint,s.p256dh,s.auth,s.created_at"+
+    " FROM fbmn_catalog_private.ceo_push_subscriptions s"+
+    " JOIN fbmn_admin.principals p ON p.auth_subject=s.owner_subject"+
+    " WHERE p.role='owner' AND p.enabled=true"+
+    " AND s.last_seen_at>=now()-interval '180 days'"+
+    " ORDER BY s.created_at LIMIT 30");
    const counts=await db.query<{total:string}>(
     "SELECT (SELECT count(*) FROM fbmn_catalog_private.contact_requests WHERE status='new')+"+
     " (SELECT count(*) FROM fbmn_catalog_private.outsourcing_requests WHERE status='new') AS total");
@@ -52,19 +56,19 @@ export async function GET(request:Request){
     let failed=false;
     const payload=pushPayload(e.kind,e.ref,badge);
     const topic=createHash("sha256").update(e.event_key).digest("base64url").slice(0,26);
-    for(const sub of subs.rows){
-     if(new Date(sub.created_at)>new Date(e.occurred_at))continue;
-     try{
-      await webpush.sendNotification(
-       {endpoint:sub.endpoint,keys:{p256dh:sub.p256dh,auth:sub.auth}},payload,
-       {TTL:86400,urgency:"normal",topic,timeout:7000,contentEncoding:"aes128gcm"});
-     }catch(error){
-      const status=(error as {statusCode?:number})?.statusCode;
-      if(status===404||status===410){
-       await db.query("DELETE FROM fbmn_catalog_private.ceo_push_subscriptions WHERE endpoint=$1",[sub.endpoint]);
-      }else failed=true;
-     }
-    }
+    await Promise.all(subs.rows.filter(sub=>new Date(sub.created_at)<=new Date(e.occurred_at))
+      .map(async sub=>{
+       try{
+        await webpush.sendNotification(
+         {endpoint:sub.endpoint,keys:{p256dh:sub.p256dh,auth:sub.auth}},payload,
+         {TTL:86400,urgency:"normal",topic,timeout:7000,contentEncoding:"aes128gcm"});
+       }catch(error){
+        const status=(error as {statusCode?:number})?.statusCode;
+        if(status===404||status===410){
+         await db.query("DELETE FROM fbmn_catalog_private.ceo_push_subscriptions WHERE endpoint=$1",[sub.endpoint]);
+        }else failed=true;
+       }
+      }));
     if(!failed){
      await db.query("UPDATE fbmn_catalog_private.ceo_push_events SET delivered_at=now(),claimed_until=NULL"+
       " WHERE event_key=$1",[e.event_key]);delivered++;
