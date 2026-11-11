@@ -88,6 +88,7 @@ function ChatbotConversation() {
       const top = Math.max(0, viewport.offsetTop);
       const keyboard = Math.max(0, window.innerHeight - viewport.height - viewport.offsetTop);
       panel.current?.style.setProperty("--fb-chat-visual-top", `${Math.round(top)}px`);
+      panel.current?.style.setProperty("--fb-chat-visual-height", `${Math.round(viewport.height)}px`);
       panel.current?.style.setProperty("--fb-chat-keyboard-bottom", `${Math.round(keyboard)}px`);
     };
     syncViewport();
