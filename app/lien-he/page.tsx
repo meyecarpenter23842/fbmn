@@ -24,6 +24,20 @@ export default async function ContactPage() {
           {company?.phone && <p><strong>Điện thoại:</strong> <a href={"tel:" + company.phone.replace(/[^+0-9]/g, "")}>{company.phone}</a></p>}
           {company?.hours && <p><strong>Thời gian làm việc:</strong> {company.hours}</p>}
         </address>
+        <div className="content-location-map" aria-label="Bản đồ vị trí Futurebook Miền Nam">
+          <iframe
+            title="Bản đồ tìm kiếm địa chỉ Futurebook Miền Nam"
+            src={`https://www.google.com/maps?q=${encodeURIComponent(contact.address)}&output=embed`}
+            loading="lazy"
+            referrerPolicy="no-referrer"
+            allowFullScreen
+          />
+          <a
+            href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(contact.address)}`}
+            target="_blank"
+            rel="noopener noreferrer"
+          >Xem địa chỉ trên Google Maps <span aria-hidden="true">↗</span></a>
+        </div>
       </div>
       <div className="content-intro-panel">
         <h2>Tư vấn &amp; hợp tác đại lý</h2>
