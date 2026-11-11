@@ -5,7 +5,7 @@ no API/Neon/Worker migration, no changes to Website/Admin or authenticated Owner
 
 ## Screens
 - Overview: real first-page counts, responsive metric grid, recent requests and conversations.
-- Conversations: searchable loaded sessions, clearly labeled session IDs rather than invented
+- Conversations: search loaded session IDs and their latest-message preview (not full history), clearly labeled session IDs rather than invented
   customer names, customer/assistant reading bubbles and a bounded desktop detail panel.
 - Outsourcing: searchable, status-filtered existing requests, summaries and grouped detail.
 - Contact: same searchable/filterable inbox, without implementing email until CEO-MAIL01.

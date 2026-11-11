@@ -239,6 +239,7 @@ void main(){
   await tester.pumpAndSettle();
   await tester.tap(find.text('Hội thoại').last);
   await tester.pumpAndSettle();
+  expect(find.text('Tìm mã phiên hoặc tin nhắn gần nhất'),findsOneWidget);
   await tester.tap(find.textContaining('Phiên aabbccdd'));
   await tester.pumpAndSettle();
   expect(find.text('Khách hàng'),findsOneWidget);

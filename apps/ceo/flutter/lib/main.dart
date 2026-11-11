@@ -509,11 +509,11 @@ class _CeoHomeState extends State<CeoHome>{
     r.latest.toLowerCase().contains(q)).toList();
   return ListView(physics:const AlwaysScrollableScrollPhysics(),children:[
    CeoPanel(title:'Hội thoại khách hàng',
-    subtitle:'Tìm trong các phiên đã tải · Chỉ đọc lịch sử chatbot',
+    subtitle:'Lọc theo mã phiên hoặc đoạn xem trước của phiên đã tải',
     icon:Icons.forum_outlined,
     child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
      CeoSearchBox(controller:searchController,
-      hint:'Tìm nội dung hoặc mã phiên chat',
+      hint:'Tìm mã phiên hoặc tin nhắn gần nhất',
       onChanged:(_)=>setState((){})),
      const SizedBox(height:12),
      if(visible.isEmpty)
