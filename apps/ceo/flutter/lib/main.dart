@@ -5,6 +5,7 @@ import 'ceo_ui_tokens.dart';
 import 'ceo_detail_sheet.dart';
 import 'ceo_feedback.dart';
 import 'ceo_workspace.dart';
+import 'ceo_mail.dart';
 import 'push_stub.dart' if (dart.library.js_interop) 'push_web.dart' as push;
 
 void main() => runApp(const CeoApp());
@@ -113,6 +114,7 @@ class _CeoHomeState extends State<CeoHome>{
  CeoPage<CeoRequest>? outsourcing,contacts;
  final TextEditingController searchController=TextEditingController();
  String requestFilter='all';
+ String contactSection='requests';
  final Map<String,String> confirmedViews={};
  final Set<String> viewWrites={};
  String pushState='unknown';
@@ -451,8 +453,28 @@ class _CeoHomeState extends State<CeoHome>{
   }
   if(selected==0)return overview();
   if(selected==1)return chatList();
-  return requests(selected==2?outsourcing:contacts,selected==2);
+  if(selected==3)return contactWorkspace();
+  return requests(outsourcing,true);
  }
+
+ Widget contactWorkspace()=>Column(children:[
+  Padding(padding:const EdgeInsets.fromLTRB(12,10,12,5),child:Align(
+   alignment:Alignment.centerLeft,
+   child:Wrap(spacing:7,runSpacing:4,children:[
+    for(final tab in const <(String,String)>[
+     ('requests','Khách liên hệ'),('inbox','Hộp thư đến'),('sent','Đã gửi')])
+     ChoiceChip(
+      key:ValueKey('ceo-contact-${tab.$1}'),
+      label:Text(tab.$2),
+      selected:contactSection==tab.$1,
+      selectedColor:ceoLavender,
+      labelStyle:TextStyle(fontSize:13,fontWeight:FontWeight.w700,
+       color:contactSection==tab.$1?ceoPurple:ceoInk),
+      onSelected:(_)=>setState(()=>contactSection=tab.$1)),
+   ]))),
+  Expanded(child:contactSection=='requests'?requests(contacts,false):
+   CeoMailPanel(key:ValueKey(contactSection),api:widget.api,box:contactSection)),
+ ]);
 
  Widget overview(){
   if(conversations==null||outsourcing==null||contacts==null){

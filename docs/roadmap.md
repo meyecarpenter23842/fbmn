@@ -311,3 +311,6 @@ Thứ tự mới trước DL8: DL11A (Header một hàng, logo giữa 3+3 tab, t
 
 
 **CEO-UI01 — Owner 11/11/2026:** Tái thiết kế riêng Flutter CEO: nền tảng card, search/filter và responsive; làm lại Tổng quan, Hội thoại, Gia công, Liên hệ; giữ 5 menu, các dữ liệu thật, read receipt/badge, quyền Owner và API hiện có. Không gộp module gửi nhận mail (CEO-MAIL01) hoặc thay DB/Worker vào lô này. Chi tiết và gate tại `docs/web-ceo-ui01.md`.
+
+
+**CEO-MAIL01 — 11/11/2026, Owner yêu cầu:** App CEO Liên hệ mở tab con Khách liên hệ / Hộp thư đến / Đã gửi; chức năng soạn và trả lời email thực qua CEO Gateway Owner-only + Resend gửi/nhận domain đã xác minh; chữ ký thương hiệu logo trong suốt, thông tin info@fbmn.vn và Facebook chính thức. Không lưu API key vào Git, không đổi API/DL12E báo đã xem hoặc gửi email tự động, không chạy migration vì lịch sử/trạng thái gửi lưu và đọc từ Resend. Test Flutter/Gateway, CI/Codex PR repo phụ → đồng bộ repo chính → Vercel CEO production.
