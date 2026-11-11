@@ -6,6 +6,7 @@ import { getCategoryBySlug, parseCatalogFilters, GROUP_LABELS } from "@/lib/cata
 import { toAllowedParams, type RawSearchParams } from "@/lib/catalog/route";
 import {getOptionalPublicCms} from "@/lib/content/cms";
 import {CmsBannerSlot} from "@/components/cms-web-content";
+import WebInterestView from "@/components/web-interest-view";
 
 export const dynamic = "force-dynamic";
 
@@ -29,6 +30,7 @@ export default async function CategoryPage({ params, searchParams }: Props) {
   </div></CatalogShell>;
   const filters = { ...parseCatalogFilters(toAllowedParams(raw)), categoryId: category.id };
   return <CatalogShell><div className="catalog-wrap">
+    <WebInterestView kind="category" slug={category.slug}/>
     <CatalogBreadcrumb trail={[{ label: "Sản phẩm", href: "/san-pham" }, { label: category.name }]}/>
     <CmsBannerSlot items={cms} slot="category.header"/>
     <CatalogListing data={catalog} filters={filters} heading={category.name}

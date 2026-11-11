@@ -6,6 +6,7 @@ import { getPublishedProductImageUrl } from "@/lib/catalog/product-image";
 import CatalogueProductOptions from "@/components/catalogue-product-options";
 import CatalogueRelatedProducts from "@/components/catalogue-related-products";
 import {relatedProducts} from "@/lib/catalog/recommendations";
+import WebInterestView from "@/components/web-interest-view";
 
 export const dynamic = "force-dynamic";
 
@@ -37,6 +38,7 @@ export default async function ProductPage({ params, searchParams }: Props) {
   // G05: reuse the verified G03 gallery/selector/CTA glass presentation on every product.
   const glass=true;
   const content=<div className="catalog-wrap">
+    <WebInterestView kind="product" slug={product.slug}/>
     <CatalogBreadcrumb trail={[
       { label: "Sản phẩm", href: "/san-pham" },
       ...(category && category.id!=="p5-uncategorized" && category.name.toLocaleLowerCase("vi")!=="chưa phân loại" ? [{ label: category.name, href: "/danh-muc/" + encodeURIComponent(category.slug) }] : []),

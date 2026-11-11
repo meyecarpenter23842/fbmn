@@ -25,10 +25,7 @@ export default function WebAnalytics(){
   if(pathname==="/policy")return;
   const info=classify(pathname);
   trackWebEvent("web_page_view",{page_type:info.page_type});
-  if("category_key" in info&&info.category_key)
-   trackWebEvent("web_category_view",{category_key:info.category_key});
-  if("product_key" in info&&info.product_key)
-   trackWebEvent("web_product_view",{product_key:info.product_key});
+
  },[pathname]);
  return null;
 }
