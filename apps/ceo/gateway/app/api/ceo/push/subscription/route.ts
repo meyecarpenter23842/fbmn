@@ -4,7 +4,7 @@ import {allowedOrigin,parseSubscription,pushEndpoint} from "@/lib/ceo-push-polic
 export const runtime="nodejs";export const dynamic="force-dynamic";
 const headers={"Cache-Control":"private, no-store","X-Content-Type-Options":"nosniff"};
 const fail=(status:number,code:string)=>Response.json({error:{code}},{status,headers});
-async function authenticate(request:Request){
+async function authenticate(request:Request):Promise<{status:number;subject?:string}>{
  if(!allowedOrigin(request))return {status:403}; // same-origin mutation
  if(request.headers.get("content-type")?.split(";")[0]!=="application/json")return {status:415};
  return await requireOwner(request);
