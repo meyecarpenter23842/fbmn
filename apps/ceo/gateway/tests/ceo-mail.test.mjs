@@ -24,6 +24,10 @@ test("CEO-MAIL01 validates recipient, subject, body, reply ids and disallows spo
 test("CEO-MAIL01 provider mailbox scope and branded html are safe",()=>{
  assert.equal(isCompanyMailbox({to:["info@fbmn.vn"]},"inbox"),true);
  assert.equal(isCompanyMailbox({to:["other@fbmn.vn"]},"inbox"),false);
+ assert.equal(isCompanyMailbox({to:["person@example.com"],cc:["info@fbmn.vn"]},"inbox"),true);
+ assert.equal(isCompanyMailbox({to:["person@example.com"],bcc:["info@fbmn.vn"]},"inbox"),true);
+ const reply=parseMailSend({replyId:"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",subject:"Re: "+"a".repeat(600),text:"OK"});
+ assert.ok(reply&&reply.replyId);
  assert.equal(isCompanyMailbox({from:"Futurebook <info@fbmn.vn>"},"sent"),true);
  const html=mailSignatureHtml('<script>alert("x")</script>\nKiểm tra');
  assert.ok(!html.includes("<script>"));

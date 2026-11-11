@@ -1,6 +1,6 @@
 import {requireOwner} from "@/lib/owner-gate";
 import {parseMailDetail,plainTextFromHtml} from "@/lib/ceo-mail-policy.mjs";
-import {mailVisible,resendRequest} from "@/lib/ceo-mail-service";
+import {mailVisible,resendRequest,recipientForReply} from "@/lib/ceo-mail-service";
 export const runtime="nodejs";export const dynamic="force-dynamic";
 const headers={"Cache-Control":"private, no-store","X-Content-Type-Options":"nosniff"};
 const fail=(s:number,c:string)=>Response.json({error:{code:c}},{status:s,headers});
@@ -19,7 +19,7 @@ export async function GET(request:Request,ctx:{params:Promise<{id:string}>}){
  const item=response.payload;
  return Response.json({data:{id:item.id,from:item.from,to:item.to,subject:item.subject,
   text:typeof item.text==="string"&&item.text.trim()?item.text:plainTextFromHtml(item.html),
-  html:typeof item.html==="string"?item.html:"",
+  replyTo:query.box==="inbox"?recipientForReply(item):null,
   created_at:item.created_at,status:item.last_event||item.status||"",
   message_id:item.message_id||"",attachments:item.attachments||[]}},{headers});
 }

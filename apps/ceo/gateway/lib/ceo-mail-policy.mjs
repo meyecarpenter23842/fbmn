@@ -26,7 +26,7 @@ export function parseMailSend(raw){
    Object.keys(raw).some(k=>!["to","subject","text","replyId","requestId"].includes(k)))return null;
  const text=raw.text,subject=raw.subject,replyId=raw.replyId,requestId=raw.requestId;
  if(typeof text!=="string"||!text.trim()||text.length>12000||
-   typeof subject!=="string"||!subject.trim()||subject.length>180||
+   typeof subject!=="string"||!subject.trim()||(!replyId&&subject.length>180)||(replyId&&subject.length>2000)||
    /[\r\n]/.test(subject)||raw.to!==undefined&&typeof raw.to!=="string"||
    replyId!==undefined&&(!UUID.test(replyId)||typeof replyId!=="string")||
    requestId!==undefined&&(typeof requestId!=="string"||!/^[a-z0-9_-]{12,100}$/i.test(requestId)))return null;
@@ -36,7 +36,8 @@ export function parseMailSend(raw){
 }
 export function isCompanyMailbox(item,box){
  if(!item||typeof item!=="object")return false;
- if(box==="inbox")return Array.isArray(item.to)&&item.to.some(x=>addressOf(x)===MAIL_FROM);
+ if(box==="inbox")return ["to","cc","bcc"].some(field=>
+  Array.isArray(item[field])&&item[field].some(x=>addressOf(x)===MAIL_FROM));
  return addressOf(item.from)===MAIL_FROM;
 }
 export function escapeMailHtml(text){

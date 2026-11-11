@@ -1,9 +1,9 @@
 class CeoMailItem {
- final String id,from,subject,createdAt,status,messageId,text;
+ final String id,from,subject,createdAt,status,messageId,text,replyTo;
  final List<String> to,attachments;
  const CeoMailItem({required this.id,required this.from,required this.subject,
   required this.createdAt,required this.status,required this.messageId,
-  required this.text,required this.to,required this.attachments});
+  required this.text,required this.to,required this.attachments,this.replyTo=''});
  factory CeoMailItem.fromJson(Object? raw){
   final j=raw is Map<String,dynamic>?raw:<String,dynamic>{};
   String str(String key)=>j[key] is String?j[key] as String:'';
@@ -17,7 +17,7 @@ class CeoMailItem {
   }
   return CeoMailItem(id:str('id'),from:str('from'),to:values('to'),
    subject:str('subject'),createdAt:str('created_at'),status:str('status'),
-   messageId:str('message_id'),text:str('text'),attachments:List.unmodifiable(files));
+   messageId:str('message_id'),text:str('text'),replyTo:str('replyTo'),attachments:List.unmodifiable(files));
  }
 }
 class CeoMailPage {

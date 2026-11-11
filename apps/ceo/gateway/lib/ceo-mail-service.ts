@@ -27,7 +27,7 @@ export function mailVisible(item:unknown,box:string):boolean{
 }
 export function recipientForReply(item:unknown):string|null{
  if(!isCompanyMailbox(item,"inbox"))return null;
- return addressOf((item as {reply_to?:unknown;from?:unknown}).reply_to instanceof Array?
-  (item as {reply_to:string[]}).reply_to[0]:(item as {from?:unknown}).from) ||
-  addressOf((item as {from?:unknown}).from);
+ const data=item as {reply_to?:unknown;from?:unknown};
+ const requested=Array.isArray(data.reply_to)?data.reply_to[0]:data.reply_to;
+ return addressOf(requested)||addressOf(data.from);
 }

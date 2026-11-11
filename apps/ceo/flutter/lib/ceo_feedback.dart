@@ -7,7 +7,9 @@ import 'ceo_ui_tokens.dart';
 class CeoErrorToast extends StatefulWidget{
  final String message;
  final VoidCallback onRetry,onClose;
- const CeoErrorToast({super.key,required this.message,required this.onRetry,required this.onClose});
+ final bool success;
+ const CeoErrorToast({super.key,required this.message,required this.onRetry,
+  required this.onClose,this.success=false});
  @override State<CeoErrorToast> createState()=>_CeoErrorToastState();
 }
 class _CeoErrorToastState extends State<CeoErrorToast>{
@@ -49,12 +51,13 @@ class _CeoErrorToastState extends State<CeoErrorToast>{
        ConstrainedBox(constraints:const BoxConstraints(minHeight:66),
         child:Padding(padding:const EdgeInsets.fromLTRB(12,10,6,10),
          child:Row(children:[
-          const Icon(Icons.error_outline,color:Color(0xFFB42318),size:22),
+          Icon(widget.success?Icons.check_circle_outline:Icons.error_outline,
+           color:widget.success?ceoPurple:const Color(0xFFB42318),size:22),
           const SizedBox(width:10),
           Expanded(child:Text(widget.message,maxLines:3,
            overflow:TextOverflow.ellipsis,
            style:const TextStyle(fontSize:13,height:1.3))),
-          TextButton(onPressed:(){timer?.cancel();widget.onRetry();},
+          if(!widget.success)TextButton(onPressed:(){timer?.cancel();widget.onRetry();},
            child:const Text('Thử lại')),
           IconButton(tooltip:'Đóng thông báo',onPressed:hide,
            constraints:const BoxConstraints(minWidth:36,minHeight:36),
