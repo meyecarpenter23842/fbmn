@@ -92,6 +92,8 @@ try{for(const width of [1440,1280,1024,801,768,390,360]){
    visual.height=window.innerHeight-280;
    visual.dispatchEvent(new Event("resize"));
   });
+  // Allow visual-viewport resize styles and any pending layout frame to settle.
+  await page.waitForTimeout(180);
   const keyboard=await chat.evaluate(el=>({
    bottom:el.getBoundingClientRect().bottom,
    visualBottom:visualViewport.offsetTop+visualViewport.height,
@@ -99,7 +101,12 @@ try{for(const width of [1440,1280,1024,801,768,390,360]){
    keyboardInset:getComputedStyle(el).getPropertyValue("--fb-chat-keyboard-bottom"),
    visibleHeight:getComputedStyle(el).getPropertyValue("--fb-chat-visual-height"),
    computedHeight:getComputedStyle(el).height,
-   inlineHeight:el.style.height
+   inlineHeight:el.style.height,
+   inlineCss:el.style.cssText,
+   computedMinHeight:getComputedStyle(el).minHeight,
+   computedMaxHeight:getComputedStyle(el).maxHeight,
+   computedTransition:getComputedStyle(el).transition,
+   supportsHeight:CSS.supports("height",el.style.height)
   }));
   assert.ok(keyboard.bottom<=keyboard.visualBottom-8&&keyboard.composerBottom<=keyboard.visualBottom-8,
    "virtual keyboard hides mobile chat composer "+JSON.stringify({width,keyboard}));
