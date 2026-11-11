@@ -1,0 +1,11 @@
+{
+ "name":"Futurebook Miền Nam — CEO",
+ "short_name":"Futurebook CEO",
+ "start_url":"/ceo/index.html",
+ "scope":"/ceo/",
+ "display":"standalone",
+ "background_color":"#F7F8FC",
+ "theme_color":"#6D249E",
+ "orientation":"portrait-primary",
+ "icons":[{"src":"icons/fbmn.svg","sizes":"any","type":"image/svg+xml","purpose":"any"}]
+}

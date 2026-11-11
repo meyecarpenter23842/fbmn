@@ -1,0 +1,52 @@
+// Models reflect existing Owner-only Worker responses. No invented analytics or unread flags.
+String _str(Object? value)=>value is String?value:"";
+int _num(Object? value)=>value is int?value:0;
+Map<String,dynamic> _object(Object? v)=>v is Map<String,dynamic>?v:<String,dynamic>{};
+List<dynamic> _array(Object? v)=>v is List? v:<dynamic>[];
+
+class CeoPage<T>{
+ final List<T> items;
+ final int page;
+ final bool hasMore;
+ const CeoPage(this.items,this.page,this.hasMore);
+}
+
+class CeoConversation {
+ final String session,createdAt,updatedAt,latest;
+ final int messageCount;
+ const CeoConversation({required this.session,required this.createdAt,required this.updatedAt,
+   required this.latest,required this.messageCount});
+ factory CeoConversation.fromJson(Object? input) {
+  final j=_object(input);
+  return CeoConversation(session:_str(j["session"]),createdAt:_str(j["createdAt"]),
+   updatedAt:_str(j["updatedAt"]),latest:_str(j["latest"]),messageCount:_num(j["messageCount"]));
+ }
+}
+class CeoTurn{
+ final String question,answer,createdAt;
+ const CeoTurn({required this.question,required this.answer,required this.createdAt});
+ factory CeoTurn.fromJson(Object? input){
+  final j=_object(input);
+  return CeoTurn(question:_str(j["question"]),answer:_str(j["answer"]),createdAt:_str(j["createdAt"]));
+ }
+}
+class CeoRequest{
+ final String id,name,email,phone,company,province,customerGroup,
+   productType,specifications,quantity,desiredDate,details,message,createdAt,status;
+ final List<String> interests;
+ const CeoRequest({required this.id,required this.name,required this.email,required this.phone,
+  required this.company,required this.province,required this.customerGroup,required this.productType,
+  required this.specifications,required this.quantity,required this.desiredDate,required this.details,
+  required this.message,required this.createdAt,required this.status,required this.interests});
+ bool get pending=>status=="new";
+ factory CeoRequest.fromJson(Object? input) {
+  final j=_object(input);
+  return CeoRequest(
+   id:_str(j["id"]),name:_str(j["name"]),email:_str(j["email"]),phone:_str(j["phone"]),
+   company:_str(j["company"]),province:_str(j["province"]),customerGroup:_str(j["customerGroup"]),
+   productType:_str(j["productType"]),specifications:_str(j["specifications"]),
+   quantity:_str(j["quantity"]),desiredDate:_str(j["desiredDate"]),details:_str(j["details"]),
+   message:_str(j["message"]),createdAt:_str(j["createdAt"]),status:_str(j["status"]),
+   interests:_array(j["interests"]).whereType<String>().toList(growable:false));
+ }
+}
