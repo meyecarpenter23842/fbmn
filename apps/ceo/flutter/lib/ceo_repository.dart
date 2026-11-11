@@ -51,7 +51,9 @@ class CeoApi implements CeoRepository {
  Future<String> _ownerJwt() async{
   final response=await _request("GET","/api/auth/token");
   final data=response["data"];
-  final token=data is Map<String,dynamic>?data["token"]:null;
+  // Raw Neon/Better Auth HTTP returns {"token":"..."} at the top level.
+  // The SDK client may expose data.token; accept both exact shapes.
+  final token=response["token"]??(data is Map<String,dynamic>?data["token"]:null);
   if(token is! String||token.length>12000||!_jwtPattern.hasMatch(token)){
    throw const CeoApiException(401);
   }

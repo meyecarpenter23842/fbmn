@@ -19,7 +19,7 @@ void main(){
      return json(200,{'data':{'user':{'id':'example'}}});
     case '/api/auth/token':
      expect(r.method,'GET');
-     return json(200,{'data':{'token':jwt}});
+     return json(200,{'token':jwt});
     case '/api/ceo/session':
      expect(r.headers['authorization'],'Bearer '+jwt);
      return json(200,{'data':{'role':'owner'}});

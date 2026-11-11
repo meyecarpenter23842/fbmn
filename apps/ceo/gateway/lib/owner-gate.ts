@@ -8,8 +8,8 @@ export function workerOrigin():string|null{
   return url.protocol==="https:"&&!url.username&&!url.password&&!url.search&&!url.hash&&url.pathname==="/"?url.origin:null;
  }catch{return null;}
 }
-/** First-party Neon Auth cookie -> short-lived JWT -> Worker Owner DB grant.
- * Never send JWT or cookie to Flutter, analytics, logs or persistent storage. */
+/** Short-lived same-origin Neon browser bearer (or server cookie fallback) -> Worker.
+ * The Worker verifies JWT and Owner DB grants. Never log or persist credentials. */
 export async function requireOwner(request?:Request):Promise<Gate>{
  const base=workerOrigin();
  if(!base)return {status:503};
