@@ -26,15 +26,22 @@ CREATE TABLE fbmn_catalog_private.ceo_push_events(
  attempts integer NOT NULL DEFAULT 0 CHECK(attempts BETWEEN 0 AND 5),
  delivered_at timestamptz
 );
+CREATE TABLE fbmn_catalog_private.ceo_push_delivery_receipts(
+ event_key text NOT NULL REFERENCES fbmn_catalog_private.ceo_push_events(event_key) ON DELETE CASCADE,
+ endpoint text NOT NULL REFERENCES fbmn_catalog_private.ceo_push_subscriptions(endpoint) ON DELETE CASCADE,
+ delivered_at timestamptz NOT NULL DEFAULT now(),
+ PRIMARY KEY(event_key,endpoint)
+);
 CREATE INDEX ceo_push_events_ready
  ON fbmn_catalog_private.ceo_push_events(occurred_at)
  WHERE delivered_at IS NULL;
-REVOKE ALL ON fbmn_catalog_private.ceo_push_subscriptions,fbmn_catalog_private.ceo_push_events FROM PUBLIC;
+REVOKE ALL ON fbmn_catalog_private.ceo_push_subscriptions,fbmn_catalog_private.ceo_push_events,fbmn_catalog_private.ceo_push_delivery_receipts FROM PUBLIC;
 GRANT USAGE ON SCHEMA fbmn_catalog_private TO fbmn_ceo_push_login;
 GRANT USAGE ON SCHEMA fbmn_admin TO fbmn_ceo_push_login;
 GRANT SELECT(auth_subject,role,enabled) ON fbmn_admin.principals TO fbmn_ceo_push_login;
 GRANT SELECT,INSERT,UPDATE,DELETE ON fbmn_catalog_private.ceo_push_subscriptions TO fbmn_ceo_push_login;
 GRANT SELECT,INSERT,UPDATE,DELETE ON fbmn_catalog_private.ceo_push_events TO fbmn_ceo_push_login;
+GRANT SELECT,INSERT,DELETE ON fbmn_catalog_private.ceo_push_delivery_receipts TO fbmn_ceo_push_login;
 -- Events are IDs/timestamps/status only, not customer name/contact/chat body.
 GRANT SELECT(id,created_at,status) ON fbmn_catalog_private.contact_requests TO fbmn_ceo_push_login;
 GRANT SELECT(id,created_at,status) ON fbmn_catalog_private.outsourcing_requests TO fbmn_ceo_push_login;

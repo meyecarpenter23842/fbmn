@@ -36,6 +36,13 @@ export function parseSubscription(body){
   auth.length>48||!base64url.test(auth))return null;
  return {endpoint:body.endpoint,p256dh,auth};
 }
+// Retry only targets which have not already accepted this event.
+export function pendingTargets(subscriptions,sentEndpoints,occurredAt){
+ const sent=new Set(sentEndpoints);
+ const timestamp=new Date(occurredAt).getTime();
+ return subscriptions.filter(sub=>!sent.has(sub.endpoint)&&
+  new Date(sub.created_at).getTime()<=timestamp);
+}
 export function pushPayload(kind,ref,badge){
  if(!validRef(kind,ref))throw Error("invalid_push_target");
  return JSON.stringify({type:kind,id:ref,badge:Number.isSafeInteger(badge)?

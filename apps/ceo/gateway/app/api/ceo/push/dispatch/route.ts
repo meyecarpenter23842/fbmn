@@ -1,6 +1,6 @@
 import {createHash,timingSafeEqual} from "node:crypto";
 import {withPushDb} from "@/lib/ceo-push-db";
-import {pushPayload,validRef} from "@/lib/ceo-push-policy.mjs";
+import {pushPayload,validRef,pendingTargets} from "@/lib/ceo-push-policy.mjs";
 import webpush from "web-push";
 export const runtime="nodejs";export const dynamic="force-dynamic";export const maxDuration=60;
 const headers={"Cache-Control":"private, no-store"};
@@ -56,12 +56,17 @@ export async function GET(request:Request){
     let failed=false;
     const payload=pushPayload(e.kind,e.ref,badge);
     const topic=createHash("sha256").update(e.event_key).digest("base64url").slice(0,26);
-    await Promise.all(subs.rows.filter(sub=>new Date(sub.created_at)<=new Date(e.occurred_at))
-      .map(async sub=>{
+    const receipts=await db.query<{endpoint:string}>(
+     "SELECT endpoint FROM fbmn_catalog_private.ceo_push_delivery_receipts WHERE event_key=$1",
+     [e.event_key]);
+    const targets=pendingTargets(subs.rows,receipts.rows.map(r=>r.endpoint),e.occurred_at);
+    await Promise.all(targets.map(async sub=>{
        try{
         await webpush.sendNotification(
          {endpoint:sub.endpoint,keys:{p256dh:sub.p256dh,auth:sub.auth}},payload,
          {TTL:86400,urgency:"normal",topic,timeout:7000,contentEncoding:"aes128gcm"});
+        await db.query("INSERT INTO fbmn_catalog_private.ceo_push_delivery_receipts(event_key,endpoint)"+
+         " VALUES($1,$2) ON CONFLICT DO NOTHING",[e.event_key,sub.endpoint]);
        }catch(error){
         const status=(error as {statusCode?:number})?.statusCode;
         if(status===404||status===410){

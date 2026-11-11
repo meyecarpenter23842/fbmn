@@ -1,6 +1,6 @@
 import {test} from "node:test";
 import assert from "node:assert/strict";
-import {pushEndpoint,parseSubscription,validRef,pushPayload,pushRoute,allowedOrigin} from "../lib/ceo-push-policy.mjs";
+import {pushEndpoint,parseSubscription,validRef,pushPayload,pushRoute,allowedOrigin,pendingTargets} from "../lib/ceo-push-policy.mjs";
 const sub={endpoint:"https://fcm.googleapis.com/fcm/send/something",
  keys:{p256dh:"a".repeat(87),auth:"b".repeat(22)}};
 test("browser push endpoint restricted; prevent server-side request forgery",()=>{
@@ -29,4 +29,12 @@ test("mutations must be same origin, not forged from another site",()=>{
  assert.equal(allowedOrigin(new Request("https://ceo.fbmn.vn/api/ceo/push/subscription",
   {headers:{Origin:"https://attacker.test"}})),false);
  assert.equal(allowedOrigin(new Request("https://ceo.fbmn.vn/api/ceo/push/subscription")),false);
+});
+
+test("retries exclude already accepted delivery receipts",()=>{
+ const now=new Date("2026-11-11T06:00:00Z");
+ const subs=[{endpoint:"one",created_at:new Date("2026-11-11T05:00:00Z")},
+  {endpoint:"two",created_at:new Date("2026-11-11T05:00:00Z")},
+  {endpoint:"late",created_at:new Date("2026-11-11T07:00:00Z")}];
+ assert.deepEqual(pendingTargets(subs,["one"],now).map(x=>x.endpoint),["two"]);
 });

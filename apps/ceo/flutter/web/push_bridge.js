@@ -46,7 +46,16 @@
   if(Notification.permission==="denied")return "denied";
   try{
    const reg=await navigator.serviceWorker.getRegistration(SCOPE);
-   if(reg&&await reg.pushManager.getSubscription())return "enabled";
+   if(reg){
+    const sub=await reg.pushManager.getSubscription();
+    if(sub){
+     // Update last_seen_at for an actively used Owner PWA, and keep an
+     // expired or revoked server registration from appearing active.
+     try{await ceoApi("subscription","POST",sub.toJSON());}
+     catch(error){return error?.message==="login_required"?"login_required":"service_error";}
+     return "enabled";
+    }
+   }
   }catch{return "service_error";}
   return "disabled";
  };
