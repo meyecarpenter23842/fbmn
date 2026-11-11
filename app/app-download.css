@@ -5,14 +5,14 @@
   align-self: center;
   align-items: center;
   justify-content: center;
-  gap: 7px;
+  gap: 9px;
   flex: 0 0 auto;
   margin-left: auto;
   min-height: var(--fb-control-height-compact);
   padding: 0 13px;
-  border: 1px solid var(--fb-glass-border);
+  border: 1px solid rgba(255,255,255,.42);
   border-radius: 10px;
-  background: rgba(255,255,255,.47);
+  background: rgba(255,255,255,.94);
   color: var(--color-primary-strong);
   font-size: var(--fb-control-font-size);
   font-weight: 750;
@@ -22,10 +22,12 @@
   backdrop-filter: blur(10px);
   transition: color var(--fb-motion-button) var(--fb-easing-open), background-color var(--fb-motion-button) var(--fb-easing-open), border-color var(--fb-motion-button) var(--fb-easing-open), transform var(--fb-motion-button) var(--fb-easing-open);
 }
-.ref-navigation__download svg { color: var(--color-primary); }
+.ref-navigation__download > svg { color: var(--color-primary); }
+.app-download__trigger-platforms { display: inline-flex; align-items: center; gap: 7px; padding-left: 9px; border-left: 1px solid var(--fb-glass-stroke); color: var(--fb-glass-ink); }
+.app-download__trigger-platforms svg { width: 17px; height: 17px; }
 .ref-navigation__download:hover {
   color: var(--color-primary-strong);
-  background: rgba(255,255,255,.8);
+  background: #fff;
   border-color: rgba(109,36,158,.3);
   transform: translateY(-1px);
 }
@@ -34,10 +36,10 @@
 .app-download {
   position: fixed;
   z-index: 110;
-  top: 116px;
+  top: 86px;
   right: clamp(12px, 3vw, 36px);
   width: min(358px, calc(100vw - 24px));
-  max-height: calc(100dvh - 132px);
+  max-height: calc(100dvh - 102px);
   overflow: hidden auto;
   padding: 0;
   border: 1px solid rgba(255,255,255,.84);
