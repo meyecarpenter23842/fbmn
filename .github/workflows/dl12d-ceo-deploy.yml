@@ -1,0 +1,95 @@
+name: DL12D CEO Release (manual)
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: "Vercel destination"
+        required: true
+        type: choice
+        default: preview
+        options: [preview, production]
+permissions:
+  contents: read
+concurrency:
+  group: dl12d-ceo-deploy
+  cancel-in-progress: false
+jobs:
+  release:
+    if: github.repository == 'meyecarpenter23842/fbmn' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    environment: ceo-release
+    env:
+      VERCEL_ORG_ID: team_hUFtVIsg2fKzwGlfi2Lrw1du
+      VERCEL_PROJECT_ID: prj_aR7k1l9K9CRhIE7Ao1yAaIKnL26B
+      VERCEL_CLI_VERSION: 65.14.0
+      NEXT_TELEMETRY_DISABLED: '1'
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.47.9'
+          channel: stable
+          cache: true
+      - name: Flutter analyze and tests
+        working-directory: apps/ceo/flutter
+        run: |
+          flutter pub get
+          flutter analyze
+          flutter test
+      - name: Build Flutter PWA
+        working-directory: apps/ceo/flutter
+        run: flutter build web --release --base-href=/ceo/
+      - name: Package tested Flutter into CEO gateway
+        run: |
+          set -euo pipefail
+          mkdir -p apps/ceo/gateway/public/ceo
+          cp -a apps/ceo/flutter/build/web/. apps/ceo/gateway/public/ceo/
+          test -s apps/ceo/gateway/public/ceo/index.html
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '24'
+      - name: Gateway verification
+        working-directory: apps/ceo/gateway
+        run: |
+          npm install --no-audit --no-fund
+          npm run lint
+          npm run typecheck
+          npm test
+      - name: Install pinned Vercel CLI
+        run: npm install -g "vercel@${VERCEL_CLI_VERSION}"
+      - name: Prepare Vercel link
+        working-directory: apps/ceo/gateway
+        run: |
+          mkdir -p .vercel
+          printf '{"orgId":"%s","projectId":"%s"}\n' "$VERCEL_ORG_ID" "$VERCEL_PROJECT_ID" > .vercel/project.json
+      - name: Pull Vercel environment
+        working-directory: apps/ceo/gateway
+        run: |
+          if [ "${{ inputs.target }}" = production ]; then environment=production; else environment=preview; fi
+          vercel pull --yes --environment "$environment" --scope alibaba240185
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      - name: Vercel build — reuse verified Flutter files
+        working-directory: apps/ceo/gateway
+        run: |
+          if [ "${{ inputs.target }}" = production ]; then
+            vercel build --prod --scope alibaba240185
+          else
+            vercel build --scope alibaba240185
+          fi
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          FBMN_CEO_PREBUILT: '1'
+      - name: Deploy selected target
+        working-directory: apps/ceo/gateway
+        run: |
+          if [ "${{ inputs.target }}" = production ]; then
+            vercel deploy --prebuilt --prod --yes --scope alibaba240185
+          else
+            vercel deploy --prebuilt --yes --scope alibaba240185
+          fi
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
