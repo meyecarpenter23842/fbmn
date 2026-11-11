@@ -15,6 +15,7 @@ class FakeRepo implements CeoRepository {
  @override Future<List<CeoTurn>> turns(String session)async=>[];
  @override Future<CeoPage<CeoRequest>> contactRequests([int page=1])async=>CeoPage([],page,false);
  @override Future<CeoPage<CeoRequest>> outsourcingRequests([int page=1])async=>CeoPage([],page,false);
+ @override Future<String> markViewed(String kind,String id)async=>'2026-11-11T14:00:00.000Z';
  @override void dispose(){}
 }
 
@@ -64,11 +65,11 @@ void main(){
   expect(find.text('Hội thoại'),findsNothing);
  });
 
- testWidgets('CEO bell and menu tabs show red numeric badge only for new requests', (tester)async{
+ testWidgets('CEO bell and menu tabs show red numeric badge only for new unviewed requests', (tester)async{
   await tester.pumpWidget(CeoApp(repository:FakePendingRepo()));
   await tester.pumpAndSettle();
 
-  final bell=find.byTooltip('Xem thông báo và yêu cầu mới');
+  final bell=find.byTooltip('Xem thông báo và yêu cầu chưa xem');
   expect(bell,findsOneWidget);
   final badgeWithinBell=find.descendant(of:bell,matching:find.byType(Badge));
   expect(badgeWithinBell,findsOneWidget);
@@ -83,11 +84,11 @@ void main(){
   await tester.pumpWidget(CeoApp(repository:FakePendingRepo()));
   await tester.pumpAndSettle();
 
-  await tester.tap(find.byTooltip('Xem thông báo và yêu cầu mới'));
+  await tester.tap(find.byTooltip('Xem thông báo và yêu cầu chưa xem'));
   await tester.pumpAndSettle();
 
-  expect(find.text('Thông báo & yêu cầu mới'),findsOneWidget);
-  expect(find.text('3 yêu cầu mới'),findsOneWidget);
+  expect(find.text('Thông báo & yêu cầu chưa xem'),findsOneWidget);
+  expect(find.text('3 yêu cầu chưa xem'),findsOneWidget);
   expect(find.text('Web Push trên thiết bị'),findsOneWidget);
   expect(find.text('Gia công · Khách thử'),findsNWidgets(2));
   expect(find.text('Liên hệ · Khách thử'),findsOneWidget);
@@ -103,14 +104,14 @@ void main(){
   await tester.pump();
   await tester.pump();
 
-  await tester.tap(find.byTooltip('Xem thông báo và yêu cầu mới'));
+  await tester.tap(find.byTooltip('Xem thông báo và yêu cầu chưa xem'));
   await tester.pump(const Duration(milliseconds:350));
-  expect(find.text('0 yêu cầu mới'),findsOneWidget);
+  expect(find.text('0 yêu cầu chưa xem'),findsOneWidget);
 
   repo.finishLoading();
   await tester.pump();
   await tester.pumpAndSettle();
-  expect(find.text('3 yêu cầu mới'),findsOneWidget);
+  expect(find.text('3 yêu cầu chưa xem'),findsOneWidget);
  });
 
  testWidgets('Bell updates when a second request page finishes loading', (tester)async{
@@ -122,20 +123,40 @@ void main(){
 
   await tester.tap(find.text('Tải trang tiếp'));
   await tester.pump();
-  await tester.tap(find.byTooltip('Xem thông báo và yêu cầu mới'));
+  await tester.tap(find.byTooltip('Xem thông báo và yêu cầu chưa xem'));
   await tester.pump(const Duration(milliseconds:350));
-  expect(find.text('3 yêu cầu mới'),findsOneWidget);
+  expect(find.text('3 yêu cầu chưa xem'),findsOneWidget);
 
   repo.finishSecondPage();
   await tester.pump();
   await tester.pumpAndSettle();
-  expect(find.text('4 yêu cầu mới'),findsOneWidget);
+  expect(find.text('4 yêu cầu chưa xem'),findsOneWidget);
+ });
+
+ testWidgets('Viewing request clears Owner badge but retains Mới workflow status', (tester)async{
+  await tester.pumpWidget(CeoApp(repository:FakePendingRepo()));
+  await tester.pumpAndSettle();
+  final bell=find.byTooltip('Xem thông báo và yêu cầu mới');
+  expect(find.descendant(of:bell,matching:find.text('3')),findsOneWidget);
+  await tester.tap(bell);
+  await tester.pumpAndSettle();
+  await tester.tap(find.text('Liên hệ · Khách thử'));
+  await tester.pumpAndSettle();
+  expect(find.text('Chi tiết liên hệ'),findsOneWidget);
+  expect(find.text('Mới · chưa xử lý'),findsOneWidget);
+  expect(find.descendant(of:bell,matching:find.text('2')),findsOneWidget);
+  await tester.tap(find.byTooltip('Đóng chi tiết'));
+  await tester.pumpAndSettle();
+  await tester.tap(bell);
+  await tester.pumpAndSettle();
+  expect(find.text('2 yêu cầu chưa xem'),findsOneWidget);
+  expect(find.text('Liên hệ · Khách thử'),findsNothing);
  });
 
  testWidgets('CEO bell hides number when no status-new requests exist', (tester)async{
   await tester.pumpWidget(CeoApp(repository:FakeRepo(true)));
   await tester.pumpAndSettle();
-  final bell=find.byTooltip('Xem thông báo và yêu cầu mới');
+  final bell=find.byTooltip('Xem thông báo và yêu cầu chưa xem');
   expect(bell,findsOneWidget);
   expect(find.descendant(of:bell,matching:find.byType(Badge)),findsNothing);
  });
