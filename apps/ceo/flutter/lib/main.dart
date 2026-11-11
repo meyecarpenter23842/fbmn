@@ -175,6 +175,95 @@ class _CeoHomeState extends State<CeoHome>{
    pushState=='denied'?Icons.notifications_off_outlined:
    Icons.notifications_none_outlined));
 
+ String get pushStatusText=>switch(pushState){
+  'enabled'=>'Đang bật trên thiết bị này.',
+  'disabled'=>'Đang tắt. Bật để nhận thông báo khi có khách mới.',
+  'denied'=>'Trình duyệt đã chặn quyền thông báo.',
+  'ios_install'=>'iPhone: thêm CEO vào Màn hình chính rồi mở từ ứng dụng.',
+  'login_required'=>'Phiên Owner hết hạn. Vui lòng đăng nhập lại.',
+  'forbidden'=>'Tài khoản hiện tại không có quyền Owner.',
+  'service_error'=>'Chưa kết nối được máy chủ Web Push.',
+  'unsupported'=>'Trình duyệt hoặc thiết bị không hỗ trợ Web Push.',
+  _=>'Đang kiểm tra trạng thái thông báo...',
+ };
+
+ // Bell opens the Owner's new-request inbox. Push permission is managed
+ // separately here, so viewing requests never silently unsubscribes.
+ void openNotifications(){
+  showModalBottomSheet<void>(
+   context:context,isScrollControlled:true,useSafeArea:true,
+   sheetAnimationStyle:ceoDetailSheetMotion(context),
+   builder:(sheetContext)=>StatefulBuilder(
+    builder:(sheetContext,updateSheet){
+     final newOut=outsourcing?.items.where((r)=>r.pending).toList()??<CeoRequest>[];
+     final newContacts=contacts?.items.where((r)=>r.pending).toList()??<CeoRequest>[];
+     final total=newOut.length+newContacts.length;
+     void openRequest(CeoRequest request,bool isOutsourcing){
+      Navigator.of(sheetContext).pop();
+      Future.delayed(const Duration(milliseconds:250),(){
+       if(mounted)showCase(request,isOutsourcing);
+      });
+     }
+     return FractionallySizedBox(heightFactor:.78,child:Column(children:[
+      const CeoSheetHeader(title:'Thông báo & yêu cầu mới'),
+      Padding(padding:const EdgeInsets.fromLTRB(12,8,12,4),
+       child:Card(margin:EdgeInsets.zero,color:const Color(0xFFF4EDFA),
+        child:ListTile(
+         leading:const Icon(Icons.notifications_active_outlined,color:brand),
+         title:const Text('Web Push trên thiết bị',
+          style:TextStyle(fontWeight:FontWeight.w700,fontSize:14)),
+         subtitle:Text(pushStatusText,style:const TextStyle(fontSize:12)),
+         trailing:pushBusy?
+          const SizedBox(width:24,height:24,
+           child:CircularProgressIndicator(strokeWidth:2)):
+          TextButton(
+           onPressed:()async{
+            final action=togglePush(); // Preserve the browser user gesture.
+            updateSheet((){});
+            await action;
+            if(sheetContext.mounted)updateSheet((){});
+           },
+           child:Text(pushState=='enabled'?'Tắt':'Bật')),
+        ))),
+      Expanded(child:ListView(padding:const EdgeInsets.fromLTRB(12,8,12,20),children:[
+       ListTile(
+        leading:const Icon(Icons.mark_email_unread_outlined,color:brand),
+        title:Text('$total yêu cầu mới',
+         style:const TextStyle(fontWeight:FontWeight.w800,fontSize:16)),
+        subtitle:const Text('Đếm yêu cầu trạng thái Mới trong các trang đã tải; không phải số chưa đọc.'),
+       ),
+       if(total==0)
+        const Padding(padding:EdgeInsets.all(16),
+         child:Text('Hiện không có yêu cầu mới trong danh sách đã tải.')),
+       for(final item in newOut)
+        ListTile(
+         leading:const Icon(Icons.handyman_outlined,color:brand),
+         title:Text('Gia công · ${item.name}'),
+         subtitle:Text(dateString(item.createdAt)),
+         trailing:const Icon(Icons.chevron_right),
+         onTap:()=>openRequest(item,true)),
+       for(final item in newContacts)
+        ListTile(
+         leading:const Icon(Icons.mail_outline,color:brand),
+         title:Text('Liên hệ · ${item.name}'),
+         subtitle:Text(dateString(item.createdAt)),
+         trailing:const Icon(Icons.chevron_right),
+         onTap:()=>openRequest(item,false)),
+       const Divider(),
+       ListTile(
+        title:const Text('Xem tất cả yêu cầu gia công'),
+        trailing:const Icon(Icons.arrow_forward_ios,size:16),
+        onTap:(){Navigator.of(sheetContext).pop();choose(2);}),
+       ListTile(
+        title:const Text('Xem tất cả liên hệ'),
+        trailing:const Icon(Icons.arrow_forward_ios,size:16),
+        onTap:(){Navigator.of(sheetContext).pop();choose(3);}),
+      ])),
+     ]));
+    }),
+  );
+ }
+
  Future<void> openDeepLinkedItem()async{
   final id=initialTarget,tab=initialTab;
   initialTarget=null;initialTab=null;
@@ -276,8 +365,8 @@ class _CeoHomeState extends State<CeoHome>{
      Text(names[selected],style:const TextStyle(fontSize:12,color:Color(0xFF667085)))]),
     actions:[
      IconButton(
-      tooltip:pushState=='enabled'?'Tắt thông báo Web Push':'Bật thông báo khách mới',
-      onPressed:pushBusy?null:togglePush,
+      tooltip:'Xem thông báo và yêu cầu mới',
+      onPressed:openNotifications,
       icon:bellIcon()),
      IconButton(tooltip:'Tải lại dữ liệu',onPressed:loading||selected==4?null:refresh,
       icon:const Icon(Icons.refresh)),
