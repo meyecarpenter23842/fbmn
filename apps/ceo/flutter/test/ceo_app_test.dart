@@ -56,6 +56,21 @@ class FakePaginatedRepo extends FakePendingRepo {
  }
 }
 
+
+class FakeChatRepo extends FakeRepo {
+ FakeChatRepo():super(true);
+ @override Future<CeoPage<CeoConversation>> conversations([int page=1])async=>CeoPage([
+  const CeoConversation(session:'aabbccdd-0000-0000-0000-000000000001',
+   createdAt:'2026-11-11T12:00:00Z',updatedAt:'2026-11-11T12:10:00Z',
+   latest:'Khách muốn hỏi mẫu bìa',messageCount:1),
+ ],page,false);
+ @override Future<List<CeoTurn>> turns(String session)async=>[
+  const CeoTurn(question:'Cho tôi xem mẫu bìa giấy',
+   answer:'Vui lòng xem catalogue của Futurebook.',
+   createdAt:'2026-11-11T12:00:00Z'),
+ ];
+}
+
 void main(){
  testWidgets('Anonymous session cannot see any Owner inbox', (tester)async{
   await tester.pumpWidget(CeoApp(repository:FakeRepo(false)));
@@ -160,6 +175,58 @@ void main(){
   expect(bell,findsOneWidget);
   expect(find.descendant(of:bell,matching:find.byType(Badge)),findsNothing);
  });
+
+ testWidgets('CEO-UI01 mobile workspace has no overflow at 360/390 px', (tester)async{
+  for(final width in <double>[360,390]){
+   await tester.binding.setSurfaceSize(Size(width,800));
+   await tester.pumpWidget(CeoApp(repository:FakePendingRepo()));
+   await tester.pumpAndSettle();
+   for(final tab in <int>[0,1,2,3]){
+    final nav=tester.widget<NavigationBar>(find.byType(NavigationBar));
+    nav.onDestinationSelected!(tab);
+    await tester.pumpAndSettle();
+    expect(tester.takeException(),isNull,
+     reason:'Unexpected Flutter overflow at width '+width.toString()+' tab '+tab.toString());
+   }
+   final search=find.byKey(const ValueKey('ceo-workspace-search'));
+   expect(search,findsOneWidget);
+   await tester.enterText(search,'khong-co-khach-hang');
+   await tester.pumpAndSettle();
+   expect(find.text('Không tìm thấy yêu cầu'),findsOneWidget);
+   expect(tester.takeException(),isNull);
+   await tester.pumpWidget(const SizedBox.shrink());
+  }
+  await tester.binding.setSurfaceSize(null);
+ });
+
+ testWidgets('CEO-UI01 status filter keeps original pending states', (tester)async{
+  await tester.pumpWidget(CeoApp(repository:FakePendingRepo()));
+  await tester.pumpAndSettle();
+  await tester.tap(find.text('Liên hệ').last);
+  await tester.pumpAndSettle();
+  expect(find.text('Khách thử'),findsNWidgets(2));
+  await tester.tap(find.byKey(const ValueKey('ceo-filter-handled')));
+  await tester.pumpAndSettle();
+  expect(find.text('Khách thử'),findsOneWidget);
+  expect(find.text('Đã xử lý'),findsWidgets);
+  await tester.tap(find.byKey(const ValueKey('ceo-filter-new')));
+  await tester.pumpAndSettle();
+  expect(find.text('Khách thử'),findsOneWidget);
+  expect(find.text('Mới'),findsWidgets);
+ });
+
+ testWidgets('CEO-UI01 chat detail shows customer and assistant bubbles', (tester)async{
+  await tester.pumpWidget(CeoApp(repository:FakeChatRepo()));
+  await tester.pumpAndSettle();
+  await tester.tap(find.text('Hội thoại').last);
+  await tester.pumpAndSettle();
+  await tester.tap(find.textContaining('Phiên aabbccdd'));
+  await tester.pumpAndSettle();
+  expect(find.text('Khách hàng'),findsOneWidget);
+  expect(find.text('Trợ lý Futurebook'),findsOneWidget);
+  expect(find.text('Cho tôi xem mẫu bìa giấy'),findsOneWidget);
+ });
+
  testWidgets('Owner sees five tabs, no invented analytics', (tester)async{
   await tester.pumpWidget(CeoApp(repository:FakeRepo(true)));
   await tester.pumpAndSettle();
@@ -170,6 +237,6 @@ void main(){
   expect(find.text('Liên hệ'),findsWidgets);
   await tester.tap(find.text('Thống kê').last);
   await tester.pumpAndSettle();
-  expect(find.textContaining('Không hiển thị số liệu mẫu'),findsOneWidget);
+  expect(find.textContaining('Chỉ hiển thị số liệu sau khi kết nối'),findsOneWidget);
  });
 }
