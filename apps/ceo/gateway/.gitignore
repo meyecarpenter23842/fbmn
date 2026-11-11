@@ -4,3 +4,4 @@ node_modules/
 public/ceo/
 .env*
 !.env.example
+.vercel/

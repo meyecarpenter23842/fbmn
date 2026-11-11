@@ -1,0 +1,5 @@
+# Compiled CEO assets are generated in build, not source-controlled.
+.next
+node_modules
+.vercel
+*.log

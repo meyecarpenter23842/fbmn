@@ -5,7 +5,9 @@ on:
     paths:
       - "apps/ceo/**"
       - "docs/web-dl12a-ceo-flutter.md"
+      - "docs/web-dl12d-ceo-vercel.md"
       - ".github/workflows/dl12a-ceo.yml"
+      - ".github/workflows/dl12d-ceo-deploy.yml"
 permissions:
   contents: read
 jobs:
@@ -46,7 +48,23 @@ jobs:
       - run: flutter pub get
       - run: flutter analyze
       - run: flutter test
-      - run: flutter build web --base-href=/ceo/
+      - run: flutter build web --release --base-href=/ceo/
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '24'
+      - name: Verify the actual single-origin Vercel CEO bundle
+        run: |
+          set -euo pipefail
+          mkdir -p ../gateway/public/ceo
+          cp -a build/web/. ../gateway/public/ceo/
+          cd ../gateway
+          npm install --no-audit --no-fund
+          FBMN_CEO_PREBUILT=1 bash scripts/vercel-build-ceo.sh
+          test -s public/ceo/index.html
+          test -s public/ceo/flutter_bootstrap.js
+          node -e "const s=require('fs').readFileSync('public/ceo/index.html','utf8');if(!s.includes('<base href=\"/ceo/\">'))process.exit(1)"
+        env:
+          NEXT_TELEMETRY_DISABLED: '1'
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: dl12a-ceo-flutter-web
