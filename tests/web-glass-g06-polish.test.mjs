@@ -42,8 +42,8 @@ test("G06 glass improves backdrop visibility with existing R2 asset and gradient
   assert.match(site, /--fb-glass-shadow:\s*inset 0 1px 0 rgba/);
   assert.match(foundation, /var\(--fb-glass-decorative-image\)/);
   assert.match(foundation, /var\(--fb-glass-backdrop-gradient\)/);
-  assert.match(home, /\.ref-header__inner\s*\{[^}]*min-height:\s*68px/);
-  assert.match(home, /\.ref-navigation__inner\s*\{[^}]*min-height:\s*46px/);
+  assert.match(home, /\.ref-header__inner\s*\{[^}]*min-height:\s*62px/);
+  assert.match(home, /\.ref-navigation__inner\s*\{[^}]*grid-template-columns:\s*1fr auto 1fr/);
   assert.match(read("lib/media/decorative-background.ts"), /website: "\/api\/decorative-background"/);
   assert.doesNotMatch(css, /http:\/\/|https:\/\/|\.r2\.dev/);
   // Legacy homepage CSS already contains !important in book mockup geometry;

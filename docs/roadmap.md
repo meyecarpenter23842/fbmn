@@ -298,3 +298,7 @@ File người dùng cung cấp: `Futurebook_MASTER_SAN_PHAM_VA_ANH_2026.xlsx` (*
 - Frontend Native **iOS và Android** cho dealer và end-user theo hợp đồng API đã hoàn thiện; có thể dùng hai UI/client codebases hoặc công cụ native khác theo quyết định riêng. Backend sử dụng chung.
 - Chuyển backend/DB sang máy chủ riêng: qua service/data adapters, backups, migration cutover và smoke; tránh thay frontend và giữ API contracts. Đây là **giai đoạn sau**, không tự tạo issue triển khai ngay.
 - Kết nối CRM, push nâng cao, analytics, kho/ERP hoặc vận hành nhiều pháp nhân chỉ bổ sung khi có yêu cầu nghiệp vụ, không trộn vào roadmap đang chốt.
+
+
+## Owner 11/11/2026 — Website compact header, Policy, Analytics và CEO
+Thứ tự mới trước DL8: DL11A (Header một hàng, logo giữa 3+3 tab, tìm kiếm ngắn, khoảng hở, nút tải app footer) → DL11B (Policy độc lập /policy, không link menu/footer) → DL11C (PostHog Website, tracking không PII) → DL12A (Flutter/Dart CEO PWA, Owner, 5 tab, đọc chat/gia công/liên hệ, chưa đọc) → DL12B (Analytics CEO qua API server) → DL12C (Web Push, badge, deep link, thiết bị hỗ trợ) → DL12D (Vercel riêng fbmn-ceo, ceo.fbmn.vn, test thiết bị thật) → DL8. DL11A chỉ Website UI: bảo toàn sáu URL, search SKU, CTA đại lý, mobile hamburger, popup app và store URL chưa có; CI/Codex + browser 1440/1280/768/390/360 trước release. Không sửa backend/DB/Admin. Các lô sau chưa triển khai.

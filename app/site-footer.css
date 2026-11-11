@@ -37,7 +37,7 @@
   border: 0;
   background: transparent;
 }
-.site-footer__logo { display: block; width: 140px; max-width: 100%; height: auto; object-fit: contain; }
+.site-footer__logo { display: block; width: 104px; max-width: 100%; height: auto; object-fit: contain; }
 .site-footer__brand p {
   max-width: 250px;
   margin: 11px 0 0;
@@ -134,7 +134,7 @@ a.site-footer__social-icon:focus-visible { outline: 3px solid #fff; outline-offs
   .site-footer__wrap { width: calc(100% - 30px); padding: 18px 0 12px; }
   .site-footer__grid { grid-template-columns: minmax(0,1fr); gap: 14px; }
   .site-footer__brand { grid-column: 1 / -1; }
-  .site-footer__logo { width: 134px; }
+  .site-footer__logo { width: 110px; }
   .site-footer__brand p { margin-top: 9px; }
   .site-footer h2 { font-size: 14px; margin-bottom: 8px; }
   .site-footer__contact { grid-column: 1 / -1; }

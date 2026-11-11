@@ -98,9 +98,9 @@ test("G05 keeps desktop and mobile controls accessible without layout animation 
   const downloadHover = downloadCss.match(/\.ref-navigation__download:hover\s*\{([^}]*)\}/)?.[1];
   const downloadFocus = downloadCss.match(/\.ref-navigation__download:focus-visible\s*\{([^}]*)\}/)?.[1];
   assert.ok(downloadBase && downloadHover && downloadFocus);
-  assert.match(downloadBase, /background:\s*rgba\(255,255,255,\.47\)/);
+  assert.match(downloadBase, /background:\s*rgba\(255,255,255,\.94\)/);
   assert.match(downloadBase, /color:\s*var\(--color-primary-strong\)/);
-  assert.match(downloadHover, /background:\s*rgba\(255,255,255,\.8\)/);
+  assert.match(downloadHover, /background:\s*\#fff/);
   assert.match(downloadFocus, /outline:\s*3px solid var\(--color-primary\)/);
   const mobileDownload = downloadCss.match(/@media \(max-width: 800px\)\s*\{[\s\S]*?\.ref-navigation__download\s*\{([^}]*)\}/)?.[1];
   assert.match(mobileDownload || "", /min-height:\s*var\(--fb-control-height-touch\)/);

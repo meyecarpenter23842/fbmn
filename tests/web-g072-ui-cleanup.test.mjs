@@ -71,7 +71,7 @@ test("DL7D supersedes G07.2 footer groups while keeping brand, contact and socia
   assert.match(footer,/officialContact as contact/);
   assert.match(footer,/href="\/lien-he#thong-tin-lien-he"/);
   assert.doesNotMatch(footer,/Khám phá Futurebook|Hỗ trợ khách hàng|Fanpage/);
-  assert.match(footerCSS,/\.site-footer__logo\s*\{[^}]*width:\s*140px/);
+  assert.match(footerCSS,/\.site-footer__logo\s*\{[^}]*width:\s*104px/);
   assert.match(footerCSS,/@media \(max-width: 700px\)[\s\S]*?\.site-footer__grid\s*\{[^}]*grid-template-columns:\s*minmax\(0,1fr\)/);
   assert.match(footerCSS,/\.site-footer__social-icon--facebook/);
   assert.match(footerCSS,/\.site-footer__social-icon--youtube/);

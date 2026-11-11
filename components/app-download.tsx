@@ -202,7 +202,7 @@ export function AppDownloadMenuButton({ onOpen }: { onOpen?: () => void }) {
         <rect x="4.5" y="2" width="15" height="20" rx="3"/>
         <path d="M12 6v9m-3-3 3 3 3-3M10 19h4"/>
       </svg>
-      <span>Tải app</span>
+      <span>Tải ứng dụng</span><span className="app-download__trigger-platforms" aria-hidden="true"><AppStoreIcon platform="ios"/><AppStoreIcon platform="android"/></span>
     </button>
   );
 }

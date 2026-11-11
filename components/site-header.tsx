@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
@@ -15,10 +15,10 @@ const desktopNavigation = [
   { label: "Liên hệ", href: "/lien-he" },
 ] as const;
 
-function Brand() {
+function Brand({mobile=false}: {mobile?:boolean}) {
   return (
-    <Link className="ref-brand" href="/#home" aria-label="Futurebook Miền Nam — Trang chủ">
-      <Image src="/brand/fbmn-transparent-logo.webp" alt="Logo chính thức Futurebook Miền Nam" width={300} height={84} priority className="ref-brand__official-image" />
+    <Link className={"ref-brand"+(mobile?" ref-brand--mobile":"")} href="/#home" aria-label="Futurebook Miền Nam — Trang chủ">
+      <Image src="/brand/fbmn-transparent-logo.webp" alt="Logo chính thức Futurebook Miền Nam" width={300} height={84} sizes={mobile?"132px":"144px"} priority className="ref-brand__official-image" />
     </Link>
   );
 }
@@ -37,6 +37,7 @@ export function SiteHeader() {
     setPendingPath(target.startsWith("/#") || target === pathname ? null : target);
   };
   const menuButton = useRef<HTMLButtonElement>(null);
+  const searchButton = useRef<HTMLButtonElement>(null);
   const menuPanel = useRef<HTMLElement>(null);
 
   useEffect(() => {
@@ -45,7 +46,7 @@ export function SiteHeader() {
       if (event.key === "Escape") {
         setMenuOpen(false);
         setSearchOpen(false);
-        menuButton.current?.focus();
+        (searchOpen?searchButton:menuButton).current?.focus();
       }
     };
     const onPointerDown = (event: PointerEvent) => {
@@ -64,30 +65,14 @@ export function SiteHeader() {
   return (
     <header className="ref-header">
       <Container className="ref-header__inner">
-        <Brand />
+        <Brand mobile />
         <form className="ref-header__desktop-search" role="search" aria-label="Tìm kiếm sản phẩm" action="/san-pham" method="get">
-          <input type="search" name="q" aria-label="Tìm sản phẩm" placeholder="Tìm sản phẩm: vở A4, vở B5, sổ tay..." maxLength={80}/>
+          <input type="search" name="q" aria-label="Tìm sản phẩm" placeholder="Tìm sản phẩm" maxLength={80}/>
           <button type="submit" aria-label="Tìm sản phẩm"><Icon name="search" size={22}/></button>
         </form>
-        <div className="ref-header__right">
-          <Link className="ref-header__dealer-cta" href="/lien-he#thong-tin-lien-he"
-            onNavigate={() => beginNavigation("/lien-he")}
-            aria-label="Liên hệ Futurebook để hỏi báo giá sỉ và hợp tác đại lý">
-            Liên hệ đại lý <Icon name="arrow" size={18}/>
-          </Link>
-          <button className="ref-header__mobile-icon" type="button"
-            aria-label={searchOpen ? "Đóng thông báo tìm kiếm" : "Mở thông báo tìm kiếm"}
-            aria-expanded={searchOpen} aria-controls="ref-mobile-search"
-            onClick={() => { setSearchOpen(!searchOpen); setMenuOpen(false); }}><Icon name="search" size={23}/></button>
-          <button className="ref-header__mobile-icon" type="button" ref={menuButton}
-            aria-label={menuOpen ? "Đóng danh mục điều hướng" : "Mở danh mục điều hướng"}
-            aria-expanded={menuOpen} aria-controls="site-navigation"
-            onClick={() => { setMenuOpen(!menuOpen); setSearchOpen(false); }}><Icon name={menuOpen ? "x" : "menu"} size={24}/></button>
-        </div>
-      </Container>
       <nav ref={menuPanel} id="site-navigation" className={"ref-navigation" + (menuOpen ? " ref-navigation--open" : "")} aria-label="Điều hướng chính">
-        <Container className="ref-navigation__inner">
-          {desktopNavigation.map(item => {
+        <div className="ref-navigation__inner">
+          {[desktopNavigation.slice(0,3),desktopNavigation.slice(3)].map((group,index)=><Fragment key={index}><div className={"ref-navigation__group"+(index?" ref-navigation__group--right":"")}>{group.map(item => {
             const active = item.href === "/#home" ? pathname === "/"
               : item.href === "/san-pham" ? pathname === "/san-pham" || pathname.startsWith("/san-pham/") || pathname.startsWith("/danh-muc/")
               : item.href === "/bang-tin" ? pathname === "/bang-tin" || pathname.startsWith("/tin-tuc") || pathname.startsWith("/khuyen-mai")
@@ -98,14 +83,31 @@ export function SiteHeader() {
               prefetch={item.href === "/san-pham" || item.href === "/#home" ? null : false}
               onNavigate={() => beginNavigation(item.href)} onClick={() => setMenuOpen(false)}
               aria-current={active ? "page" : undefined}>{item.label}</Link>;
-          })}
+          })}</div>{index===0&&<Brand />}</Fragment>)}
           <Link className="ref-navigation__dealer-cta-mobile" href="/lien-he#thong-tin-lien-he"
             onNavigate={() => beginNavigation("/lien-he")} onClick={() => setMenuOpen(false)}>
             <Icon name="arrow" size={17}/> Hợp tác đại lý · Báo giá sỉ
           </Link>
-        </Container>
-        <span className={"ref-navigation__progress" + (navigating ? " ref-navigation__progress--active" : "")} aria-hidden="true" />
+        </div>
+
       </nav>
+        <div className="ref-header__right">
+          <Link className="ref-header__dealer-cta" href="/lien-he#thong-tin-lien-he"
+            onNavigate={() => beginNavigation("/lien-he")}
+            aria-label="Liên hệ Futurebook để hỏi báo giá sỉ và hợp tác đại lý">
+            <span className="ref-header__dealer-full">Liên hệ đại lý</span><span className="ref-header__dealer-short">Đại lý</span><Icon name="arrow" size={16}/>
+          </Link>
+          <button className="ref-header__mobile-icon" type="button"
+            aria-label={searchOpen ? "Đóng thông báo tìm kiếm" : "Mở thông báo tìm kiếm"}
+            ref={searchButton} aria-expanded={searchOpen} aria-controls="ref-mobile-search"
+            onClick={() => { setSearchOpen(!searchOpen); setMenuOpen(false); }}><Icon name="search" size={23}/></button>
+          <button className="ref-header__mobile-icon" type="button" ref={menuButton}
+            aria-label={menuOpen ? "Đóng danh mục điều hướng" : "Mở danh mục điều hướng"}
+            aria-expanded={menuOpen} aria-controls="site-navigation"
+            onClick={() => { setMenuOpen(!menuOpen); setSearchOpen(false); }}><Icon name={menuOpen ? "x" : "menu"} size={24}/></button>
+        </div>
+      </Container>
+      <span className={"ref-navigation__progress" + (navigating ? " ref-navigation__progress--active" : "")} aria-hidden="true" />
       <div id="ref-mobile-search" className="ref-search-notice" hidden={!searchOpen} role="status">
         <Container><form action="/san-pham" method="get" role="search" aria-label="Tìm sản phẩm trên điện thoại" className="catalog-mobile-search"><label htmlFor="catalog-header-mobile-q">Tìm sản phẩm theo tên hoặc mã SKU</label><div><input id="catalog-header-mobile-q" name="q" type="search" maxLength={80} placeholder="Nhập sản phẩm cần tìm..." /><button type="submit">Tìm kiếm</button></div></form></Container>
       </div>
