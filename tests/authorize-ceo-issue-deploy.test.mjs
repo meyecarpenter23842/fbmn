@@ -1,6 +1,6 @@
 import {test} from "node:test";
 import assert from "node:assert/strict";
-import {approveCommand,checksGreen,latestReview} from "../scripts/authorize-ceo-issue-deploy.mjs";
+import {approveCommand,checksGreen,latestReview,needsCeoBuildChecks} from "../scripts/authorize-ceo-issue-deploy.mjs";
 const valid={repo:"meyecarpenter23842/fbmn",issue:"72",actor:"alibaba240185",command:"/deploy ceo production"};
 test("Owner can deploy CEO only from Issue 72 with exact comment",()=>{
  assert.equal(approveCommand(valid),"production");
@@ -27,4 +27,10 @@ test("Old Codex clean result cannot override newer running status",()=>{
   c(2,"2026-11-11T00:01:00Z",running)],sha).status,"running");
  assert.equal(latestReview([c(1,"2026-11-11T00:00:00Z",clean)],sha).has_any_findings,false);
  assert.equal(latestReview([c(1,"2026-11-11T00:00:00Z",clean)],"2".repeat(40)),undefined);
+});
+
+test("Path-filtered Flutter and gateway checks are needed only for CEO changes",()=>{
+ assert.equal(needsCeoBuildChecks(["app/page.tsx","docs/roadmap.md"]),false);
+ assert.equal(needsCeoBuildChecks(["apps/ceo/gateway/lib/owner-gate.ts"]),true);
+ assert.equal(needsCeoBuildChecks([".github/workflows/dl12d-ceo-deploy.yml"]),true);
 });

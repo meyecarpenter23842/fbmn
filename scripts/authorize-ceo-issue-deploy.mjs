@@ -19,6 +19,11 @@ export function checksGreen(runs,names=JOBS){
  for(const r of runs||[])if(r.name&&(!latest.has(r.name)||r.id>latest.get(r.name).id))latest.set(r.name,r);
  return names.every(n=>latest.get(n)?.conclusion==="success"&&latest.get(n)?.status==="completed");
 }
+export function needsCeoBuildChecks(filenames){
+ return (filenames||[]).some(p=>p.startsWith("apps/ceo/")||
+  [".github/workflows/dl12a-ceo.yml",".github/workflows/dl12d-ceo-deploy.yml",
+   "docs/web-dl12a-ceo-flutter.md","docs/web-dl12d-ceo-vercel.md"].includes(p));
+}
 export function latestReview(comments,sha){
  const out=[];
  for(const c of comments||[]){
@@ -41,6 +46,15 @@ async function gh(token,path){
  requireCondition(res.ok,"GitHub API HTTP "+res.status);
  return res.json();
 }
+async function changedFiles(token,pr){
+ const result=[];
+ for(let page=1;page<=50;page++){
+  const list=await gh(token,"repos/"+DEV+"/pulls/"+pr+"/files?per_page=100&page="+page);
+  result.push(...list.map(x=>x.filename));
+  if(list.length<100)return result;
+ }
+ throw Error("Too many PR files to authorize safely");
+}
 async function comments(token,pr){
  const all=[];
  for(let page=1;page<=50;page++){
@@ -62,6 +76,8 @@ export async function authorize(env=process.env){
   gh(token,"repos/"+UPSTREAM+"/git/ref/heads/main")]);
  const devSha=devRef.object?.sha,upSha=upRef.object?.sha;
  requireCondition(/^[a-f0-9]{40}$/.test(devSha||"")&&/^[a-f0-9]{40}$/.test(upSha||""),"Invalid refs");
+ if(env.EXPECTED_SHA)requireCondition(env.EXPECTED_SHA===devSha,
+  "Approved SHA is stale: main advanced after authorization; comment again");
  const [devCommit,upCommit]=await Promise.all([
   gh(token,"repos/"+DEV+"/git/commits/"+devSha),
   gh(token,"repos/"+UPSTREAM+"/git/commits/"+upSha)]);
@@ -74,7 +90,15 @@ export async function authorize(env=process.env){
  requireCondition(!!reviewed,"Latest dev main is not a reviewed PR merge");
  const head=reviewed.head.sha;
  const checks=await gh(token,"repos/"+DEV+"/commits/"+head+"/check-runs?per_page=100");
- requireCondition(checksGreen(checks.check_runs),"PR CI not 6/6 green");
+ const files=await changedFiles(token,reviewed.number);
+ const ceoRelated=needsCeoBuildChecks(files);
+ // CEO jobs are intentionally path-filtered. If they ran, their latest status
+ // must be green; if source changed, both are mandatory. The deploy job will
+ // rerun Flutter and gateway tests even after unrelated merges.
+ const extra=(checks.check_runs||[]).filter(r=>r.name==="flutter"||r.name==="gateway")
+   .map(r=>r.name);
+ const needed=[...new Set([...JOBS.slice(0,4),...(ceoRelated?JOBS.slice(4):extra)])];
+ requireCondition(checksGreen(checks.check_runs,needed),"Required PR checks not green");
  const mainRuns=await gh(token,"repos/"+DEV+"/actions/workflows/ci.yml/runs?head_sha="+devSha+"&event=push&per_page=20");
  const mainRun=(mainRuns.workflow_runs||[]).filter(r=>r.head_sha===devSha&&r.event==="push")
   .sort((a,b)=>b.id-a.id)[0];

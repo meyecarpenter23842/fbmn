@@ -36,7 +36,7 @@ jobs:
         with:
           ref: main
           persist-credentials: false
-      - name: Verify Owner, control Issue, 6/6 CI, Codex and synchronized source trees
+      - name: Verify Owner, control Issue, required CI, Codex and synchronized source trees
         id: auth
         run: node scripts/authorize-ceo-issue-deploy.mjs
         env:
@@ -71,6 +71,7 @@ jobs:
           REQUESTED_BY: ${{ github.event.comment.user.login }}
           DEPLOY_COMMAND: ${{ github.event.comment.body }}
           IS_PULL_REQUEST: ${{ github.event.issue.pull_request != null }}
+          EXPECTED_SHA: ${{ needs.authorize.outputs.sha }}
       - uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.47.9'
@@ -139,6 +140,7 @@ jobs:
           REQUESTED_BY: ${{ github.event.comment.user.login }}
           DEPLOY_COMMAND: ${{ github.event.comment.body }}
           IS_PULL_REQUEST: ${{ github.event.issue.pull_request != null }}
+          EXPECTED_SHA: ${{ needs.authorize.outputs.sha }}
       - name: Deploy only CEO project to approved target
         id: publish
         env:

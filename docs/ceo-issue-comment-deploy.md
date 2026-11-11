@@ -10,7 +10,7 @@ GitHub Actions: DL12D CEO deploy by Owner issue comment.
 
 Cần comment vào Issue #72 của repo phát triển, KHÔNG comment ở PR. Chỉ hai tài khoản Owner alibaba240185 và meyecarpenter23842 được phép khởi động.
 
-Bảo vệ: workflow trên main kiểm tra đúng issue, người ra lệnh, dev/main là squash merge PR được CI 6/6 và Codex review sạch, dev/main CI push xanh, mã cây Git của hai repo main trùng nhau. Chỉ checkout commit được duyệt; kiểm tra lại trước dùng token và trước deploy. Vercel project cố định fbmn-ceo.
+Bảo vệ: workflow trên main kiểm tra đúng issue, người ra lệnh, dev/main là squash merge PR được CI bắt buộc và Codex review sạch, dev/main CI push xanh, mã cây Git của hai repo main trùng nhau. Chỉ checkout commit được duyệt; kiểm tra lại trước dùng token và trước deploy. Vercel project cố định fbmn-ceo.
 
 Build Flutter Web, lint/test gateway, ghép cả hai trong một origin, dùng Vercel CLI từ thư mục GỐC repo. Không deploy Website/Admin/Worker, không chạy migration hay PostHog.
 
