@@ -60,6 +60,8 @@ test("book chatbot respects motion, close timing and existing Dialogflow session
   assert.match(code,/aria-hidden=\{!open\}/);
   assert.match(code,/session\.current\?\?=crypto\.randomUUID\(\)/);
   assert.match(css,/fb-chat-close 220ms/);
+  assert.match(css, /\.fb-chat__header\s*\{[^}]*min-height:52px; height:52px/);
+  assert.match(css, /@media \(max-width: 700px\)[\s\S]*?\.fb-chat__header\s*\{[^}]*min-height:56px; height:56px/);
   assert.match(css,/fb-chat-open 280ms/);
   assert.match(css,/prefers-reduced-motion:reduce/);
 });
