@@ -12,7 +12,7 @@ void main(){
  test('Owner sign-in gets ephemeral Neon token then confirms Worker grant',()async{
   final calls=<String>[];
   final repo=CeoApi(client:MockClient((r)async{
-   calls.add(r.method+' '+r.url.path);
+   calls.add('${r.method} ${r.url.path}');
    switch(r.url.path){
     case '/api/auth/sign-in/email':
      expect(r.method,'POST');
@@ -21,12 +21,12 @@ void main(){
      expect(r.method,'GET');
      return json(200,{'token':jwt});
     case '/api/ceo/session':
-     expect(r.headers['authorization'],'Bearer '+jwt);
+     expect(r.headers['authorization'],'Bearer $jwt');
      return json(200,{'data':{'role':'owner'}});
     case '/api/ceo/contact-requests':
-     expect(r.headers['authorization'],'Bearer '+jwt);
+     expect(r.headers['authorization'],'Bearer $jwt');
      return json(200,{'data':{'requests':[], 'page':1,'hasMore':false}});
-    default:throw StateError('Unknown route '+r.url.path);
+    default:throw StateError('Unknown route ${r.url.path}');
    }
   }));
   await repo.signIn('owner@example.test','example');
