@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 const ceoPurple=Color(0xFF6D249E);
 const ceoCanvas=Color(0xFFF7F8FC);
+const ceoBadgeRed=Color(0xFFDC2626);
 const ceoDesktopButtonHeight=36.0,ceoMobileButtonHeight=44.0;
 const ceoInputHeight=40.0,ceoControlFontSize=13.0,ceoRadius=9.0;
 const ceoMotion=Duration(milliseconds:190);

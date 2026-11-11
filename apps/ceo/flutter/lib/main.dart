@@ -157,11 +157,24 @@ class _CeoHomeState extends State<CeoHome>{
   if(tab==3)return contacts?.items.where((r)=>r.pending).length??0;
   return 0;
  }
- Widget tabIcon(int tab){
-  final count=countNew(tab);
-  return count==0?Icon(symbols[tab]):
-   Badge.count(count:count>99?99:count,child:Icon(symbols[tab]));
+ Widget redCountBadge(int count,Widget icon){
+  if(count<=0)return icon;
+  return Badge(
+   backgroundColor:ceoBadgeRed,textColor:Colors.white,
+   alignment:Alignment.topRight,offset:const Offset(5,-5),
+   label:Text(count>99?'99+':'$count',
+    style:const TextStyle(fontSize:10,fontWeight:FontWeight.w700)),
+   child:icon);
  }
+ Widget tabIcon(int tab)=>redCountBadge(countNew(tab),Icon(symbols[tab]));
+ // The count uses real status-new requests in loaded pages only.
+ // There is no read receipt for chat conversations.
+ Widget bellIcon()=>redCountBadge(
+  countNew(2)+countNew(3),
+  Icon(pushState=='enabled'?Icons.notifications_active:
+   pushState=='denied'?Icons.notifications_off_outlined:
+   Icons.notifications_none_outlined));
+
  Future<void> openDeepLinkedItem()async{
   final id=initialTarget,tab=initialTab;
   initialTarget=null;initialTab=null;
@@ -265,9 +278,7 @@ class _CeoHomeState extends State<CeoHome>{
      IconButton(
       tooltip:pushState=='enabled'?'Tắt thông báo Web Push':'Bật thông báo khách mới',
       onPressed:pushBusy?null:togglePush,
-      icon:Icon(pushState=='enabled'?Icons.notifications_active:
-        pushState=='denied'?Icons.notifications_off_outlined:
-        Icons.notifications_none_outlined)),
+      icon:bellIcon()),
      IconButton(tooltip:'Tải lại dữ liệu',onPressed:loading||selected==4?null:refresh,
       icon:const Icon(Icons.refresh)),
      IconButton(tooltip:'Đăng xuất',onPressed:loading?null:logout,icon:const Icon(Icons.logout))]),

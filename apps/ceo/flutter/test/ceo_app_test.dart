@@ -16,6 +16,20 @@ class FakeRepo implements CeoRepository {
  @override Future<CeoPage<CeoRequest>> outsourcingRequests([int page=1])async=>CeoPage([],page,false);
  @override void dispose(){}
 }
+
+class FakePendingRepo extends FakeRepo {
+ FakePendingRepo():super(true);
+ CeoRequest item(String id,String status)=>CeoRequest(
+  id:id,name:'Khách thử',email:'',phone:'',company:'',province:'',
+  customerGroup:'',productType:'',specifications:'',quantity:'',
+  desiredDate:'',details:'',message:'',createdAt:'',status:status,
+  interests:const []);
+ @override Future<CeoPage<CeoRequest>> contactRequests([int page=1])async=>
+  CeoPage([item('contact-a','new'),item('contact-b','handled')],page,false);
+ @override Future<CeoPage<CeoRequest>> outsourcingRequests([int page=1])async=>
+  CeoPage([item('out-a','new'),item('out-b','new')],page,false);
+}
+
 void main(){
  testWidgets('Anonymous session cannot see any Owner inbox', (tester)async{
   await tester.pumpWidget(CeoApp(repository:FakeRepo(false)));
@@ -23,6 +37,29 @@ void main(){
   expect(find.text('Bảng điều hành CEO'),findsOneWidget);
   expect(find.text('Đăng nhập'),findsOneWidget);
   expect(find.text('Hội thoại'),findsNothing);
+ });
+
+ testWidgets('CEO bell and menu tabs show red numeric badge only for new requests', (tester)async{
+  await tester.pumpWidget(CeoApp(repository:FakePendingRepo()));
+  await tester.pumpAndSettle();
+
+  final bell=find.byTooltip('Bật thông báo khách mới');
+  expect(bell,findsOneWidget);
+  final badgeWithinBell=find.descendant(of:bell,matching:find.byType(Badge));
+  expect(badgeWithinBell,findsOneWidget);
+  expect(find.descendant(of:bell,matching:find.text('3')),findsOneWidget);
+  expect(tester.widget<Badge>(badgeWithinBell).backgroundColor,const Color(0xFFDC2626));
+
+  final allRedBadges=tester.widgetList<Badge>(find.byType(Badge))
+    .where((badge)=>badge.backgroundColor==const Color(0xFFDC2626)).length;
+  expect(allRedBadges,3); // bell + Gia công + Liên hệ; no invented chat unread.
+ });
+ testWidgets('CEO bell hides number when no status-new requests exist', (tester)async{
+  await tester.pumpWidget(CeoApp(repository:FakeRepo(true)));
+  await tester.pumpAndSettle();
+  final bell=find.byTooltip('Bật thông báo khách mới');
+  expect(bell,findsOneWidget);
+  expect(find.descendant(of:bell,matching:find.byType(Badge)),findsNothing);
  });
  testWidgets('Owner sees five tabs, no invented analytics', (tester)async{
   await tester.pumpWidget(CeoApp(repository:FakeRepo(true)));
