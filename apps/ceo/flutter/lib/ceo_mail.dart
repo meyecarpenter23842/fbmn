@@ -181,7 +181,7 @@ class _CeoMailComposerState extends State<CeoMailComposer>{
  String? lastPayload,lastRequestId,confirmNewPayload;
  @override void dispose(){recipient.dispose();subject.dispose();message.dispose();super.dispose();}
  Future<void> send()async{
-  if(saving)return;
+  if(saving){return;}
   if(widget.reply==null&&(!recipient.text.contains('@')||recipient.text.length>320)){
    setState(()=>error='Nhập địa chỉ email hợp lệ.');return;
   }
