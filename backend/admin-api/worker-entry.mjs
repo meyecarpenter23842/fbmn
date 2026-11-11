@@ -4,7 +4,23 @@ import {Client} from "pg";
 import {createCredentialStore} from "./chatbot-credentials.mjs";
 import {saveChatTurn} from "./chat-history-service.mjs";
 import {runChat} from "./chatbot-runtime.mjs";
-export default createAdminStagingWorker({});
+const adminWorker=createAdminStagingWorker({});
+const CEO_CRON_URL="https://ceo.fbmn.vn/api/ceo/push/dispatch";
+async function deliverScheduledPush(env){
+ // Secret is configured independently via wrangler secret and never echoed.
+ const secret=env?.FBMN_CEO_PUSH_DISPATCH_SECRET;
+ if(typeof secret!=="string"||secret.length<32)return;
+ const response=await fetch(CEO_CRON_URL,{
+  method:"GET",redirect:"error",cache:"no-store",
+  headers:{Authorization:"Bearer "+secret},
+  signal:AbortSignal.timeout(20000)
+ });
+ if(!response.ok)throw Error("CEO push dispatch unavailable");
+}
+export default {
+ fetch(request,env,ctx){return adminWorker.fetch(request,env,ctx);},
+ scheduled(_controller,env,ctx){ctx.waitUntil(deliverScheduledPush(env));}
+};
 // Named RPC entrypoint is only reachable through a Cloudflare service binding.
 export class ChatbotGateway extends WorkerEntrypoint {
  async chat(request,visitor){
