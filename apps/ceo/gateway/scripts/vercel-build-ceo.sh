@@ -40,6 +40,8 @@ fi
 test -s "$PUBLIC_APP/index.html" || { echo "Missing CEO Flutter index" >&2; exit 1; }
 test -s "$PUBLIC_APP/flutter_bootstrap.js" || { echo "Missing CEO Flutter bootstrap" >&2; exit 1; }
 test -s "$PUBLIC_APP/main.dart.js" || { echo "Missing CEO Flutter JS" >&2; exit 1; }
+test -s "$PUBLIC_APP/push-sw.js" || { echo "Missing DL12C push worker" >&2; exit 1; }
+test -s "$PUBLIC_APP/push_bridge.js" || { echo "Missing DL12C push bridge" >&2; exit 1; }
 grep -Fq '<base href="/ceo/">' "$PUBLIC_APP/index.html" || {
   echo "Incorrect CEO Flutter base href" >&2; exit 1;
 }

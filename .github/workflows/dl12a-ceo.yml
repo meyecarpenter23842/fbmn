@@ -6,6 +6,7 @@ on:
       - "apps/ceo/**"
       - "docs/web-dl12a-ceo-flutter.md"
       - "docs/web-dl12d-ceo-vercel.md"
+      - "docs/web-dl12c-ceo-push.md"
       - ".github/workflows/dl12a-ceo.yml"
       - ".github/workflows/dl12d-ceo-deploy.yml"
 permissions:
@@ -62,6 +63,8 @@ jobs:
           FBMN_CEO_PREBUILT=1 bash scripts/vercel-build-ceo.sh
           test -s public/ceo/index.html
           test -s public/ceo/flutter_bootstrap.js
+          test -s public/ceo/push_bridge.js
+          test -s public/ceo/push-sw.js
           node -e "const s=require('fs').readFileSync('public/ceo/index.html','utf8');if(!s.includes('<base href=\"/ceo/\">'))process.exit(1)"
         env:
           NEXT_TELEMETRY_DISABLED: '1'
