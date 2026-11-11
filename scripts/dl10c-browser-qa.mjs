@@ -39,9 +39,9 @@ try{
    if(width<800)await page.getByRole("button",{name:"Mở menu"}).click();
    await page.getByRole("button",{name:"Quản lý hội thoại",exact:true}).click({timeout:30000});
    await page.getByText(item.latest,{exact:true}).waitFor();
-   const detail=page.getByRole("button",{name:"Xem chi tiết"});
+   const detail=page.getByRole("button",{name:/Khách · aaaaaaaa/});
    const geometry=await detail.evaluate(el=>({width:el.clientWidth,scroll:el.scrollWidth,box:el.getBoundingClientRect().width}));
-   assert.ok(geometry.width>=80&&geometry.scroll<=geometry.width+2,"detail action must fit text "+JSON.stringify(geometry));
+   assert.ok(geometry.width>=80&&geometry.scroll<=geometry.width+2,"conversation row must fit "+JSON.stringify(geometry));
    assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+3),"no horizontal overflow");
    await page.screenshot({path:out+"/list-"+width+".png",fullPage:true});
    await page.getByLabel("Từ khóa hoặc mã phiên").fill("Giấy A4");
@@ -51,7 +51,10 @@ try{
    await page.getByText(item.latest,{exact:true}).waitFor();
    assert.equal(search,"Giấy A4");assert.equal(dateFrom,"2026-11-01");assert.equal(dateTo,"2026-11-10");
    await detail.click();
-   const dialog=page.getByRole("dialog",{name:"Chi tiết hội thoại"});
+   const dialog=page.getByRole("region",{name:"Nội dung hội thoại"});
+   assert.equal(await page.locator(".dl10c-conversation[aria-current=\"true\"]").getAttribute("aria-current"),"true");
+   if(width>780)assert.ok(await page.getByRole("complementary",{name:"Danh sách hội thoại"}).isVisible());
+   else {await dialog.getByRole("button",{name:"Danh sách"}).click();await detail.click();}
    await dialog.getByText("Dòng một",{exact:false}).waitFor();
    const style=await dialog.locator(".dl10c-messages p").last().evaluate(el=>({whiteSpace:getComputedStyle(el).whiteSpace,wrap:getComputedStyle(el).overflowWrap,width:el.clientWidth,scroll:el.scrollWidth}));
    assert.equal(style.whiteSpace,"pre-wrap");assert.equal(style.wrap,"anywhere");
@@ -59,7 +62,7 @@ try{
    await page.screenshot({path:out+"/detail-"+width+".png",fullPage:true});
    await dialog.getByRole("button",{name:"Xóa hội thoại",exact:true}).click();
    assert.equal(deletes,0,"first click must only confirm");
-   await dialog.getByRole("button",{name:"Xác nhận xóa vĩnh viễn"}).click();
+   await page.getByRole("dialog",{name:"Xóa hội thoại"}).getByRole("button",{name:"Xác nhận xóa vĩnh viễn"}).click();
    await page.getByText("Không có hội thoại phù hợp.",{exact:true}).waitFor();
    assert.equal(deletes,1);
    console.log("DL10C_BROWSER_OK width="+width+" search detail confirm delete");
