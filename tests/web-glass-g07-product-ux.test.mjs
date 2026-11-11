@@ -96,19 +96,20 @@ test("G07: sticky quote appears only offscreen, retains company SKU and real con
   assert.match(css, /@media \(max-width: 700px\)[\s\S]*?\.fb-song-mobile-cta\s*\{[^}]*position:\s*fixed/);
   assert.match(css, /env\(safe-area-inset-bottom\)/);
 
-  // The chatbot is a separate fixed 52px control, 12px from the right edge.
-  // The G07 quote bar must reserve 92px, leaving >=16px between hit targets.
+  // Mobile mascot is larger now: lift the full touch area ABOVE the fixed
+  // product quote bar rather than shrinking the book beside the CTA.
   const chat = read("app/chatbot.css");
   assert.match(chat, /\.fb-chat\s*\{[^}]*z-index:\s*120/);
-  assert.match(chat, /@media \(max-width: 700px\)[\s\S]*?\.fb-chat\s*\{[^}]*right:\s*12px/);
-  assert.match(chat, /\.fb-chat__launcher\s*\{[^}]*width:\s*52px/);
+  assert.match(chat, /@media \(max-width: 700px\)[\s\S]*?\.fb-chat\s*\{[^}]*right:\s*18px/);
+  assert.match(chat, /\.fb-chat__launcher\s*\{[^}]*width:\s*76px; height:94px/);
+  assert.match(chat, /\.fb-glass-site:has\(\.fb-song-mobile-cta\) \.fb-chat\s*\{[^}]*bottom:max\(82px/);
   assert.match(css, /width:\s*min\(440px, calc\(100% - 92px\)\)/);
   assert.match(css, /left:\s*10px/);
   assert.match(css, /\.fb-song-mobile-cta > span\s*\{[^}]*text-overflow:\s*ellipsis/);
-  for (const viewport of [360,390]) {
-    const quoteRight=10+Math.min(440,viewport-92);
-    const chatbotLeft=viewport-12-52;
-    assert.ok(chatbotLeft-quoteRight>=16,"float controls overlap at "+viewport);
+  for (const viewport of [320,360,390]) {
+    assert.ok(viewport-18-76>=0,"mascot launcher clipped at "+viewport);
+    const quoteTopFromBottom=10+60; // Quote CTA minimum 60px + bottom 10px.
+    assert.ok(82-quoteTopFromBottom>=12,"mascot must clear the fixed quote CTA");
   }
 
   assert.match(core, /@media \(max-width: 780px\)/);
