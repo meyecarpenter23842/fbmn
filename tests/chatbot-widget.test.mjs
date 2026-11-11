@@ -35,7 +35,7 @@ test("DL10B widget calls same-origin backend and never embeds credentials",()=>{
 });
 test("app invitation anchors near the header, away from chatbot touch targets", () => {
   const styles=read("app/app-download.css");
-  assert.match(styles, /\.app-download\s*\{[^}]*top:\s*86px/);
+  assert.match(styles, /\.app-download\s*\{[^}]*top:\s*96px/);
   assert.match(styles, /@media \(max-width: 800px\)[\s\S]*?\.app-download\s*\{[^}]*top:\s*calc\(78px \+ env\(safe-area-inset-top\)\)/);
   assert.doesNotMatch(styles, /bottom:\s*86px/);
 });
@@ -45,6 +45,6 @@ test("chat input stays focusable while typing and the popup fits short screens",
   const downloadCss = read("app/app-download.css");
   assert.match(widget, /readOnly=\{typing\}/);
   assert.doesNotMatch(widget, /onChange=\{event => setDraft\(event.target.value\)\}\s+disabled=\{typing\}/);
-  assert.match(downloadCss, /max-height: calc\(100dvh - 102px\)/);
+  assert.match(downloadCss, /max-height: calc\(100dvh - 112px\)/);
   assert.match(downloadCss, /max-height: calc\(100dvh - 94px - env\(safe-area-inset-top\)\)/);
 });
