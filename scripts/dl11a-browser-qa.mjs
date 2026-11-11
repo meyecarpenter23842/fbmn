@@ -60,6 +60,32 @@ try{for(const width of [1440,1280,1024,801,768,390,360]){
  assert.ok(sticky.scroll>50&&sticky.top>=0&&sticky.top<=20&&sticky.position==="sticky",JSON.stringify({width,sticky}));
  if(width<=800){const toggle=page.locator('button[aria-controls="site-navigation"]');await toggle.click();await page.locator("#site-navigation .ref-navigation__link").last().waitFor({state:"visible"});await page.keyboard.press("Escape");}
  await page.screenshot({path:"artifacts/dl11a/sticky-"+width+".png"});
+ if(width===390||width===360){
+  const launcher=page.getByRole("button",{name:"Mở chat Futurebook"});
+  await launcher.waitFor();
+  const mascot=await launcher.locator(".fb-chat__mascot").evaluate(el=>{
+   const r=el.getBoundingClientRect();return {left:r.left,right:r.right,width:r.width};
+  });
+  assert.ok(mascot.width>=68&&mascot.left>=8&&mascot.right<=width-8,"full mascot clipped "+JSON.stringify({width,mascot}));
+  await launcher.click();
+  const chat=page.locator("#fb-chat-panel");await chat.waitFor();
+  const input=chat.locator("#fb-chat-input");
+  await input.fill("Nhờ tư vấn sản phẩm");
+  const geometry=await chat.evaluate(el=>{
+   const r=el.getBoundingClientRect(),i=el.querySelector("#fb-chat-input").getBoundingClientRect();
+   const send=el.querySelector('button[type="submit"]').getBoundingClientRect();
+   return {left:r.left,right:r.right,top:r.top,bottom:r.bottom,inputLeft:i.left,inputRight:i.right,sendLeft:send.left,sendRight:send.right,inputFont:parseFloat(getComputedStyle(el.querySelector("#fb-chat-input")).fontSize)};
+  });
+  assert.ok(geometry.left>=8&&geometry.right<=width-8&&geometry.inputLeft>=geometry.left&&geometry.inputRight<geometry.sendLeft&&geometry.sendRight<=geometry.right,"mobile composer overflow "+JSON.stringify({width,geometry}));
+  assert.ok(geometry.inputFont>=16,"iOS input zoom risk "+JSON.stringify({width,geometry}));
+  await page.screenshot({path:"artifacts/dl11a/chat-mobile-"+width+".png"});
+  await page.setViewportSize({width,height:520});
+  const short=await chat.evaluate(el=>({top:el.getBoundingClientRect().top,bottom:el.getBoundingClientRect().bottom,h:innerHeight}));
+  assert.ok(short.top>=0&&short.bottom<=short.h+1,"chat sheet escapes short viewport "+JSON.stringify({width,short}));
+  await chat.getByRole("button",{name:"Đóng chatbot"}).click();
+  await chat.waitFor({state:"hidden"});
+  await page.setViewportSize({width,height:900});
+ }
  const btn=page.getByRole("button",{name:"Tải ứng dụng",exact:true});await btn.scrollIntoViewIfNeeded();await btn.click();
  const dialog=page.getByRole("dialog",{name:"Ứng dụng Futurebook"});await dialog.waitFor();
  assert.equal(await dialog.locator(".app-download__store--unavailable").count(),2);
