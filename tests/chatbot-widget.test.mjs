@@ -75,7 +75,10 @@ test("mobile chat sheet fits the visual viewport and keeps the input beside its 
   assert.match(css, /\.fb-chat__panel\s*\{[\s\S]*?position:fixed; z-index:2; left:12px; right:12px/);
   assert.match(css, /\.fb-chat__composer\s*\{[\s\S]*?grid-template-columns:minmax\(0,1fr\) 44px/);
   assert.match(css, /\.fb-chat__composer input\s*\{[^}]*font-size:16px/);
-  assert.match(css, /--fb-chat-keyboard-bottom/);
+  assert.match(css, /--fb-chat-visual-height/);
+  assert.match(widget, /setProperty\("--fb-chat-visual-height"/);
+  assert.match(css, /bottom:auto/);
+  assert.match(css, /--fb-chat-keyboard-bottom|--fb-chat-visual-height/);
   assert.match(widget, /window\.visualViewport/);
   assert.match(widget, /viewport\.addEventListener\("resize", syncViewport\)/);
   assert.match(widget, /ref=\{panel\}/);
