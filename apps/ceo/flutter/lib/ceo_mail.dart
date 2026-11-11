@@ -26,9 +26,9 @@ class CeoMailPanelState extends State<CeoMailPanel>{
  bool loading=false;
  String error='',notice='';
  @override void initState(){super.initState();Future.microtask(load);}
- @override void didUpdateWidget(covariant CeoMailPanel old){
-  super.didUpdateWidget(old);
-  if(old.box!=widget.box){page=null;Future.microtask(load);}
+ @override void didUpdateWidget(covariant CeoMailPanel oldWidget){
+  super.didUpdateWidget(oldWidget);
+  if(oldWidget.box!=widget.box){page=null;Future.microtask(load);}
  }
  Future<void> load({bool more=false})async{
   if(loading)return;
@@ -204,11 +204,16 @@ class _CeoMailComposerState extends State<CeoMailComposer>{
    await widget.api.mailSend(to:recipient.text.trim(),subject:subject.text.trim(),
     text:message.text.trim(),replyId:widget.reply?.id,requestId:lastRequestId);
    if(mounted){Navigator.of(context).pop(true);}
-  }catch(_){if(mounted)setState((){
-    uncertainFailure=true;
-    networkNotice='Không xác nhận được lượt gửi. Nếu giữ nguyên nội dung, thử lại sẽ dùng cùng mã gửi.';
-   });}
-  finally{if(mounted)setState(()=>saving=false);}
+  }catch(_){
+   if(mounted){
+    setState((){
+     uncertainFailure=true;
+     networkNotice='Không xác nhận được lượt gửi. Nếu giữ nguyên nội dung, thử lại sẽ dùng cùng mã gửi.';
+    });
+   }
+  }finally{
+   if(mounted){setState(()=>saving=false);}
+  }
  }
  @override Widget build(BuildContext context)=>Stack(children:[
   Column(children:[
