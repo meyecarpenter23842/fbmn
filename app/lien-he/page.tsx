@@ -15,7 +15,7 @@ export default async function ContactPage() {
     <ContentBreadcrumb items={[{ name: "Liên hệ" }]}/>
     <PageHeading eyebrow="KẾT NỐI FUTUREBOOK" title="Liên hệ Futurebook Miền Nam" intro="Liên hệ để được tư vấn sản phẩm và hợp tác phân phối."/>
     <section id="thong-tin-lien-he" className="content-intro-grid" aria-label="Thông tin liên hệ, hợp tác đại lý và báo giá sỉ">
-      <div className="content-outline-panel">
+      <div className="content-outline-panel content-outline-panel--contact">
         <h2>Thông tin liên hệ</h2>
         <address className="content-contact-list">
           {company?.legalName && <p><strong>Đơn vị:</strong> {company.legalName}</p>}
