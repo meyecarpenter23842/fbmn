@@ -4,6 +4,7 @@ import 'ceo_repository.dart';
 import 'ceo_ui_tokens.dart';
 import 'ceo_detail_sheet.dart';
 import 'ceo_feedback.dart';
+import 'ceo_workspace.dart';
 import 'push_stub.dart' if (dart.library.js_interop) 'push_web.dart' as push;
 
 void main() => runApp(const CeoApp());
@@ -110,13 +111,15 @@ class _CeoHomeState extends State<CeoHome>{
  bool pendingRefresh=false;
  CeoPage<CeoConversation>? conversations;
  CeoPage<CeoRequest>? outsourcing,contacts;
+ final TextEditingController searchController=TextEditingController();
+ String requestFilter='all';
  final Map<String,String> confirmedViews={};
  final Set<String> viewWrites={};
  String pushState='unknown';
  bool pushBusy=false;
  // Keep an open notification route synchronized with async Owner data / push state.
  final ValueNotifier<int> alertsVersion=ValueNotifier<int>(0);
- @override void dispose(){alertsVersion.dispose();super.dispose();}
+ @override void dispose(){searchController.dispose();alertsVersion.dispose();super.dispose();}
  String? initialTarget;
  int? initialTab;
  @override void initState(){
@@ -360,7 +363,7 @@ class _CeoHomeState extends State<CeoHome>{
  }
  void choose(int value){
   if(value==selected)return;
-  setState((){selected=value;error='';});
+  setState((){selected=value;error='';requestFilter='all';searchController.clear();});
   if(value!=4)Future.microtask(refresh);
  }
  Future<void> more()async{
@@ -409,6 +412,8 @@ class _CeoHomeState extends State<CeoHome>{
       icon:const Icon(Icons.refresh)),
      IconButton(tooltip:'Đăng xuất',onPressed:loading?null:logout,icon:const Icon(Icons.logout))]),
    bottomNavigationBar:wide?null:NavigationBar(selectedIndex:selected,onDestinationSelected:choose,
+     labelBehavior:box.maxWidth<400?NavigationDestinationLabelBehavior.onlyShowSelected:
+      NavigationDestinationLabelBehavior.alwaysShow,
      destinations:List.generate(5,(i)=>NavigationDestination(icon:tabIcon(i),label:names[i]))),
    body:Stack(children:[
     Row(children:[
@@ -416,7 +421,9 @@ class _CeoHomeState extends State<CeoHome>{
        labelType:NavigationRailLabelType.all,
        destinations:List.generate(5,(i)=>NavigationRailDestination(
         icon:tabIcon(i),label:Text(names[i])))),
-     Expanded(child:SafeArea(child:RefreshIndicator(onRefresh:refresh,child:content()))),
+     Expanded(child:SafeArea(child:Center(child:ConstrainedBox(
+      constraints:const BoxConstraints(maxWidth:1180),
+      child:RefreshIndicator(onRefresh:refresh,child:content()))))),
     ]),
     if(error.isNotEmpty)Positioned(top:12,right:12,left:wide?null:12,
       child:CeoErrorToast(
@@ -425,129 +432,321 @@ class _CeoHomeState extends State<CeoHome>{
    ]),
   );
  });
- Widget card(String heading,String subtitle,Widget body)=>Card(margin:const EdgeInsets.fromLTRB(14,14,14,0),
-  child:Padding(padding:const EdgeInsets.all(16),child:Column(
-   crossAxisAlignment:CrossAxisAlignment.start,children:[
-     Text(heading,style:const TextStyle(fontSize:18,fontWeight:FontWeight.w800)),
-     const SizedBox(height:4),
-     Text(subtitle,style:const TextStyle(color:Color(0xFF667085),fontSize:12)),
-     const SizedBox(height:12),body,
-   ])));
+
+ // All CEO screens share the same panel, search and row primitives.
  Widget content(){
-  if(selected==4){return ListView(children:[card('Thống kê Website','DL12B · Chưa kết nối',
-    const Text('Không hiển thị số liệu mẫu. Analytics sẽ được kết nối và kiểm chứng ở lô DL12B.'))]);}
+  if(selected==4){
+   return ListView(physics:const AlwaysScrollableScrollPhysics(),children:[
+    const CeoPanel(title:'Thống kê Website',subtitle:'DL12B · Chưa kết nối',
+     icon:Icons.bar_chart_outlined,
+     child:CeoEmptyResult(title:'Chưa có dữ liệu thống kê',
+      detail:'Chỉ hiển thị số liệu sau khi kết nối và xác minh dữ liệu thực.',
+      icon:Icons.insights_outlined)),
+   ]);
+  }
   if(loading&&((selected==0&&(conversations==null||outsourcing==null||contacts==null))||
-    (selected==1&&conversations==null)||(selected==2&&outsourcing==null)||(selected==3&&contacts==null))){
-    return const Center(child:CircularProgressIndicator());
+   (selected==1&&conversations==null)||(selected==2&&outsourcing==null)||
+   (selected==3&&contacts==null))){
+   return const Center(child:CircularProgressIndicator());
   }
   if(selected==0)return overview();
   if(selected==1)return chatList();
   return requests(selected==2?outsourcing:contacts,selected==2);
  }
+
  Widget overview(){
-  if(conversations==null||outsourcing==null||contacts==null){return ListView(children:[
-   card('Chưa có dữ liệu','Chỉ hiển thị dữ liệu thật',
-    const Text('Kéo xuống hoặc bấm tải lại để kết nối dịch vụ Owner.'))]);}
+  if(conversations==null||outsourcing==null||contacts==null){
+   return ListView(physics:const AlwaysScrollableScrollPhysics(),children:[
+    const CeoPanel(title:'Chưa có dữ liệu',subtitle:'Chỉ hiển thị dữ liệu thật',
+     icon:Icons.cloud_off_outlined,
+     child:CeoEmptyResult(title:'Chưa tải được thông tin',
+      detail:'Kéo xuống hoặc bấm tải lại để kết nối dịch vụ Owner.')),
+   ]);
+  }
   final pendingOut=outsourcing!.items.where((r)=>r.pending).length;
   final pendingContacts=contacts!.items.where((r)=>r.pending).length;
-  return ListView(children:[
-   card('Hoạt động gần đây','Số lượng trong trang đầu mỗi hộp thư, không phải tổng toàn hệ thống',
-    Wrap(spacing:12,runSpacing:12,children:[
-     metric('Hội thoại',conversations!.items.length),
-     metric('Gia công mới',pendingOut),metric('Liên hệ mới',pendingContacts)])),
-   card('Gia công mới','Trạng thái mới = chưa xử lý, không có nghĩa chưa đọc',
-    Column(children:outsourcing!.items.take(4).map((r)=>caseRow(r,true)).toList())),
-   card('Liên hệ gần đây','Yêu cầu mới và đã xử lý',
-    Column(children:contacts!.items.take(4).map((r)=>caseRow(r,false)).toList())),
-   card('Hội thoại gần đây','Chưa có dữ liệu đã đọc/chưa đọc trên Worker',
-    Column(children:conversations!.items.take(4).map(chatRow).toList())),
+  return ListView(physics:const AlwaysScrollableScrollPhysics(),children:[
+   CeoPanel(title:'Hoạt động gần đây',
+    subtitle:'Số liệu trong trang đầu mỗi danh sách, không phải tổng hệ thống',
+    icon:Icons.space_dashboard_outlined,
+    child:LayoutBuilder(builder:(context,box){
+     final cols=box.maxWidth>=660?3:box.maxWidth>=260?2:1;
+     const gap=10.0;
+     final width=(box.maxWidth-gap*(cols-1))/cols;
+     final items=<Widget>[
+      CeoMetricCard(label:'Hội thoại',count:conversations!.items.length,icon:Icons.forum_outlined),
+      CeoMetricCard(label:'Gia công chưa xử lý',count:pendingOut,icon:Icons.handyman_outlined),
+      CeoMetricCard(label:'Liên hệ chưa xử lý',count:pendingContacts,icon:Icons.contact_mail_outlined),
+     ];
+     return Wrap(spacing:gap,runSpacing:gap,children:[
+      for(var i=0;i<items.length;i++)
+       SizedBox(width:cols==2&&i==2?box.maxWidth:width,child:items[i]),
+     ]);
+    })),
+   CeoPanel(title:'Gia công mới',subtitle:'Yêu cầu gần nhất trong danh sách đã tải',
+    icon:Icons.handyman_outlined,
+    child:outsourcing!.items.isEmpty?
+     const CeoEmptyResult(title:'Chưa có yêu cầu gia công',detail:'Khi có yêu cầu mới, dữ liệu sẽ hiển thị tại đây.'):
+     Column(children:outsourcing!.items.take(3).map((r)=>caseRow(r,true)).toList())),
+   CeoPanel(title:'Liên hệ gần đây',subtitle:'Đã xem và chưa xử lý là hai trạng thái riêng biệt',
+    icon:Icons.contact_mail_outlined,
+    child:contacts!.items.isEmpty?
+     const CeoEmptyResult(title:'Chưa có liên hệ',detail:'Yêu cầu từ Website sẽ xuất hiện tại đây.'):
+     Column(children:contacts!.items.take(3).map((r)=>caseRow(r,false)).toList())),
+   CeoPanel(title:'Hội thoại gần đây',subtitle:'Lịch sử chatbot đang lưu trong Admin',
+    icon:Icons.forum_outlined,
+    child:conversations!.items.isEmpty?
+     const CeoEmptyResult(title:'Chưa có hội thoại',detail:'Không có phiên chat trong dữ liệu đã tải.'):
+     Column(children:conversations!.items.take(3).map(chatRow).toList())),
    const SizedBox(height:24),
   ]);
  }
- Widget metric(String label,int count)=>Container(width:160,padding:const EdgeInsets.all(14),
-  decoration:BoxDecoration(color:const Color(0xFFF4EDFA),borderRadius:BorderRadius.circular(12)),
-  child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-   Text(count.toString(),style:const TextStyle(fontSize:26,fontWeight:FontWeight.w800)),
-   Text(label,style:const TextStyle(fontSize:13))]));
- Widget chatList()=>ListView(children:[
-  card('Hội thoại','Đọc lịch sử chat do Futurebook Admin lưu',
-   (conversations?.items.isEmpty??true)?const Text('Không có hội thoại.'):
-   Column(children:conversations!.items.map(chatRow).toList())),
-  if(conversations?.hasMore==true)loadMore(),const SizedBox(height:24)]);
- Widget requests(CeoPage<CeoRequest>? page,bool outsource)=>ListView(children:[
-  card(outsource?'Yêu cầu gia công':'Liên hệ & đại lý','Trạng thái lấy trực tiếp từ Admin',
-   (page?.items.isEmpty??true)?const Text('Không có yêu cầu.'):
-   Column(children:page!.items.map((r)=>caseRow(r,outsource)).toList())),
-  if(page?.hasMore==true)loadMore(),const SizedBox(height:24)]);
- Widget loadMore()=>Padding(padding:const EdgeInsets.all(14),child:OutlinedButton(
-  onPressed:loading?null:more,child:const Text('Tải trang tiếp')));
- Widget chatRow(CeoConversation r)=>ListTile(contentPadding:EdgeInsets.zero,
-  leading:const Icon(Icons.forum_outlined,color:brand),
-  title:Text('Phiên ${r.session.length>=8?r.session.substring(0,8):r.session}',
-   style:const TextStyle(fontWeight:FontWeight.w700)),
-  subtitle:Text("${r.latest.isEmpty?'Chưa có phản hồi':r.latest}\n${dateString(r.updatedAt)}",
-   maxLines:3,overflow:TextOverflow.ellipsis),
-  isThreeLine:true,trailing:const Icon(Icons.chevron_right),
-  onTap:()=>showChat(r));
- Widget caseRow(CeoRequest r,bool outsource)=>ListTile(contentPadding:EdgeInsets.zero,
-  leading:Icon(outsource?Icons.handyman_outlined:Icons.mail_outline,color:brand),
-  title:Text(r.name,style:const TextStyle(fontWeight:FontWeight.w700)),
-  subtitle:Text('${outsource?r.productType:r.customerGroup}\n${dateString(r.createdAt)}',
-   maxLines:2,overflow:TextOverflow.ellipsis),
-  isThreeLine:true,
-  trailing:Chip(label:Text(r.pending?'Mới':'Đã xử lý'),
-    backgroundColor:r.pending?const Color(0xFFFFF1DA):const Color(0xFFF4EDFA)),
-  onTap:()=>showCase(r,outsource));
- Widget field(String title,String value)=>Padding(padding:const EdgeInsets.only(bottom:14),
-  child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-   Text(title,style:const TextStyle(fontSize:12,color:brand,fontWeight:FontWeight.w700)),
+
+ Widget chatList(){
+  final q=searchController.text.trim().toLowerCase();
+  final visible=(conversations?.items??<CeoConversation>[]).where((r)=>
+   q.isEmpty||r.session.toLowerCase().contains(q)||
+    r.latest.toLowerCase().contains(q)).toList();
+  return ListView(physics:const AlwaysScrollableScrollPhysics(),children:[
+   CeoPanel(title:'Hội thoại khách hàng',
+    subtitle:'Lọc theo mã phiên hoặc đoạn xem trước của phiên đã tải',
+    icon:Icons.forum_outlined,
+    child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+     CeoSearchBox(controller:searchController,
+      hint:'Tìm mã phiên hoặc tin nhắn gần nhất',
+      onChanged:(_)=>setState((){})),
+     const SizedBox(height:12),
+     if(visible.isEmpty)
+      CeoEmptyResult(title:q.isNotEmpty?'Không tìm thấy hội thoại':'Chưa có hội thoại',
+       detail:q.isNotEmpty?'Thử từ khóa khác hoặc tải thêm dữ liệu.':
+        'Chưa có hội thoại trong danh sách hiện tại.',
+       icon:Icons.chat_bubble_outline),
+     for(final item in visible)chatRow(item),
+    ])),
+   if(conversations?.hasMore==true)loadMore(),
+   const SizedBox(height:24),
+  ]);
+ }
+
+ bool matchesRequest(CeoRequest item,bool outsource){
+  if(requestFilter=='new'&&!item.pending)return false;
+  if(requestFilter=='handled'&&item.pending)return false;
+  final q=searchController.text.trim().toLowerCase();
+  if(q.isEmpty)return true;
+  return <String>[
+   item.name,item.email,item.phone,item.company,item.province,item.customerGroup,
+   item.productType,item.specifications,item.quantity,item.details,item.message,
+   ...item.interests,
+  ].join(' ').toLowerCase().contains(q);
+ }
+
+ Widget requests(CeoPage<CeoRequest>? page,bool outsource){
+  final visible=(page?.items??<CeoRequest>[])
+   .where((item)=>matchesRequest(item,outsource)).toList();
+  return ListView(physics:const AlwaysScrollableScrollPhysics(),children:[
+   CeoPanel(title:outsource?'Yêu cầu gia công':'Liên hệ & đại lý',
+    subtitle:'Tìm và lọc trong danh sách đã tải · Trạng thái lấy từ Admin',
+    icon:outsource?Icons.handyman_outlined:Icons.contact_mail_outlined,
+    child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+     CeoSearchBox(controller:searchController,
+      hint:outsource?'Tìm tên khách, sản phẩm, quy cách':'Tìm khách, công ty, email, tỉnh thành',
+      onChanged:(_)=>setState((){})),
+     const SizedBox(height:12),
+     Wrap(spacing:8,runSpacing:8,children:[
+      for(final pair in const <(String,String)>[
+       ('all','Tất cả'),('new','Mới'),('handled','Đã xử lý')])
+       ChoiceChip(
+        key:ValueKey('ceo-filter-${pair.$1}'),
+        label:Text(pair.$2),
+        selected:requestFilter==pair.$1,
+        selectedColor:ceoLavender,
+        labelStyle:TextStyle(fontSize:13,fontWeight:FontWeight.w600,
+         color:requestFilter==pair.$1?ceoPurple:ceoInk),
+        onSelected:(_)=>setState(()=>requestFilter=pair.$1)),
+     ]),
+     const SizedBox(height:8),
+     if(visible.isEmpty)
+      CeoEmptyResult(title:page?.items.isEmpty??true?'Chưa có yêu cầu':'Không tìm thấy yêu cầu',
+       detail:page?.items.isEmpty??true?
+        'Danh sách hiện chưa có yêu cầu khách hàng.':
+        'Thử đổi bộ lọc hoặc từ khóa; tìm kiếm chỉ áp dụng cho trang đã tải.'),
+     for(final item in visible)caseRow(item,outsource),
+    ])),
+   if(page?.hasMore==true)loadMore(),
+   const SizedBox(height:24),
+  ]);
+ }
+
+ Widget loadMore()=>Padding(
+  padding:const EdgeInsets.fromLTRB(12,12,12,8),
+  child:OutlinedButton(onPressed:loading?null:more,
+   child:const Text('Tải trang tiếp')));
+
+ Widget chatRow(CeoConversation item)=>_listRow(
+  icon:Icons.chat_bubble_outline,
+  title:'Phiên ${item.session.length>=8?item.session.substring(0,8):item.session}',
+  subtitle:item.latest.isEmpty?'Chưa có nội dung phản hồi':item.latest,
+  meta:dateString(item.updatedAt),
+  trailing:item.messageCount>0?
+   CeoStatusPill(text:'${item.messageCount} lượt'):null,
+  onTap:()=>showChat(item));
+
+ Widget caseRow(CeoRequest item,bool outsource)=>_listRow(
+  icon:outsource?Icons.handyman_outlined:Icons.person_outline,
+  title:item.name.isEmpty?'Khách chưa có tên':item.name,
+  subtitle:outsource?
+   (item.productType.isEmpty?'Yêu cầu gia công':item.productType):
+   (item.company.isNotEmpty?item.company:
+    item.customerGroup.isEmpty?'Liên hệ từ Website':item.customerGroup),
+  meta:dateString(item.createdAt),
+  trailing:Wrap(spacing:5,runSpacing:4,children:[
+   if(item.unread)const CeoStatusPill(text:'Chưa xem',highlighted:true),
+   CeoStatusPill(text:item.pending?'Mới':'Đã xử lý',highlighted:item.pending),
+  ]),
+  onTap:()=>showCase(item,outsource));
+
+ Widget _listRow({required IconData icon,required String title,
+  required String subtitle,required String meta,required VoidCallback onTap,
+  Widget? trailing}){
+  return Padding(padding:const EdgeInsets.only(bottom:5),
+   child:Material(color:Colors.transparent,child:InkWell(
+    borderRadius:BorderRadius.circular(12),onTap:onTap,
+    child:Padding(padding:const EdgeInsets.symmetric(horizontal:3,vertical:11),
+     child:Row(crossAxisAlignment:CrossAxisAlignment.center,children:[
+      Container(width:42,height:42,
+       decoration:BoxDecoration(color:ceoLavender.withValues(alpha:.65),
+        borderRadius:BorderRadius.circular(12)),
+       child:Icon(icon,color:ceoPurple,size:21)),
+      const SizedBox(width:11),
+      Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+       Text(title,maxLines:1,overflow:TextOverflow.ellipsis,
+        style:const TextStyle(fontSize:14,fontWeight:FontWeight.w700,color:ceoInk)),
+       const SizedBox(height:3),
+       Text(subtitle,maxLines:2,overflow:TextOverflow.ellipsis,
+        style:const TextStyle(fontSize:12.5,color:ceoMuted,height:1.3)),
+       const SizedBox(height:5),
+       if(meta.isNotEmpty)Text(meta,maxLines:1,overflow:TextOverflow.ellipsis,
+        style:const TextStyle(fontSize:11.5,color:ceoMuted)),
+       if(trailing!=null)...[
+        const SizedBox(height:7),
+        Align(alignment:Alignment.centerLeft,child:trailing),
+       ],
+      ])),
+      const SizedBox(width:5),
+      const Icon(Icons.chevron_right,color:ceoMuted,size:19),
+     ])),
+   )));
+ }
+
+ Widget field(String title,String value)=>Padding(
+  padding:const EdgeInsets.only(bottom:13),
+  child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+   Text(title,style:const TextStyle(fontSize:12,
+    color:ceoMuted,fontWeight:FontWeight.w700)),
    const SizedBox(height:4),
-   SelectableText(value.isEmpty?'—':value,style:const TextStyle(fontSize:14,height:1.4)),
+   SelectableText(value.trim().isEmpty?'—':value,
+    style:const TextStyle(fontSize:14,height:1.5,color:ceoInk)),
   ]));
- void showCase(CeoRequest r,bool outsource){
-  showModalBottomSheet<void>(
-  context:context,isScrollControlled:true,useSafeArea:true,showDragHandle:false,
-  sheetAnimationStyle:ceoDetailSheetMotion(context),
-  builder:(ctx)=>FractionallySizedBox(heightFactor:.88,child:Column(children:[
+
+ // Desktop uses a bounded dialog, mobile a keyboard-safe full-width sheet.
+ void openDetail(Widget Function(BuildContext) builder){
+  if(MediaQuery.sizeOf(context).width>=850){
+   showDialog<void>(context:context,builder:(dialogContext)=>Dialog(
+    clipBehavior:Clip.antiAlias,
+    insetPadding:const EdgeInsets.symmetric(horizontal:24,vertical:28),
+    child:SizedBox(width:860,height:MediaQuery.sizeOf(dialogContext).height*.84,
+     child:builder(dialogContext))));
+  }else{
+   showModalBottomSheet<void>(
+    context:context,isScrollControlled:true,useSafeArea:true,showDragHandle:false,
+    sheetAnimationStyle:ceoDetailSheetMotion(context),
+    builder:(sheetContext)=>FractionallySizedBox(
+     heightFactor:.94,child:builder(sheetContext)));
+  }
+ }
+
+ void showCase(CeoRequest item,bool outsource){
+  final kind=outsource?'outsourcing':'contact';
+  openDetail((ctx)=>ValueListenableBuilder<int>(
+   valueListenable:alertsVersion,
+   builder:(ctx,_,__)=>Column(children:[
    CeoSheetHeader(title:outsource?'Chi tiết gia công':'Chi tiết liên hệ'),
-   Expanded(child:ListView(padding:const EdgeInsets.all(20),children:[
-    field('Trạng thái',r.pending?'Mới · chưa xử lý':'Đã xử lý'),
-    field('Thời gian',dateString(r.createdAt)),field('Họ tên',r.name),
-    field('Email',r.email),field('Số điện thoại',r.phone),
-    if(outsource)...[
-     field('Loại sản phẩm',r.productType),field('Quy cách',r.specifications),
-     field('Số lượng',r.quantity),field('Thời gian mong muốn',r.desiredDate),
-     field('Nội dung',r.details),
-    ]else...[
-     field('Đơn vị',r.company),field('Tỉnh/thành',r.province),
-     field('Nhóm khách',r.customerGroup),
-     field('Sản phẩm quan tâm',r.interests.join(', ')),field('Nội dung',r.message),
-    ],
+   Expanded(child:ListView(padding:const EdgeInsets.all(14),children:[
+    CeoDetailGroup(title:'Thông tin yêu cầu',icon:Icons.assignment_outlined,
+     children:[
+      Row(children:[
+       Expanded(child:field('Trạng thái',item.pending?'Mới · chưa xử lý':'Đã xử lý')),
+       const SizedBox(width:8),
+       Expanded(child:field('Đã xem',item.viewedAt!=null||
+        confirmedViews.containsKey('$kind:${item.id}')?'Đã xem':'Chưa xem')),
+      ]),
+      field('Thời gian',dateString(item.createdAt)),
+     ]),
+    const SizedBox(height:12),
+    CeoDetailGroup(title:'Thông tin khách hàng',icon:Icons.person_outline,
+     children:[
+      field('Họ tên',item.name),
+      field('Email',item.email),
+      field('Số điện thoại',item.phone),
+      if(!outsource)...[
+       field('Đơn vị',item.company),field('Tỉnh/thành',item.province),
+       field('Nhóm khách',item.customerGroup),
+      ],
+     ]),
+    const SizedBox(height:12),
+    CeoDetailGroup(title:outsource?'Chi tiết gia công':'Nhu cầu liên hệ',
+     icon:outsource?Icons.handyman_outlined:Icons.description_outlined,
+     children:outsource?[
+      field('Loại sản phẩm',item.productType),
+      field('Quy cách',item.specifications),
+      field('Số lượng',item.quantity),
+      field('Thời gian mong muốn',item.desiredDate),
+      field('Nội dung',item.details),
+     ]:[
+      field('Sản phẩm quan tâm',item.interests.join(', ')),
+      field('Nội dung',item.message),
+     ]),
+    const SizedBox(height:12),
     const Text('Mở xem chỉ đánh dấu đã xem; xử lý/xóa thực hiện tại Futurebook Admin.',
-     style:TextStyle(color:Color(0xFF667085))),
+     style:TextStyle(color:ceoMuted,fontSize:12.5,height:1.4)),
+    const SizedBox(height:18),
    ])),
   ])));
-  if(r.unread)Future.microtask(()=>markViewed(r,outsource));
+  if(item.unread)Future.microtask(()=>markViewed(item,outsource));
  }
- void showChat(CeoConversation r)=>showModalBottomSheet<void>(
-  context:context,isScrollControlled:true,useSafeArea:true,showDragHandle:false,
-  sheetAnimationStyle:ceoDetailSheetMotion(context),
-  builder:(ctx)=>FractionallySizedBox(heightFactor:.88,child:Column(children:[
+
+ void showChat(CeoConversation item){
+  openDetail((ctx)=>Column(children:[
    const CeoSheetHeader(title:'Nội dung hội thoại'),
    Expanded(child:FutureBuilder<List<CeoTurn>>(
-    future:widget.api.turns(r.session),builder:(context,s){
-     if(s.connectionState!=ConnectionState.done)return const Center(child:CircularProgressIndicator());
-     if(s.hasError)return Center(child:Text(userError(s.error!)));
-     return ListView(padding:const EdgeInsets.all(20),children:[
-      const Text('Hiển thị 25 lượt đầu; hội thoại dài hơn có thể đọc trong Admin.',
-       style:TextStyle(color:Color(0xFF667085),fontSize:12)),
-      const SizedBox(height:12),
-      for(final turn in (s.data??[]))...[
-       field('Khách · ${dateString(turn.createdAt)}',turn.question),
-       field('Trợ lý Futurebook',turn.answer.isEmpty?'Chưa có phản hồi':turn.answer),
-       const Divider(),
+    future:widget.api.turns(item.session),
+    builder:(context,s){
+     if(s.connectionState!=ConnectionState.done){
+      return const Center(child:CircularProgressIndicator());
+     }
+     if(s.hasError){
+      return CeoEmptyResult(title:'Không tải được hội thoại',detail:userError(s.error!),
+       icon:Icons.error_outline);
+     }
+     final turns=s.data??<CeoTurn>[];
+     return ListView(padding:const EdgeInsets.all(16),children:[
+      Container(padding:const EdgeInsets.all(12),
+       decoration:BoxDecoration(color:ceoLavender,
+        borderRadius:BorderRadius.circular(12)),
+       child:const Text('Lịch sử chatbot · Chỉ hiển thị 25 lượt đầu. Hội thoại dài hơn xem trong Admin.',
+        style:TextStyle(fontSize:12.5,color:ceoInk,height:1.4))),
+      const SizedBox(height:18),
+      if(turns.isEmpty)const CeoEmptyResult(title:'Chưa có tin nhắn',
+       detail:'Phiên này chưa có lượt hội thoại trong dữ liệu trả về.',
+       icon:Icons.chat_outlined),
+      for(final turn in turns)...[
+       CeoChatBubble(text:turn.question,time:dateString(turn.createdAt),assistant:false),
+       const SizedBox(height:12),
+       CeoChatBubble(text:turn.answer,time:'',assistant:true),
+       const SizedBox(height:18),
       ],
      ]);
     })),
-  ])));
+  ]));
+ }
 }

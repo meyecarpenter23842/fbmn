@@ -308,3 +308,6 @@ Thứ tự mới trước DL8: DL11A (Header một hàng, logo giữa 3+3 tab, t
 **DL11A correction — Owner 11/11/2026:** fix collapsed top margin by containing it inside the shared painted backdrop (no white strip), keep header inset 20px/14px; mobile search left, official logo center, hamburger right. Verify home and Gia công at all seven viewport widths; preserve glass/motion and routes.
 
 **DL11B — Owner 11/11/2026:** Policy công khai tại /policy (canonical fbmn.vn), chỉ trang này cho phép index, không menu/footer/link quảng bá, không chatbot/app prompt/CMS popup tại Policy. Mô tả dữ liệu đang thu, nhà cung cấp, lưu trữ, quyền và email yêu cầu xóa; Messenger chưa tích hợp, chưa tuyên bố Meta duyệt. Header sticky 12px desktop/8px mobile khi scroll, giữ khoảng hở ban đầu 20/14px, không đổi menu. Browser QA Policy + sticky desktop/mobile; không migration/backend/Admin.
+
+
+**CEO-UI01 — Owner 11/11/2026:** Tái thiết kế riêng Flutter CEO: nền tảng card, search/filter và responsive; làm lại Tổng quan, Hội thoại, Gia công, Liên hệ; giữ 5 menu, các dữ liệu thật, read receipt/badge, quyền Owner và API hiện có. Không gộp module gửi nhận mail (CEO-MAIL01) hoặc thay DB/Worker vào lô này. Chi tiết và gate tại `docs/web-ceo-ui01.md`.
