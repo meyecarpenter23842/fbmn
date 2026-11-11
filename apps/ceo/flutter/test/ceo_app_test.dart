@@ -43,7 +43,7 @@ void main(){
   await tester.pumpWidget(CeoApp(repository:FakePendingRepo()));
   await tester.pumpAndSettle();
 
-  final bell=find.byTooltip('Bật thông báo khách mới');
+  final bell=find.byTooltip('Xem thông báo và yêu cầu mới');
   expect(bell,findsOneWidget);
   final badgeWithinBell=find.descendant(of:bell,matching:find.byType(Badge));
   expect(badgeWithinBell,findsOneWidget);
@@ -54,10 +54,28 @@ void main(){
     .where((badge)=>badge.backgroundColor==const Color(0xFFDC2626)).length;
   expect(allRedBadges,3); // bell + Gia công + Liên hệ; no invented chat unread.
  });
+ testWidgets('Tapping bell opens new requests without changing push permission', (tester)async{
+  await tester.pumpWidget(CeoApp(repository:FakePendingRepo()));
+  await tester.pumpAndSettle();
+
+  await tester.tap(find.byTooltip('Xem thông báo và yêu cầu mới'));
+  await tester.pumpAndSettle();
+
+  expect(find.text('Thông báo & yêu cầu mới'),findsOneWidget);
+  expect(find.text('3 yêu cầu mới'),findsOneWidget);
+  expect(find.text('Web Push trên thiết bị'),findsOneWidget);
+  expect(find.text('Gia công · Khách thử'),findsNWidgets(2));
+  expect(find.text('Liên hệ · Khách thử'),findsOneWidget);
+
+  await tester.tap(find.text('Liên hệ · Khách thử'));
+  await tester.pumpAndSettle();
+  expect(find.text('Chi tiết liên hệ'),findsOneWidget);
+ });
+
  testWidgets('CEO bell hides number when no status-new requests exist', (tester)async{
   await tester.pumpWidget(CeoApp(repository:FakeRepo(true)));
   await tester.pumpAndSettle();
-  final bell=find.byTooltip('Bật thông báo khách mới');
+  final bell=find.byTooltip('Xem thông báo và yêu cầu mới');
   expect(bell,findsOneWidget);
   expect(find.descendant(of:bell,matching:find.byType(Badge)),findsNothing);
  });
