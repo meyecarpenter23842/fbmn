@@ -147,7 +147,7 @@
 @keyframes fb-chat-wave { 0%,62%,100% { transform:rotate(-27deg); } 68%,79% { transform:rotate(-60deg); } 74%,85% { transform:rotate(-40deg); } }
 @keyframes fb-chat-blink { 0%,43%,46%,100% { transform:scaleY(1); } 44%,45% { transform:scaleY(.15); } }
 @media (max-width:700px) {
-  .fb-chat { right:8px; bottom:max(5px,env(safe-area-inset-bottom)); }
+  .fb-chat { right:12px; bottom:max(5px,env(safe-area-inset-bottom)); }
   .fb-chat__panel { right:4px; bottom:109px; width:min(350px,calc(100vw - 24px)); height:min(475px,calc(100dvh - 132px - env(safe-area-inset-bottom))); }
   .fb-chat__launcher { width:92px; height:102px; }
   .fb-chat__close { flex-basis:44px; width:44px; height:44px; }
