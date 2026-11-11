@@ -119,8 +119,9 @@
 @media(max-width:780px){.contact-interest-grid{grid-template-columns:1fr}}
 
 /* Contact: place map in the existing left-hand card; the inquiry form remains untouched. */
+.content-outline-panel--contact { display:flex; flex-direction:column; }
 .content-location-map {
-  display: flex; flex-direction: column; gap: 8px; min-height: 260px;
+  display: flex; flex:1 1 auto; flex-direction: column; gap: 8px; min-height: 260px;
   margin-top: 22px; padding: 7px; border: 1px solid var(--fb-glass-border);
   border-radius: 16px; background: rgba(247,242,252,.8); overflow: hidden;
 }
