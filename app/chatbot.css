@@ -162,8 +162,11 @@
   .fb-chat__panel {
     position:fixed; z-index:2; left:12px; right:12px;
     top:calc(max(10px,env(safe-area-inset-top)) + var(--fb-chat-visual-top,0px));
-    bottom:calc(max(10px,env(safe-area-inset-bottom)) + var(--fb-chat-keyboard-bottom,0px));
-    width:auto; max-width:none; min-width:0; height:auto; max-height:none;
+    bottom:auto;
+    width:auto; max-width:none; min-width:0;
+    /* Height follows the visible viewport, not the layout viewport obscured by the keyboard. */
+    height:calc(var(--fb-chat-visual-height,100dvh) - max(10px,env(safe-area-inset-top)) - max(10px,env(safe-area-inset-bottom)));
+    max-height:none;
     border-radius:20px;
   }
   .fb-chat__header { min-height:56px; height:56px; }
