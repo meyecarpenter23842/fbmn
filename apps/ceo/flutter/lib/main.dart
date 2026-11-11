@@ -110,6 +110,8 @@ class _CeoHomeState extends State<CeoHome>{
  bool pendingRefresh=false;
  CeoPage<CeoConversation>? conversations;
  CeoPage<CeoRequest>? outsourcing,contacts;
+ final Map<String,String> confirmedViews={};
+ final Set<String> viewWrites={};
  String pushState='unknown';
  bool pushBusy=false;
  // Keep an open notification route synchronized with async Owner data / push state.
@@ -164,8 +166,8 @@ class _CeoHomeState extends State<CeoHome>{
   }}
  }
  int countNew(int tab){
-  if(tab==2)return outsourcing?.items.where((r)=>r.pending).length??0;
-  if(tab==3)return contacts?.items.where((r)=>r.pending).length??0;
+  if(tab==2)return outsourcing?.items.where((r)=>r.unread).length??0;
+  if(tab==3)return contacts?.items.where((r)=>r.unread).length??0;
   return 0;
  }
  Widget redCountBadge(int count,Widget icon){
@@ -178,8 +180,8 @@ class _CeoHomeState extends State<CeoHome>{
    child:icon);
  }
  Widget tabIcon(int tab)=>redCountBadge(countNew(tab),Icon(symbols[tab]));
- // The count uses real status-new requests in loaded pages only.
- // There is no read receipt for chat conversations.
+ // Badge counts are real, unhandled AND unseen Owner requests in loaded pages.
+ // Chat has no read receipts; never invent a chat-unread count.
  Widget bellIcon()=>redCountBadge(
   countNew(2)+countNew(3),
   Icon(pushState=='enabled'?Icons.notifications_active:
@@ -207,8 +209,8 @@ class _CeoHomeState extends State<CeoHome>{
    builder:(sheetContext)=>ValueListenableBuilder<int>(
     valueListenable:alertsVersion,
     builder:(sheetContext,_,__){
-     final newOut=outsourcing?.items.where((r)=>r.pending).toList()??<CeoRequest>[];
-     final newContacts=contacts?.items.where((r)=>r.pending).toList()??<CeoRequest>[];
+     final newOut=outsourcing?.items.where((r)=>r.unread).toList()??<CeoRequest>[];
+     final newContacts=contacts?.items.where((r)=>r.unread).toList()??<CeoRequest>[];
      final total=newOut.length+newContacts.length;
      void openRequest(CeoRequest request,bool isOutsourcing){
       Navigator.of(sheetContext).pop();
@@ -235,13 +237,13 @@ class _CeoHomeState extends State<CeoHome>{
       Expanded(child:ListView(padding:const EdgeInsets.fromLTRB(12,8,12,20),children:[
        ListTile(
         leading:const Icon(Icons.mark_email_unread_outlined,color:brand),
-        title:Text('$total yêu cầu mới',
+        title:Text('$total yêu cầu chưa xem',
          style:const TextStyle(fontWeight:FontWeight.w800,fontSize:16)),
-        subtitle:const Text('Đếm yêu cầu trạng thái Mới trong các trang đã tải; không phải số chưa đọc.'),
+        subtitle:const Text('Đếm yêu cầu Mới chưa xem trong các trang đã tải; xem không đồng nghĩa đã xử lý.'),
        ),
        if(total==0)
         const Padding(padding:EdgeInsets.all(16),
-         child:Text('Hiện không có yêu cầu mới trong danh sách đã tải.')),
+         child:Text('Không còn yêu cầu Mới chưa xem trong danh sách đã tải.')),
        for(final item in newOut)
         ListTile(
          leading:const Icon(Icons.handyman_outlined,color:brand),
@@ -299,6 +301,28 @@ class _CeoHomeState extends State<CeoHome>{
   }catch(e){if(mounted)setState(()=>error=userError(e));}
  }
 
+ CeoPage<CeoRequest> applyConfirmedViews(CeoPage<CeoRequest> page,String kind)=>
+  CeoPage(page.items.map((item){
+   final at=confirmedViews['$kind:${item.id}'];
+   return at!=null&&item.viewedAt==null?item.markViewedAt(at):item;
+  }).toList(growable:false),page.page,page.hasMore);
+ Future<void> markViewed(CeoRequest request,bool outsource)async{
+  final kind=outsource?'outsourcing':'contact';
+  final key='$kind:${request.id}';
+  if(!request.unread||viewWrites.contains(key)||confirmedViews.containsKey(key))return;
+  viewWrites.add(key);
+  try{
+   final viewedAt=await widget.api.markViewed(kind,request.id);
+   if(!mounted)return;
+   confirmedViews[key]=viewedAt;
+   setState((){
+    if(outsource&&outsourcing!=null)outsourcing=applyConfirmedViews(outsourcing!,kind);
+    if(!outsource&&contacts!=null)contacts=applyConfirmedViews(contacts!,kind);
+   });
+   alertsVersion.value++;
+  }catch(e){if(mounted)setState(()=>error=userError(e));}
+  finally{viewWrites.remove(key);}
+ }
  Future<void> refresh()async{
   if(loading){pendingRefresh=true;return;}
   final tabAtStart=selected;
@@ -309,15 +333,15 @@ class _CeoHomeState extends State<CeoHome>{
       widget.api.conversations(),widget.api.outsourcingRequests(),widget.api.contactRequests()]);
     if(mounted){setState((){
       conversations=result[0] as CeoPage<CeoConversation>;
-      outsourcing=result[1] as CeoPage<CeoRequest>;
-      contacts=result[2] as CeoPage<CeoRequest>;
+      outsourcing=applyConfirmedViews(result[1] as CeoPage<CeoRequest>,'outsourcing');
+      contacts=applyConfirmedViews(result[2] as CeoPage<CeoRequest>,'contact');
     });}
    }else if(tabAtStart==1){final v=await widget.api.conversations();
     if(mounted)setState(()=>conversations=v);}
    else if(tabAtStart==2){final v=await widget.api.outsourcingRequests();
-    if(mounted)setState(()=>outsourcing=v);}
+    if(mounted)setState(()=>outsourcing=applyConfirmedViews(v,'outsourcing'));}
    else if(tabAtStart==3){final v=await widget.api.contactRequests();
-    if(mounted)setState(()=>contacts=v);}
+    if(mounted)setState(()=>contacts=applyConfirmedViews(v,'contact'));}
   }catch(e){if(mounted)setState(()=>error=userError(e));}
   finally{
    endLoad(tabAtStart);
@@ -349,10 +373,10 @@ class _CeoHomeState extends State<CeoHome>{
     if(mounted)setState(()=>conversations=CeoPage([...conversations!.items,...v.items],v.page,v.hasMore));
    }else if(selected==2&&outsourcing?.hasMore==true){
     final v=await widget.api.outsourcingRequests(outsourcing!.page+1);
-    if(mounted)setState(()=>outsourcing=CeoPage([...outsourcing!.items,...v.items],v.page,v.hasMore));
+    if(mounted)setState(()=>outsourcing=applyConfirmedViews(CeoPage([...outsourcing!.items,...v.items],v.page,v.hasMore),'outsourcing'));
    }else if(selected==3&&contacts?.hasMore==true){
     final v=await widget.api.contactRequests(contacts!.page+1);
-    if(mounted)setState(()=>contacts=CeoPage([...contacts!.items,...v.items],v.page,v.hasMore));
+    if(mounted)setState(()=>contacts=applyConfirmedViews(CeoPage([...contacts!.items,...v.items],v.page,v.hasMore),'contact'));
    }
   }catch(e){if(mounted)setState(()=>error=userError(e));}
   finally{
@@ -480,7 +504,8 @@ class _CeoHomeState extends State<CeoHome>{
    const SizedBox(height:4),
    SelectableText(value.isEmpty?'—':value,style:const TextStyle(fontSize:14,height:1.4)),
   ]));
- void showCase(CeoRequest r,bool outsource)=>showModalBottomSheet<void>(
+ void showCase(CeoRequest r,bool outsource){
+  showModalBottomSheet<void>(
   context:context,isScrollControlled:true,useSafeArea:true,showDragHandle:false,
   sheetAnimationStyle:ceoDetailSheetMotion(context),
   builder:(ctx)=>FractionallySizedBox(heightFactor:.88,child:Column(children:[
@@ -498,10 +523,12 @@ class _CeoHomeState extends State<CeoHome>{
      field('Nhóm khách',r.customerGroup),
      field('Sản phẩm quan tâm',r.interests.join(', ')),field('Nội dung',r.message),
     ],
-    const Text('DL12A chỉ đọc. Thao tác xử lý/xóa thực hiện tại Futurebook Admin.',
+    const Text('Mở xem chỉ đánh dấu đã xem; xử lý/xóa thực hiện tại Futurebook Admin.',
      style:TextStyle(color:Color(0xFF667085))),
    ])),
   ])));
+  if(r.unread)Future.microtask(()=>markViewed(r,outsource));
+ }
  void showChat(CeoConversation r)=>showModalBottomSheet<void>(
   context:context,isScrollControlled:true,useSafeArea:true,showDragHandle:false,
   sheetAnimationStyle:ceoDetailSheetMotion(context),
