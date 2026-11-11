@@ -56,10 +56,12 @@ test("menu action and popup are global, dismissible and have recognized brand ma
   assert.doesNotMatch(ui, /href="https:\/\/(?:apps\.apple\.com|play\.google\.com)/);
 });
 
- test("automatic app prompt does not obscure the catalogue; manual menu retained",()=>{
+ test("automatic app prompt does not obscure catalogue or policy; manual menu retained",()=>{
  const ui=read("components/app-download.tsx");
  assert.match(ui,/isCatalogue=pathname==="\/catalogue"/);
- assert.match(ui,/if \(open\|\|isCatalogue\) return/);
- assert.match(ui,/isCatalogue&&open&&source==="automatic"\)dismiss\(\)/);
+ assert.match(ui,/if \(open\|\|isCatalogue\|\|isPolicy\) return/);
+ assert.match(ui,/\(isCatalogue\|\|isPolicy\)&&open&&source==="automatic"\)dismiss\(\)/);
  assert.match(ui,/showPopup\("menu"\)/);
+ assert.match(ui,/isPolicy=pathname==="\/policy"/);
+ assert.match(ui,/open && !isPolicy/);
  });

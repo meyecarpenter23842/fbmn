@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
 type ChatMessage = { id: number; author: "visitor" | "bot"; text: string; contact?: boolean };
@@ -25,6 +26,11 @@ function Avatar({ small = false }: { small?: boolean }) {
 }
 
 export function ChatbotWidget() {
+  const pathname=usePathname();
+  return pathname==="/policy"?null:<ChatbotConversation/>;
+}
+
+function ChatbotConversation() {
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>([welcomeMessage]);

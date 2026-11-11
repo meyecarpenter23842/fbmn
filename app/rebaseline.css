@@ -3,7 +3,7 @@
    until official approved R2 assets are available. Mobile bottom navigation is
    no longer included after direct mobile staging feedback on 28 Oct 2026. */
 
-.ref-header { background: linear-gradient(155deg, rgba(255,255,255,.30), rgba(255,255,255,.06) 55%, rgba(235,216,250,.16)), var(--fb-glass-surface-layer); position: relative; z-index: 30; width: min(1260px, calc(100% - 32px)); margin: 20px auto 0; border: 1px solid var(--fb-glass-border); border-radius: 24px; box-shadow: inset 0 1px 1px rgba(255,255,255,.95), inset 0 -1px 1px rgba(109,36,158,.09), 0 14px 32px rgba(69,25,102,.17), 0 3px 8px rgba(69,25,102,.09); overflow: visible; -webkit-backdrop-filter: blur(var(--fb-glass-ui-blur)); backdrop-filter: blur(var(--fb-glass-ui-blur)); }
+.ref-header { background: linear-gradient(155deg, rgba(255,255,255,.30), rgba(255,255,255,.06) 55%, rgba(235,216,250,.16)), var(--fb-glass-surface-layer); position: sticky; top: 12px; z-index: 30; width: min(1260px, calc(100% - 32px)); margin: 20px auto 0; border: 1px solid var(--fb-glass-border); border-radius: 24px; box-shadow: inset 0 1px 1px rgba(255,255,255,.95), inset 0 -1px 1px rgba(109,36,158,.09), 0 14px 32px rgba(69,25,102,.17), 0 3px 8px rgba(69,25,102,.09); overflow: visible; -webkit-backdrop-filter: blur(var(--fb-glass-ui-blur)); backdrop-filter: blur(var(--fb-glass-ui-blur)); }
 .ref-header__inner { display: grid; width: 100%; grid-template-columns: minmax(0,1fr) auto minmax(0,1fr); align-items: center; gap: 12px; min-height: 62px; padding-inline: 14px; border-radius: 24px; }
 .ref-brand { display: inline-flex; align-items: center; gap: 7px; width: max-content; max-width: 100%; }
 .ref-brand__emblem { display: grid; place-items: center; width: 52px; height: 48px; border-radius: 5px; border: 3px solid #4e1b8f; color: #d30b4b; background: #fff; font-size: 25px; font-weight: 1000; letter-spacing: -3px; box-shadow: inset 0 0 0 2px white, 0 0 0 1px #d10b4a; }
@@ -280,7 +280,7 @@
   .ref-navigation {
     left: auto; right: 0; top: calc(100% + 6px);
     width: min(326px, calc(100vw - 24px));
-    overflow: hidden; border-radius: 16px;
+    overflow-x: hidden; overflow-y: auto; max-height: calc(100dvh - 90px - env(safe-area-inset-top)); border-radius: 16px;
     border: 1px solid rgba(255,255,255,.25);
     background: linear-gradient(145deg, rgba(255,255,255,.26), rgba(235,216,250,.12)), var(--fb-glass-panel-layer);
     color: #fff;
@@ -343,7 +343,7 @@
   }
 }
 @media (max-width: 800px) {
-  .ref-header { width: calc(100% - 18px); margin-top: 14px; border-radius: 20px; }
+  .ref-header { width: calc(100% - 18px); margin-top: 14px; top: max(8px, env(safe-area-inset-top)); border-radius: 20px; }
   .ref-header__inner { border-radius: 20px; padding-inline: 8px; }
   .ref-navigation { border-radius: 16px; background: linear-gradient(145deg, rgba(255,255,255,.3), rgba(235,216,250,.12)), var(--fb-glass-panel-layer); }
   .ref-navigation__inner { gap: 4px; }
@@ -398,3 +398,7 @@
   .ref-navigation__link, .ref-header__dealer-cta, .ref-header__desktop-search button, .ref-header__mobile-icon, .ref-navigation__dealer-cta-mobile { transition: none; }
   .ref-navigation__link:active, .ref-header__dealer-cta:active, .ref-header__desktop-search button:active, .ref-header__mobile-icon:active, .ref-navigation__dealer-cta-mobile:active { transform: none; }
 }
+
+/* DL11B: anchor targets remain readable below the sticky glass header. */
+html { scroll-padding-top: 96px; }
+@media (max-width:800px) { html { scroll-padding-top: calc(80px + env(safe-area-inset-top)); } }

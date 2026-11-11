@@ -54,11 +54,26 @@ try{for(const width of [1440,1280,1024,801,768,390,360]){
  assert.ok(await page.locator(".fb-glass-site").evaluate(el=>Math.abs(el.getBoundingClientRect().top)<1));
  assert.ok(await page.locator(".ref-header").evaluate(el=>el.getBoundingClientRect().top>10));
  await page.screenshot({path:"artifacts/dl11a/gia-cong-"+width+".png"});
+ await page.evaluate(()=>window.scrollTo(0,Math.min(500,document.documentElement.scrollHeight-innerHeight)));
+ await page.waitForTimeout(250);
+ const sticky=await page.locator(".ref-header").evaluate(el=>({top:el.getBoundingClientRect().top,scroll:scrollY,position:getComputedStyle(el).position}));
+ assert.ok(sticky.scroll>50&&sticky.top>=0&&sticky.top<=20&&sticky.position==="sticky",JSON.stringify({width,sticky}));
+ if(width<=800){const toggle=page.locator('button[aria-controls="site-navigation"]');await toggle.click();await page.locator("#site-navigation .ref-navigation__link").last().waitFor({state:"visible"});await page.keyboard.press("Escape");}
+ await page.screenshot({path:"artifacts/dl11a/sticky-"+width+".png"});
  const btn=page.getByRole("button",{name:"Tải ứng dụng",exact:true});await btn.scrollIntoViewIfNeeded();await btn.click();
  const dialog=page.getByRole("dialog",{name:"Ứng dụng Futurebook"});await dialog.waitFor();
  assert.equal(await dialog.locator(".app-download__store--unavailable").count(),2);
  await page.screenshot({path:"artifacts/dl11a/app-"+width+".png"});
  await dialog.getByRole("button",{name:"Đóng thông báo tải ứng dụng"}).click();
  await dialog.waitFor({state:"hidden"});await page.close();
- console.log("DL11A_BROWSER_OK "+width);
+ const policy=await browser.newPage({viewport:{width,height:900}});
+ const response=await policy.goto("http://127.0.0.1:3100/policy",{waitUntil:"domcontentloaded"});
+ assert.equal(response.status(),200);await policy.getByRole("heading",{name:"Chính sách bảo mật",exact:true}).waitFor();
+ await policy.waitForTimeout(1600);
+ assert.equal(await policy.locator(".ref-header,.site-footer,.app-download,.fb-chat__launcher,.cms-web-popup-dialog").count(),0);
+ assert.equal(await policy.locator("html").evaluate(el=>el.scrollWidth>innerWidth+2),false);
+ assert.ok(await policy.locator("#data-deletion").isVisible());
+ assert.equal(await policy.locator("link[rel=canonical]").getAttribute("href"),"https://fbmn.vn/policy");
+ await policy.screenshot({path:"artifacts/dl11a/policy-"+width+".png"});await policy.close();
+ console.log("DL11B_BROWSER_OK "+width);
 }}finally{await browser.close();}
