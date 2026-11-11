@@ -2,9 +2,15 @@ import { createAdminStagingWorker } from "./staging-worker.mjs";
 import {WorkerEntrypoint} from "cloudflare:workers";
 import {Client} from "pg";
 import {createCredentialStore} from "./chatbot-credentials.mjs";
+import {deliverScheduledPush} from "./ceo-push-cron.mjs";
 import {saveChatTurn} from "./chat-history-service.mjs";
 import {runChat} from "./chatbot-runtime.mjs";
-export default createAdminStagingWorker({});
+const adminWorker=createAdminStagingWorker({});
+
+export default {
+ fetch(request,env,ctx){return adminWorker.fetch(request,env,ctx);},
+ scheduled(_controller,env,ctx){ctx.waitUntil(deliverScheduledPush(env));}
+};
 // Named RPC entrypoint is only reachable through a Cloudflare service binding.
 export class ChatbotGateway extends WorkerEntrypoint {
  async chat(request,visitor){

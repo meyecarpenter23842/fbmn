@@ -4,6 +4,7 @@ import 'ceo_repository.dart';
 import 'ceo_ui_tokens.dart';
 import 'ceo_detail_sheet.dart';
 import 'ceo_feedback.dart';
+import 'push_stub.dart' if (dart.library.js_interop) 'push_web.dart' as push;
 
 void main() => runApp(const CeoApp());
 const brand = Color(0xFF6D249E);
@@ -109,7 +110,86 @@ class _CeoHomeState extends State<CeoHome>{
  bool pendingRefresh=false;
  CeoPage<CeoConversation>? conversations;
  CeoPage<CeoRequest>? outsourcing,contacts;
- @override void initState(){super.initState();Future.microtask(refresh);}
+ String pushState='unknown';
+ bool pushBusy=false;
+ String? initialTarget;
+ int? initialTab;
+ @override void initState(){
+  super.initState();
+  final tab=Uri.base.queryParameters['tab'],id=Uri.base.queryParameters['id'];
+  final tabNumber=switch(tab){'chat'=>1,'outsourcing'=>2,'contact'=>3,_=>null};
+  if(tabNumber!=null&&id!=null&&
+   (tabNumber==1?RegExp(r'^[a-f0-9]{36}$').hasMatch(id):
+    RegExp(r'^[0-9a-fA-F-]{36}$').hasMatch(id))){
+   selected=tabNumber;initialTab=tabNumber;initialTarget=id;
+  }
+  Future.microtask(refresh);
+  Future.microtask(loadPushState);
+ }
+ Future<void> loadPushState()async{
+  final status=await push.status();
+  if(mounted)setState(()=>pushState=status);
+ }
+ Future<void> togglePush()async{
+  if(pushBusy)return;
+  // Start the browser permission prompt within the user gesture, no awaits first.
+  final action=pushState=='enabled'?push.disable():push.enable();
+  setState(()=>pushBusy=true);
+  try{
+   final status=await action;
+   if(!mounted)return;
+   setState(()=>pushState=status);
+   final message=switch(status){
+    'unsupported'=>'Trình duyệt hoặc thiết bị không hỗ trợ Web Push.',
+    'ios_install'=>'Trên iPhone, thêm CEO vào Màn hình chính rồi mở từ biểu tượng ứng dụng.',
+    'denied'=>'Quyền thông báo đã bị chặn trong trình duyệt.',
+    'login_required'=>'Phiên Owner hết hạn. Vui lòng đăng nhập lại.',
+    'forbidden'=>'Tài khoản không có quyền Owner.',
+    'service_error'=>'Chưa kết nối được Web Push. Kiểm tra cấu hình server.',
+    _=>''
+   };
+   if(message.isNotEmpty)setState(()=>error=message);
+  }catch(_){if(mounted)setState(()=>error='Chưa kết nối được dịch vụ Web Push.');}
+  finally{if(mounted)setState(()=>pushBusy=false);}
+ }
+ int countNew(int tab){
+  if(tab==2)return outsourcing?.items.where((r)=>r.pending).length??0;
+  if(tab==3)return contacts?.items.where((r)=>r.pending).length??0;
+  return 0;
+ }
+ Widget tabIcon(int tab){
+  final count=countNew(tab);
+  return count==0?Icon(symbols[tab]):
+   Badge.count(count:count>99?99:count,child:Icon(symbols[tab]));
+ }
+ Future<void> openDeepLinkedItem()async{
+  final id=initialTarget,tab=initialTab;
+  initialTarget=null;initialTab=null;
+  if(!mounted||id==null||tab==null)return;
+  if(tab==1){
+   showChat(CeoConversation(session:id,createdAt:'',updatedAt:'',
+    latest:'',messageCount:0));
+   return;
+  }
+  try{
+   CeoPage<CeoRequest>? current=tab==2?outsourcing:contacts;
+   for(var page=1;page<=5;page++){
+    current??=tab==2?await widget.api.outsourcingRequests(page):
+      await widget.api.contactRequests(page);
+    for(final item in current.items){
+     if(item.id.toLowerCase()==id.toLowerCase()){
+      if(mounted)showCase(item,tab==2);
+      return;
+     }
+    }
+    if(!current.hasMore)break;
+    current=tab==2?await widget.api.outsourcingRequests(page+1):
+      await widget.api.contactRequests(page+1);
+   }
+   if(mounted)setState(()=>error='Yêu cầu này không còn trong danh sách hiện tại.');
+  }catch(e){if(mounted)setState(()=>error=userError(e));}
+ }
+
  Future<void> refresh()async{
   if(loading){pendingRefresh=true;return;}
   final tabAtStart=selected;
@@ -137,7 +217,10 @@ class _CeoHomeState extends State<CeoHome>{
   final reload=selected!=4&&pendingRefresh&&selected!=previousTab;
   pendingRefresh=false;
   setState(()=>loading=false);
-  if(reload)Future.microtask(refresh);
+  if(reload){Future.microtask(refresh);}
+  else if(initialTarget!=null&&selected==previousTab){
+   WidgetsBinding.instance.addPostFrameCallback((_){if(mounted)openDeepLinkedItem();});
+  }
  }
  void choose(int value){
   if(value==selected)return;
@@ -165,7 +248,10 @@ class _CeoHomeState extends State<CeoHome>{
  Future<void> logout()async{
   if(loading)return;
   setState(()=>loading=true);
-  try{await widget.api.signOut();if(mounted)widget.onSignOut();}
+  try{
+   try{await push.disable();}catch(_){} // revoke device push when logging out
+   await widget.api.signOut();if(mounted)widget.onSignOut();
+  }
   catch(e){if(mounted)setState(()=>error=userError(e));}
   finally{if(mounted)setState(()=>loading=false);}
  }
@@ -175,17 +261,24 @@ class _CeoHomeState extends State<CeoHome>{
    appBar:AppBar(backgroundColor:Colors.white,title:Column(crossAxisAlignment:CrossAxisAlignment.start,
     children:[const Text('Futurebook CEO',style:TextStyle(fontWeight:FontWeight.w800,fontSize:20)),
      Text(names[selected],style:const TextStyle(fontSize:12,color:Color(0xFF667085)))]),
-    actions:[IconButton(tooltip:'Tải lại dữ liệu',onPressed:loading||selected==4?null:refresh,
+    actions:[
+     IconButton(
+      tooltip:pushState=='enabled'?'Tắt thông báo Web Push':'Bật thông báo khách mới',
+      onPressed:pushBusy?null:togglePush,
+      icon:Icon(pushState=='enabled'?Icons.notifications_active:
+        pushState=='denied'?Icons.notifications_off_outlined:
+        Icons.notifications_none_outlined)),
+     IconButton(tooltip:'Tải lại dữ liệu',onPressed:loading||selected==4?null:refresh,
       icon:const Icon(Icons.refresh)),
      IconButton(tooltip:'Đăng xuất',onPressed:loading?null:logout,icon:const Icon(Icons.logout))]),
    bottomNavigationBar:wide?null:NavigationBar(selectedIndex:selected,onDestinationSelected:choose,
-     destinations:List.generate(5,(i)=>NavigationDestination(icon:Icon(symbols[i]),label:names[i]))),
+     destinations:List.generate(5,(i)=>NavigationDestination(icon:tabIcon(i),label:names[i]))),
    body:Stack(children:[
     Row(children:[
      if(wide)NavigationRail(selectedIndex:selected,onDestinationSelected:choose,
        labelType:NavigationRailLabelType.all,
        destinations:List.generate(5,(i)=>NavigationRailDestination(
-        icon:Icon(symbols[i]),label:Text(names[i])))),
+        icon:tabIcon(i),label:Text(names[i])))),
      Expanded(child:SafeArea(child:RefreshIndicator(onRefresh:refresh,child:content()))),
     ]),
     if(error.isNotEmpty)Positioned(top:12,right:12,left:wide?null:12,
