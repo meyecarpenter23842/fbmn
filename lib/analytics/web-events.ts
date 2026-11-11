@@ -18,7 +18,8 @@ export type WebAnalyticsRecord = {
 };
 const EVENTS = new Set<string>(WEB_EVENTS);
 const UUID=/^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/i;
-const SLUG=/^[a-z0-9](?:[a-z0-9-]{0,79})$/;
+// Match the published catalogue identifier contract: ASCII letters, digits, underscore, dash.
+const SLUG=/^[a-z0-9][a-z0-9_-]{0,119}$/i;
 const SKU=/^[A-Za-z0-9][A-Za-z0-9._\/-]{0,63}$/;
 const BOOK=/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/i;
 const SOURCES=new Set(["direct","google","facebook","zalo","referral"]);

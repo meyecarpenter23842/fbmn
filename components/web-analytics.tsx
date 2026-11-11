@@ -11,8 +11,8 @@ function classify(path:string){
  if(path==="/gia-cong")return {page_type:"outsourcing"};
  if(path.startsWith("/tin-tuc"))return {page_type:"news"};
  if(path.startsWith("/khuyen-mai"))return {page_type:"promotion"};
- if(path.startsWith("/danh-muc/"))return {page_type:"category",category_key:path.split("/")[2]};
- if(path.startsWith("/san-pham/"))return {page_type:"product",product_key:path.split("/")[2]};
+ if(path.startsWith("/danh-muc/"))return {page_type:"category"};
+ if(path.startsWith("/san-pham/"))return {page_type:"product"};
  return {page_type:"other"};
 }
 export default function WebAnalytics(){

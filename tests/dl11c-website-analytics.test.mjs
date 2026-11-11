@@ -16,6 +16,8 @@ test("DL11C validates event-specific fields and source",()=>{
  assert.equal(parseWebAnalytics({...base,page_type:"/contact?email=abc"}),null);
  assert.equal(parseWebAnalytics({...base,event:"web_product_view",page_type:undefined,product_key:"song-natural"}),null);
  assert.ok(parseWebAnalytics({event:"web_product_view",session_id:base.session_id,traffic_source:"direct",product_key:"song-natural"}));
+ assert.ok(parseWebAnalytics({event:"web_product_view",session_id:base.session_id,traffic_source:"direct",product_key:"Demo_Product"}));
+ assert.ok(parseWebAnalytics({event:"web_category_view",session_id:base.session_id,traffic_source:"direct",category_key:"School_Paper"}));
  assert.ok(parseWebAnalytics({event:"web_sku_view",session_id:base.session_id,traffic_source:"direct",product_key:"song-natural",sku:"0001234"}));
  assert.equal(parseWebAnalytics({...base,utm_campaign:"fbmn-john@example.com"}),null);
 });
