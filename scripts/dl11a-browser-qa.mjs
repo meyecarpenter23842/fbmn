@@ -67,6 +67,14 @@ try{for(const width of [1440,1280,1024,801,768,390,360]){
    const r=el.getBoundingClientRect();return {left:r.left,right:r.right,width:r.width};
   });
   assert.ok(mascot.width>=68&&mascot.left>=8&&mascot.right<=width-8,"full mascot clipped "+JSON.stringify({width,mascot}));
+  // Emulate a visual viewport shrinking independently of the layout viewport:
+  // this is how a mobile software keyboard obscures the composer.
+  await page.evaluate(()=>{
+   const visual=new EventTarget();
+   visual.offsetTop=0;
+   visual.height=window.innerHeight;
+   Object.defineProperty(window,"visualViewport",{configurable:true,value:visual});
+  });
   await launcher.click();
   const chat=page.locator("#fb-chat-panel");await chat.waitFor();
   const input=chat.locator("#fb-chat-input");
@@ -79,6 +87,25 @@ try{for(const width of [1440,1280,1024,801,768,390,360]){
   assert.ok(geometry.left>=8&&geometry.right<=width-8&&geometry.inputLeft>=geometry.left&&geometry.inputRight<geometry.sendLeft&&geometry.sendRight<=geometry.right,"mobile composer overflow "+JSON.stringify({width,geometry}));
   assert.ok(geometry.inputFont>=16,"iOS input zoom risk "+JSON.stringify({width,geometry}));
   await page.screenshot({path:"artifacts/dl11a/chat-mobile-"+width+".png"});
+  await page.evaluate(()=>{
+   const visual=window.visualViewport;
+   visual.height=window.innerHeight-280;
+   visual.dispatchEvent(new Event("resize"));
+  });
+  const keyboard=await chat.evaluate(el=>({
+   bottom:el.getBoundingClientRect().bottom,
+   visualBottom:visualViewport.offsetTop+visualViewport.height,
+   composerBottom:el.querySelector(".fb-chat__composer").getBoundingClientRect().bottom,
+   keyboardInset:getComputedStyle(el).getPropertyValue("--fb-chat-keyboard-bottom")
+  }));
+  assert.ok(keyboard.bottom<=keyboard.visualBottom-8&&keyboard.composerBottom<=keyboard.visualBottom-8,
+   "virtual keyboard hides mobile chat composer "+JSON.stringify({width,keyboard}));
+  assert.ok(parseFloat(keyboard.keyboardInset)>=280,"VisualViewport event did not update the keyboard inset");
+  await page.evaluate(()=>{
+   const visual=window.visualViewport;
+   visual.height=window.innerHeight;
+   visual.dispatchEvent(new Event("resize"));
+  });
   await page.setViewportSize({width,height:520});
   const short=await chat.evaluate(el=>({top:el.getBoundingClientRect().top,bottom:el.getBoundingClientRect().bottom,h:innerHeight}));
   assert.ok(short.top>=0&&short.bottom<=short.h+1,"chat sheet escapes short viewport "+JSON.stringify({width,short}));
