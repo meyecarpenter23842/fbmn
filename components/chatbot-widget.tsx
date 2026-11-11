@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {trackWebEvent} from "@/lib/analytics/web-client";
 
 type ChatMessage = { id: number; author: "visitor" | "bot"; text: string; contact?: boolean };
@@ -15,15 +15,21 @@ const welcomeMessage: ChatMessage = {
   text: "Chào anh/chị! Futurebook Miền Nam hỗ trợ tra cứu sản phẩm, hợp tác đại lý và thông tin liên hệ.",
 };
 
-function Avatar({ small = false }: { small?: boolean }) {
-  return <Image
-    src="/brand/fbmn-chatbot-avatar.webp"
-    width={small ? 30 : 40}
-    height={small ? 30 : 40}
-    alt=""
-    className="fb-chat__avatar"
-    aria-hidden="true"
-  />;
+/** Decorative book mascot; real Dialogflow chat behavior remains unchanged. */
+function BookMascot({ compact = false }: { compact?: boolean }) {
+  return <span className={"fb-chat__mascot" + (compact ? " fb-chat__mascot--compact" : "")} aria-hidden="true">
+    <span className="fb-chat__mascot-arm fb-chat__mascot-arm--left" />
+    <span className="fb-chat__mascot-arm fb-chat__mascot-arm--right" />
+    <span className="fb-chat__mascot-leg fb-chat__mascot-leg--left" />
+    <span className="fb-chat__mascot-leg fb-chat__mascot-leg--right" />
+    <span className="fb-chat__mascot-pages" />
+    <span className="fb-chat__mascot-cover">
+      <Image src="/brand/fbmn-transparent-logo.webp" width={300} height={84}
+        className="fb-chat__mascot-logo" alt="" />
+      <span className="fb-chat__mascot-face"><span className="fb-chat__mascot-eye"/><span className="fb-chat__mascot-eye"/></span>
+      <span className="fb-chat__mascot-smile" />
+    </span>
+  </span>;
 }
 
 export function ChatbotWidget() {
@@ -33,6 +39,7 @@ export function ChatbotWidget() {
 
 function ChatbotConversation() {
   const [open, setOpen] = useState(false);
+  const [renderPanel, setRenderPanel] = useState(false);
   const [draft, setDraft] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>([welcomeMessage]);
   const [typing, setTyping] = useState(false);
@@ -40,9 +47,28 @@ function ChatbotConversation() {
   const nextId = useRef(1);
   const session = useRef<string | null>(null);
   const controller = useRef<AbortController | null>(null);
+  const closingTimer = useRef<number | null>(null);
   const launcher = useRef<HTMLButtonElement>(null);
   const input = useRef<HTMLInputElement>(null);
   const feed = useRef<HTMLDivElement>(null);
+
+  const close = useCallback(() => {
+    setOpen(false);
+    if (closingTimer.current) window.clearTimeout(closingTimer.current);
+    closingTimer.current = window.setTimeout(() => {
+      setRenderPanel(false);
+      closingTimer.current = null;
+    }, 220);
+    launcher.current?.focus();
+  }, []);
+
+  const show = () => {
+    if (closingTimer.current) window.clearTimeout(closingTimer.current);
+    closingTimer.current = null;
+    setRenderPanel(true);
+    setOpen(true);
+    trackWebEvent("web_chat_open");
+  };
 
   useEffect(() => {
     if (!open) return;
@@ -57,16 +83,16 @@ function ChatbotConversation() {
     if (!open) return;
     const handleKeydown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
-        setOpen(false);
-        launcher.current?.focus();
+        close();
       }
     };
     document.addEventListener("keydown", handleKeydown);
     return () => document.removeEventListener("keydown", handleKeydown);
-  }, [open]);
+  }, [open, close]);
 
   useEffect(() => () => {
     controller.current?.abort();
+    if (closingTimer.current) window.clearTimeout(closingTimer.current);
   }, []);
 
   const submitMessage = async (raw: string) => {
@@ -98,16 +124,14 @@ function ChatbotConversation() {
     }
   };
 
-  const close = () => {
-    setOpen(false);
-    launcher.current?.focus();
-  };
-
   return (
     <div className="fb-chat" data-chatbot-mode="live">
-      {open && (
+      {renderPanel && (
         <section
           className="fb-chat__panel"
+          data-state={open ? "open" : "closing"}
+          aria-hidden={!open}
+          inert={!open}
           role="dialog"
           aria-modal="false"
           aria-labelledby="fb-chat-title"
@@ -115,7 +139,7 @@ function ChatbotConversation() {
           id="fb-chat-panel"
         >
           <header className="fb-chat__header">
-            <span className="fb-chat__head-avatar"><Avatar small /></span>
+            <span className="fb-chat__head-avatar"><BookMascot compact /></span>
             <span className="fb-chat__heading">
               <strong id="fb-chat-title">Futurebook Miền Nam</strong>
               <small id="fb-chat-mode">Trợ lý Futurebook · Dialogflow CX</small>
@@ -127,7 +151,7 @@ function ChatbotConversation() {
           <div className="fb-chat__feed" ref={feed} role="log" aria-label="Nội dung trò chuyện" aria-live="polite" aria-relevant="additions text">
             {messages.map(message => (
               <div key={message.id} className={"fb-chat__message fb-chat__message--" + message.author}>
-                {message.author === "bot" && <span className="fb-chat__mini-avatar"><Avatar small /></span>}
+                {message.author === "bot" && <span className="fb-chat__mini-avatar"><span className="fb-chat__mini-book" aria-hidden="true" /></span>}
                 <div className="fb-chat__bubble">
                   <p>{message.text}</p>
                   {message.contact && <Link href="/lien-he" onClick={close}>Liên hệ Futurebook <span aria-hidden="true">→</span></Link>}
@@ -136,7 +160,7 @@ function ChatbotConversation() {
             ))}
             {typing && (
               <div className="fb-chat__message fb-chat__message--bot">
-                <span className="fb-chat__mini-avatar"><Avatar small /></span>
+                <span className="fb-chat__mini-avatar"><span className="fb-chat__mini-book" aria-hidden="true" /></span>
                 <div className="fb-chat__typing" role="status" aria-label="Bot đang nhập tin nhắn">
                   <span aria-hidden="true"/><span aria-hidden="true"/><span aria-hidden="true"/>
                   <span className="fb-chat__sr-only">Bot đang nhập…</span>
@@ -161,16 +185,14 @@ function ChatbotConversation() {
       )}
       <button
         ref={launcher}
-        className="fb-chat__launcher"
+        className={"fb-chat__launcher" + (open ? " fb-chat__launcher--active" : "")}
         type="button"
         aria-label={open ? "Đóng chat Futurebook" : "Mở chat Futurebook"}
         aria-expanded={open}
         aria-controls="fb-chat-panel"
-        onClick={() => {if(open)close();else{setOpen(true);trackWebEvent("web_chat_open");}}}
+        onClick={() => { if (open) close(); else show(); }}
       >
-        {open ? (
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" aria-hidden="true"><path d="M5 5l14 14M19 5 5 19"/></svg>
-        ) : <Avatar />}
+        <BookMascot />
       </button>
     </div>
   );

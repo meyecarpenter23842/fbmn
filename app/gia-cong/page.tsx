@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import Image from "next/image";
 import {ContentShell,ContentBreadcrumb,PageHeading} from "@/components/content-ui";
 import OutsourcingRequestForm from "@/components/outsourcing-request-form";
 export const dynamic="force-dynamic";
@@ -14,13 +15,15 @@ export default function OutsourcingPage(){
   <PageHeading eyebrow="YÊU CẦU TƯ VẤN" title="Gia công theo yêu cầu"
    intro="Trao đổi nhu cầu và quy cách với Futurebook Miền Nam."/>
   <section className="content-intro-grid" aria-label="Thông tin gia công và yêu cầu tư vấn">
-   <div className="content-outline-panel">
+   <div className="content-outline-panel content-outline-panel--outsourcing">
     <h2>Gia công theo yêu cầu</h2>
     <p>Khách hàng có thể mô tả sản phẩm, mẫu bìa, quy cách, chất liệu và số lượng dự kiến để được trao đổi về khả năng đáp ứng.</p>
     <p>Khả năng thực hiện, số lượng tối thiểu, tiến độ và báo giá chỉ được xác nhận sau khi Futurebook Miền Nam kiểm tra yêu cầu. Website không công bố cam kết khi chưa có xác nhận chính thức.</p>
     <h3>Thông tin nên chuẩn bị</h3>
     <p>Loại sản phẩm, khổ, số trang, chất liệu bìa, số lượng dự kiến và các yêu cầu riêng (nếu có).</p>
     <Link className="content-text-link" href="/san-pham">Tham khảo danh mục sản phẩm</Link>
+    <Image className="content-outsourcing-art" src="/illustrations/futurebook-paper-craft.svg"
+     width={780} height={450} unoptimized alt="Minh họa giấy và sổ theo yêu cầu gia công" />
    </div>
    <div className="content-intro-panel">
     <h2>Gửi yêu cầu tư vấn</h2>
