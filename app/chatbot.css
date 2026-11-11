@@ -147,17 +147,43 @@
 @keyframes fb-chat-wave { 0%,62%,100% { transform:rotate(-27deg); } 68%,79% { transform:rotate(-60deg); } 74%,85% { transform:rotate(-40deg); } }
 @keyframes fb-chat-blink { 0%,43%,46%,100% { transform:scaleY(1); } 44%,45% { transform:scaleY(.15); } }
 @media (max-width: 700px) {
-  .fb-chat { right:12px; bottom:max(5px,env(safe-area-inset-bottom)); }
-  .fb-chat__panel { right:4px; bottom:73px; width:min(350px,calc(100vw - 24px)); height:min(475px,calc(100dvh - 102px - env(safe-area-inset-bottom))); }
-  /* G07 fixed quote CTA reserves only a 52px chat target on mobile. */
-  .fb-chat__launcher { width:52px; height:64px; }
-  .fb-chat__launcher .fb-chat__mascot { scale:.56; transform-origin:center; }
+  /* Full book remains legible with hands and feet, inset from the screen edge. */
+  .fb-chat { right:18px; bottom:max(12px,env(safe-area-inset-bottom)); }
+  .fb-chat__launcher { width:76px; height:94px; }
+  .fb-chat__launcher .fb-chat__mascot {
+    position:absolute; right:0; bottom:0; scale:.8; transform-origin:bottom right;
+    filter:drop-shadow(0 7px 8px rgba(57,20,93,.3));
+  }
+  /* On product screens, keep the full-size character above the fixed quote CTA. */
+  .fb-glass-site:has(.fb-song-mobile-cta) .fb-chat {
+    bottom:max(82px,calc(76px + env(safe-area-inset-bottom)));
+  }
+  /* A viewport-bound chat sheet prevents horizontal clipping and keeps the composer reachable. */
+  .fb-chat__panel {
+    position:fixed; z-index:2; left:12px; right:12px;
+    top:calc(max(10px,env(safe-area-inset-top)) + var(--fb-chat-visual-top,0px));
+    bottom:calc(max(10px,env(safe-area-inset-bottom)) + var(--fb-chat-keyboard-bottom,0px));
+    width:auto; max-width:none; min-width:0; height:auto; max-height:none;
+    border-radius:20px;
+  }
   .fb-chat__header { min-height:56px; height:56px; }
   .fb-chat__close { flex-basis:44px; width:44px; height:44px; }
+  .fb-chat__feed, .fb-chat__message { min-width:0; }
+  .fb-chat__bubble { min-width:0; max-width:min(265px,calc(100dvw - 98px)); overflow-wrap:anywhere; }
+  .fb-chat__quick { min-width:0; max-width:100%; }
   .fb-chat__quick button { min-height:44px; }
-  .fb-chat__composer button { flex-basis:44px; height:44px; }
+  .fb-chat__composer {
+    display:grid; grid-template-columns:minmax(0,1fr) 44px;
+    gap:8px; width:100%; max-width:100%; min-width:0; padding:10px 12px;
+  }
+  /* 16px prevents Safari from auto-zooming the entire page when the input is focused. */
+  .fb-chat__composer input { width:100%; max-width:100%; min-width:0; height:44px; font-size:16px; }
+  .fb-chat__composer button { width:44px; min-width:44px; height:44px; flex-basis:auto; }
+  .fb-chat__notice { min-width:0; overflow-wrap:anywhere; }
 }
-@media (max-height:450px) { .fb-chat__panel { height:calc(100dvh - 117px - env(safe-area-inset-bottom)); } }
+@media (max-height:450px) and (min-width:701px) {
+  .fb-chat__panel { height:calc(100dvh - 117px - env(safe-area-inset-bottom)); }
+}
 @media (prefers-reduced-motion:reduce) {
   .fb-chat__panel, .fb-chat__bubble, .fb-chat__mascot, .fb-chat__mascot-arm--right, .fb-chat__mascot-eye, .fb-chat__typing > span[aria-hidden] { animation:none; }
   .fb-chat__launcher, .fb-chat__close, .fb-chat__quick button, .fb-chat__composer button { transition:none; }
