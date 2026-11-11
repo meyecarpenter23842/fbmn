@@ -107,7 +107,9 @@ class CeoApi implements CeoRepository {
  }
  @override Future<String> markViewed(String kind,String id)async{
   if(!["contact","outsourcing"].contains(kind)||
-     !RegExp(r'^[0-9a-fA-F-]{36}'+r'$').hasMatch(id))throw const CeoApiException(400);
+     !RegExp(r'^[0-9a-fA-F-]{36}' r'$').hasMatch(id)){
+   throw const CeoApiException(400);
+  }
   final jwt=await _ownerJwt();
   final response=await _request("POST","/api/ceo/reads",
    json:{"kind":kind,"id":id},bearer:jwt);
