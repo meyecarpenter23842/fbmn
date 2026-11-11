@@ -89,6 +89,13 @@ function ChatbotConversation() {
       const keyboard = Math.max(0, window.innerHeight - viewport.height - viewport.offsetTop);
       panel.current?.style.setProperty("--fb-chat-visual-top", `${Math.round(top)}px`);
       panel.current?.style.setProperty("--fb-chat-visual-height", `${Math.round(viewport.height)}px`);
+      // Inline the visible height as well: mobile browsers can retain a cached calc() height
+      // when only the visual viewport changes while the layout viewport stays fixed.
+      if (window.matchMedia("(max-width: 700px)").matches) {
+        panel.current?.style.setProperty("height", `calc(${Math.round(viewport.height)}px - max(10px,env(safe-area-inset-top)) - max(10px,env(safe-area-inset-bottom)))`);
+      } else {
+        panel.current?.style.removeProperty("height");
+      }
       panel.current?.style.setProperty("--fb-chat-keyboard-bottom", `${Math.round(keyboard)}px`);
     };
     syncViewport();
