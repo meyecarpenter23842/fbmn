@@ -65,6 +65,10 @@ export function SiteHeader() {
   return (
     <header className="ref-header">
       <Container className="ref-header__inner">
+          <button className="ref-header__mobile-icon ref-header__mobile-search" type="button"
+            aria-label={searchOpen ? "Đóng thông báo tìm kiếm" : "Mở thông báo tìm kiếm"}
+            ref={searchButton} aria-expanded={searchOpen} aria-controls="ref-mobile-search"
+            onClick={() => { setSearchOpen(!searchOpen); setMenuOpen(false); }}><Icon name="search" size={23}/></button>
         <Brand mobile />
         <form className="ref-header__desktop-search" role="search" aria-label="Tìm kiếm sản phẩm" action="/san-pham" method="get">
           <input type="search" name="q" aria-label="Tìm sản phẩm" placeholder="Tìm sản phẩm" maxLength={80}/>
@@ -97,10 +101,6 @@ export function SiteHeader() {
             aria-label="Liên hệ Futurebook để hỏi báo giá sỉ và hợp tác đại lý">
             <span className="ref-header__dealer-full">Liên hệ đại lý</span><span className="ref-header__dealer-short">Đại lý</span><Icon name="arrow" size={16}/>
           </Link>
-          <button className="ref-header__mobile-icon" type="button"
-            aria-label={searchOpen ? "Đóng thông báo tìm kiếm" : "Mở thông báo tìm kiếm"}
-            ref={searchButton} aria-expanded={searchOpen} aria-controls="ref-mobile-search"
-            onClick={() => { setSearchOpen(!searchOpen); setMenuOpen(false); }}><Icon name="search" size={23}/></button>
           <button className="ref-header__mobile-icon" type="button" ref={menuButton}
             aria-label={menuOpen ? "Đóng danh mục điều hướng" : "Mở danh mục điều hướng"}
             aria-expanded={menuOpen} aria-controls="site-navigation"

@@ -14,6 +14,8 @@
  * Existing separate Admin and Đại Việt apps never import this stylesheet.
  */
 .fb-glass-site {
+  /* Contain the first route/header top margin so it cannot collapse outside the painted backdrop. */
+  display: flow-root;
   min-height: 100vh;
   width: 100%;
   overflow-x: clip;
