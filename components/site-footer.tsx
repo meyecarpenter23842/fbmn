@@ -13,7 +13,7 @@ export function SiteFooter() {
           <Link href="/" className="site-footer__brand-link" aria-label="Futurebook Miền Nam — về trang chủ">
             <Image
               src="/brand/fbmn-transparent-logo.webp" alt="Logo Futurebook Miền Nam"
-              width={300} height={84} className="site-footer__logo" sizes="(max-width: 700px) 134px, 140px"
+              width={300} height={84} className="site-footer__logo" sizes="(max-width: 700px) 110px, 104px"
             />
           </Link>
           <p>Tập vở, sổ và văn phòng phẩm Futurebook Miền Nam.</p>

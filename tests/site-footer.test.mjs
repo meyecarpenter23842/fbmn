@@ -20,11 +20,11 @@ test("all website shells share one structured footer", () => {
 
 test("footer logo always smaller than menu/header logo", () => {
   const styles = read("app/site-footer.css");
-  assert.match(styles, /\.site-footer__logo\s*\{[^}]*width:\s*140px/s);
-  assert.match(styles, /\.site-footer__logo\s*\{\s*width:\s*134px/);
+  assert.match(styles, /\.site-footer__logo\s*\{[^}]*width:\s*104px/s);
+  assert.match(styles, /\.site-footer__logo\s*\{\s*width:\s*110px/);
   const headerStyles = read("app/rebaseline.css");
-  assert.match(headerStyles, /\.ref-brand__official-image\s*\{[^}]*width:\s*min\(213px/s);
-  assert.match(headerStyles, /width:\s*clamp\(145px/);
+  assert.match(headerStyles, /\.ref-brand__official-image\s*\{[^}]*width:\s*144px/s);
+  assert.match(headerStyles, /width:\s*132px/);
   assert.match(read("app/layout.tsx"), /\.\/site-footer\.css/);
 });
 

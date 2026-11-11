@@ -24,7 +24,7 @@ test("DL1 desktop main nav has six links and approved purple theme", () => {
   assert.match(header, /href: "\/bang-tin"/);
   assert.match(header, /href: "\/catalogue"/);
   assert.match(header, /ref-header__dealer-cta/);
-  assert.match(css, /\.ref-navigation \{ background: rgba\(255,255,255,\.12\)/);
+  assert.match(css, /\.ref-navigation \{ color: var\(--fb-glass-ink\)/);
   assert.match(css, /\.ref-navigation__link--active \{[^}]*background: linear-gradient\(115deg, var\(--color-primary\)/);
   assert.match(css, /@media \(max-width: 800px\)/);
   assert.doesNotMatch(css, /ref-bottom-nav|position:\s*fixed/);
