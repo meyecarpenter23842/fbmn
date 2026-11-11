@@ -355,7 +355,10 @@ class _CeoHomeState extends State<CeoHome>{
     if(mounted)setState(()=>contacts=CeoPage([...contacts!.items,...v.items],v.page,v.hasMore));
    }
   }catch(e){if(mounted)setState(()=>error=userError(e));}
-  finally{endLoad(tabAtStart);}
+  finally{
+   endLoad(tabAtStart);
+   if(mounted)alertsVersion.value++;
+  }
  }
  Future<void> logout()async{
   if(loading)return;
