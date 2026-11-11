@@ -29,7 +29,7 @@ export function ownerSyncProof(comments,devSha,treeSha){
  for(const c of comments||[]){
   // The verified receipt is issued by the development repository owner only.
   if(c.user?.login!=="meyecarpenter23842")continue;
-  for(const m of (c.body||"").matchAll(/<!-- fbmn-ceo-sync-proof:v1 (\\{[^\\n]+\\}) -->/g)){
+  for(const m of (c.body||"").matchAll(/<!-- fbmn-ceo-sync-proof:v1 (\{[^\n]+\}) -->/g)){
    try{
     const p=JSON.parse(m[1]);
     if(p.dev_sha!==devSha||p.tree_sha!==treeSha||
