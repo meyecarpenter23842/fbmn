@@ -47,7 +47,8 @@ async function currentPublicCms(signal:AbortSignal):Promise<PublicCmsItem[]|null
 export default function CmsPopupRuntime(){
  const path=usePathname()||"/";
  // Key by route visit: an old popup cannot reappear via Back/Forward with stale state.
- return path==="/policy"?null:<CmsPopupSession key={path} path={path}/>;
+ if(path==="/policy")return null;
+ return <CmsPopupSession key={path} path={path}/>;
 }
 function CmsPopupSession({path}:{path:string}){
  const [show,setShow]=useState<{path:string;item:PublicCmsItem}|null>(null);
