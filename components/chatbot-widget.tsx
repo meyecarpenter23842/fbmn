@@ -51,6 +51,7 @@ function ChatbotConversation() {
   const launcher = useRef<HTMLButtonElement>(null);
   const input = useRef<HTMLInputElement>(null);
   const feed = useRef<HTMLDivElement>(null);
+  const panel = useRef<HTMLElement>(null);
 
   const close = useCallback(() => {
     setOpen(false);
@@ -78,6 +79,33 @@ function ChatbotConversation() {
   useEffect(() => {
     if (open && feed.current) feed.current.scrollTop = feed.current.scrollHeight;
   }, [open, typing, messages]);
+
+  // Keep the chat composer above the mobile virtual keyboard (especially iOS Safari).
+  useEffect(() => {
+    if (!open || !window.visualViewport) return;
+    const viewport = window.visualViewport;
+    const syncViewport = () => {
+      const top = Math.max(0, viewport.offsetTop);
+      const keyboard = Math.max(0, window.innerHeight - viewport.height - viewport.offsetTop);
+      panel.current?.style.setProperty("--fb-chat-visual-top", `${Math.round(top)}px`);
+      panel.current?.style.setProperty("--fb-chat-visual-height", `${Math.round(viewport.height)}px`);
+      // Inline the visible height as well: mobile browsers can retain a cached calc() height
+      // when only the visual viewport changes while the layout viewport stays fixed.
+      if (window.matchMedia("(max-width: 700px)").matches) {
+        panel.current?.style.setProperty("height", `calc(${Math.round(viewport.height)}px - max(10px,env(safe-area-inset-top)) - max(10px,env(safe-area-inset-bottom)))`);
+      } else {
+        panel.current?.style.removeProperty("height");
+      }
+      panel.current?.style.setProperty("--fb-chat-keyboard-bottom", `${Math.round(keyboard)}px`);
+    };
+    syncViewport();
+    viewport.addEventListener("resize", syncViewport);
+    viewport.addEventListener("scroll", syncViewport);
+    return () => {
+      viewport.removeEventListener("resize", syncViewport);
+      viewport.removeEventListener("scroll", syncViewport);
+    };
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
@@ -129,6 +157,7 @@ function ChatbotConversation() {
       {renderPanel && (
         <section
           className="fb-chat__panel"
+          ref={panel}
           data-state={open ? "open" : "closing"}
           aria-hidden={!open}
           inert={!open}
