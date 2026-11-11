@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { officialContact as contact } from "@/lib/content/official-contact";
+import { GlassPanel } from "@/components/glass-ui";
 import "./policy.css";
 
 export const metadata: Metadata = {
@@ -11,7 +12,7 @@ export const metadata: Metadata = {
 
 export default function PolicyPage() {
   return <main className="fb-policy">
-    <article className="fb-policy__document">
+    <GlassPanel className="fb-policy__document">
       <p className="fb-policy__brand">FUTUREBOOK MIỀN NAM</p>
       <h1>Chính sách bảo mật</h1>
       <p>Cập nhật: <time dateTime="2026-11-11">11/11/2026</time></p>
@@ -44,6 +45,6 @@ export default function PolicyPage() {
       <p>Yêu cầu xóa có thể gửi ngay cả khi không có tài khoản Website. Với Messenger, xóa dữ liệu tại Futurebook không đồng nghĩa xóa mọi bản sao do Meta lưu; anh/chị có thể quản lý tin nhắn và dữ liệu Meta qua cài đặt tài khoản Facebook của mình.</p>
       <h2>8. Thay đổi chính sách</h2>
       <p>Futurebook cập nhật chính sách khi thay đổi cách xử lý dữ liệu, bao gồm trước khi triển khai tích hợp Messenger hoặc thống kê hành vi Website mới. Phiên bản hiện hành được công bố tại địa chỉ này. Mọi câu hỏi về quyền riêng tư vui lòng gửi email <a href={contact.emailHref}>{contact.email}</a>.</p>
-    </article>
+    </GlassPanel>
   </main>;
 }

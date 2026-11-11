@@ -1,5 +1,5 @@
 .fb-policy{width:min(860px,calc(100% - 32px));margin:0 auto;padding:24px 0 48px;color:var(--fb-glass-ink)}
-.fb-policy__document{background:var(--fb-glass-surface-fallback);border:1px solid var(--fb-glass-border);border-radius:var(--fb-glass-panel-radius);box-shadow:var(--fb-glass-shadow);padding:clamp(20px,4vw,44px);line-height:1.75;overflow-wrap:anywhere}
+.fb-policy__document{padding:clamp(20px,4vw,44px);line-height:1.75;overflow-wrap:anywhere}
 .fb-policy__brand{font-weight:750;color:var(--color-primary-strong);letter-spacing:.05em;font-size:13px}
 .fb-policy h1{font-size:clamp(26px,4vw,36px);line-height:1.25;color:var(--color-primary-strong);margin:0 0 12px}
 .fb-policy h2{font-size:19px;line-height:1.4;color:var(--color-primary-strong);margin:26px 0 8px}
