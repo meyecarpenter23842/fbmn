@@ -180,6 +180,7 @@
   .ref-header__inner { grid-template-columns: 1fr auto 1fr; gap: 6px; min-height: 56px; }
   .ref-brand--mobile { display: inline-flex; grid-column: 2; grid-row: 1; }
   .ref-header__right { grid-column: 3; grid-row: 1; }
+  .ref-header__mobile-search { grid-column: 1; grid-row: 1; justify-self: start; }
   .ref-navigation__inner > .ref-brand { display: none; }
   .ref-navigation__group { display: contents; }
   .ref-brand__emblem { width: 37px; height: 34px; font-size: 17px; border-width: 2px; }

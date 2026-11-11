@@ -11,6 +11,8 @@ try{for(const width of [1440,1280,1024,801,768,390,360]){
  await header.waitFor();
  const g=await header.evaluate(el=>({height:el.getBoundingClientRect().height,top:el.getBoundingClientRect().top,overflow:el.scrollWidth>el.clientWidth+2}));
  assert.ok(g.height<=76&&g.top>=(width>800?19:13)&&!g.overflow,JSON.stringify({width,g}));
+ const backdrop=await page.locator(".fb-glass-site").evaluate(el=>({top:el.getBoundingClientRect().top,bg:getComputedStyle(el).backgroundImage}));
+ assert.ok(Math.abs(backdrop.top)<1&&backdrop.bg!=="none","background covers top gap "+JSON.stringify(backdrop));
  if(width>800){
   const nav=page.locator("#site-navigation");
   const links=nav.locator(".ref-navigation__link");
@@ -34,6 +36,11 @@ try{for(const width of [1440,1280,1024,801,768,390,360]){
   }
  }else{
   const toggle=page.locator('button[aria-controls="site-navigation"]');
+  const searchToggle=page.locator('button[aria-controls="ref-mobile-search"]');
+  const logo=page.locator(".ref-brand--mobile");
+  const s=await searchToggle.boundingBox(),b=await logo.boundingBox(),m=await toggle.boundingBox();
+  assert.ok(s.x+s.width<=b.x&&b.x+b.width<=m.x,"search left, logo center, hamburger right");
+  assert.ok(Math.abs(b.x+b.width/2-width/2)<2,"mobile logo centered");
   await toggle.click();assert.equal(await toggle.getAttribute("aria-expanded"),"true");
   await page.locator("#site-navigation .ref-navigation__link").last().waitFor({state:"visible"});
   await page.screenshot({path:"artifacts/dl11a/menu-"+width+".png"});
@@ -42,6 +49,11 @@ try{for(const width of [1440,1280,1024,801,768,390,360]){
   assert.ok(await page.locator("#ref-mobile-search").isVisible());await page.keyboard.press("Escape");
  }
  await page.screenshot({path:"artifacts/dl11a/header-"+width+".png"});
+ // Content shells also used to collapse the header margin, notably Gia công.
+ await page.goto("http://127.0.0.1:3100/gia-cong",{waitUntil:"domcontentloaded"});
+ assert.ok(await page.locator(".fb-glass-site").evaluate(el=>Math.abs(el.getBoundingClientRect().top)<1));
+ assert.ok(await page.locator(".ref-header").evaluate(el=>el.getBoundingClientRect().top>10));
+ await page.screenshot({path:"artifacts/dl11a/gia-cong-"+width+".png"});
  const btn=page.getByRole("button",{name:"Tải ứng dụng",exact:true});await btn.scrollIntoViewIfNeeded();await btn.click();
  const dialog=page.getByRole("dialog",{name:"Ứng dụng Futurebook"});await dialog.waitFor();
  assert.equal(await dialog.locator(".app-download__store--unavailable").count(),2);
