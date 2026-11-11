@@ -52,7 +52,7 @@ try{
    assert.equal(search,"Giấy A4");assert.equal(dateFrom,"2026-11-01");assert.equal(dateTo,"2026-11-10");
    await detail.click();
    const dialog=page.getByRole("region",{name:"Nội dung hội thoại"});
-   assert.equal(await detail.getAttribute("aria-current"),"true");
+   assert.equal(await page.locator(".dl10c-conversation[aria-current=\"true\"]").getAttribute("aria-current"),"true");
    if(width>780)assert.ok(await page.getByRole("complementary",{name:"Danh sách hội thoại"}).isVisible());
    else {await dialog.getByRole("button",{name:"Danh sách"}).click();await detail.click();}
    await dialog.getByText("Dòng một",{exact:false}).waitFor();
