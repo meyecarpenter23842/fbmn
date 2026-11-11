@@ -102,6 +102,7 @@ try{for(const width of [1440,1280,1024,801,768,390,360]){
    visibleHeight:getComputedStyle(el).getPropertyValue("--fb-chat-visual-height"),
    computedHeight:getComputedStyle(el).height,
    inlineHeight:el.style.height,
+   visualHeight:visualViewport.height,
    inlineCss:el.style.cssText,
    computedMinHeight:getComputedStyle(el).minHeight,
    computedMaxHeight:getComputedStyle(el).maxHeight,
@@ -111,6 +112,12 @@ try{for(const width of [1440,1280,1024,801,768,390,360]){
   assert.ok(keyboard.bottom<=keyboard.visualBottom-8&&keyboard.composerBottom<=keyboard.visualBottom-8,
    "virtual keyboard hides mobile chat composer "+JSON.stringify({width,keyboard}));
   assert.ok(parseFloat(keyboard.keyboardInset)>=280,"VisualViewport event did not update the keyboard inset");
+  // Verify that both the CSS computed height and the direct inline fallback
+  // actually consume the shrunken visual viewport, not just the bottom geometry.
+  assert.ok(keyboard.inlineHeight.includes(`${Math.round(keyboard.visualHeight)}px`),
+   "inline mobile keyboard height was not updated "+JSON.stringify({width,keyboard}));
+  assert.ok(parseFloat(keyboard.computedHeight)<=keyboard.visualHeight-16,
+   "computed chat height ignores the virtual keyboard "+JSON.stringify({width,keyboard}));
   await page.evaluate(()=>{
    const visual=window.visualViewport;
    visual.height=window.innerHeight;
