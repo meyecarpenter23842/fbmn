@@ -3,16 +3,19 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 const read = p => readFileSync(new URL("../" + p, import.meta.url), "utf8");
 
-test("chatbot uses user-supplied FBMN image with compact floating launcher", () => {
+test("chatbot has a branded animated book mascot rather than a round avatar", () => {
   const code = read("components/chatbot-widget.tsx"), css = read("app/chatbot.css");
   const layout = read("app/layout.tsx");
-  const image = readFileSync(new URL("../public/brand/fbmn-chatbot-avatar.webp", import.meta.url));
+  const image = readFileSync(new URL("../public/brand/fbmn-transparent-logo.webp", import.meta.url));
   assert.ok(image.byteLength > 1000);
-  assert.match(code, /fbmn-chatbot-avatar\.webp/);
+  assert.match(code, /function BookMascot/);
+  assert.match(code, /fbmn-transparent-logo\.webp/);
+  assert.doesNotMatch(code, /fbmn-chatbot-avatar\.webp/);
   assert.match(layout, /<ChatbotWidget\s*\/>/);
-  assert.match(css, /\.fb-chat__launcher\s*\{[^}]*width:\s*56px;\s*height:\s*56px/s);
-  assert.match(css, /\.fb-chat__panel\s*\{/);
-  assert.match(css, /@media \(max-width:\s*700px\)/);
+  assert.match(css, /\.fb-chat__launcher\s*\{[\s\S]*?width:96px; height:106px;/);
+  assert.match(css, /@keyframes fb-chat-float/);
+  assert.match(css, /@keyframes fb-chat-blink/);
+  assert.match(css, /@media \(max-width:700px\)/);
 });
 test("widget has real pending state and accessible close", () => {
   const code=read("components/chatbot-widget.tsx");
@@ -47,4 +50,16 @@ test("chat input stays focusable while typing and the popup fits short screens",
   assert.doesNotMatch(widget, /onChange=\{event => setDraft\(event.target.value\)\}\s+disabled=\{typing\}/);
   assert.match(downloadCss, /max-height: calc\(100dvh - 112px\)/);
   assert.match(downloadCss, /max-height: calc\(100dvh - 94px - env\(safe-area-inset-top\)\)/);
+});
+
+test("book chatbot respects motion, close timing and existing Dialogflow session",()=>{
+  const code=read("components/chatbot-widget.tsx"),css=read("app/chatbot.css");
+  assert.match(code,/setRenderPanel\(false\)/);
+  assert.match(code,/\}, 220\)/);
+  assert.match(code,/inert=\{!open\}/);
+  assert.match(code,/aria-hidden=\{!open\}/);
+  assert.match(code,/session\.current\?\?=crypto\.randomUUID\(\)/);
+  assert.match(css,/fb-chat-close 220ms/);
+  assert.match(css,/fb-chat-open 280ms/);
+  assert.match(css,/prefers-reduced-motion:reduce/);
 });
