@@ -35,3 +35,4 @@ JWT Owner không lưu persistent storage, không chấp nhận push URL ngoài /
 Cron chỉ nhận Bearer CRON_SECRET; role database push chỉ đọc IDs/time/status từ inbox và không được truy cập PII.
 
 DL12B không bị thay đổi.
+- Gửi thành công được ghi theo từng event và endpoint để retry không spam thiết bị đã nhận. Cron xóa event IDs sau 90 ngày và subscription không còn hoạt động sau 180 ngày. Quyền Owner DB được kiểm lại trước mỗi lần phát.

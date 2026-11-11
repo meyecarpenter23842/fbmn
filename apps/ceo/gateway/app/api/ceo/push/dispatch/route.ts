@@ -17,6 +17,11 @@ export async function GET(request:Request){
  try{
   webpush.setVapidDetails("mailto:info@fbmn.vn",pub,priv);
   return await withPushDb(async db=>{
+   // Short-lived event IDs only; retention applies even when Owner devices are inactive.
+   await db.query("DELETE FROM fbmn_catalog_private.ceo_push_events"+
+    " WHERE occurred_at<now()-interval '90 days'");
+   await db.query("DELETE FROM fbmn_catalog_private.ceo_push_subscriptions"+
+    " WHERE last_seen_at<now()-interval '180 days'");
    // No subscription means no data scanning and no historic messages.
    const earliest=await db.query<{since:Date|null}>(
     "SELECT min(created_at) AS since FROM fbmn_catalog_private.ceo_push_subscriptions"+
