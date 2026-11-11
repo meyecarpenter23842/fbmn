@@ -302,3 +302,5 @@ File người dùng cung cấp: `Futurebook_MASTER_SAN_PHAM_VA_ANH_2026.xlsx` (*
 
 ## Owner 11/11/2026 — Website compact header, Policy, Analytics và CEO
 Thứ tự mới trước DL8: DL11A (Header một hàng, logo giữa 3+3 tab, tìm kiếm ngắn, khoảng hở, nút tải app footer) → DL11B (Policy độc lập /policy, không link menu/footer) → DL11C (PostHog Website, tracking không PII) → DL12A (Flutter/Dart CEO PWA, Owner, 5 tab, đọc chat/gia công/liên hệ, chưa đọc) → DL12B (Analytics CEO qua API server) → DL12C (Web Push, badge, deep link, thiết bị hỗ trợ) → DL12D (Vercel riêng fbmn-ceo, ceo.fbmn.vn, test thiết bị thật) → DL8. DL11A chỉ Website UI: bảo toàn sáu URL, search SKU, CTA đại lý, mobile hamburger, popup app và store URL chưa có; CI/Codex + browser 1440/1280/768/390/360 trước release. Không sửa backend/DB/Admin. Các lô sau chưa triển khai.
+
+**DL11A polish — Owner 11/11/2026:** giữ nguyên layout một hàng đã duyệt, tăng khoảng hở trên desktop 20px/mobile 14px, kính trong với viền bắt sáng và bóng nhiều lớp, phản hồi hover/press 190–200ms cho tab/search/CTA/mobile controls và nút tải ứng dụng; giữ reduced motion. Website-only, không đổi dữ liệu hoặc lô tiếp theo.

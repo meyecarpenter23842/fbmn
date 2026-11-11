@@ -10,7 +10,7 @@ try{for(const width of [1440,1280,1024,801,768,390,360]){
  const header=page.locator(".ref-header");
  await header.waitFor();
  const g=await header.evaluate(el=>({height:el.getBoundingClientRect().height,top:el.getBoundingClientRect().top,overflow:el.scrollWidth>el.clientWidth+2}));
- assert.ok(g.height<=76&&g.top>=5&&!g.overflow,JSON.stringify({width,g}));
+ assert.ok(g.height<=76&&g.top>=(width>800?19:13)&&!g.overflow,JSON.stringify({width,g}));
  if(width>800){
   const nav=page.locator("#site-navigation");
   const links=nav.locator(".ref-navigation__link");
@@ -20,6 +20,18 @@ try{for(const width of [1440,1280,1024,801,768,390,360]){
   assert.ok(left.x+left.width<=b.x+1&&b.x+b.width<=right.x+1,"logo between three links each side");
   assert.ok(Math.abs(b.x+b.width/2-width/2)<20,"centered logo");
   assert.ok(await page.locator(".ref-header__desktop-search").isVisible());
+  if(width===1440){
+   await page.emulateMedia({reducedMotion:"no-preference"});
+   const link=links.nth(1);await link.hover();await page.waitForTimeout(250);
+   assert.notEqual(await link.evaluate(el=>getComputedStyle(el).transform),"none");
+   assert.notEqual(await link.evaluate(el=>getComputedStyle(el).boxShadow),"none");
+   await page.screenshot({path:"artifacts/dl11a/hover-1440.png"});
+   await page.mouse.down();await page.waitForTimeout(220);
+   const press=await link.evaluate(el=>new DOMMatrix(getComputedStyle(el).transform).a);assert.ok(press<.99,"pressed link scales");
+   await page.mouse.move(2,2);await page.mouse.up();
+   await page.emulateMedia({reducedMotion:"reduce"});await link.hover();
+   assert.equal(await link.evaluate(el=>getComputedStyle(el).transform),"none");
+  }
  }else{
   const toggle=page.locator('button[aria-controls="site-navigation"]');
   await toggle.click();assert.equal(await toggle.getAttribute("aria-expanded"),"true");
