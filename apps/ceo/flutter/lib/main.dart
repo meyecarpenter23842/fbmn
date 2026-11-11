@@ -276,6 +276,7 @@ class _CeoHomeState extends State<CeoHome>{
   ]));
  void showCase(CeoRequest r,bool outsource)=>showModalBottomSheet<void>(
   context:context,isScrollControlled:true,useSafeArea:true,showDragHandle:false,
+  sheetAnimationStyle:ceoDetailSheetMotion(context),
   builder:(ctx)=>FractionallySizedBox(heightFactor:.88,child:Column(children:[
    CeoSheetHeader(title:outsource?'Chi tiết gia công':'Chi tiết liên hệ'),
    Expanded(child:ListView(padding:const EdgeInsets.all(20),children:[
@@ -297,6 +298,7 @@ class _CeoHomeState extends State<CeoHome>{
   ])));
  void showChat(CeoConversation r)=>showModalBottomSheet<void>(
   context:context,isScrollControlled:true,useSafeArea:true,showDragHandle:false,
+  sheetAnimationStyle:ceoDetailSheetMotion(context),
   builder:(ctx)=>FractionallySizedBox(heightFactor:.88,child:Column(children:[
    const CeoSheetHeader(title:'Nội dung hội thoại'),
    Expanded(child:FutureBuilder<List<CeoTurn>>(

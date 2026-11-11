@@ -29,3 +29,12 @@ class CeoSheetHeader extends StatelessWidget{
   );
  }
 }
+
+/** One motion owner for the request and conversation sheets. */
+AnimationStyle ceoDetailSheetMotion(BuildContext context){
+ final reduced=MediaQuery.of(context).disableAnimations;
+ return reduced
+   ? const AnimationStyle(duration:Duration.zero,reverseDuration:Duration.zero)
+   : const AnimationStyle(duration:Duration(milliseconds:280),
+       reverseDuration:Duration(milliseconds:220));
+}
