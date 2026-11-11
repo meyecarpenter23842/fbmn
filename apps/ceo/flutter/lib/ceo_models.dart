@@ -54,7 +54,7 @@ class CeoRequest{
    productType:_str(j["productType"]),specifications:_str(j["specifications"]),
    quantity:_str(j["quantity"]),desiredDate:_str(j["desiredDate"]),details:_str(j["details"]),
    message:_str(j["message"]),createdAt:_str(j["createdAt"]),status:_str(j["status"]),
-   viewedAt:j["viewedAt"] is String?j["viewedAt"] as String:null,
+   viewedAt:j["viewedAt"] is String ? j["viewedAt"] as String : null,
    interests:_array(j["interests"]).whereType<String>().toList(growable:false));
  }
 }

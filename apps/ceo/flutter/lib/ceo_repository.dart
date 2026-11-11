@@ -107,14 +107,12 @@ class CeoApi implements CeoRepository {
  }
  @override Future<String> markViewed(String kind,String id)async{
   if(!["contact","outsourcing"].contains(kind)||
-     !RegExp(r'^[0-9a-fA-F-]{36}
-}
-).hasMatch(id))throw const CeoApiException(400);
+     !RegExp(r'^[0-9a-fA-F-]{36}'+r'$').hasMatch(id))throw const CeoApiException(400);
   final jwt=await _ownerJwt();
   final response=await _request("POST","/api/ceo/reads",
    json:{"kind":kind,"id":id},bearer:jwt);
   final data=response["data"];
-  final stamp=data is Map<String,dynamic>?data["viewedAt"]:null;
+  final stamp=data is Map<String,dynamic> ? data["viewedAt"] : null;
   if(stamp is! String||DateTime.tryParse(stamp)==null)throw const CeoApiException(503);
   return stamp;
  }
