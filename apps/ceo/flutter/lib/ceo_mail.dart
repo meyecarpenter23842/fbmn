@@ -62,8 +62,8 @@ class _CeoMailPanelState extends State<CeoMailPanel>{
        if(s.connectionState!=ConnectionState.done){
         return const Center(child:CircularProgressIndicator());
        }
-       if(s.hasError)return Center(child:Padding(
-        padding:const EdgeInsets.all(20),child:Text('Không tải được thư: ${s.error}')));
+       if(s.hasError){return Center(child:Padding(
+        padding:const EdgeInsets.all(20),child:Text('Không tải được thư: ${s.error}')));}
        final letter=s.data!;
        return ListView(padding:const EdgeInsets.all(16),children:[
         Text(letter.subject.isNotEmpty?letter.subject:'(Không có tiêu đề)',

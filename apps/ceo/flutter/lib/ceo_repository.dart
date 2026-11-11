@@ -127,16 +127,15 @@ class CeoApi implements CeoRepository {
  }
 
  @override Future<CeoMailPage> mailList(String box,{String? after})async{
-  if(box!='inbox'&&box!='sent')throw const CeoApiException(400);
+  if(box!='inbox'&&box!='sent'){throw const CeoApiException(400);}
   final afterParam=after==null?'':'&after=$after';
   final j=await _data('/api/ceo/mail?box=$box&limit=20$afterParam');
   return CeoMailPage.fromJson(j);
  }
  @override Future<CeoMailItem> mailDetail(String box,String id)async{
-  if(!['inbox','sent'].contains(box)||!RegExp(r'^[a-f0-9-]{36}
-}
-).hasMatch(id))
+  if(!['inbox','sent'].contains(box)||id.length!=36){
    throw const CeoApiException(400);
+  }
   return CeoMailItem.fromJson(await _data('/api/ceo/mail/$id?box=$box'));
  }
  @override Future<String> mailSend({required String to,required String subject,
@@ -148,8 +147,9 @@ class CeoApi implements CeoRepository {
    if(requestId!=null)'requestId':requestId,
   });
   final data=result['data'];
-  if(data is! Map<String,dynamic>||data['id'] is! String)
+  if(data is! Map<String,dynamic>||data['id'] is! String){
    throw const CeoApiException(503);
+  }
   return data['id'] as String;
  }
  @override void dispose()=>_client.close();
