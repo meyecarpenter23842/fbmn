@@ -11,7 +11,7 @@ String dateString(String value) {
  final d=DateTime.tryParse(value)?.toUtc().add(const Duration(hours:7));
  if(d==null)return '';
  String two(int n)=>n.toString().padLeft(2,'0');
- return two(d.day)+'/'+two(d.month)+'/'+d.year.toString()+' · '+two(d.hour)+':'+two(d.minute);
+ return '${two(d.day)}/${two(d.month)}/${d.year} · ${two(d.hour)}:${two(d.minute)}';
 }
 String userError(Object error)=>error is CeoApiException?error.toString():'Không kết nối được dịch vụ.';
 
@@ -119,11 +119,11 @@ class _CeoHomeState extends State<CeoHome>{
    if(selected==0){
     final result=await Future.wait<Object>([
       widget.api.conversations(),widget.api.outsourcingRequests(),widget.api.contactRequests()]);
-    if(mounted)setState((){
+    if(mounted){setState((){
       conversations=result[0] as CeoPage<CeoConversation>;
       outsourcing=result[1] as CeoPage<CeoRequest>;
       contacts=result[2] as CeoPage<CeoRequest>;
-    });
+    });}
    }else if(selected==1){final v=await widget.api.conversations();
     if(mounted)setState(()=>conversations=v);}
    else if(selected==2){final v=await widget.api.outsourcingRequests();
@@ -195,8 +195,8 @@ class _CeoHomeState extends State<CeoHome>{
      const SizedBox(height:12),body,
    ])));
  Widget content(){
-  if(selected==4)return ListView(children:[card('Thống kê Website','DL12B · Chưa kết nối',
-    const Text('Không hiển thị số liệu mẫu. Analytics sẽ được kết nối và kiểm chứng ở lô DL12B.'))]);
+  if(selected==4){return ListView(children:[card('Thống kê Website','DL12B · Chưa kết nối',
+    const Text('Không hiển thị số liệu mẫu. Analytics sẽ được kết nối và kiểm chứng ở lô DL12B.'))]);}
   if(loading&&((selected==0&&(conversations==null||outsourcing==null||contacts==null))||
     (selected==1&&conversations==null)||(selected==2&&outsourcing==null)||(selected==3&&contacts==null))){
     return const Center(child:CircularProgressIndicator());
@@ -206,9 +206,9 @@ class _CeoHomeState extends State<CeoHome>{
   return requests(selected==2?outsourcing:contacts,selected==2);
  }
  Widget overview(){
-  if(conversations==null||outsourcing==null||contacts==null)return ListView(children:[
+  if(conversations==null||outsourcing==null||contacts==null){return ListView(children:[
    card('Chưa có dữ liệu','Chỉ hiển thị dữ liệu thật',
-    const Text('Kéo xuống hoặc bấm tải lại để kết nối dịch vụ Owner.'))]);
+    const Text('Kéo xuống hoặc bấm tải lại để kết nối dịch vụ Owner.'))]);}
   final pendingOut=outsourcing!.items.where((r)=>r.pending).length;
   final pendingContacts=contacts!.items.where((r)=>r.pending).length;
   return ListView(children:[
@@ -244,16 +244,16 @@ class _CeoHomeState extends State<CeoHome>{
   onPressed:loading?null:more,child:const Text('Tải trang tiếp')));
  Widget chatRow(CeoConversation r)=>ListTile(contentPadding:EdgeInsets.zero,
   leading:const Icon(Icons.forum_outlined,color:brand),
-  title:Text('Phiên '+(r.session.length>=8?r.session.substring(0,8):r.session),
+  title:Text('Phiên ${r.session.length>=8?r.session.substring(0,8):r.session}',
    style:const TextStyle(fontWeight:FontWeight.w700)),
-  subtitle:Text((r.latest.isEmpty?'Chưa có phản hồi':r.latest)+'\n'+dateString(r.updatedAt),
+  subtitle:Text("${r.latest.isEmpty?'Chưa có phản hồi':r.latest}\n${dateString(r.updatedAt)}",
    maxLines:3,overflow:TextOverflow.ellipsis),
   isThreeLine:true,trailing:const Icon(Icons.chevron_right),
   onTap:()=>showChat(r));
  Widget caseRow(CeoRequest r,bool outsource)=>ListTile(contentPadding:EdgeInsets.zero,
   leading:Icon(outsource?Icons.handyman_outlined:Icons.mail_outline,color:brand),
   title:Text(r.name,style:const TextStyle(fontWeight:FontWeight.w700)),
-  subtitle:Text((outsource?r.productType:r.customerGroup)+'\n'+dateString(r.createdAt),
+  subtitle:Text('${outsource?r.productType:r.customerGroup}\n${dateString(r.createdAt)}',
    maxLines:2,overflow:TextOverflow.ellipsis),
   isThreeLine:true,
   trailing:Chip(label:Text(r.pending?'Mới':'Đã xử lý'),
@@ -299,7 +299,7 @@ class _CeoHomeState extends State<CeoHome>{
        style:TextStyle(color:Color(0xFF667085),fontSize:12)),
       const SizedBox(height:12),
       for(final turn in (s.data??[]))...[
-       field('Khách · '+dateString(turn.createdAt),turn.question),
+       field('Khách · ${dateString(turn.createdAt)}',turn.question),
        field('Trợ lý Futurebook',turn.answer.isEmpty?'Chưa có phản hồi':turn.answer),
        const Divider(),
       ],
