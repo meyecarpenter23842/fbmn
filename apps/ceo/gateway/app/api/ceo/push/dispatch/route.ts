@@ -1,6 +1,6 @@
 import {createHash,timingSafeEqual} from "node:crypto";
 import {withPushDb} from "@/lib/ceo-push-db";
-import {pushPayload,validRef,pendingTargets} from "@/lib/ceo-push-policy.mjs";
+import {pushPayload,validRef} from "@/lib/ceo-push-policy.mjs";
 import webpush from "web-push";
 export const runtime="nodejs";export const dynamic="force-dynamic";export const maxDuration=60;
 const headers={"Cache-Control":"private, no-store"};
@@ -39,18 +39,12 @@ export async function GET(request:Request){
     "WITH claimed AS (SELECT event_key FROM fbmn_catalog_private.ceo_push_events"+
     " WHERE delivered_at IS NULL AND attempts<5"+
     " AND (claimed_until IS NULL OR claimed_until<now())"+
-    " ORDER BY occurred_at LIMIT 6 FOR UPDATE SKIP LOCKED)"+
+    " ORDER BY occurred_at LIMIT 4 FOR UPDATE SKIP LOCKED)"+
     " UPDATE fbmn_catalog_private.ceo_push_events AS e"+
-    " SET claimed_until=now()+interval '4 minutes',attempts=attempts+1"+
+    " SET claimed_until=now()+interval '4 minutes'"+
     " FROM claimed c WHERE e.event_key=c.event_key"+
     " RETURNING e.event_key,e.kind,e.ref,e.occurred_at");
-   const subs=await db.query<{endpoint:string;p256dh:string;auth:string;created_at:Date}>(
-    "SELECT s.endpoint,s.p256dh,s.auth,s.created_at"+
-    " FROM fbmn_catalog_private.ceo_push_subscriptions s"+
-    " JOIN fbmn_admin.principals p ON p.auth_subject=s.owner_subject"+
-    " WHERE p.role='owner' AND p.enabled=true"+
-    " AND s.last_seen_at>=now()-interval '180 days'"+
-    " ORDER BY s.created_at LIMIT 30");
+
    const counts=await db.query<{total:string}>(
     "SELECT (SELECT count(*) FROM fbmn_catalog_private.contact_requests WHERE status='new')+"+
     " (SELECT count(*) FROM fbmn_catalog_private.outsourcing_requests WHERE status='new') AS total");
@@ -61,10 +55,20 @@ export async function GET(request:Request){
     let failed=false;
     const payload=pushPayload(e.kind,e.ref,badge);
     const topic=createHash("sha256").update(e.event_key).digest("base64url").slice(0,26);
-    const receipts=await db.query<{endpoint:string}>(
-     "SELECT endpoint FROM fbmn_catalog_private.ceo_push_delivery_receipts WHERE event_key=$1",
-     [e.event_key]);
-    const targets=pendingTargets(subs.rows,receipts.rows.map(r=>r.endpoint),e.occurred_at);
+    // Select one page of devices still awaiting THIS event. An extra row
+    // proves there is another page, so we must never mark delivery complete.
+    const pending=await db.query<{endpoint:string;p256dh:string;auth:string;created_at:Date}>(
+     "SELECT s.endpoint,s.p256dh,s.auth,s.created_at"+
+     " FROM fbmn_catalog_private.ceo_push_subscriptions s"+
+     " JOIN fbmn_admin.principals p ON p.auth_subject=s.owner_subject"+
+     " WHERE p.role='owner' AND p.enabled=true"+
+     " AND s.last_seen_at>=now()-interval '180 days'"+
+     " AND s.created_at<=$2 AND NOT EXISTS ("+
+     "SELECT 1 FROM fbmn_catalog_private.ceo_push_delivery_receipts r"+
+     " WHERE r.event_key=$1 AND r.endpoint=s.endpoint)"+
+     " ORDER BY s.created_at,s.endpoint LIMIT 31",[e.event_key,e.occurred_at]);
+    const targets=pending.rows.slice(0,30);
+    const hasMoreDevices=pending.rows.length>30;
     await Promise.all(targets.map(async sub=>{
        try{
         await webpush.sendNotification(
@@ -79,15 +83,23 @@ export async function GET(request:Request){
         }else failed=true;
        }
       }));
-    if(!failed){
-     await db.query("UPDATE fbmn_catalog_private.ceo_push_events SET delivered_at=now(),claimed_until=NULL"+
-      " WHERE event_key=$1",[e.event_key]);delivered++;
-    }else{
-     await db.query("UPDATE fbmn_catalog_private.ceo_push_events SET claimed_until=now()+interval '5 minutes'"+
+    if(failed){
+     // Count only real transient failures toward the retry cap, not pages
+     // successfully processed while more devices remain.
+     await db.query("UPDATE fbmn_catalog_private.ceo_push_events"+
+      " SET attempts=attempts+1,claimed_until=now()+interval '5 minutes'"+
       " WHERE event_key=$1",[e.event_key]);
+    }else if(hasMoreDevices){
+     // Leave event pending for the next Cron; accepted endpoints have receipts.
+     await db.query("UPDATE fbmn_catalog_private.ceo_push_events"+
+      " SET claimed_until=NULL WHERE event_key=$1",[e.event_key]);
+    }else{
+     await db.query("UPDATE fbmn_catalog_private.ceo_push_events"+
+      " SET delivered_at=now(),claimed_until=NULL WHERE event_key=$1",[e.event_key]);
+     delivered++;
     }
    }
-   return Response.json({data:{dispatched:delivered,subscriptions:subs.rows.length}},{headers});
+   return Response.json({data:{dispatched:delivered}},{headers});
   });
  }catch{
   return reject(503);
