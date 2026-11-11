@@ -5,7 +5,7 @@ const browser=await chromium.launch();
 await mkdir("artifacts/dl11a",{recursive:true});
 try{for(const width of [1440,1280,1024,801,768,390,360]){
  const page=await browser.newPage({viewport:{width,height:900},reducedMotion:"reduce"});
- await page.addInitScript(()=>localStorage.setItem("fbmn-app-download-last-shown",String(Date.now())));
+ await page.addInitScript(()=>localStorage.setItem("fbmn:app-download:last-shown:v1",String(Date.now())));
  await page.goto("http://127.0.0.1:3100/",{waitUntil:"domcontentloaded"});
  const header=page.locator(".ref-header");
  await header.waitFor();

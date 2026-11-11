@@ -36,7 +36,7 @@
 .ref-navigation { color: var(--fb-glass-ink); min-width: 0; }
 .ref-navigation__inner { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 12px; }
 .ref-navigation__group { display: flex; align-items: center; justify-content: flex-end; gap: 3px; }
-.ref-navigation__group:nth-child(2) { grid-column: 3; grid-row: 1; justify-content: flex-start; }
+.ref-navigation__group--right { grid-column: 3; grid-row: 1; justify-content: flex-start; }
 .ref-navigation__inner > .ref-brand { grid-column: 2; grid-row: 1; }
 .ref-brand--mobile, .ref-header__dealer-short { display: none; }
 .ref-navigation__catalog { display: inline-flex; align-items: center; gap: 12px; padding: 0 18px; min-width: 210px; background: var(--fb-glass-surface-layer); font-size: var(--fb-control-font-size); font-weight: 750; white-space: nowrap; transition: background-color var(--fb-motion-menu) var(--fb-easing-open);  color: var(--color-primary-strong); border: 1px solid var(--fb-glass-border); border-radius: 999px; min-height: 36px; margin: 4px 0; box-shadow: 0 2px 9px rgba(76, 36, 112, .07);}

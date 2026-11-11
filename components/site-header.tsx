@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
@@ -37,6 +37,7 @@ export function SiteHeader() {
     setPendingPath(target.startsWith("/#") || target === pathname ? null : target);
   };
   const menuButton = useRef<HTMLButtonElement>(null);
+  const searchButton = useRef<HTMLButtonElement>(null);
   const menuPanel = useRef<HTMLElement>(null);
 
   useEffect(() => {
@@ -45,7 +46,7 @@ export function SiteHeader() {
       if (event.key === "Escape") {
         setMenuOpen(false);
         setSearchOpen(false);
-        menuButton.current?.focus();
+        (searchOpen?searchButton:menuButton).current?.focus();
       }
     };
     const onPointerDown = (event: PointerEvent) => {
@@ -71,7 +72,7 @@ export function SiteHeader() {
         </form>
       <nav ref={menuPanel} id="site-navigation" className={"ref-navigation" + (menuOpen ? " ref-navigation--open" : "")} aria-label="Điều hướng chính">
         <div className="ref-navigation__inner">
-          {[desktopNavigation.slice(0,3),desktopNavigation.slice(3)].map((group,index)=><div className="ref-navigation__group" key={index}>{group.map(item => {
+          {[desktopNavigation.slice(0,3),desktopNavigation.slice(3)].map((group,index)=><Fragment key={index}><div className={"ref-navigation__group"+(index?" ref-navigation__group--right":"")}>{group.map(item => {
             const active = item.href === "/#home" ? pathname === "/"
               : item.href === "/san-pham" ? pathname === "/san-pham" || pathname.startsWith("/san-pham/") || pathname.startsWith("/danh-muc/")
               : item.href === "/bang-tin" ? pathname === "/bang-tin" || pathname.startsWith("/tin-tuc") || pathname.startsWith("/khuyen-mai")
@@ -82,8 +83,7 @@ export function SiteHeader() {
               prefetch={item.href === "/san-pham" || item.href === "/#home" ? null : false}
               onNavigate={() => beginNavigation(item.href)} onClick={() => setMenuOpen(false)}
               aria-current={active ? "page" : undefined}>{item.label}</Link>;
-          })}</div>)}
-          <Brand />
+          })}</div>{index===0&&<Brand />}</Fragment>)}
           <Link className="ref-navigation__dealer-cta-mobile" href="/lien-he#thong-tin-lien-he"
             onNavigate={() => beginNavigation("/lien-he")} onClick={() => setMenuOpen(false)}>
             <Icon name="arrow" size={17}/> Hợp tác đại lý · Báo giá sỉ
@@ -99,7 +99,7 @@ export function SiteHeader() {
           </Link>
           <button className="ref-header__mobile-icon" type="button"
             aria-label={searchOpen ? "Đóng thông báo tìm kiếm" : "Mở thông báo tìm kiếm"}
-            aria-expanded={searchOpen} aria-controls="ref-mobile-search"
+            ref={searchButton} aria-expanded={searchOpen} aria-controls="ref-mobile-search"
             onClick={() => { setSearchOpen(!searchOpen); setMenuOpen(false); }}><Icon name="search" size={23}/></button>
           <button className="ref-header__mobile-icon" type="button" ref={menuButton}
             aria-label={menuOpen ? "Đóng danh mục điều hướng" : "Mở danh mục điều hướng"}
