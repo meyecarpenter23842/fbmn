@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:futurebook_ceo/main.dart';
@@ -28,6 +29,19 @@ class FakePendingRepo extends FakeRepo {
   CeoPage([item('contact-a','new'),item('contact-b','handled')],page,false);
  @override Future<CeoPage<CeoRequest>> outsourcingRequests([int page=1])async=>
   CeoPage([item('out-a','new'),item('out-b','new')],page,false);
+}
+
+class FakeDelayedRequestsRepo extends FakePendingRepo {
+ final contactsPending=Completer<CeoPage<CeoRequest>>();
+ final outsourcingPending=Completer<CeoPage<CeoRequest>>();
+ @override Future<CeoPage<CeoRequest>> contactRequests([int page=1])=>contactsPending.future;
+ @override Future<CeoPage<CeoRequest>> outsourcingRequests([int page=1])=>outsourcingPending.future;
+ void finishLoading(){
+  contactsPending.complete(CeoPage([
+   item('contact-a','new'),item('contact-b','handled')],1,false));
+  outsourcingPending.complete(CeoPage([
+   item('out-a','new'),item('out-b','new')],1,false));
+ }
 }
 
 void main(){
@@ -70,6 +84,22 @@ void main(){
   await tester.tap(find.text('Liên hệ · Khách thử'));
   await tester.pumpAndSettle();
   expect(find.text('Chi tiết liên hệ'),findsOneWidget);
+ });
+
+ testWidgets('Open bell before requests finish loading updates visible count', (tester)async{
+  final repo=FakeDelayedRequestsRepo();
+  await tester.pumpWidget(CeoApp(repository:repo));
+  await tester.pump();
+  await tester.pump();
+
+  await tester.tap(find.byTooltip('Xem thông báo và yêu cầu mới'));
+  await tester.pump(const Duration(milliseconds:350));
+  expect(find.text('0 yêu cầu mới'),findsOneWidget);
+
+  repo.finishLoading();
+  await tester.pump();
+  await tester.pumpAndSettle();
+  expect(find.text('3 yêu cầu mới'),findsOneWidget);
  });
 
  testWidgets('CEO bell hides number when no status-new requests exist', (tester)async{
