@@ -203,7 +203,7 @@ class _CeoMailComposerState extends State<CeoMailComposer>{
   try{
    await widget.api.mailSend(to:recipient.text.trim(),subject:subject.text.trim(),
     text:message.text.trim(),replyId:widget.reply?.id,requestId:lastRequestId);
-   if(mounted)Navigator.of(context).pop(true);
+   if(mounted){Navigator.of(context).pop(true);}
   }catch(_){if(mounted)setState((){
     uncertainFailure=true;
     networkNotice='Không xác nhận được lượt gửi. Nếu giữ nguyên nội dung, thử lại sẽ dùng cùng mã gửi.';
