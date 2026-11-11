@@ -2,7 +2,7 @@ name: DL11A Website browser UI QA
 on:
   pull_request:
     branches: [main]
-    paths: ["components/site-header.tsx","components/app-download.tsx","app/rebaseline.css","app/app-download.css","scripts/dl11a-browser-qa.mjs",".github/workflows/dl11a-browser-ui.yml"]
+    paths: ["app/policy/**","components/chatbot-widget.tsx","components/cms-popup-runtime.tsx","components/site-header.tsx","components/app-download.tsx","app/rebaseline.css","app/app-download.css","scripts/dl11a-browser-qa.mjs",".github/workflows/dl11a-browser-ui.yml"]
 permissions:
   contents: read
 jobs:

@@ -67,6 +67,7 @@ function readLastShown(memory: number): number | null {
 export function AppDownloadProvider({ children }: { children: ReactNode }) {
   const pathname=usePathname();
   const isCatalogue=pathname==="/catalogue";
+  const isPolicy=pathname==="/policy";
   const [open, setOpen] = useState(false);
   const [closing, setClosing] = useState(false);
   const dismissTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -112,11 +113,11 @@ export function AppDownloadProvider({ children }: { children: ReactNode }) {
   useEffect(()=>()=>{if(dismissTimeout.current)clearTimeout(dismissTimeout.current);},[]);
 
   useEffect(() => {
-    if(isCatalogue&&open&&source==="automatic")dismiss();
-  },[isCatalogue,open,source,dismiss]);
+    if((isCatalogue||isPolicy)&&open&&source==="automatic")dismiss();
+  },[isCatalogue,isPolicy,open,source,dismiss]);
 
   useEffect(() => {
-    if (open||isCatalogue) return;
+    if (open||isCatalogue||isPolicy) return;
     let timeout: number | undefined;
     const schedule = () => {
       if (timeout !== undefined) window.clearTimeout(timeout);
@@ -145,7 +146,7 @@ export function AppDownloadProvider({ children }: { children: ReactNode }) {
       document.removeEventListener("visibilitychange", schedule);
       window.removeEventListener("storage", onStorage);
     };
-  }, [open, showPopup, isCatalogue]);
+  }, [open, showPopup, isCatalogue, isPolicy]);
 
   useEffect(() => {
     if (!open) return;
@@ -160,7 +161,7 @@ export function AppDownloadProvider({ children }: { children: ReactNode }) {
   return (
     <DownloadContext.Provider value={() => showPopup("menu")}>
       {children}
-      {open && (
+      {open && !isPolicy && (
         <aside className={"app-download" + (closing ? " app-download--closing" : "")} role="dialog" aria-modal="false" aria-labelledby="app-download-heading" aria-describedby="app-download-subheading">
           <div className="app-download__head">
             <span className="app-download__glyph" aria-hidden="true">
