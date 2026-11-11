@@ -45,32 +45,9 @@ class CeoApi implements CeoRepository {
   }catch(_){/* fail-closed on wrong response */}
   throw const CeoApiException(503);
  }
- static final _jwtPattern=RegExp(r'^[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+
- @override Future<CeoPage<CeoConversation>> conversations([int page=1]) async{
-  final j=await _data("/api/ceo/chat-history?page=$page");
-  return CeoPage((j["conversations"] as List? ?? const [])
-    .map(CeoConversation.fromJson).toList(growable:false),j["page"] as int? ?? page,j["hasMore"]==true);
- }
- @override Future<List<CeoTurn>> turns(String session) async{
-  if(!RegExp(r'^[a-f0-9]{36}$').hasMatch(session))throw const CeoApiException(400);
-  final j=await _data("/api/ceo/chat-history?session=$session&page=1");
-  return (j["turns"] as List? ?? const []).map(CeoTurn.fromJson).toList(growable:false);
- }
- @override Future<CeoPage<CeoRequest>> contactRequests([int page=1]) async{
-  final j=await _data("/api/ceo/contact-requests?page=$page");
-  return CeoPage((j["requests"] as List? ?? const [])
-    .map(CeoRequest.fromJson).toList(growable:false),j["page"] as int? ?? page,j["hasMore"]==true);
- }
- @override Future<CeoPage<CeoRequest>> outsourcingRequests([int page=1]) async{
-  final j=await _data("/api/ceo/outsourcing-requests?page=$page");
-  return CeoPage((j["requests"] as List? ?? const [])
-    .map(CeoRequest.fromJson).toList(growable:false),j["page"] as int? ?? page,j["hasMore"]==true);
- }
- @override void dispose()=>_client.close();
-}
-);
- /// Fetch a fresh, short-lived managed Neon JWT over the same origin, following
- /// the existing Admin browser flow. Never persist it in storage or in state.
+ static final _jwtPattern=RegExp(r'^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$');
+ /// Fetch a fresh managed Neon JWT from the same origin used by Futurebook Admin.
+ /// The JWT is ephemeral: do not persist it or send it to analytics.
  Future<String> _ownerJwt() async{
   final response=await _request("GET","/api/auth/token");
   final data=response["data"];
@@ -83,7 +60,6 @@ class CeoApi implements CeoRepository {
  @override Future<void> signIn(String email,String password) async{
   await _request("POST","/api/auth/sign-in/email",json:{
    "email":email.trim().toLowerCase(),"password":password,"rememberMe":false});
-  // A missing/expired browser session is 401, not an invented Owner denial.
   if(!await ownerSession())throw const CeoApiException(401);
  }
  @override Future<void> signOut() async{
@@ -96,15 +72,13 @@ class CeoApi implements CeoRepository {
    return (response["data"] as Map<String,dynamic>?)?["role"]=="owner";
   }on CeoApiException catch(e){
    if(e.status==401)return false;
-   // 403 genuinely means Worker rejected the grant. 503 means service issue.
-   // Neither should be rewritten as a generic missing Owner role.
    rethrow;
   }
  }
  Future<Map<String,dynamic>> _data(String route) async{
   final jwt=await _ownerJwt();
-  final j=await _request("GET",route,bearer:jwt);
-  final data=j["data"];
+  final response=await _request("GET",route,bearer:jwt);
+  final data=response["data"];
   if(data is Map<String,dynamic>)return data;
   throw const CeoApiException(503);
  }

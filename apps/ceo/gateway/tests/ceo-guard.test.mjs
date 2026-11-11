@@ -8,7 +8,8 @@ test("DL12A restricts GET targets to approved Owner inboxes",()=>{
  for(const value of [["../../pricing",""],["session",""],["chat-history","?url=https://evil.example"],["contact-requests","?token=x"],["contact-requests","?page=-1"],["contact-requests","?page=1000"],["chat-history","?q=x&session=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"],["chat-history","?from=2026-02-30"],["chat-history","?session=../admin"]])
   assert.equal(ceoReadTarget(...value),null,JSON.stringify(value));
 });
-\nimport {readBearerJwt} from "../lib/bearer-jwt.mjs";
+
+import {readBearerJwt} from "../lib/bearer-jwt.mjs";
 test("CEO Bearer extraction accepts only canonical JWT syntax",()=>{
  assert.equal(readBearerJwt("Bearer a.b.c"),"a.b.c");
  for(const header of [null,"","Bearer fake","Bearer a.b","Bearer a.b.c extra",

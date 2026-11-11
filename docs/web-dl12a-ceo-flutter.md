@@ -26,3 +26,7 @@ Only Futurebook Miền Nam; do not deploy or migrate other services in this lot.
 - Build locally: `cd apps/ceo/flutter && flutter pub get && flutter analyze && flutter test && flutter build web --base-href=/ceo/`.
 - Gateway checks: `cd apps/ceo/gateway && npm install && npm run lint && npm run typecheck && npm test && npm run build`.
 - DL12D release will copy the `build/web` output under `apps/ceo/gateway/public/ceo` **in the approved build pipeline** and deploy one same-origin application. Do not serve the Flutter frontend from an unrelated domain or place Neon Auth secrets into Flutter compile-time defines.
+
+## Owner session correction — 11/11/2026
+
+CEO now uses the same managed Neon browser JWT flow as Futurebook Admin: client obtains short-lived JWT from same-origin `/api/auth/token`, forwards it in memory to CEO gateway, and the existing Admin Worker independently validates identity + Owner role from DB. JWTs are never persisted, exposed in UI or recorded by telemetry. A missing session returns 401 instead of a false Owner denial; a genuine Worker denial returns 403; upstream failure returns 503. No changes to Owner grants, Neon schema or Admin. Real-device Owner login remains to be validated after CEO deployment.
