@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'ceo_models.dart';
 import 'ceo_repository.dart';
 import 'ceo_ui_tokens.dart';
+import 'ceo_detail_sheet.dart';
+import 'ceo_feedback.dart';
 
 void main() => runApp(const CeoApp());
 const brand = Color(0xFF6D249E);
@@ -178,16 +180,18 @@ class _CeoHomeState extends State<CeoHome>{
      IconButton(tooltip:'Đăng xuất',onPressed:loading?null:logout,icon:const Icon(Icons.logout))]),
    bottomNavigationBar:wide?null:NavigationBar(selectedIndex:selected,onDestinationSelected:choose,
      destinations:List.generate(5,(i)=>NavigationDestination(icon:Icon(symbols[i]),label:names[i]))),
-   body:Row(children:[
-    if(wide)NavigationRail(selectedIndex:selected,onDestinationSelected:choose,
-      labelType:NavigationRailLabelType.all,
-      destinations:List.generate(5,(i)=>NavigationRailDestination(
-       icon:Icon(symbols[i]),label:Text(names[i])))),
-    Expanded(child:SafeArea(child:Column(children:[
-      if(error.isNotEmpty)MaterialBanner(content:Text(error),
-       actions:[TextButton(onPressed:refresh,child:const Text('Thử lại'))]),
-      Expanded(child:RefreshIndicator(onRefresh:refresh,child:content())),
-    ]))),
+   body:Stack(children:[
+    Row(children:[
+     if(wide)NavigationRail(selectedIndex:selected,onDestinationSelected:choose,
+       labelType:NavigationRailLabelType.all,
+       destinations:List.generate(5,(i)=>NavigationRailDestination(
+        icon:Icon(symbols[i]),label:Text(names[i])))),
+     Expanded(child:SafeArea(child:RefreshIndicator(onRefresh:refresh,child:content()))),
+    ]),
+    if(error.isNotEmpty)Positioned(top:12,right:12,left:wide?null:12,
+      child:CeoErrorToast(
+       key:ValueKey(error),message:error,onRetry:refresh,
+       onClose:(){if(mounted)setState(()=>error='');})),
    ]),
   );
  });
@@ -271,12 +275,10 @@ class _CeoHomeState extends State<CeoHome>{
    SelectableText(value.isEmpty?'—':value,style:const TextStyle(fontSize:14,height:1.4)),
   ]));
  void showCase(CeoRequest r,bool outsource)=>showModalBottomSheet<void>(
-  context:context,isScrollControlled:true,useSafeArea:true,showDragHandle:true,
-  builder:(ctx)=>FractionallySizedBox(heightFactor:.88,child:ListView(
-   padding:const EdgeInsets.all(20),children:[
-    Text(outsource?'Chi tiết gia công':'Chi tiết liên hệ',
-     style:Theme.of(ctx).textTheme.headlineSmall),
-    const SizedBox(height:12),
+  context:context,isScrollControlled:true,useSafeArea:true,showDragHandle:false,
+  builder:(ctx)=>FractionallySizedBox(heightFactor:.88,child:Column(children:[
+   CeoSheetHeader(title:outsource?'Chi tiết gia công':'Chi tiết liên hệ'),
+   Expanded(child:ListView(padding:const EdgeInsets.all(20),children:[
     field('Trạng thái',r.pending?'Mới · chưa xử lý':'Đã xử lý'),
     field('Thời gian',dateString(r.createdAt)),field('Họ tên',r.name),
     field('Email',r.email),field('Số điện thoại',r.phone),
@@ -291,15 +293,17 @@ class _CeoHomeState extends State<CeoHome>{
     ],
     const Text('DL12A chỉ đọc. Thao tác xử lý/xóa thực hiện tại Futurebook Admin.',
      style:TextStyle(color:Color(0xFF667085))),
-   ])));
+   ])),
+  ])));
  void showChat(CeoConversation r)=>showModalBottomSheet<void>(
-  context:context,isScrollControlled:true,useSafeArea:true,showDragHandle:true,
-  builder:(ctx)=>FractionallySizedBox(heightFactor:.88,child:FutureBuilder<List<CeoTurn>>(
+  context:context,isScrollControlled:true,useSafeArea:true,showDragHandle:false,
+  builder:(ctx)=>FractionallySizedBox(heightFactor:.88,child:Column(children:[
+   const CeoSheetHeader(title:'Nội dung hội thoại'),
+   Expanded(child:FutureBuilder<List<CeoTurn>>(
     future:widget.api.turns(r.session),builder:(context,s){
      if(s.connectionState!=ConnectionState.done)return const Center(child:CircularProgressIndicator());
      if(s.hasError)return Center(child:Text(userError(s.error!)));
      return ListView(padding:const EdgeInsets.all(20),children:[
-      Text('Nội dung hội thoại',style:Theme.of(context).textTheme.headlineSmall),
       const Text('Hiển thị 25 lượt đầu; hội thoại dài hơn có thể đọc trong Admin.',
        style:TextStyle(color:Color(0xFF667085),fontSize:12)),
       const SizedBox(height:12),
@@ -309,5 +313,6 @@ class _CeoHomeState extends State<CeoHome>{
        const Divider(),
       ],
      ]);
-    })));
+    })),
+  ])));
 }
