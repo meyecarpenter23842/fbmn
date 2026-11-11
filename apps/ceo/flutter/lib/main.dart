@@ -474,12 +474,10 @@ class _CeoHomeState extends State<CeoHome>{
      const gap=10.0;
      final width=(box.maxWidth-gap*(cols-1))/cols;
      final items=<Widget>[
-      const CeoMetricCard(label:'Hội thoại',count:0,icon:Icons.forum_outlined),
+      CeoMetricCard(label:'Hội thoại',count:conversations!.items.length,icon:Icons.forum_outlined),
       CeoMetricCard(label:'Gia công chưa xử lý',count:pendingOut,icon:Icons.handyman_outlined),
       CeoMetricCard(label:'Liên hệ chưa xử lý',count:pendingContacts,icon:Icons.contact_mail_outlined),
      ];
-     items[0]=CeoMetricCard(label:'Hội thoại',count:conversations!.items.length,
-      icon:Icons.forum_outlined);
      return Wrap(spacing:gap,runSpacing:gap,children:[
       for(var i=0;i<items.length;i++)
        SizedBox(width:cols==2&&i==2?box.maxWidth:width,child:items[i]),
@@ -558,7 +556,7 @@ class _CeoHomeState extends State<CeoHome>{
       for(final pair in const <(String,String)>[
        ('all','Tất cả'),('new','Mới'),('handled','Đã xử lý')])
        ChoiceChip(
-        key:ValueKey('ceo-filter-'+pair.$1),
+        key:ValueKey('ceo-filter-${pair.$1}'),
         label:Text(pair.$2),
         selected:requestFilter==pair.$1,
         selectedColor:ceoLavender,
@@ -586,11 +584,11 @@ class _CeoHomeState extends State<CeoHome>{
 
  Widget chatRow(CeoConversation item)=>_listRow(
   icon:Icons.chat_bubble_outline,
-  title:'Phiên '+(item.session.length>=8?item.session.substring(0,8):item.session),
+  title:'Phiên ${item.session.length>=8?item.session.substring(0,8):item.session}',
   subtitle:item.latest.isEmpty?'Chưa có nội dung phản hồi':item.latest,
   meta:dateString(item.updatedAt),
   trailing:item.messageCount>0?
-   CeoStatusPill(text:item.messageCount.toString()+' lượt'):null,
+   CeoStatusPill(text:'${item.messageCount} lượt'):null,
   onTap:()=>showChat(item));
 
  Widget caseRow(CeoRequest item,bool outsource)=>_listRow(

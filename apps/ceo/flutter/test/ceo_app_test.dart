@@ -186,7 +186,7 @@ void main(){
     nav.onDestinationSelected!(tab);
     await tester.pumpAndSettle();
     expect(tester.takeException(),isNull,
-     reason:'Unexpected Flutter overflow at width '+width.toString()+' tab '+tab.toString());
+     reason:'Unexpected Flutter overflow at width $width tab $tab');
    }
    final search=find.byKey(const ValueKey('ceo-workspace-search'));
    expect(search,findsOneWidget);
@@ -194,6 +194,24 @@ void main(){
    await tester.pumpAndSettle();
    expect(find.text('Không tìm thấy yêu cầu'),findsOneWidget);
    expect(tester.takeException(),isNull);
+   await tester.pumpWidget(const SizedBox.shrink());
+  }
+  await tester.binding.setSurfaceSize(null);
+ });
+
+
+ testWidgets('CEO-UI01 desktop workspace fits 1280/1440 without overflow', (tester)async{
+  for(final width in <double>[1280,1440]){
+   await tester.binding.setSurfaceSize(Size(width,900));
+   await tester.pumpWidget(CeoApp(repository:FakePendingRepo()));
+   await tester.pumpAndSettle();
+   for(final tab in <int>[0,1,2,3]){
+    final rail=tester.widget<NavigationRail>(find.byType(NavigationRail));
+    rail.onDestinationSelected!(tab);
+    await tester.pumpAndSettle();
+    expect(tester.takeException(),isNull,
+     reason:'Unexpected Flutter overflow at desktop width $width tab $tab');
+   }
    await tester.pumpWidget(const SizedBox.shrink());
   }
   await tester.binding.setSurfaceSize(null);
