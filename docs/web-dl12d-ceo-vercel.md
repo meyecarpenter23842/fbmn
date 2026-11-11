@@ -21,12 +21,12 @@ After dev PR CI + Codex, squash merge dev, sync reviewed tree to the upstream re
 From a machine with Vercel CLI and access to the reviewed repo, run:
 
 ```bash
-cd apps/ceo/gateway
+# From the FBMN repository root; project Root Directory is set in Vercel.
 vercel link --scope alibaba240185 --project fbmn-ceo --yes
 vercel deploy --prod --yes --scope alibaba240185
 ```
 
-The Vercel project build command handles the Flutter SDK (if not installed), Flutter web build, copying into `public/ceo`, then Next build. Do not run against a dirty or unreviewed tree. If Vercel CLI upload omits sibling `../flutter`, use the Git-source deployment or manual CI build with `--prebuilt` and check the project source-outside-root setting.
+The Vercel project build command handles the Flutter SDK (if not installed), Flutter web build, copying into `public/ceo`, then Next build. Do not run against a dirty or unreviewed tree. The CLI must run from the **repository root** because Vercel already sets Root Directory to `apps/ceo/gateway`. Running from inside the gateway applies the root twice. For constrained developer machines, use the Git-source deployment or the manual CI workflow with verified prebuilt Flutter artifacts.
 
 ## CI release workflow
 
