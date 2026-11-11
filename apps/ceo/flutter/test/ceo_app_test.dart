@@ -44,6 +44,17 @@ class FakeDelayedRequestsRepo extends FakePendingRepo {
  }
 }
 
+class FakePaginatedRepo extends FakePendingRepo {
+ final nextPage=Completer<CeoPage<CeoRequest>>();
+ @override Future<CeoPage<CeoRequest>> contactRequests([int page=1]) async {
+  if(page>1)return nextPage.future;
+  return CeoPage([item('contact-a','new')],1,true);
+ }
+ void finishSecondPage(){
+  nextPage.complete(CeoPage([item('contact-c','new')],2,false));
+ }
+}
+
 void main(){
  testWidgets('Anonymous session cannot see any Owner inbox', (tester)async{
   await tester.pumpWidget(CeoApp(repository:FakeRepo(false)));
@@ -100,6 +111,25 @@ void main(){
   await tester.pump();
   await tester.pumpAndSettle();
   expect(find.text('3 yêu cầu mới'),findsOneWidget);
+ });
+
+ testWidgets('Bell updates when a second request page finishes loading', (tester)async{
+  final repo=FakePaginatedRepo();
+  await tester.pumpWidget(CeoApp(repository:repo));
+  await tester.pumpAndSettle();
+  await tester.tap(find.text('Liên hệ').last);
+  await tester.pumpAndSettle();
+
+  await tester.tap(find.text('Tải trang tiếp'));
+  await tester.pump();
+  await tester.tap(find.byTooltip('Xem thông báo và yêu cầu mới'));
+  await tester.pump(const Duration(milliseconds:350));
+  expect(find.text('3 yêu cầu mới'),findsOneWidget);
+
+  repo.finishSecondPage();
+  await tester.pump();
+  await tester.pumpAndSettle();
+  expect(find.text('4 yêu cầu mới'),findsOneWidget);
  });
 
  testWidgets('CEO bell hides number when no status-new requests exist', (tester)async{
