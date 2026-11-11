@@ -1,79 +1,162 @@
-/* Isolated global chatbot; responsive, compact, keyboard-friendly and brand-matched. */
-.fb-chat { position: fixed; right: 18px; bottom: 18px; z-index: 120; font-family: inherit; }
+/* Futurebook floating book mascot and book-page chat panel. Shared brand tokens, no API changes. */
+.fb-chat { position:fixed; right:16px; bottom:max(10px,env(safe-area-inset-bottom)); z-index:120; font-family:inherit; }
 .fb-chat__launcher {
-  border: 3px solid #fff;
-  width: 56px; height: 56px; padding: 0; border-radius: 50%;
-  display: grid; place-items: center;
-  overflow: hidden;
-  color: #fff; background: #65259c;
-  box-shadow: 0 5px 19px rgba(44, 15, 76, .29);
-  cursor: pointer; transition: transform .2s ease, box-shadow .2s ease;
+  position:relative; display:grid; place-items:center; width:96px; height:106px;
+  padding:0; border:0; border-radius:18px; background:transparent; color:#fff;
+  cursor:pointer; transition:transform var(--fb-motion-button,190ms) ease, filter var(--fb-motion-button,190ms) ease;
 }
-.fb-chat__launcher:hover { transform: translateY(-3px); box-shadow: 0 8px 24px rgba(44,15,76,.36); }
-.fb-chat__launcher:focus-visible { outline: 3px solid #e22b63; outline-offset: 3px; }
-.fb-chat__launcher .fb-chat__avatar { display:block; width:100%; height:100%; object-fit:cover; }
+.fb-chat__launcher:hover { transform:translateY(-3px); filter:drop-shadow(0 8px 9px rgba(62,23,106,.18)); }
+.fb-chat__launcher:active { transform:translateY(1px) scale(.97); }
+.fb-chat__launcher:focus-visible { outline:3px solid #9f4cc0; outline-offset:2px; }
+.fb-chat__launcher--active .fb-chat__mascot { animation-play-state:paused; }
+
+/* Accessible launcher button, decorative mascot made of layers rather than an animated asset. */
+.fb-chat__mascot { display:block; position:relative; width:90px; height:102px; transform-origin:center 85%; animation:fb-chat-float 4.6s ease-in-out infinite; }
+.fb-chat__mascot-pages {
+  position:absolute; z-index:1; left:18px; top:13px; width:58px; height:71px;
+  border:2px solid #b9a1d2; border-radius:7px 11px 12px 7px;
+  background:repeating-linear-gradient(0deg,#fff 0 5px,#e2d4ed 6px 7px);
+  transform:rotate(3deg) translateX(4px); box-shadow:0 9px 15px rgba(57,20,93,.19);
+}
+.fb-chat__mascot-cover {
+  position:absolute; z-index:3; left:16px; top:8px; width:60px; height:74px;
+  display:flex; flex-direction:column; align-items:center;
+  border:2px solid rgba(255,255,255,.85); border-left:6px solid #4b176f;
+  border-radius:9px 13px 13px 8px; transform:rotate(-5deg);
+  background:linear-gradient(142deg,#9656c5 0%,#6b2eaa 48%,#4a197b 100%);
+  box-shadow:inset -4px 0 8px rgba(255,255,255,.1),0 10px 18px rgba(54,13,88,.25);
+}
+.fb-chat__mascot-cover::after {
+  content:""; position:absolute; inset:5px 5px 5px 3px; border:1px solid rgba(255,255,255,.21);
+  border-radius:5px 8px 7px 3px; pointer-events:none;
+}
+.fb-chat__mascot-logo {
+  position:relative; z-index:4; width:49px; height:18px; object-fit:contain; margin:7px 0 0 2px;
+  filter:drop-shadow(0 1px 1px rgba(255,255,255,.22));
+}
+.fb-chat__mascot-face { position:relative; z-index:4; display:flex; gap:14px; margin-top:12px; }
+.fb-chat__mascot-eye {
+  width:8px; height:10px; border-radius:50%; background:#fff; box-shadow:1px 0 0 rgba(65,30,95,.28);
+  transform-origin:center 60%; animation:fb-chat-blink 5.2s ease-in-out infinite;
+}
+.fb-chat__mascot-eye::after { content:""; display:block; width:3px; height:5px; margin:3px 0 0 3px; background:#39205b; border-radius:50%; }
+.fb-chat__mascot-smile { position:relative; z-index:4; width:16px; height:9px; margin-top:3px; border-bottom:3px solid #fff; border-radius:0 0 13px 13px; }
+.fb-chat__mascot-arm {
+  position:absolute; z-index:0; top:40px; width:26px; height:8px; background:#7134a5;
+  border-radius:12px; box-shadow:0 2px 5px rgba(60,20,90,.16);
+}
+.fb-chat__mascot-arm::after { content:""; position:absolute; right:-3px; top:-3px; width:13px; height:13px; border-radius:50%; background:#f0bdca; }
+.fb-chat__mascot-arm--left { left:2px; transform:rotate(24deg); }
+.fb-chat__mascot-arm--right { right:-1px; transform:rotate(-27deg); transform-origin:4px 4px; animation:fb-chat-wave 4.6s ease-in-out infinite; }
+.fb-chat__mascot-leg { position:absolute; z-index:0; top:77px; width:7px; height:19px; border-radius:8px; background:#553085; }
+.fb-chat__mascot-leg::after { content:""; position:absolute; bottom:-3px; right:-2px; width:16px; height:9px; background:#db719b; border-radius:8px 8px 4px 4px; }
+.fb-chat__mascot-leg--left { left:29px; transform:rotate(12deg); }
+.fb-chat__mascot-leg--right { left:61px; transform:rotate(-12deg); }
+.fb-chat__mascot--compact { animation:none; transform:scale(.48); transform-origin:top left; }
+
+/* The open conversation suggests the pages of a book without sacrificing readable UI. */
 .fb-chat__panel {
-  position: absolute; right: 0; bottom: 72px;
-  display: flex; flex-direction: column; overflow: hidden;
-  width: min(360px, calc(100vw - 30px));
-  height: min(490px, calc(100dvh - 115px));
-  border-radius: 18px;
-  border: 1px solid #e5d6f0; background: #fff;
-  box-shadow: 0 15px 46px rgba(38, 13, 70, .23);
-  animation: fb-chat-open .22s cubic-bezier(.2,.9,.3,1) both;
+  position:absolute; right:0; bottom:115px; display:flex; flex-direction:column;
+  width:min(365px,calc(100vw - 24px)); height:min(500px,calc(100dvh - 145px - env(safe-area-inset-bottom)));
+  overflow:hidden; border:1px solid rgba(210,190,229,.9); border-radius:23px 23px 22px 22px;
+  background:rgba(255,253,255,.96); -webkit-backdrop-filter:blur(16px); backdrop-filter:blur(16px);
+  box-shadow:0 20px 55px rgba(50,20,87,.23),inset 4px 0 0 rgba(135,74,181,.1);
+  animation:fb-chat-open 280ms cubic-bezier(.22,1,.36,1) both;
 }
+.fb-chat__panel[data-state="closing"] { pointer-events:none; animation:fb-chat-close 220ms cubic-bezier(.4,0,1,1) both; }
 .fb-chat__header {
-  flex: 0 0 auto; display:flex; align-items:center; gap: 9px;
-  min-height: 63px; padding: 10px 12px;
-  background: linear-gradient(120deg, #55208a, #7a35ae);
-  color: #fff;
+  flex:0 0 auto; display:flex; align-items:center; gap:10px; min-height:62px;
+  padding:7px 10px 7px 12px; color:#42205e; border-bottom:1px solid #eadbf3;
+  background:linear-gradient(115deg,rgba(249,239,255,.96),rgba(255,253,255,.94));
 }
-.fb-chat__head-avatar {
-  display:grid; place-items:center; flex:0 0 35px;
-  width:35px; height:35px; border-radius:50%; background:#fff; overflow:hidden;
-  border: 1.5px solid rgba(255,255,255,.75);
-}
-.fb-chat__avatar { width:100%; height:100%; object-fit:cover; }
+.fb-chat__head-avatar { display:block; position:relative; flex:0 0 47px; width:47px; height:49px; }
 .fb-chat__heading { min-width:0; flex:1; display:flex; flex-direction:column; gap:4px; }
-.fb-chat__heading strong { font-size:13px; font-weight:800; line-height:1.15; }
-.fb-chat__heading small { font-size:10px; color:#f1e2fc; }
-.fb-chat__close { flex:0 0 34px; width:34px; height:34px; display:grid; place-items:center; color:#fff; border:0; border-radius:9px; background:rgba(255,255,255,.12); cursor:pointer; }
-.fb-chat__close:hover, .fb-chat__close:focus-visible { background:rgba(255,255,255,.23); }
-.fb-chat__feed { flex:1 1 auto; min-height:0; overflow-y:auto; overscroll-behavior:contain; display:flex; flex-direction:column; gap:12px; padding:16px 12px; background: #fcfaff; }
-.fb-chat__message { display:flex; gap:7px; align-items:flex-end; max-width:100%; }
+.fb-chat__heading strong { font-size:14px; font-weight:800; line-height:1.18; color:#4a1b7a; }
+.fb-chat__heading small { font-size:11px; line-height:1.35; color:#755b8b; }
+.fb-chat__close {
+  flex:0 0 36px; width:36px; height:36px; display:grid; place-items:center;
+  color:#5e367e; border:1px solid #e8d9f1; border-radius:10px;
+  background:rgba(255,255,255,.9); cursor:pointer;
+  transition:background var(--fb-motion-button,190ms) ease, transform var(--fb-motion-button,190ms) ease;
+}
+.fb-chat__close:hover { background:#f1e4fa; transform:translateY(-1px); }
+.fb-chat__close:focus-visible { outline:2px solid #9250c7; outline-offset:2px; }
+.fb-chat__feed {
+  flex:1 1 auto; min-height:0; overflow-y:auto; overscroll-behavior:contain;
+  display:flex; flex-direction:column; gap:12px; padding:17px 12px;
+  background:linear-gradient(90deg,rgba(125,73,169,.045) 0 8px,transparent 8px),rgba(255,253,255,.76);
+}
+.fb-chat__message { display:flex; gap:8px; align-items:flex-end; max-width:100%; }
 .fb-chat__message--visitor { align-self:flex-end; justify-content:flex-end; }
 .fb-chat__message--bot { align-self:flex-start; }
-.fb-chat__mini-avatar { flex:0 0 24px; width:24px; height:24px; border-radius:50%; overflow:hidden; border:1px solid #e8dcef; background:#fff; display:grid; place-items:center; }
-.fb-chat__bubble { padding:10px 11px; border-radius:13px 13px 13px 4px; font-size:13px; line-height:1.55; color:#3e3151; background:#f1eafb; max-width:265px; overflow-wrap:anywhere; animation:fb-chat-bubble .17s ease both; }
+.fb-chat__mini-avatar {
+  flex:0 0 26px; width:26px; height:26px; border-radius:9px; background:#f0e4f7;
+  border:1px solid #dec8ef; display:grid; place-items:center;
+}
+.fb-chat__mini-book { position:relative; display:block; width:12px; height:15px; border:2px solid #8758b0; border-left:4px solid #643297; border-radius:2px 4px 4px 2px; background:#b38bd2; transform:rotate(-8deg); }
+.fb-chat__mini-book::after { content:""; position:absolute; left:3px; top:5px; width:2px; height:2px; border-radius:50%; background:#fff; box-shadow:4px 0 #fff; }
+.fb-chat__bubble {
+  max-width:265px; padding:10px 12px; border:1px solid #e8dcf1;
+  border-radius:14px 14px 14px 5px; font-size:13px; line-height:1.55; color:#3e3151;
+  background:#f5eefb; overflow-wrap:anywhere; animation:fb-chat-bubble 170ms ease both;
+}
 .fb-chat__bubble p { margin:0; }
 .fb-chat__bubble a { display:inline-block; margin-top:8px; color:#622398; font-weight:800; text-decoration:underline; text-underline-offset:3px; }
-.fb-chat__message--visitor .fb-chat__bubble { background:#6725a0; color:#fff; border-radius:13px 13px 4px 13px; }
+.fb-chat__message--visitor .fb-chat__bubble {
+  background:#6b2ca1; color:#fff; border-color:#6b2ca1; border-radius:14px 14px 5px 14px;
+}
 .fb-chat__typing { display:flex; align-items:center; gap:5px; height:34px; padding:0 12px; background:#eee5fa; border-radius:13px 13px 13px 4px; }
 .fb-chat__typing > span[aria-hidden] { height:6px; width:6px; border-radius:50%; background:#8156a8; animation:fb-chat-dot 1.12s ease-in-out infinite; }
 .fb-chat__typing > span[aria-hidden]:nth-child(2) { animation-delay:.14s; }
 .fb-chat__typing > span[aria-hidden]:nth-child(3) { animation-delay:.28s; }
-.fb-chat__quick { flex:0 0 auto; display:flex; gap:5px; padding:9px 10px 8px; overflow-x:auto; background:#fff; scrollbar-width:none; }
+.fb-chat__quick {
+  flex:0 0 auto; display:flex; gap:6px; padding:9px 10px; overflow-x:auto;
+  background:rgba(255,255,255,.95); border-top:1px solid #f0e5f5; scrollbar-width:none;
+}
 .fb-chat__quick::-webkit-scrollbar { display:none; }
-.fb-chat__quick button { flex:0 0 auto; border:1px solid #dfc7f0; border-radius:999px; background:#fff; color:#66308c; font-size:var(--fb-control-font-size); font-weight:650; padding:7px 9px; cursor:pointer; }
-.fb-chat__quick button:hover { background:#f6edfe; }
+.fb-chat__quick button {
+  flex:0 0 auto; min-height:36px; padding:7px 11px; border:1px solid #dfc7f0;
+  border-radius:999px; background:#fff; color:#66308c;
+  font-size:var(--fb-control-font-size,13px); font-weight:650; cursor:pointer;
+  transition:background var(--fb-motion-button,190ms) ease, border-color var(--fb-motion-button,190ms) ease;
+}
+.fb-chat__quick button:hover { background:#f6edfe; border-color:#b78ed6; }
+.fb-chat__quick button:focus-visible { outline:2px solid #9250c7; outline-offset:2px; }
 .fb-chat__quick button:disabled { opacity:.5; cursor:default; }
-.fb-chat__composer { display:flex; flex:0 0 auto; gap:6px; align-items:center; padding:7px 10px; border-top:1px solid #eee6f4; }
-.fb-chat__composer input { flex:1; min-width:0; height:39px; padding:0 11px; border-radius:10px; background:#faf7fd; border:1px solid #e8dbef; font-size:var(--fb-control-font-size); color:#2d2140; }
+.fb-chat__composer { display:flex; flex:0 0 auto; gap:7px; align-items:center; padding:8px 10px; border-top:1px solid #eee6f4; background:#fff; }
+.fb-chat__composer input {
+  flex:1; min-width:0; height:40px; padding:0 11px; border-radius:10px;
+  background:#faf7fd; border:1px solid #e8dbef; font-size:var(--fb-control-font-size,13px); color:#2d2140;
+}
 .fb-chat__composer input:focus-visible { outline:2px solid #9250c7; outline-offset:1px; }
-.fb-chat__composer button { flex:0 0 38px; height:38px; display:grid; place-items:center; background:#6825a0; border:0; border-radius:10px; color:#fff; cursor:pointer; }
+.fb-chat__composer button {
+  flex:0 0 40px; height:40px; display:grid; place-items:center;
+  background:#6825a0; border:0; border-radius:10px; color:#fff; cursor:pointer;
+  transition:transform var(--fb-motion-button,190ms) ease,background var(--fb-motion-button,190ms) ease;
+}
+.fb-chat__composer button:hover:not(:disabled) { background:#572080; }
+.fb-chat__composer button:focus-visible { outline:2px solid #9250c7; outline-offset:2px; }
 .fb-chat__composer button:disabled { opacity:.35; cursor:default; }
-.fb-chat__notice { margin:0; flex:0 0 auto; font-size:9px; line-height:1.4; color:#7c7185; padding:0 10px 8px; text-align:center; }
+.fb-chat__notice { flex:0 0 auto; margin:0; padding:0 12px 9px; background:#fff; color:#736680; font-size:10px; line-height:1.42; text-align:center; }
 .fb-chat__sr-only { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; }
 @keyframes fb-chat-dot { 0%,60%,100% { transform:translateY(0); opacity:.45; } 30% { transform:translateY(-4px); opacity:1; } }
 @keyframes fb-chat-open { from { opacity:0; transform:translateY(8px) scale(.97); } to { opacity:1; transform:translateY(0) scale(1); } }
+@keyframes fb-chat-close { from { opacity:1; transform:translateY(0) scale(1); } to { opacity:0; transform:translateY(8px) scale(.97); } }
 @keyframes fb-chat-bubble { from { opacity:.3; transform:translateY(3px); } to { opacity:1; transform:translateY(0); } }
-@media (max-width: 700px) {
-  .fb-chat { right: 12px; bottom: max(12px, env(safe-area-inset-bottom)); }
-  .fb-chat__launcher { width:52px; height:52px; }
-  .fb-chat__panel { bottom:67px; width:min(350px,calc(100vw - 24px)); height:min(465px,calc(100dvh - 100px - env(safe-area-inset-bottom))); }
+@keyframes fb-chat-float { 0%,100% { transform:translateY(0) rotate(-1deg); } 50% { transform:translateY(-5px) rotate(2deg); } }
+@keyframes fb-chat-wave { 0%,62%,100% { transform:rotate(-27deg); } 68%,79% { transform:rotate(-60deg); } 74%,85% { transform:rotate(-40deg); } }
+@keyframes fb-chat-blink { 0%,43%,46%,100% { transform:scaleY(1); } 44%,45% { transform:scaleY(.15); } }
+@media (max-width:700px) {
+  .fb-chat { right:8px; bottom:max(5px,env(safe-area-inset-bottom)); }
+  .fb-chat__panel { right:4px; bottom:109px; width:min(350px,calc(100vw - 24px)); height:min(475px,calc(100dvh - 132px - env(safe-area-inset-bottom))); }
+  .fb-chat__launcher { width:92px; height:102px; }
+  .fb-chat__close { flex-basis:44px; width:44px; height:44px; }
+  .fb-chat__quick button { min-height:44px; }
+  .fb-chat__composer button { flex-basis:44px; height:44px; }
 }
+@media (max-height:450px) { .fb-chat__panel { height:calc(100dvh - 117px - env(safe-area-inset-bottom)); } }
 @media (prefers-reduced-motion:reduce) {
-  .fb-chat__panel, .fb-chat__bubble { animation:none; }
-  .fb-chat__typing > span[aria-hidden] { animation:none; opacity:1; }
-  .fb-chat__launcher { transition:none; }
+  .fb-chat__panel, .fb-chat__bubble, .fb-chat__mascot, .fb-chat__mascot-arm--right, .fb-chat__mascot-eye, .fb-chat__typing > span[aria-hidden] { animation:none; }
+  .fb-chat__launcher, .fb-chat__close, .fb-chat__quick button, .fb-chat__composer button { transition:none; }
+  .fb-chat__typing > span[aria-hidden] { opacity:1; }
 }
