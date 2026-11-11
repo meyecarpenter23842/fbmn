@@ -28,9 +28,13 @@ vercel deploy --prod --yes --scope alibaba240185
 
 The Vercel project build command handles the Flutter SDK (if not installed), Flutter web build, copying into `public/ceo`, then Next build. Do not run against a dirty or unreviewed tree. The CLI must run from the **repository root** because Vercel already sets Root Directory to `apps/ceo/gateway`. Running from inside the gateway applies the root twice. For constrained developer machines, use the Git-source deployment or the manual CI workflow with verified prebuilt Flutter artifacts.
 
-## CI release workflow
+## Deploy bằng Issue comment
 
-`DL12D CEO Release (manual)` in the **development repo** is `workflow_dispatch` only, not production repo CI. It builds/tests Flutter, copies compiled assets into the gateway, uses **Vercel CLI pinned** with the existing Vercel project IDs, and deploys prebuilt. The one-time GitHub Actions secret `VERCEL_TOKEN` must be supplied to the dev repo by Owner to enable workflow release; do not request it in chat or commit it. Trigger on reviewed `main` only. GitHub Actions does **not** automatically push to the upstream repo, and release is allowed only after source tree synchronization is verified.
+Workflow chỉ nhận comment của Owner trên **Issue #72** của repo phát triển:
+- /deploy ceo preview
+- /deploy ceo production
+
+Xem [hướng dẫn Issue comment](ceo-issue-comment-deploy.md). Kích hoạt bằng comment thật sau khi mã nguồn đã merge, CI + Codex sạch và đồng bộ hai repo. Không dùng workflow_dispatch hay CLI thủ công cho phát hành thường lệ. GitHub secret VERCEL_TOKEN cần được cấu hình sẵn; thiếu thì dừng an toàn.
 
 ### Acceptance
 
