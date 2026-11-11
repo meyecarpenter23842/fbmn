@@ -112,6 +112,9 @@ class _CeoHomeState extends State<CeoHome>{
  CeoPage<CeoRequest>? outsourcing,contacts;
  String pushState='unknown';
  bool pushBusy=false;
+ // Keep an open notification route synchronized with async Owner data / push state.
+ final ValueNotifier<int> alertsVersion=ValueNotifier<int>(0);
+ @override void dispose(){alertsVersion.dispose();super.dispose();}
  String? initialTarget;
  int? initialTab;
  @override void initState(){
@@ -128,13 +131,18 @@ class _CeoHomeState extends State<CeoHome>{
  }
  Future<void> loadPushState()async{
   final status=await push.status();
-  if(mounted)setState(()=>pushState=status);
+  // A slower initial lookup must not overwrite a user-initiated change.
+  if(mounted&&!pushBusy){
+   setState(()=>pushState=status);
+   alertsVersion.value++;
+  }
  }
  Future<void> togglePush()async{
-  if(pushBusy)return;
+  if(pushBusy||pushState=='unknown')return;
   // Start the browser permission prompt within the user gesture, no awaits first.
   final action=pushState=='enabled'?push.disable():push.enable();
   setState(()=>pushBusy=true);
+  alertsVersion.value++;
   try{
    final status=await action;
    if(!mounted)return;
@@ -150,7 +158,10 @@ class _CeoHomeState extends State<CeoHome>{
    };
    if(message.isNotEmpty)setState(()=>error=message);
   }catch(_){if(mounted)setState(()=>error='Chưa kết nối được dịch vụ Web Push.');}
-  finally{if(mounted)setState(()=>pushBusy=false);}
+  finally{if(mounted){
+   setState(()=>pushBusy=false);
+   alertsVersion.value++;
+  }}
  }
  int countNew(int tab){
   if(tab==2)return outsourcing?.items.where((r)=>r.pending).length??0;
@@ -193,8 +204,9 @@ class _CeoHomeState extends State<CeoHome>{
   showModalBottomSheet<void>(
    context:context,isScrollControlled:true,useSafeArea:true,
    sheetAnimationStyle:ceoDetailSheetMotion(context),
-   builder:(sheetContext)=>StatefulBuilder(
-    builder:(sheetContext,updateSheet){
+   builder:(sheetContext)=>ValueListenableBuilder<int>(
+    valueListenable:alertsVersion,
+    builder:(sheetContext,_,__){
      final newOut=outsourcing?.items.where((r)=>r.pending).toList()??<CeoRequest>[];
      final newContacts=contacts?.items.where((r)=>r.pending).toList()??<CeoRequest>[];
      final total=newOut.length+newContacts.length;
@@ -213,16 +225,11 @@ class _CeoHomeState extends State<CeoHome>{
          title:const Text('Web Push trên thiết bị',
           style:TextStyle(fontWeight:FontWeight.w700,fontSize:14)),
          subtitle:Text(pushStatusText,style:const TextStyle(fontSize:12)),
-         trailing:pushBusy?
+         trailing:pushBusy||pushState=='unknown'?
           const SizedBox(width:24,height:24,
            child:CircularProgressIndicator(strokeWidth:2)):
           TextButton(
-           onPressed:()async{
-            final action=togglePush(); // Preserve the browser user gesture.
-            updateSheet((){});
-            await action;
-            if(sheetContext.mounted)updateSheet((){});
-           },
+           onPressed:togglePush, // Preserve the browser user gesture.
            child:Text(pushState=='enabled'?'Tắt':'Bật')),
         ))),
       Expanded(child:ListView(padding:const EdgeInsets.fromLTRB(12,8,12,20),children:[
@@ -312,7 +319,10 @@ class _CeoHomeState extends State<CeoHome>{
    else if(tabAtStart==3){final v=await widget.api.contactRequests();
     if(mounted)setState(()=>contacts=v);}
   }catch(e){if(mounted)setState(()=>error=userError(e));}
-  finally{endLoad(tabAtStart);}
+  finally{
+   endLoad(tabAtStart);
+   if(mounted)alertsVersion.value++;
+  }
  }
  void endLoad(int previousTab){
   if(!mounted)return;
