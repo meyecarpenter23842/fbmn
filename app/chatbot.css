@@ -148,8 +148,10 @@
 @keyframes fb-chat-blink { 0%,43%,46%,100% { transform:scaleY(1); } 44%,45% { transform:scaleY(.15); } }
 @media (max-width: 700px) {
   .fb-chat { right:12px; bottom:max(5px,env(safe-area-inset-bottom)); }
-  .fb-chat__panel { right:4px; bottom:109px; width:min(350px,calc(100vw - 24px)); height:min(475px,calc(100dvh - 132px - env(safe-area-inset-bottom))); }
-  .fb-chat__launcher { width:92px; height:102px; }
+  .fb-chat__panel { right:4px; bottom:73px; width:min(350px,calc(100vw - 24px)); height:min(475px,calc(100dvh - 102px - env(safe-area-inset-bottom))); }
+  /* G07 fixed quote CTA reserves only a 52px chat target on mobile. */
+  .fb-chat__launcher { width:52px; height:64px; }
+  .fb-chat__launcher .fb-chat__mascot { scale:.56; transform-origin:center; }
   .fb-chat__header { min-height:56px; height:56px; }
   .fb-chat__close { flex-basis:44px; width:44px; height:44px; }
   .fb-chat__quick button { min-height:44px; }
