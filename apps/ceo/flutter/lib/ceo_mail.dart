@@ -1,4 +1,6 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'ceo_feedback.dart';
 import 'ceo_repository.dart';
 import 'ceo_mail_models.dart';
 import 'ceo_ui_tokens.dart';
@@ -88,9 +90,13 @@ class _CeoMailPanelState extends State<CeoMailPanel>{
            style:TextStyle(fontSize:12,color:ceoMuted))),
         ],
         if(widget.box=='inbox')...[
+         const SizedBox(height:14),
+         Text(letter.replyTo.isEmpty?'Không xác định được địa chỉ trả lời':
+          'Trả lời tới: ${letter.replyTo}',
+          style:const TextStyle(fontSize:12.5,color:ceoMuted)),
          const SizedBox(height:20),
          FilledButton.icon(
-          onPressed:(){
+          onPressed:letter.replyTo.isEmpty?null:(){
            Navigator.of(ctx).pop();
            Future.delayed(const Duration(milliseconds:280),(){
             if(mounted)compose(reply:letter);
@@ -103,7 +109,7 @@ class _CeoMailPanelState extends State<CeoMailPanel>{
  }
  @override Widget build(BuildContext context){
   final items=page?.items??const <CeoMailItem>[];
-  return ListView(physics:const AlwaysScrollableScrollPhysics(),children:[
+  return Stack(children:[ListView(physics:const AlwaysScrollableScrollPhysics(),children:[
    CeoPanel(title:widget.box=='inbox'?'Hộp thư đến':'Thư đã gửi',
     subtitle:widget.box=='inbox'?'Thư nhận tại info@fbmn.vn':'Thư gửi từ info@fbmn.vn',
     icon:widget.box=='inbox'?Icons.markunread_mailbox_outlined:Icons.outbox_outlined,
@@ -113,13 +119,9 @@ class _CeoMailPanelState extends State<CeoMailPanel>{
      Align(alignment:Alignment.centerRight,
       child:FilledButton.icon(onPressed:loading?null:()=>compose(),
        icon:const Icon(Icons.edit_outlined,size:18),label:const Text('Soạn thư'))),
-     if(notice.isNotEmpty)Padding(padding:const EdgeInsets.only(top:9),
-      child:Text(notice,style:const TextStyle(color:ceoPurple,fontSize:13))),
-     if(error.isNotEmpty)Padding(padding:const EdgeInsets.only(top:9),
-      child:Text(error,style:const TextStyle(color:Colors.red,fontSize:13))),
      if(loading&&page==null)const Padding(padding:EdgeInsets.all(30),
       child:Center(child:CircularProgressIndicator())),
-     if(!loading&&items.isEmpty)CeoEmptyResult(title:'Chưa có email',
+     if(!loading&&error.isEmpty&&page!=null&&items.isEmpty)CeoEmptyResult(title:'Chưa có email',
       detail:widget.box=='inbox'?'Chưa có email nhận được qua Resend.':
        'Chưa có email gửi đi được ghi nhận trên Resend.',
       icon:Icons.mail_outline),
@@ -151,6 +153,13 @@ class _CeoMailPanelState extends State<CeoMailPanel>{
       child:const Text('Tải thêm')),
     ])),
    const SizedBox(height:24),
+  ]),
+  if(notice.isNotEmpty||error.isNotEmpty)
+   Positioned(top:10,right:12,left:12,
+    child:Align(alignment:Alignment.topRight,
+     child:CeoErrorToast(key:ValueKey('mail-$notice-$error'),
+      message:notice.isNotEmpty?notice:error,success:notice.isNotEmpty,
+      onRetry:()=>load(),onClose:(){if(mounted)setState((){notice='';error='';});}))),
   ]);
  }
 }
@@ -162,14 +171,14 @@ class CeoMailComposer extends StatefulWidget{
  @override State<CeoMailComposer> createState()=>_CeoMailComposerState();
 }
 class _CeoMailComposerState extends State<CeoMailComposer>{
- late final recipient=TextEditingController(text:widget.reply?.from??'');
+ late final recipient=TextEditingController(text:widget.reply?.replyTo??'');
  late final subject=TextEditingController(text:widget.reply==null?'':(
   widget.reply!.subject.toLowerCase().startsWith('re:')?
   widget.reply!.subject:'Re: ${widget.reply!.subject}'));
  final message=TextEditingController();
- bool saving=false;
- String error='';
- late final requestId='mail-${DateTime.now().microsecondsSinceEpoch}';
+ bool saving=false,uncertainFailure=false;
+ String error='',networkNotice='';
+ String? lastPayload,lastRequestId,confirmNewPayload;
  @override void dispose(){recipient.dispose();subject.dispose();message.dispose();super.dispose();}
  Future<void> send()async{
   if(saving)return;
@@ -179,15 +188,30 @@ class _CeoMailComposerState extends State<CeoMailComposer>{
   if(subject.text.trim().isEmpty||message.text.trim().isEmpty){
    setState(()=>error='Vui lòng nhập tiêu đề và nội dung.');return;
   }
-  setState((){saving=true;error='';});
+  final payload=jsonEncode([recipient.text.trim(),subject.text.trim(),
+   message.text.trim(),widget.reply?.id]);
+  if(uncertainFailure&&payload!=lastPayload&&confirmNewPayload!=payload){
+   setState((){confirmNewPayload=payload;
+    error='Lượt gửi trước có thể đã được tiếp nhận. Bấm Gửi thêm lần nữa để gửi phiên bản mới.';});
+   return;
+  }
+  if(payload!=lastPayload){
+   lastPayload=payload;
+   lastRequestId='mail-${DateTime.now().microsecondsSinceEpoch}';
+  }
+  setState((){saving=true;error='';networkNotice='';});
   try{
    await widget.api.mailSend(to:recipient.text.trim(),subject:subject.text.trim(),
-    text:message.text.trim(),replyId:widget.reply?.id,requestId:requestId);
+    text:message.text.trim(),replyId:widget.reply?.id,requestId:lastRequestId);
    if(mounted)Navigator.of(context).pop(true);
-  }catch(e){if(mounted)setState(()=>error=e.toString());}
+  }catch(_){if(mounted)setState((){
+    uncertainFailure=true;
+    networkNotice='Không xác nhận được lượt gửi. Nếu giữ nguyên nội dung, thử lại sẽ dùng cùng mã gửi.';
+   });}
   finally{if(mounted)setState(()=>saving=false);}
  }
- @override Widget build(BuildContext context)=>Column(children:[
+ @override Widget build(BuildContext context)=>Stack(children:[
+  Column(children:[
   const CeoSheetHeader(title:'Soạn email Futurebook'),
   Expanded(child:SingleChildScrollView(padding:EdgeInsets.fromLTRB(
    16,12,16,MediaQuery.viewInsetsOf(context).bottom+24),
@@ -214,5 +238,10 @@ class _CeoMailComposerState extends State<CeoMailComposer>{
      icon:const Icon(Icons.send,size:18),
      label:Text(saving?'Đang gửi...':'Gửi email')),
    ]))),
+ ]),
+  if(networkNotice.isNotEmpty)
+   Positioned(top:10,right:12,left:12,child:Align(alignment:Alignment.topRight,
+    child:CeoErrorToast(key:ValueKey(networkNotice),message:networkNotice,
+     onRetry:send,onClose:(){if(mounted)setState(()=>networkNotice='');}))),
  ]);
 }
