@@ -217,7 +217,7 @@ class _CeoHomeState extends State<CeoHome>{
   final reload=selected!=4&&pendingRefresh&&selected!=previousTab;
   pendingRefresh=false;
   setState(()=>loading=false);
-  if(reload)Future.microtask(refresh);
+  if(reload){Future.microtask(refresh);}
   else if(initialTarget!=null&&selected==previousTab){
    WidgetsBinding.instance.addPostFrameCallback((_){if(mounted)openDeepLinkedItem();});
   }
