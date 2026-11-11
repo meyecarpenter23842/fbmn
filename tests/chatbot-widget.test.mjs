@@ -16,8 +16,9 @@ test("chatbot has a branded animated book mascot rather than a round avatar", ()
   assert.match(css, /@keyframes fb-chat-float/);
   assert.match(css, /@keyframes fb-chat-blink/);
   assert.match(css, /@media \(max-width:\s*700px\)/);
-  assert.match(css, /\.fb-chat__launcher\s*\{\s*width:52px; height:64px/);
-  assert.match(css, /\.fb-chat__launcher \.fb-chat__mascot\s*\{\s*scale:\.56/);
+  assert.match(css, /\.fb-chat__launcher\s*\{\s*width:76px; height:94px/);
+  assert.match(css, /\.fb-chat__launcher \.fb-chat__mascot\s*\{[\s\S]*?scale:\.8/);
+  assert.match(css, /\.fb-glass-site:has\(\.fb-song-mobile-cta\) \.fb-chat/);
 });
 test("widget has real pending state and accessible close", () => {
   const code=read("components/chatbot-widget.tsx");
@@ -66,4 +67,17 @@ test("book chatbot respects motion, close timing and existing Dialogflow session
   assert.match(css, /@media \(max-width: 700px\)[\s\S]*?\.fb-chat__header\s*\{[^}]*min-height:56px; height:56px/);
   assert.match(css,/fb-chat-open 280ms/);
   assert.match(css,/prefers-reduced-motion:reduce/);
+});
+
+test("mobile chat sheet fits the visual viewport and keeps the input beside its send button", () => {
+  const widget = read("components/chatbot-widget.tsx");
+  const css = read("app/chatbot.css");
+  assert.match(css, /\.fb-chat__panel\s*\{[\s\S]*?position:fixed; z-index:2; left:12px; right:12px/);
+  assert.match(css, /\.fb-chat__composer\s*\{[\s\S]*?grid-template-columns:minmax\(0,1fr\) 44px/);
+  assert.match(css, /\.fb-chat__composer input\s*\{[^}]*font-size:16px/);
+  assert.match(css, /--fb-chat-keyboard-bottom/);
+  assert.match(widget, /window\.visualViewport/);
+  assert.match(widget, /viewport\.addEventListener\("resize", syncViewport\)/);
+  assert.match(widget, /ref=\{panel\}/);
+  assert.doesNotMatch(css, /scale:\.56/);
 });
