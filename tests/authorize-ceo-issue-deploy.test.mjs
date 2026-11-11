@@ -1,6 +1,6 @@
 import {test} from "node:test";
 import assert from "node:assert/strict";
-import {approveCommand,checksGreen,latestReview} from "../authorize-ceo-issue-deploy.mjs";
+import {approveCommand,checksGreen,latestReview} from "../scripts/authorize-ceo-issue-deploy.mjs";
 const valid={repo:"meyecarpenter23842/fbmn",issue:"72",actor:"alibaba240185",command:"/deploy ceo production"};
 test("Owner can deploy CEO only from Issue 72 with exact comment",()=>{
  assert.equal(approveCommand(valid),"production");
