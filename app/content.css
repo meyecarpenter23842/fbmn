@@ -117,3 +117,34 @@
 .contact-interest-grid label{display:flex;align-items:center;gap:8px;min-width:0;font-weight:600}
 .contact-interest-grid input{flex:none;accent-color:var(--color-primary)}
 @media(max-width:780px){.contact-interest-grid{grid-template-columns:1fr}}
+
+/* Contact: place map in the existing left-hand card; the inquiry form remains untouched. */
+.content-location-map {
+  display: flex; flex-direction: column; gap: 8px; min-height: 260px;
+  margin-top: 22px; padding: 7px; border: 1px solid var(--fb-glass-border);
+  border-radius: 16px; background: rgba(247,242,252,.8); overflow: hidden;
+}
+.content-location-map iframe {
+  display: block; flex: 1 1 auto; width: 100%; min-height: 225px; border: 0;
+  border-radius: 11px; background: #eee7f5;
+}
+.content-location-map a {
+  align-self: flex-end; padding: 3px 7px 2px; font-size: 13px;
+  font-weight: 700; color: var(--color-primary-strong); text-underline-offset: 3px;
+}
+.content-location-map a:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+
+/* Outsourcing: illustration floats inside unused card space without changing its geometry. */
+.content-outline-panel--outsourcing { position: relative; isolation: isolate; overflow: hidden; }
+.content-outline-panel--outsourcing > :not(.content-outsourcing-art) { position: relative; z-index: 1; }
+.content-outsourcing-art {
+  position: absolute; z-index: 0; right: 8px; bottom: 4px;
+  width: min(100%, 480px); height: auto; max-height: 43%;
+  object-fit: contain; object-position: right bottom; pointer-events: none;
+  filter: drop-shadow(0 12px 16px rgba(75,30,116,.09));
+}
+@media (max-width: 800px) {
+  .content-location-map { min-height: 230px; }
+  .content-location-map iframe { min-height: 192px; }
+  .content-outsourcing-art { width: 138px; max-height: 95px; opacity: .2; right: 0; bottom: 0; }
+}
