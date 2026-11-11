@@ -666,7 +666,10 @@ class _CeoHomeState extends State<CeoHome>{
  }
 
  void showCase(CeoRequest item,bool outsource){
-  openDetail((ctx)=>Column(children:[
+  final kind=outsource?'outsourcing':'contact';
+  openDetail((ctx)=>ValueListenableBuilder<int>(
+   valueListenable:alertsVersion,
+   builder:(ctx,_,__)=>Column(children:[
    CeoSheetHeader(title:outsource?'Chi tiết gia công':'Chi tiết liên hệ'),
    Expanded(child:ListView(padding:const EdgeInsets.all(14),children:[
     CeoDetailGroup(title:'Thông tin yêu cầu',icon:Icons.assignment_outlined,
@@ -674,7 +677,8 @@ class _CeoHomeState extends State<CeoHome>{
       Row(children:[
        Expanded(child:field('Trạng thái',item.pending?'Mới · chưa xử lý':'Đã xử lý')),
        const SizedBox(width:8),
-       Expanded(child:field('Đã xem',item.viewedAt==null?'Chưa xem':'Đã xem')),
+       Expanded(child:field('Đã xem',item.viewedAt!=null||
+        confirmedViews.containsKey('$kind:${item.id}')?'Đã xem':'Chưa xem')),
       ]),
       field('Thời gian',dateString(item.createdAt)),
      ]),
@@ -707,7 +711,7 @@ class _CeoHomeState extends State<CeoHome>{
      style:TextStyle(color:ceoMuted,fontSize:12.5,height:1.4)),
     const SizedBox(height:18),
    ])),
-  ]));
+  ])));
   if(item.unread)Future.microtask(()=>markViewed(item,outsource));
  }
 
