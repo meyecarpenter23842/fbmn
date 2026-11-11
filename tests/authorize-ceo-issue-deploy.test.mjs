@@ -1,6 +1,6 @@
 import {test} from "node:test";
 import assert from "node:assert/strict";
-import {approveCommand,checksGreen,latestReview,needsCeoBuildChecks} from "../scripts/authorize-ceo-issue-deploy.mjs";
+import {approveCommand,checksGreen,latestReview,needsCeoBuildChecks,ownerSyncProof} from "../scripts/authorize-ceo-issue-deploy.mjs";
 const valid={repo:"meyecarpenter23842/fbmn",issue:"72",actor:"alibaba240185",command:"/deploy ceo production"};
 test("Owner can deploy CEO only from Issue 72 with exact comment",()=>{
  assert.equal(approveCommand(valid),"production");
@@ -33,4 +33,16 @@ test("Path-filtered Flutter and gateway checks are needed only for CEO changes",
  assert.equal(needsCeoBuildChecks(["app/page.tsx","docs/roadmap.md"]),false);
  assert.equal(needsCeoBuildChecks(["apps/ceo/gateway/lib/owner-gate.ts"]),true);
  assert.equal(needsCeoBuildChecks([".github/workflows/dl12d-ceo-deploy.yml"]),true);
+});
+
+test("Trusted owner sync receipt must bind dev/main SHA and exact tree",()=>{
+ const dev="1".repeat(40),tree="2".repeat(40),up="3".repeat(40);
+ const payload="<!-- fbmn-ceo-sync-proof:v1 "+JSON.stringify({
+  dev_sha:dev,upstream_sha:up,tree_sha:tree})+" -->";
+ const valid={id:123,created_at:"2026-11-11T05:56:00Z",
+  updated_at:"2026-11-11T05:56:00Z",user:{login:"meyecarpenter23842"},body:payload};
+ assert.equal(ownerSyncProof([valid],dev,tree)?.upstream,up);
+ assert.equal(ownerSyncProof([{...valid,user:{login:"stranger"}}],dev,tree),undefined);
+ assert.equal(ownerSyncProof([valid],"4".repeat(40),tree),undefined);
+ assert.equal(ownerSyncProof([valid],dev,"4".repeat(40)),undefined);
 });

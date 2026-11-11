@@ -17,3 +17,5 @@ Build Flutter Web, lint/test gateway, ghép cả hai trong một origin, dùng V
 Điều kiện: GitHub Actions secret VERCEL_TOKEN phải có trong repo phát triển; nếu không, workflow dừng rõ lỗi. Không copy token vào issue hay chat. Kết quả URL của release nằm ở Actions job summary. Domain ceo.fbmn.vn do Owner thêm trên Vercel.
 
 Sau khi workflow merge vào main, có thể dùng comment thật để test. CI/unit test không thay thế được kiểm chứng việc nhận event và quyền truy cập secret thật.
+
+Nếu GITHUB_TOKEN của repo phát triển không đọc được repo chính (HTTP 404), workflow chỉ chấp nhận biên nhận đồng bộ qua comment của chủ repo phụ trên Issue #72. Biên nhận gắn chính xác SHA dev/main, SHA upstream/main và tree SHA giống nhau, do trợ lý ghi sau khi trực tiếp kiểm tra cả hai repo. Không có biên nhận tương ứng thì dừng; biên nhận là bằng chứng đối soát tại thời điểm tạo, không thay thế kiểm tra live nếu quyền đọc upstream đã có.

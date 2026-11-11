@@ -24,6 +24,24 @@ export function needsCeoBuildChecks(filenames){
   [".github/workflows/dl12a-ceo.yml",".github/workflows/dl12d-ceo-deploy.yml",
    "docs/web-dl12a-ceo-flutter.md","docs/web-dl12d-ceo-vercel.md"].includes(p));
 }
+export function ownerSyncProof(comments,devSha,treeSha){
+ const proofs=[];
+ for(const c of comments||[]){
+  // The verified receipt is issued by the development repository owner only.
+  if(c.user?.login!=="meyecarpenter23842")continue;
+  for(const m of (c.body||"").matchAll(/<!-- fbmn-ceo-sync-proof:v1 (\\{[^\\n]+\\}) -->/g)){
+   try{
+    const p=JSON.parse(m[1]);
+    if(p.dev_sha!==devSha||p.tree_sha!==treeSha||
+      !/^[a-f0-9]{40}$/.test(p.upstream_sha||""))continue;
+    proofs.push({upstream:p.upstream_sha,id:c.id||0,
+      created:Date.parse(c.created_at)||0,updated:Date.parse(c.updated_at)||0});
+   }catch{}
+  }
+ }
+ proofs.sort((a,b)=>a.updated-b.updated||a.id-b.id);
+ return proofs.at(-1);
+}
 export function latestReview(comments,sha){
  const out=[];
  for(const c of comments||[]){
@@ -71,19 +89,31 @@ export async function authorize(env=process.env){
   actor:env.REQUESTED_BY,command:env.DEPLOY_COMMAND,pr:env.IS_PULL_REQUEST==="true"});
  const issue=await gh(token,"repos/"+DEV+"/issues/72");
  requireCondition(issue.state==="open"&&!issue.pull_request,"Control issue closed");
- const [devRef,upRef]=await Promise.all([
-  gh(token,"repos/"+DEV+"/git/ref/heads/main"),
-  gh(token,"repos/"+UPSTREAM+"/git/ref/heads/main")]);
- const devSha=devRef.object?.sha,upSha=upRef.object?.sha;
- requireCondition(/^[a-f0-9]{40}$/.test(devSha||"")&&/^[a-f0-9]{40}$/.test(upSha||""),"Invalid refs");
+ const devRef=await gh(token,"repos/"+DEV+"/git/ref/heads/main");
+ const devSha=devRef.object?.sha;
+ requireCondition(/^[a-f0-9]{40}$/.test(devSha||""),"Invalid dev main ref");
  if(env.EXPECTED_SHA)requireCondition(env.EXPECTED_SHA===devSha,
   "Approved SHA is stale: main advanced after authorization; comment again");
- const [devCommit,upCommit]=await Promise.all([
-  gh(token,"repos/"+DEV+"/git/commits/"+devSha),
-  gh(token,"repos/"+UPSTREAM+"/git/commits/"+upSha)]);
+ const devCommit=await gh(token,"repos/"+DEV+"/git/commits/"+devSha);
  const tree=devCommit.tree?.sha;
- requireCondition(/^[a-f0-9]{40}$/.test(tree||"")&&upCommit.tree?.sha===tree,
-  "Development and upstream main trees differ; sync first");
+ requireCondition(/^[a-f0-9]{40}$/.test(tree||""),"Invalid dev main tree");
+ let upSha,proofType="live";
+ try{
+  const upRef=await gh(token,"repos/"+UPSTREAM+"/git/ref/heads/main");
+  upSha=upRef.object?.sha;
+  requireCondition(/^[a-f0-9]{40}$/.test(upSha||""),"Invalid upstream ref");
+  const upCommit=await gh(token,"repos/"+UPSTREAM+"/git/commits/"+upSha);
+  requireCondition(upCommit.tree?.sha===tree,"Development and upstream main trees differ");
+ }catch(error){
+  // The dev-repository GITHUB_TOKEN often cannot read the separate upstream
+  // account. In that case, require a reviewed Owner-authenticated sync receipt
+  // posted after direct verification of both repos (not merely a statement in PR).
+  if(!/^GitHub API HTTP (403|404)$/.test(String(error?.message)))throw error;
+  const proof=ownerSyncProof(await comments(token,72),devSha,tree);
+  requireCondition(!!proof,"Cannot read upstream and no valid Owner sync receipt for this commit");
+  upSha=proof.upstream;
+  proofType="owner-verified-receipt";
+ }
  const prs=await gh(token,"repos/"+DEV+"/commits/"+devSha+"/pulls?per_page=100");
  const reviewed=(prs||[]).find(p=>p.merged_at&&p.merge_commit_sha===devSha&&
   p.base?.ref==="main"&&p.base?.repo?.full_name===DEV&&p.head?.repo?.full_name===DEV);
@@ -107,13 +137,13 @@ export async function authorize(env=process.env){
  const review=latestReview(await comments(token,reviewed.number),head);
  requireCondition(review?.status==="completed"&&review.has_any_findings===false&&
   review.has_unresolved_findings===false,"Codex has outstanding findings");
- return {sha:devSha,tree,target,pr:reviewed.number,upstream:upSha};
+ return {sha:devSha,tree,target,pr:reviewed.number,upstream:upSha,proofType};
 }
 async function run(){
  const out=await authorize();
  requireCondition(process.env.GITHUB_OUTPUT,"No workflow output file");
  appendFileSync(process.env.GITHUB_OUTPUT,
   "sha="+out.sha+"\ntarget="+out.target+"\npr="+out.pr+"\n");
- console.log("Approved CEO "+out.target+" SHA "+out.sha.slice(0,12)+" PR #"+out.pr);
+ console.log("Approved CEO "+out.target+" SHA "+out.sha.slice(0,12)+" PR #"+out.pr+"; sync proof "+out.proofType);
 }
 if(process.argv[1]&&resolve(process.argv[1])===fileURLToPath(import.meta.url))await run();
