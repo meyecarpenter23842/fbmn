@@ -81,8 +81,12 @@
    const reg=await navigator.serviceWorker.getRegistration(SCOPE);
    const sub=reg&&await reg.pushManager.getSubscription();
    if(sub){
-    await ceoApi("subscription","DELETE",{endpoint:sub.endpoint});
+    let serverError=false;
+    try{await ceoApi("subscription","DELETE",{endpoint:sub.endpoint});}
+    catch{serverError=true;}
+    // Revoke local subscription even if server is unreachable; its next send returns 410.
     await sub.unsubscribe();
+    if(serverError)return "service_error";
    }
    return "disabled";
   }catch(error){return error?.message==="login_required"?"login_required":"service_error";}
