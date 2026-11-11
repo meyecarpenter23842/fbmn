@@ -15,7 +15,7 @@ test("chatbot has a branded animated book mascot rather than a round avatar", ()
   assert.match(css, /\.fb-chat__launcher\s*\{[\s\S]*?width:96px; height:106px;/);
   assert.match(css, /@keyframes fb-chat-float/);
   assert.match(css, /@keyframes fb-chat-blink/);
-  assert.match(css, /@media \(max-width:700px\)/);
+  assert.match(css, /@media \(max-width:\s*700px\)/);
 });
 test("widget has real pending state and accessible close", () => {
   const code=read("components/chatbot-widget.tsx");
