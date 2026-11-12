@@ -51,6 +51,12 @@ class CeoApi implements CeoRepository {
   if(response.statusCode<200||response.statusCode>=300)throw CeoApiException(response.statusCode);
   try{
    final decoded=jsonDecode(response.body);
+   // Better Auth returns the literal JSON null when no session cookie exists.
+   // Treat only this exact same-origin session response as unauthenticated,
+   // never silently reinterpret malformed data from other Owner endpoints.
+   if(method=='GET'&&path=='/api/auth/get-session'&&decoded==null){
+    return <String,dynamic>{'session':null};
+   }
    if(decoded is Map<String,dynamic>)return decoded;
   }catch(_){/* fail-closed on wrong response */}
   throw const CeoApiException(503);
