@@ -108,7 +108,8 @@ export async function GET(request:Request){
     await Promise.all(targets.map(async sub=>{
        try{
         const badge=await ownerBadge(sub.owner_subject);
-        const payload=pushPayload(e.kind,e.ref,badge);
+        const payload=pushPayload(e.kind,e.ref,badge,topic,
+         e.kind==="chat"&&e.event_key!==("chat:"+e.ref));
         await webpush.sendNotification(
          {endpoint:sub.endpoint,keys:{p256dh:sub.p256dh,auth:sub.auth}},payload,
          {TTL:86400,urgency:"normal",topic,timeout:7000,contentEncoding:"aes128gcm"});
