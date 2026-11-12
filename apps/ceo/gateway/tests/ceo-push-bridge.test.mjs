@@ -24,3 +24,84 @@ test("iPhone Safari must install PWA before notifications",async()=>{
  vm.runInNewContext(source,context);
  assert.equal(await window.fbmnPushEnable(),"ios_install");
 });
+
+function pushSession(store,{permission="granted",oldSubscription=false}={}){
+ const calls=[],notices={prompts:0},registry={current:null};
+ let subscription=oldSubscription?subscriptionObject():null;
+ function subscriptionObject(){return {
+  endpoint:"https://fcm.googleapis.com/fcm/send/mock",
+  toJSON:()=>({endpoint:"https://fcm.googleapis.com/fcm/send/mock",
+   keys:{auth:"x".repeat(22),p256dh:"y".repeat(87)}}),
+  unsubscribe:async()=>{subscription=null;return true;}
+ };}
+ const notification={permission,requestPermission:()=>{
+  notices.prompts++;notification.permission="granted";
+  return Promise.resolve("granted");}};
+ const registration={pushManager:{
+  getSubscription:async()=>subscription,
+  subscribe:async()=>{calls.push("subscribe");subscription=subscriptionObject();return subscription;}
+ }};
+ if(oldSubscription)registry.current=registration;
+ const navigator={userAgent:"Chrome",platform:"Linux",maxTouchPoints:0,
+  standalone:true,serviceWorker:{
+   ready:Promise.resolve(registration),
+   getRegistration:async()=>registry.current,
+   register:async(url,opts)=>{calls.push("register:"+url);
+    registry.current=registration;return registration;}
+  }};
+ const storage={
+  getItem:key=>store.get(key)??null,
+  setItem:(key,val)=>store.set(key,val),
+  removeItem:key=>store.delete(key)
+ };
+ const window={isSecureContext:true,PushManager:function(){},
+  Notification:notification,navigator,localStorage:storage,
+  matchMedia:()=>({matches:false})};
+ const fetch=async(url,opts)=>{
+  calls.push(String(url)+" "+opts.method);
+  if(url==="/api/auth/token")return {ok:true,json:async()=>({token:"aa.bb.cc"})};
+  if(url==="/api/ceo/push/config")return {ok:true,json:async()=>({
+   data:{vapidPublicKey:"a".repeat(87)}})};
+  if(url==="/api/ceo/push/subscription")return {ok:true,json:async()=>({data:{}})};
+  throw Error("Unexpected request: "+url);
+ };
+ vm.runInNewContext(source,{window,navigator,Notification:notification,fetch,
+  atob:s=>Buffer.from(s,"base64").toString("binary"),Uint8Array});
+ return {window,calls,notices,registry};
+}
+test("CEO-MAIL03 persistent push consent restores automatically after closing app",async()=>{
+ const store=new Map();
+ const initial=pushSession(store,{permission:"default"});
+ assert.equal(await initial.window.fbmnPushEnable(),"enabled");
+ assert.equal(initial.notices.prompts,1);
+ assert.equal(store.get("fbmn-ceo-push-opt-in-v1"),"1");
+ // A PWA or service-worker update may remove the registration between launches.
+ const reopened=pushSession(store);
+ assert.equal(await reopened.window.fbmnPushStatus(),"enabled");
+ assert.equal(reopened.notices.prompts,0);
+ assert.ok(reopened.calls.includes("register:/ceo/push-sw.js"));
+ assert.ok(reopened.calls.some(x=>x.includes("/api/ceo/push/subscription POST")));
+});
+test("CEO-MAIL03 explicit Off stays off, but logout preserves preference for Owner relogin",async()=>{
+ const store=new Map([["fbmn-ceo-push-opt-in-v1","1"]]);
+ const owner=pushSession(store);
+ assert.equal(await owner.window.fbmnPushStatus(),"enabled");
+ assert.equal(await owner.window.fbmnPushLogout(),"disabled");
+ assert.equal(store.get("fbmn-ceo-push-opt-in-v1"),"1");
+ const relogin=pushSession(store);
+ assert.equal(await relogin.window.fbmnPushStatus(),"enabled");
+ assert.equal(await relogin.window.fbmnPushDisable(),"disabled");
+ assert.equal(store.has("fbmn-ceo-push-opt-in-v1"),false);
+ const newLaunch=pushSession(store);
+ assert.equal(await newLaunch.window.fbmnPushStatus(),"disabled");
+ assert.equal(newLaunch.calls.length,0);
+});
+test("CEO-MAIL03 pre-upgrade subscriptions are adopted and denied browser permissions stay denied",async()=>{
+ const store=new Map();
+ const legacy=pushSession(store,{oldSubscription:true});
+ assert.equal(await legacy.window.fbmnPushStatus(),"enabled");
+ assert.equal(store.get("fbmn-ceo-push-opt-in-v1"),"1");
+ const blocked=pushSession(store,{permission:"denied"});
+ assert.equal(await blocked.window.fbmnPushStatus(),"denied");
+ assert.equal(blocked.calls.length,0);
+});
