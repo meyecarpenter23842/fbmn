@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:file_picker/file_picker.dart';
 import 'ceo_feedback.dart';
 import 'ceo_repository.dart';
 import 'ceo_mail_models.dart';
@@ -178,10 +179,50 @@ class _CeoMailComposerState extends State<CeoMailComposer>{
   widget.reply!.subject.toLowerCase().startsWith('re:')?
   widget.reply!.subject:'Re: ${widget.reply!.subject}'));
  final message=TextEditingController();
- bool saving=false,uncertainFailure=false;
+ bool saving=false,picking=false,uncertainFailure=false;
+ final List<CeoMailAttachment> attachments=[];
+ static const maxFiles=5,maxTotalBytes=3000000;
+ static const allowedExtensions=<String>['pdf','doc','docx','xls','xlsx',
+  'ppt','pptx','csv','txt','png','jpg','jpeg','webp'];
  String error='',networkNotice='';
  String? lastPayload,lastRequestId,confirmNewPayload;
  @override void dispose(){recipient.dispose();subject.dispose();message.dispose();super.dispose();}
+ Future<void> pickAttachments()async{
+  if(saving||picking)return;
+  setState((){picking=true;error='';});
+  try{
+   final picked=await FilePicker.platform.pickFiles(
+    type:FileType.custom,allowedExtensions:allowedExtensions,
+    allowMultiple:true,withData:true);
+   if(!mounted||picked==null)return;
+   final files=[...attachments];
+   var total=files.fold<int>(0,(sum,file)=>sum+file.size);
+   for(final file in picked.files){
+    if(files.length>=maxFiles){
+     throw const FormatException('Tối đa 5 tệp đính kèm trong một email.');
+    }
+    final filename=file.name.trim(),bytes=file.bytes;
+    final ext=filename.split('.').last.toLowerCase();
+    if(!allowedExtensions.contains(ext)||filename.length>160||
+      filename.contains('/')||filename.contains('\\')){
+     throw const FormatException('Định dạng hoặc tên tệp chưa được hỗ trợ.');
+    }
+    if(bytes==null||bytes.isEmpty){
+     throw const FormatException('Không đọc được tệp hoặc tệp đang trống.');
+    }
+    if(bytes.length>maxTotalBytes-total){
+     throw const FormatException('Tổng tệp đính kèm không vượt 3 MB.');
+    }
+    total+=bytes.length;
+    files.add(CeoMailAttachment(filename:filename,
+     content:base64Encode(bytes),size:bytes.length));
+   }
+   if(mounted)setState((){attachments..clear()..addAll(files);});
+  }catch(e){
+   if(mounted)setState(()=>error=e is FormatException?e.message:
+    'Không mở hoặc đọc được tệp. Vui lòng chọn lại.');
+  }finally{if(mounted)setState(()=>picking=false);}
+ }
  Future<void> send()async{
   if(saving){return;}
   if(widget.reply==null&&(!recipient.text.contains('@')||recipient.text.length>320)){
@@ -196,14 +237,16 @@ class _CeoMailComposerState extends State<CeoMailComposer>{
    'to':recipient.text.trim(),'subject':subject.text.trim(),
    'text':message.text.trim(),
    if(widget.reply!=null)'replyId':widget.reply!.id,
+   if(attachments.isNotEmpty)'attachments':attachments.map((a)=>a.toJson()).toList(),
    'requestId':'x'.padRight(100,'x'), // Conservative upper bound for the request ID.
   })).length;
-  if(requestBytes>100000){
-   setState(()=>error='Nội dung thư vượt giới hạn dung lượng. Vui lòng rút ngắn email.');
+  if(requestBytes>(attachments.isEmpty?100000:4300000)){
+   setState(()=>error='Email hoặc tệp đính kèm vượt dung lượng cho phép.');
    return;
   }
   final payload=jsonEncode([recipient.text.trim(),subject.text.trim(),
-   message.text.trim(),widget.reply?.id]);
+   message.text.trim(),widget.reply?.id,
+   for(final a in attachments)[a.filename,a.size,a.content]]);
   if(uncertainFailure&&payload!=lastPayload&&confirmNewPayload!=payload){
    setState((){confirmNewPayload=payload;
     error='Lượt gửi trước có thể đã được tiếp nhận. Bấm Gửi thêm lần nữa để gửi phiên bản mới.';});
@@ -216,7 +259,8 @@ class _CeoMailComposerState extends State<CeoMailComposer>{
   setState((){saving=true;error='';networkNotice='';});
   try{
    await widget.api.mailSend(to:recipient.text.trim(),subject:subject.text.trim(),
-    text:message.text.trim(),replyId:widget.reply?.id,requestId:lastRequestId);
+    text:message.text.trim(),replyId:widget.reply?.id,requestId:lastRequestId,
+    attachments:List.unmodifiable(attachments));
    if(mounted){Navigator.of(context).pop(true);}
   }catch(_){
    if(mounted){
@@ -248,6 +292,26 @@ class _CeoMailComposerState extends State<CeoMailComposer>{
     const SizedBox(height:12),
     TextField(controller:message,minLines:6,maxLines:10,maxLength:12000,
      decoration:const InputDecoration(labelText:'Nội dung',alignLabelWithHint:true)),
+    const SizedBox(height:10),
+    Align(alignment:Alignment.centerLeft,child:OutlinedButton.icon(
+     onPressed:saving||picking?null:pickAttachments,
+     icon:const Icon(Icons.attach_file,size:18),
+     label:Text(picking?'Đang đọc tệp...':'Đính kèm tệp'))),
+    Padding(padding:const EdgeInsets.only(top:4,bottom:8),
+     child:Text('${attachments.length}/5 tệp · Tổng tối đa 3 MB · PDF, Word, Excel, PowerPoint, ảnh, CSV, TXT',
+      style:const TextStyle(color:ceoMuted,fontSize:12))),
+    for(var i=0;i<attachments.length;i++)
+     Padding(padding:const EdgeInsets.only(bottom:5),
+      child:Row(children:[
+       const Icon(Icons.insert_drive_file_outlined,size:18,color:ceoPurple),
+       const SizedBox(width:7),
+       Expanded(child:Text('${attachments[i].filename} · ${(attachments[i].size/1024).toStringAsFixed(0)} KB',
+        maxLines:1,overflow:TextOverflow.ellipsis,
+        style:const TextStyle(color:ceoInk,fontSize:12.5))),
+       IconButton(tooltip:'Bỏ tệp ${attachments[i].filename}',
+        onPressed:saving?null:(){setState(()=>attachments.removeAt(i));},
+        icon:const Icon(Icons.close,size:18)),
+      ])),
     const SizedBox(height:6),
     const Text('Email tự thêm logo, địa chỉ, website và liên kết Facebook của Futurebook ở cuối.',
      style:TextStyle(color:ceoMuted,fontSize:12.5,height:1.4)),
