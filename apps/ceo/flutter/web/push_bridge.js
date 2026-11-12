@@ -31,6 +31,30 @@
   if(ios&&!installed)return "ios_install";
   return "ok";
  }
+ function isPushWorker(worker){
+  if(!worker||typeof worker.scriptURL!=="string")return false;
+  try{return new URL(worker.scriptURL,window.location.href).pathname===SW;}
+  catch{return false;}
+ }
+ // A registration with a PushSubscription may still be running Flutter's
+ // cleanup/offline worker. A valid subscription is NOT a working Push receiver.
+ async function waitForPushWorker(reg){
+  if(isPushWorker(reg.active))return true;
+  const next=reg.installing||reg.waiting;
+  if(!next)return false;
+  return new Promise(resolve=>{
+   let done=false;
+   const finish=value=>{
+    if(done)return;done=true;clearTimeout(timeout);
+    next.removeEventListener("statechange",check);
+    resolve(value);
+   };
+   const check=()=>{if(isPushWorker(reg.active))finish(true);};
+   const timeout=setTimeout(()=>finish(false),10000);
+   next.addEventListener("statechange",check);
+   check();
+  });
+ }
  function decodeKey(base64){
   const b64=base64.replace(/-/g,"+").replace(/_/g,"/");
   const padded=b64+"=".repeat((4-b64.length%4)%4);
@@ -55,13 +79,20 @@
     Accept:"application/json",Authorization:"Bearer "+jwt,
     ...(body?{"Content-Type":"application/json"}:{})
    },...(body?{body:JSON.stringify(body)}:{})});
-  if(!r.ok)throw Error(r.status===401?"login_required":r.status===403?
-   "forbidden":"service_error");
+  if(!r.ok){
+   if(path==="test"&&r.status===429)throw Error("test_cooldown_or_missing");
+   if(path==="test"&&r.status===410)throw Error("device_expired");
+   throw Error(r.status===401?"login_required":r.status===403?
+    "forbidden":"service_error");
+  }
   return r.json();
  }
  function stateError(error){
   return error?.message==="login_required"?"login_required":
-   error?.message==="forbidden"?"forbidden":"service_error";
+   error?.message==="forbidden"?"forbidden":
+   error?.message==="receiver_missing"?"receiver_missing":
+   error?.message==="test_cooldown_or_missing"?"cooldown":
+   error?.message==="device_expired"?"receiver_missing":"service_error";
  }
  async function registerAndSync(generation=pushGeneration){
   if(generation!==pushGeneration)return "disabled";
@@ -72,6 +103,7 @@
   // Flutter/PWA updates may replace the service worker for /ceo/.
   const reg=await navigator.serviceWorker.register(SW,{scope:SCOPE,updateViaCache:"none"});
   await navigator.serviceWorker.ready;
+  if(!await waitForPushWorker(reg))throw Error("receiver_missing");
   if(generation!==pushGeneration)return "disabled";
   let sub=await reg.pushManager.getSubscription();
   if(generation!==pushGeneration)return "disabled";
@@ -140,6 +172,40 @@
    return "disabled";
   }catch(error){return stateError(error);}
  }
+ // An actual server Push test: provider acceptance is distinct from proof that
+ // the active service worker showed the notification.
+ window.fbmnPushTest=async()=>{
+  const support=supported();
+  if(support!=="ok")return support;
+  if(Notification.permission!=="granted")return "disabled";
+  try{
+   const reg=await navigator.serviceWorker.getRegistration(SCOPE);
+   if(!reg||!isPushWorker(reg.active))return "receiver_missing";
+   const sub=await reg.pushManager.getSubscription();
+   if(!sub)return "receiver_missing";
+   const bytes=crypto.getRandomValues(new Uint8Array(12));
+   const nonce=Array.from(bytes,v=>v.toString(16).padStart(2,"0")).join("");
+   let receivedResolve;
+   const received=new Promise(resolve=>{receivedResolve=resolve;});
+   const onMessage=event=>{
+    if(event?.data?.type==="FBMN_PUSH_TEST_RECEIVED"&&event.data.nonce===nonce)
+     receivedResolve("received");
+   };
+   navigator.serviceWorker.addEventListener("message",onMessage);
+   let timer;
+   try{
+    const result=await ceoApi("test","POST",{endpoint:sub.endpoint,nonce});
+    if(result?.data?.accepted!==true)return "service_error";
+    return await Promise.race([
+     received,
+     new Promise(resolve=>{timer=setTimeout(()=>resolve("accepted"),10000);})
+    ]);
+   }finally{
+    if(timer)clearTimeout(timer);
+    navigator.serviceWorker.removeEventListener("message",onMessage);
+   }
+  }catch(error){return stateError(error);}
+ };
  window.fbmnPushBadge=async(count)=>{
   if(!Number.isSafeInteger(count)||count<0)return "invalid";
   try{
