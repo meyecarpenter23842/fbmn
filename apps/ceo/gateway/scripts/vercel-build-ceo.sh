@@ -41,7 +41,7 @@ test -s "$PUBLIC_APP/index.html" || { echo "Missing CEO Flutter index" >&2; exit
 test -s "$PUBLIC_APP/flutter_bootstrap.js" || { echo "Missing CEO Flutter bootstrap" >&2; exit 1; }
 test -s "$PUBLIC_APP/main.dart.js" || { echo "Missing CEO Flutter JS" >&2; exit 1; }
 # Never let the legacy Flutter offline service worker steal /ceo/ from Push.
-node -e 'const fs=require("fs");const s=fs.readFileSync(process.argv[1],"utf8");if(/_flutter\\.loader\\.load\\(\\s*\\{\\s*serviceWorkerSettings\\s*:/.test(s)){console.error("CEO build contains competing Flutter SW registration");process.exit(1)}' "$PUBLIC_APP/flutter_bootstrap.js"
+node -e 'const s=require("fs").readFileSync(process.argv[1],"utf8");const at=s.lastIndexOf("_flutter.loader.load(");if(at<0||s.slice(at,at+300).includes("serviceWorkerSettings")){console.error("CEO build contains competing Flutter SW registration");process.exit(1)}' "$PUBLIC_APP/flutter_bootstrap.js"
 test -s "$PUBLIC_APP/push-sw.js" || { echo "Missing DL12C push worker" >&2; exit 1; }
 test -s "$PUBLIC_APP/push_bridge.js" || { echo "Missing DL12C push bridge" >&2; exit 1; }
 grep -Fq '<base href="/ceo/">' "$PUBLIC_APP/index.html" || {
