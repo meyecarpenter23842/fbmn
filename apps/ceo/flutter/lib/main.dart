@@ -138,6 +138,8 @@ class _CeoHomeState extends State<CeoHome> with WidgetsBindingObserver{
  final Set<String> viewWrites={};
  String pushState='unknown';
  bool pushBusy=false;
+ bool pushTestBusy=false;
+ String pushTestStatus='';
  // Keep an open notification route synchronized with async Owner data / push state.
  final ValueNotifier<int> alertsVersion=ValueNotifier<int>(0);
  @override void dispose(){
@@ -209,6 +211,7 @@ class _CeoHomeState extends State<CeoHome> with WidgetsBindingObserver{
     'login_required'=>'Phiên Owner hết hạn. Vui lòng đăng nhập lại.',
     'forbidden'=>'Tài khoản không có quyền Owner.',
     'service_error'=>'Chưa kết nối được Web Push. Kiểm tra cấu hình server.',
+    'receiver_missing'=>'Bộ nhận Push chưa hoạt động; tải lại CEO và bật lại.',
     _=>''
    };
    if(message.isNotEmpty)setState(()=>error=message);
@@ -244,6 +247,31 @@ class _CeoHomeState extends State<CeoHome> with WidgetsBindingObserver{
    pushState=='denied'?Icons.notifications_off_outlined:
    Icons.notifications_none_outlined));
 
+ Future<void> testPush()async{
+  if(pushTestBusy||pushBusy||pushState!='enabled')return;
+  setState((){pushTestBusy=true;pushTestStatus='Đang gửi Push thật tới thiết bị...';});
+  alertsVersion.value++;
+  try{
+   final result=await push.test();
+   if(!mounted)return;
+   final message=switch(result){
+    'received'=>'Đã nhận Push thật! Nếu không thấy banner, kiểm tra Trung tâm thông báo hoặc chế độ Tập trung.',
+    'accepted'=>'Máy chủ đã gửi Push nhưng thiết bị chưa xác nhận. Kiểm tra quyền thông báo và cập nhật ứng dụng.',
+    'cooldown'=>'Anh thử lại sau 60 giây để tránh gửi trùng.',
+    'receiver_missing'=>'Bộ nhận Push chưa hoạt động. Tải lại CEO rồi bật thông báo lại.',
+    'login_required'=>'Cần xác minh lại phiên đăng nhập Owner.',
+    'forbidden'=>'Tài khoản chưa có quyền Owner.',
+    'denied'=>'Thông báo đang bị chặn trên thiết bị.',
+    'ios_install'=>'Trên iPhone, phải mở CEO từ biểu tượng đã thêm vào Màn hình chính.',
+    'unsupported'=>'Thiết bị hoặc trình duyệt không hỗ trợ Push.',
+    _=>'Chưa gửi được Push thử. Kiểm tra kết nối và thử lại.'
+   };
+   setState(()=>pushTestStatus=message);
+  }catch(_){if(mounted)setState(()=>pushTestStatus='Không kiểm tra được Push trên thiết bị.');}
+  finally{
+   if(mounted){setState(()=>pushTestBusy=false);alertsVersion.value++;}
+  }
+ }
  String get pushStatusText=>switch(pushState){
   'enabled'=>'Đang bật trên thiết bị này.',
   'disabled'=>'Đang tắt. Bật để nhận thông báo khi có khách mới.',
@@ -252,6 +280,7 @@ class _CeoHomeState extends State<CeoHome> with WidgetsBindingObserver{
   'login_required'=>'Phiên Owner hết hạn. Vui lòng đăng nhập lại.',
   'forbidden'=>'Tài khoản hiện tại không có quyền Owner.',
   'service_error'=>'Chưa kết nối được máy chủ Web Push.',
+  'receiver_missing'=>'Bộ nhận Push chưa hoạt động; tải lại ứng dụng rồi bật lại.',
   'unsupported'=>'Trình duyệt hoặc thiết bị không hỗ trợ Web Push.',
   _=>'Đang kiểm tra trạng thái thông báo...',
  };
@@ -280,18 +309,34 @@ class _CeoHomeState extends State<CeoHome> with WidgetsBindingObserver{
       const CeoSheetHeader(title:'Thông báo & yêu cầu mới'),
       Padding(padding:const EdgeInsets.fromLTRB(12,8,12,4),
        child:Card(margin:EdgeInsets.zero,color:const Color(0xFFF4EDFA),
-        child:ListTile(
-         leading:const Icon(Icons.notifications_active_outlined,color:brand),
-         title:const Text('Web Push trên thiết bị',
-          style:TextStyle(fontWeight:FontWeight.w700,fontSize:14)),
-         subtitle:Text(pushStatusText,style:const TextStyle(fontSize:12)),
-         trailing:pushBusy||pushState=='unknown'?
-          const SizedBox(width:24,height:24,
-           child:CircularProgressIndicator(strokeWidth:2)):
-          TextButton(
-           onPressed:togglePush, // Preserve the browser user gesture.
-           child:Text(pushState=='enabled'?'Tắt':'Bật')),
-        ))),
+        child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+         ListTile(
+          leading:const Icon(Icons.notifications_active_outlined,color:brand),
+          title:const Text('Web Push trên thiết bị',
+           style:TextStyle(fontWeight:FontWeight.w700,fontSize:14)),
+          subtitle:Text(pushStatusText,style:const TextStyle(fontSize:12)),
+          trailing:pushBusy||pushState=='unknown'?
+           const SizedBox(width:24,height:24,
+            child:CircularProgressIndicator(strokeWidth:2)):
+           TextButton(
+            onPressed:togglePush, // Preserve the browser user gesture.
+            child:Text(pushState=='enabled'?'Tắt':'Bật')),
+         ),
+         if(pushState=='enabled')Padding(
+          padding:const EdgeInsets.fromLTRB(12,0,12,8),
+          child:Align(alignment:Alignment.centerRight,
+           child:OutlinedButton.icon(
+            onPressed:pushTestBusy||pushBusy?null:testPush,
+            icon:pushTestBusy?
+             const SizedBox(width:16,height:16,
+              child:CircularProgressIndicator(strokeWidth:2)):
+             const Icon(Icons.notifications_active_outlined,size:17),
+            label:const Text('Thử Push thật')))),
+         if(pushTestStatus.isNotEmpty)Padding(
+          padding:const EdgeInsets.fromLTRB(14,0,14,12),
+          child:Text(pushTestStatus,style:const TextStyle(fontSize:12,
+           color:Color(0xFF43215F),height:1.3))),
+        ]))),
       if((alerts?.delayedPush??0)>0)Padding(
        padding:const EdgeInsets.fromLTRB(12,5,12,4),
        child:Text('Có ${alerts!.delayedPush} sự kiện Push tồn đọng trên 10 phút. '
