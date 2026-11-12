@@ -54,7 +54,8 @@ void main(){
   final repo=CeoApi(client:MockClient((r)async{
    if(r.url.path=='/api/auth/sign-in/email')return json(200,{'data':{}});
    if(r.url.path=='/api/auth/token')return json(401,{'error':'unauthenticated'});
-   if(r.url.path=='/api/auth/get-session')return json(200,{'session':null});
+   if(r.url.path=='/api/auth/get-session')return http.Response('null',200,
+    headers:{'content-type':'application/json'});
    throw StateError('Do not query Worker without JWT');
   }));
   await expectLater(repo.signIn('owner@example.test','pw'),
@@ -74,7 +75,8 @@ void main(){
  test('Malformed JWT never reaches Owner Worker',()async{
   final repo=CeoApi(client:MockClient((r)async{
    if(r.url.path=='/api/auth/token')return json(200,{'data':{'token':'nope'}});
-   if(r.url.path=='/api/auth/get-session')return json(200,{'session':null});
+   if(r.url.path=='/api/auth/get-session')return http.Response('null',200,
+    headers:{'content-type':'application/json'});
    throw StateError('No Worker calls allowed');
   }));
   expect(await repo.ownerSession(),false);
