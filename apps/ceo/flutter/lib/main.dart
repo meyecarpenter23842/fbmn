@@ -219,11 +219,11 @@ class _CeoHomeState extends State<CeoHome> with WidgetsBindingObserver{
   }}
  }
  int countNew(int tab){
-  if(tab==1)return alerts?.chatCount??0;
-  if(tab==2)return alerts?.outsourcingCount??
-   (outsourcing?.items.where((r)=>r.unread).length??0);
-  if(tab==3)return (alerts?.contactCount??(contacts?.items.where((r)=>r.unread).length??0))+
-   (alerts?.mailCount??0);
+  if(tab==1){return alerts?.chatCount??0;}
+  if(tab==2){return alerts?.outsourcingCount??
+   (outsourcing?.items.where((r)=>r.unread).length??0);}
+  if(tab==3){return (alerts?.contactCount??(contacts?.items.where((r)=>r.unread).length??0))+
+   (alerts?.mailCount??0);}
   return 0;
  }
  Widget redCountBadge(int count,Widget icon){
