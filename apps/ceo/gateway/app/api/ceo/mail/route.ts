@@ -1,6 +1,6 @@
 import {requireOwner} from "@/lib/owner-gate";
 import {allowedOrigin} from "@/lib/ceo-push-policy.mjs";
-import {parseMailboxQuery,parseMailSend,mailSignatureHtml,mailSignatureText,MAIL_FROM} from "@/lib/ceo-mail-policy.mjs";
+import {parseMailboxQuery,parseMailSend,mailSignatureHtml,mailSignatureText,MAIL_FROM,MAIL_MAX_REQUEST_BYTES,readBoundedMailBody} from "@/lib/ceo-mail-policy.mjs";
 import {resendRequest,mailVisible,recipientForReply} from "@/lib/ceo-mail-service";
 import {randomUUID} from "node:crypto";
 export const runtime="nodejs";export const dynamic="force-dynamic";
@@ -30,12 +30,15 @@ export async function GET(request:Request){
 export async function POST(request:Request){
  if(!allowedOrigin(request))return fail(403,"origin_forbidden");
  if(request.headers.get("content-type")?.split(";")[0]!=="application/json")return fail(415,"invalid_content_type");
- if(Number(request.headers.get("content-length")||0)>18000)return fail(413,"body_too_large");
+ const lengthHeader=request.headers.get("content-length");
+ if(lengthHeader!==null&&(!/^\\d+$/.test(lengthHeader)||Number(lengthHeader)>MAIL_MAX_REQUEST_BYTES))
+  return fail(413,"body_too_large");
  const gate=await requireOwner(request);
  if(gate.status!==200||!gate.subject)return fail(gate.status,"owner_required");
- let raw:string;try{raw=await request.text();}catch{return fail(400,"invalid_body");}
- if(raw.length>18000)return fail(413,"body_too_large");
- let body:unknown;try{body=JSON.parse(raw);}catch{return fail(400,"invalid_body");}
+ const raw=await readBoundedMailBody(request);
+ if(!raw)return fail(400,"invalid_body");
+ if("tooLarge" in raw)return fail(413,"body_too_large");
+ let body:unknown;try{body=JSON.parse(raw.text);}catch{return fail(400,"invalid_body");}
  const parsed=parseMailSend(body);
  if(!parsed)return fail(400,"invalid_body");
  let to=parsed.to,subject=parsed.subject,replyHeaders:Record<string,string>|undefined;
