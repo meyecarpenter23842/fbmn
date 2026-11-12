@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'ceo_models.dart';
 import 'ceo_repository.dart';
@@ -29,18 +30,32 @@ class CeoApp extends StatefulWidget {
 class _CeoAppState extends State<CeoApp>{
  late final CeoRepository api=widget.repository??CeoApi();
  bool? owner;
+ bool checkingFailed=false;
  String notice='';
  @override void initState(){super.initState();check();}
  Future<void> check()async{
-  setState((){owner=null;notice='';});
+  setState((){owner=null;notice='';checkingFailed=false;});
   try{final valid=await api.ownerSession();if(mounted)setState(()=>owner=valid);}
-  catch(e){if(mounted)setState((){owner=false;notice=userError(e);});}
+  catch(e){if(mounted)setState((){owner=null;checkingFailed=true;notice=userError(e);});}
  }
  @override void dispose(){if(widget.repository==null)api.dispose();super.dispose();}
  @override Widget build(BuildContext context)=>LayoutBuilder(builder:(context,size)=>MaterialApp(
   title:'Futurebook CEO',debugShowCheckedModeBanner:false,
   theme:ceoTheme(size.maxWidth),
-  home:owner==null?const Scaffold(body:Center(child:CircularProgressIndicator())):
+  home:owner==null?(checkingFailed?
+    Scaffold(body:Center(child:ConstrainedBox(constraints:const BoxConstraints(maxWidth:420),
+     child:Padding(padding:const EdgeInsets.all(22),child:Column(
+      mainAxisSize:MainAxisSize.min,children:[
+       Image.asset('assets/brand/fbmn-official-logo.webp',height:60,fit:BoxFit.contain),
+       const SizedBox(height:18),
+       const Text('Không xác minh được phiên hiện tại',style:TextStyle(fontSize:18,fontWeight:FontWeight.w700)),
+       const SizedBox(height:8),
+       Text(notice,textAlign:TextAlign.center),
+       const SizedBox(height:14),
+       FilledButton.icon(onPressed:check,icon:const Icon(Icons.refresh),
+        label:const Text('Thử kết nối lại')),
+      ]))))):
+    const Scaffold(body:Center(child:CircularProgressIndicator()))):
    owner!?CeoHome(api:api,onSignOut:()=>setState(()=>owner=false)):
     CeoLogin(api:api,notice:notice,onSignIn:()=>setState(()=>owner=true),onRetry:check)));
 }
@@ -423,8 +438,8 @@ class _CeoHomeState extends State<CeoHome>{
   final wide=box.maxWidth>=850;
   return Scaffold(
    appBar:AppBar(backgroundColor:Colors.white,title:Column(crossAxisAlignment:CrossAxisAlignment.start,
-    children:[const Text('Futurebook CEO',style:TextStyle(fontWeight:FontWeight.w800,fontSize:20)),
-     Text(names[selected],style:const TextStyle(fontSize:12,color:Color(0xFF667085)))]),
+    children:[Image.asset('assets/brand/fbmn-official-logo.webp',height:42,width:152,
+     fit:BoxFit.contain,alignment:Alignment.centerLeft)]),
     actions:[
      IconButton(
       tooltip:'Xem thông báo và yêu cầu mới',
