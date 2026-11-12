@@ -17,7 +17,8 @@ void main(){
     return http.Response('{"session":{"access_token":"$jwt"}}',200);
    }
    if(request.url.path=='/api/ceo/session'){
-    expect(request.headers['authorization'],'Bearer $jwt');
+    expect(request.headers.entries.any((entry)=>
+     entry.key.toLowerCase()=='authorization'&&entry.value=='Bearer $jwt'),isTrue);
     return http.Response('{"data":{"role":"owner"}}',200);
    }
    throw StateError('Unexpected request: ${request.url.path}');
