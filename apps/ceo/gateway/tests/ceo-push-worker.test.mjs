@@ -5,17 +5,16 @@ import vm from "node:vm";
 const source=readFileSync(new URL("../../flutter/web/push-sw.js",import.meta.url),"utf8");
 const session="a".repeat(36),uuid="11111111-1111-4111-8111-111111111111";
 function worker(){
- const handlers={},notifications=[],opened=[],messages=[];
+ const handlers={},notifications=[],opened=[],messages=[],mockClients=[];
  const self={location:{origin:"https://ceo.fbmn.vn"},
   navigator:{setAppBadge:async()=>{}},
-  clients:{matchAll:async()=>[{url:"https://ceo.fbmn.vn/ceo/index.html",
-   postMessage:payload=>messages.push(payload)}],
+  clients:{matchAll:async()=>mockClients,
    openWindow:async(url)=>{opened.push(url);},claim:async()=>{}},
   skipWaiting:async()=>{},
   registration:{showNotification:async(title,options)=>{notifications.push({title,options});}},
   addEventListener:(event,fn)=>{handlers[event]=fn;}};
  vm.runInNewContext(source,{self,URL,Number,Date});
- return {handlers,notifications,opened,messages};
+ return {handlers,notifications,opened,messages,mockClients};
 }
 async function push(w,payload){
  let promise;
@@ -73,6 +72,8 @@ test("returning chat alerts again with a new event tag, without exposing message
 
 test("CEO-PUSH05 real diagnostic notification confirms service worker receipt",async()=>{
  const w=worker(),nonce="a".repeat(24);
+ w.mockClients.push({url:"https://ceo.fbmn.vn/ceo/index.html",
+  postMessage:payload=>w.messages.push(payload)});
  await push(w,{type:"test",nonce,badge:0});
  assert.equal(w.notifications.length,1);
  assert.equal(w.notifications[0].options.body,
