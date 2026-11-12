@@ -219,8 +219,10 @@ class _CeoMailComposerState extends State<CeoMailComposer>{
    }
    if(mounted)setState((){attachments..clear()..addAll(files);});
   }catch(e){
-   if(mounted)setState(()=>error=e is FormatException?e.message:
-    'Không mở hoặc đọc được tệp. Vui lòng chọn lại.');
+   if(mounted){
+    setState(()=>error=e is FormatException?e.message:
+     'Không mở hoặc đọc được tệp. Vui lòng chọn lại.');
+   }
   }finally{if(mounted)setState(()=>picking=false);}
  }
  Future<void> send()async{
