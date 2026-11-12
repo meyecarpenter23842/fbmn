@@ -3,6 +3,15 @@
 (()=>{
  "use strict";
  const SW="/ceo/push-sw.js",SCOPE="/ceo/",PREFERENCE="fbmn-ceo-push-opt-in-v1";
+ // Invalidate an in-flight resubscribe before Off or logout can revoke delivery.
+ let pushGeneration=0;
+ async function cleanupCancelled(sub){
+  if(!sub)return;
+  // A POST may have overtaken DELETE: remove both server and browser state.
+  try{await ceoApi("subscription","DELETE",{endpoint:sub.endpoint});}catch{}
+  try{await sub.unsubscribe();}catch{}
+ }
+
  function remembered(){
   try{return window.localStorage?.getItem(PREFERENCE)==="1";}catch{return false;}
  }
@@ -55,18 +64,31 @@
    error?.message==="forbidden"?"forbidden":"service_error";
  }
  async function registerAndSync(){
+  const generation=pushGeneration;
   const cfg=await ceoApi("config","GET");
+  if(generation!==pushGeneration)return "disabled";
   const key=cfg?.data?.vapidPublicKey;
   if(typeof key!=="string"||key.length<40)throw Error("service_error");
   // Flutter/PWA updates may replace the service worker for /ceo/.
-  // Re-register our push handler when restoring the device subscription.
   const reg=await navigator.serviceWorker.register(SW,{scope:SCOPE,updateViaCache:"none"});
   await navigator.serviceWorker.ready;
+  if(generation!==pushGeneration)return "disabled";
   let sub=await reg.pushManager.getSubscription();
+  if(generation!==pushGeneration)return "disabled";
   if(!sub)sub=await reg.pushManager.subscribe({
    userVisibleOnly:true,applicationServerKey:decodeKey(key)});
+  if(generation!==pushGeneration){
+   await cleanupCancelled(sub);return "disabled";
+  }
   // Reconcile existing device with server on every login/restart, without a prompt.
-  await ceoApi("subscription","POST",sub.toJSON());
+  try{await ceoApi("subscription","POST",sub.toJSON());}
+  catch(error){
+   if(generation!==pushGeneration)await cleanupCancelled(sub);
+   throw error;
+  }
+  if(generation!==pushGeneration){
+   await cleanupCancelled(sub);return "disabled";
+  }
   remember(true);
   return "enabled";
  }
@@ -96,6 +118,8 @@
   try{return await registerAndSync();}catch(error){return stateError(error);}
  };
  async function revoke(preservePreference){
+  // The check must happen before the first await, so pending restores abort.
+  pushGeneration++;
   if(!preservePreference)remember(false);
   try{
    const reg=await navigator.serviceWorker.getRegistration(SCOPE);
