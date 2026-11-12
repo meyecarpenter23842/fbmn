@@ -1,6 +1,6 @@
 import {requireOwner} from "@/lib/owner-gate";
 import {allowedOrigin} from "@/lib/ceo-push-policy.mjs";
-import {parseMailboxQuery,parseMailSend,mailSignatureHtml,mailSignatureText,MAIL_FROM,MAIL_MAX_REQUEST_BYTES,readBoundedMailBody} from "@/lib/ceo-mail-policy.mjs";
+import {parseMailboxQuery,parseMailSend,mailSignatureHtml,mailSignatureText,MAIL_FROM,MAIL_MAX_REQUEST_BYTES,MAIL_MAX_ATTACHMENT_REQUEST_BYTES,readBoundedMailBody} from "@/lib/ceo-mail-policy.mjs";
 import {resendRequest,mailVisible,recipientForReply} from "@/lib/ceo-mail-service";
 import {randomUUID} from "node:crypto";
 export const runtime="nodejs";export const dynamic="force-dynamic";
@@ -31,14 +31,16 @@ export async function POST(request:Request){
  if(!allowedOrigin(request))return fail(403,"origin_forbidden");
  if(request.headers.get("content-type")?.split(";")[0]!=="application/json")return fail(415,"invalid_content_type");
  const lengthHeader=request.headers.get("content-length");
- if(lengthHeader!==null&&(!/^\d+$/.test(lengthHeader)||Number(lengthHeader)>MAIL_MAX_REQUEST_BYTES))
+ if(lengthHeader!==null&&(!/^\d+$/.test(lengthHeader)||Number(lengthHeader)>MAIL_MAX_ATTACHMENT_REQUEST_BYTES))
   return fail(413,"body_too_large");
  const gate=await requireOwner(request);
  if(gate.status!==200||!gate.subject)return fail(gate.status,"owner_required");
- const raw=await readBoundedMailBody(request);
+ const raw=await readBoundedMailBody(request,MAIL_MAX_ATTACHMENT_REQUEST_BYTES);
  if(!raw)return fail(400,"invalid_body");
  if("tooLarge" in raw)return fail(413,"body_too_large");
  let body:unknown;try{body=JSON.parse(raw.text);}catch{return fail(400,"invalid_body");}
+ if((body===null||typeof body!=="object"||!Array.isArray((body as {attachments?:unknown}).attachments))&&
+   Buffer.byteLength(raw.text,"utf8")>MAIL_MAX_REQUEST_BYTES)return fail(413,"body_too_large");
  const parsed=parseMailSend(body);
  if(!parsed)return fail(400,"invalid_body");
  let to=parsed.to,subject=parsed.subject,replyHeaders:Record<string,string>|undefined;
@@ -58,6 +60,7 @@ export async function POST(request:Request){
  const sent=await resendRequest("/emails",{method:"POST",requestId:parsed.requestId||randomUUID(),
   body:{from:"Futurebook Miền Nam <"+MAIL_FROM+">",to:[to],reply_to:MAIL_FROM,subject,
    html:mailSignatureHtml(parsed.text),text:mailSignatureText(parsed.text),
+   ...(parsed.attachments.length?{attachments:parsed.attachments}:{}),
    ...(replyHeaders?{headers:replyHeaders}:{})}});
  if(sent.status!==200||typeof sent.payload?.id!=="string")return fail(sent.status,"mail_send_failed");
  return Response.json({data:{id:sent.payload.id,status:"queued"}},{status:201,headers});
