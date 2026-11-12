@@ -194,7 +194,7 @@ class _CeoMailComposerState extends State<CeoMailComposer>{
    'to':recipient.text.trim(),'subject':subject.text.trim(),
    'text':message.text.trim(),
    if(widget.reply!=null)'replyId':widget.reply!.id,
-   'requestId':'x'*100, // Conservative upper bound for the request ID.
+   'requestId':'x'.padRight(100,'x'), // Conservative upper bound for the request ID.
   })).length;
   if(requestBytes>100000){
    setState(()=>error='Nội dung thư vượt giới hạn dung lượng. Vui lòng rút ngắn email.');
