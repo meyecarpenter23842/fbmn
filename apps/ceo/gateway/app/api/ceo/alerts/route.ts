@@ -65,7 +65,8 @@ export async function POST(request:Request){
   Object.keys(value).length!==2||!Object.hasOwn(value,"kind")||
   !Object.hasOwn(value,"id"))return fail("invalid_body",400);
  const {kind,id}=value as {kind:unknown;id:unknown};
- if((kind!=="chat"&&kind!=="mail")||!validRef(kind,id))return fail("invalid_body",400);
+ if((kind!=="chat"&&kind!=="mail")||typeof id!=="string"||
+  !validRef(kind,id))return fail("invalid_body",400);
  try{
   const rows=await withPushDb(async db=>{
    const query=kind==="chat"?
