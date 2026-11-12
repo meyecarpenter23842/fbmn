@@ -247,7 +247,8 @@ void main(){
   await tester.tap(find.text('Liên hệ · Khách thử'));
   await tester.pumpAndSettle();
   expect(find.text('Chi tiết liên hệ'),findsOneWidget);
-  expect(find.text('Chưa xử lý'),findsOneWidget);
+  expect(find.text('Chưa xử lý'),findsWidgets);
+  expect(find.text('Mới'),findsNothing);
   expect(find.text('Đã xem'),findsWidgets);
   expect(find.descendant(of:bell,matching:find.text('2')),findsOneWidget);
   await tester.tap(find.byTooltip('Đóng chi tiết'));
