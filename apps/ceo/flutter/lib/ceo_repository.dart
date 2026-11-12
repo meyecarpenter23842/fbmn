@@ -79,25 +79,25 @@ class CeoApi implements CeoRepository {
   // endpoint before deciding that the Owner needs to sign in again.
   try{
    final token=_authTokenFrom(await _request('GET','/api/auth/token'));
-   if(token!=null)return token;
+   if(token!=null){return token;}
   }on CeoApiException catch(e){
-   if(e.status!=401)rethrow;
+   if(e.status!=401){rethrow;}
   }
   // get-session causes the managed auth layer to refresh its session cache and
   // cookie when the underlying server session still exists.
   try{
    final token=_sessionTokenFrom(await _request('GET','/api/auth/get-session'));
-   if(token!=null)return token;
+   if(token!=null){return token;}
   }on CeoApiException catch(e){
-   if(e.status!=401)rethrow;
+   if(e.status!=401){rethrow;}
   }
   // Some Neon versions omit access_token from get-session; retry the token API
   // once after the session refresh rather than treating the first 401 as logout.
   try{
    final token=_authTokenFrom(await _request('GET','/api/auth/token'));
-   if(token!=null)return token;
+   if(token!=null){return token;}
   }on CeoApiException catch(e){
-   if(e.status!=401)rethrow;
+   if(e.status!=401){rethrow;}
   }
   throw const CeoApiException(401);
  }
