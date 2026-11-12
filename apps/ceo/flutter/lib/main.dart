@@ -413,7 +413,7 @@ class _CeoHomeState extends State<CeoHome>{
   if(loading)return;
   setState(()=>loading=true);
   try{
-   try{await push.disable();}catch(_){} // revoke device push when logging out
+   try{await push.logout();}catch(_){} // revoke active push; preserve device opt-in for next Owner login
    await widget.api.signOut();if(mounted)widget.onSignOut();
   }
   catch(e){if(mounted)setState(()=>error=userError(e));}
