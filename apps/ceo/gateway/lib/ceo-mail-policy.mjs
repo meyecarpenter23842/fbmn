@@ -47,12 +47,20 @@ export function parseMailDetail(box,id){
  if(!["inbox","sent"].includes(box)||!UUID.test(id))return null;
  return {box,id:id.toLowerCase()};
 }
+// Match Flutter TextField.maxLength's user-perceived grapheme clusters,
+// not JavaScript's UTF-16 code-unit count.
+const graphemes=new Intl.Segmenter("vi",{granularity:"grapheme"});
+function exceedsVisibleCharacters(text,limit){
+ let count=0;
+ for(const _ of graphemes.segment(text)){if(++count>limit)return true;}
+ return false;
+}
 export function parseMailSend(raw){
  if(!raw||typeof raw!=="object"||Array.isArray(raw)||
    Object.keys(raw).some(k=>!["to","subject","text","replyId","requestId"].includes(k)))return null;
  const text=raw.text,subject=raw.subject,replyId=raw.replyId,requestId=raw.requestId;
- if(typeof text!=="string"||!text.trim()||text.length>12000||
-   typeof subject!=="string"||!subject.trim()||(!replyId&&subject.length>180)||(replyId&&subject.length>2000)||
+ if(typeof text!=="string"||!text.trim()||exceedsVisibleCharacters(text,12000)||
+   typeof subject!=="string"||!subject.trim()||(!replyId&&exceedsVisibleCharacters(subject,180))||(replyId&&exceedsVisibleCharacters(subject,2000))||
    /[\r\n]/.test(subject)||raw.to!==undefined&&typeof raw.to!=="string"||
    replyId!==undefined&&(!UUID.test(replyId)||typeof replyId!=="string")||
    requestId!==undefined&&(typeof requestId!=="string"||!/^[a-z0-9_-]{12,100}$/i.test(requestId)))return null;
