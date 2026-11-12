@@ -678,7 +678,7 @@ class _CeoHomeState extends State<CeoHome> with WidgetsBindingObserver{
        SizedBox(width:cols==2&&i==2?box.maxWidth:width,child:items[i]),
      ]);
     })),
-   CeoPanel(title:'Gia công mới',subtitle:'Yêu cầu gần nhất trong danh sách đã tải',
+   CeoPanel(title:'Gia công gần đây',subtitle:'Đã xem và chưa xử lý là hai trạng thái riêng biệt',
     icon:Icons.handyman_outlined,
     child:outsourcing!.items.isEmpty?
      const CeoEmptyResult(title:'Chưa có yêu cầu gia công',detail:'Khi có yêu cầu mới, dữ liệu sẽ hiển thị tại đây.'):
