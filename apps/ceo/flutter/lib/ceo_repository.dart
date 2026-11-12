@@ -110,13 +110,32 @@ class CeoApi implements CeoRepository {
   await _request("POST","/api/auth/sign-out",json:{});
  }
  @override Future<bool> ownerSession() async{
-  try{
-   final jwt=await _ownerJwt();
-   final response=await _request("GET","/api/ceo/session",bearer:jwt);
-   return (response["data"] as Map<String,dynamic>?)?["role"]=="owner";
-  }on CeoApiException catch(e){
-   if(e.status==401)return false;
+  String jwt;
+  try{jwt=await _ownerJwt();}
+  on CeoApiException catch(e){
+   if(e.status==401){return false;}
    rethrow;
+  }
+  Future<bool> checkRole(String token)async{
+   final response=await _request('GET','/api/ceo/session',bearer:token);
+   return (response['data'] as Map<String,dynamic>?)?['role']=='owner';
+  }
+  try{return await checkRole(jwt);}
+  on CeoApiException catch(e){
+   if(e.status!=401){rethrow;}
+   // Token can expire while the secure Better Auth cookie still holds a
+   // valid Owner session. Revalidate the cookie, not the stale bearer.
+   try{
+    final fromSession=_sessionTokenFrom(
+     await _request('GET','/api/auth/get-session'));
+    final token=fromSession??_authTokenFrom(
+     await _request('GET','/api/auth/token'));
+    if(token==null){return false;}
+    return await checkRole(token);
+   }on CeoApiException catch(error){
+    if(error.status==401){return false;}
+    rethrow;
+   }
   }
  }
  Future<Map<String,dynamic>> _data(String route) async{
