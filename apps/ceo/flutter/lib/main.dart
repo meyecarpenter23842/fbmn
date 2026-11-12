@@ -158,8 +158,8 @@ class _CeoHomeState extends State<CeoHome> with WidgetsBindingObserver{
    await push.badge(incoming.total);
   }catch(_){/* Keep previous unread badge on transient failures. */}
  }
- Future<void> markAlertRead(String kind,String id)async{
-  try{await widget.api.markAlertRead(kind,id);await loadAlerts();}
+ Future<void> markAlertRead(String kind,String id,{String? turnId})async{
+  try{await widget.api.markAlertRead(kind,id,turnId:turnId);await loadAlerts();}
   catch(_){/* Do not clear unconfirmed read receipts. */}
  }
  String? initialMailId;
@@ -855,7 +855,9 @@ class _CeoHomeState extends State<CeoHome> with WidgetsBindingObserver{
 
  Future<List<CeoTurn>> fetchChatForRead(String session)async{
   final turns=await widget.api.turns(session);
-  await markAlertRead('chat',session);
+  if(turns.isNotEmpty&&turns.last.id.isNotEmpty){
+   await markAlertRead('chat',session,turnId:turns.last.id);
+  }
   return turns;
  }
  void showChat(CeoConversation item){
@@ -876,7 +878,7 @@ class _CeoHomeState extends State<CeoHome> with WidgetsBindingObserver{
       Container(padding:const EdgeInsets.all(12),
        decoration:BoxDecoration(color:ceoLavender,
         borderRadius:BorderRadius.circular(12)),
-       child:const Text('Lịch sử chatbot · Chỉ hiển thị 25 lượt đầu. Hội thoại dài hơn xem trong Admin.',
+       child:const Text('25 lượt hội thoại gần nhất. Xem đầy đủ lịch sử trong Admin.',
         style:TextStyle(fontSize:12.5,color:ceoInk,height:1.4))),
       const SizedBox(height:18),
       if(turns.isEmpty)const CeoEmptyResult(title:'Chưa có tin nhắn',
