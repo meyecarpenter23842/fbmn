@@ -25,7 +25,7 @@ test("iPhone Safari must install PWA before notifications",async()=>{
  assert.equal(await window.fbmnPushEnable(),"ios_install");
 });
 
-function pushSession(store,{permission="granted",oldSubscription=false}={}){
+function pushSession(store,{permission="granted",oldSubscription=false,configWait=null}={}){
  const calls=[],notices={prompts:0},registry={current:null};
  let subscription=oldSubscription?subscriptionObject():null;
  function subscriptionObject(){return {
@@ -60,8 +60,11 @@ function pushSession(store,{permission="granted",oldSubscription=false}={}){
  const fetch=async(url,opts)=>{
   calls.push(String(url)+" "+opts.method);
   if(url==="/api/auth/token")return {ok:true,json:async()=>({token:"aa.bb.cc"})};
-  if(url==="/api/ceo/push/config")return {ok:true,json:async()=>({
-   data:{vapidPublicKey:"a".repeat(87)}})};
+  if(url==="/api/ceo/push/config"){
+   if(configWait)await configWait;
+   return {ok:true,json:async()=>({
+   data:{vapidPublicKey:"a".repeat(87)}})}
+  }
   if(url==="/api/ceo/push/subscription")return {ok:true,json:async()=>({data:{}})};
   throw Error("Unexpected request: "+url);
  };
@@ -104,4 +107,32 @@ test("CEO-MAIL03 pre-upgrade subscriptions are adopted and denied browser permis
  const blocked=pushSession(store,{permission:"denied"});
  assert.equal(await blocked.window.fbmnPushStatus(),"denied");
  assert.equal(blocked.calls.length,0);
+});
+
+test("CEO-MAIL03 logout invalidates a pending startup restore before it subscribes",async()=>{
+ const store=new Map([["fbmn-ceo-push-opt-in-v1","1"]]);
+ let release;
+ const block=new Promise(resolve=>{release=resolve;});
+ const app=pushSession(store,{configWait:block});
+ const restoring=app.window.fbmnPushStatus();
+ // The configuration request is still in-flight; logout revokes consent in this session.
+ await Promise.resolve();
+ assert.equal(await app.window.fbmnPushLogout(),"disabled");
+ release();
+ assert.equal(await restoring,"disabled");
+ assert.equal(app.calls.includes("register:/ceo/push-sw.js"),false);
+ assert.equal(app.calls.some(c=>c.includes("/api/ceo/push/subscription POST")),false);
+});
+test("CEO-MAIL03 explicit Off wins over concurrent status resubscription",async()=>{
+ const store=new Map([["fbmn-ceo-push-opt-in-v1","1"]]);
+ let release;
+ const block=new Promise(resolve=>{release=resolve;});
+ const app=pushSession(store,{configWait:block,oldSubscription:true});
+ const restoring=app.window.fbmnPushStatus();
+ await Promise.resolve();
+ assert.equal(await app.window.fbmnPushDisable(),"disabled");
+ release();
+ assert.equal(await restoring,"disabled");
+ assert.equal(store.has("fbmn-ceo-push-opt-in-v1"),false);
+ assert.equal(app.calls.some(c=>c.includes("/api/ceo/push/subscription POST")),false);
 });
