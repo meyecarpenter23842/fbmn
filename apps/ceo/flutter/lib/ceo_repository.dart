@@ -16,7 +16,7 @@ abstract class CeoRepository{
  Future<String> markViewed(String kind,String id);
  Future<CeoMailPage> mailList(String box,{String? after});
  Future<CeoMailItem> mailDetail(String box,String id);
- Future<String> mailSend({required String to,required String subject,required String text,String? replyId,String? requestId});
+ Future<String> mailSend({required String to,required String subject,required String text,String? replyId,String? requestId,List<CeoMailAttachment> attachments=const []});
  void dispose();
 }
 class CeoApiException implements Exception{
@@ -26,7 +26,7 @@ class CeoApiException implements Exception{
   401=>"Phiên đăng nhập chưa được xác nhận. Vui lòng đăng nhập lại.",
   403=>"Tài khoản không có quyền Owner.",
   400=>"Thông tin email chưa hợp lệ.",
-  413=>"Nội dung thư quá dài.",
+  413=>"Email hoặc tệp đính kèm vượt dung lượng cho phép.",
   429=>"Dịch vụ email đang giới hạn lượt gửi; vui lòng thử lại.",
   503=>"Dịch vụ tạm thời không kết nối.",
   _=>"Chưa tải được dữ liệu. Vui lòng thử lại."};
@@ -35,7 +35,7 @@ class CeoApi implements CeoRepository {
  final http.Client _client;
  CeoApi({http.Client? client}):_client=client??platform.createClient();
  Uri _url(String path)=>Uri.base.resolve(path);
- Future<Map<String,dynamic>> _request(String method,String path,{Map<String,dynamic>? json,String? bearer}) async{
+ Future<Map<String,dynamic>> _request(String method,String path,{Map<String,dynamic>? json,String? bearer,Duration timeout=const Duration(seconds:15)}) async{
   final headers=<String,String>{"Accept":"application/json"};
   if(json!=null)headers["Content-Type"]="application/json";
   if(bearer!=null)headers["Authorization"]="Bearer $bearer";
@@ -44,7 +44,7 @@ class CeoApi implements CeoRepository {
    final request=http.Request(method,_url(path))..headers.addAll(headers);
    if(json!=null)request.body=jsonEncode(json);
    response=await _client.send(request).then(http.Response.fromStream)
-     .timeout(const Duration(seconds:15));
+     .timeout(timeout);
   }catch(_){throw const CeoApiException(503);}
   if(response.statusCode<200||response.statusCode>=300)throw CeoApiException(response.statusCode);
   try{
@@ -139,12 +139,13 @@ class CeoApi implements CeoRepository {
   return CeoMailItem.fromJson(await _data('/api/ceo/mail/$id?box=$box'));
  }
  @override Future<String> mailSend({required String to,required String subject,
-  required String text,String? replyId,String? requestId})async{
+  required String text,String? replyId,String? requestId,List<CeoMailAttachment> attachments=const []})async{
   final jwt=await _ownerJwt();
-  final result=await _request('POST','/api/ceo/mail',bearer:jwt,json:{
+  final result=await _request('POST','/api/ceo/mail',bearer:jwt,timeout:const Duration(seconds:40),json:{
    'to':to,'subject':subject,'text':text,
    if(replyId!=null)'replyId':replyId,
    if(requestId!=null)'requestId':requestId,
+   if(attachments.isNotEmpty)'attachments':attachments.map((a)=>a.toJson()).toList(),
   });
   final data=result['data'];
   if(data is! Map<String,dynamic>||data['id'] is! String){

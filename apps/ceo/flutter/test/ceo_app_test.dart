@@ -26,7 +26,8 @@ class FakeRepo implements CeoRepository {
    status:'delivered',messageId:'<test@example.com>',text:'Nội dung thử',
    to:['info@fbmn.vn'],attachments:[]);
  @override Future<String> mailSend({required String to,required String subject,
-  required String text,String? replyId,String? requestId})async=>'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+  required String text,String? replyId,String? requestId,
+  List<CeoMailAttachment> attachments=const []})async=>'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 
  @override void dispose(){}
 }
@@ -100,6 +101,18 @@ class FakeMailRepo extends FakePendingRepo {
  }
 }
 void main(){
+ testWidgets('CEO-MAIL03 compose includes removable attachments control on narrow screens',(tester)async{
+  await tester.binding.setSurfaceSize(const Size(360,740));
+  await tester.pumpWidget(MaterialApp(home:Scaffold(body:
+   CeoMailComposer(api:FakeRepo(true)))));
+  await tester.pumpAndSettle();
+  expect(find.text('Đính kèm tệp'),findsOneWidget);
+  expect(find.textContaining('3 MB'),findsOneWidget);
+  expect(tester.takeException(),isNull);
+  await tester.pumpWidget(const SizedBox.shrink());
+  await tester.binding.setSurfaceSize(null);
+ });
+
  testWidgets('Anonymous session cannot see any Owner inbox', (tester)async{
   await tester.pumpWidget(CeoApp(repository:FakeRepo(false)));
   await tester.pumpAndSettle();

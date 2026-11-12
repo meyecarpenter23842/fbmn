@@ -11,7 +11,7 @@ export async function resendRequest(path:string,options:{method?:"GET"|"POST";bo
   const response=await fetch(BASE+path,{
    method:options.method||"GET",headers,cache:"no-store",redirect:"manual",
    body:options.body===undefined?undefined:JSON.stringify(options.body),
-   signal:AbortSignal.timeout(12000)
+   signal:AbortSignal.timeout(options.method==='POST'?25000:12000)
   });
   if(!response.headers.get("content-type")?.includes("application/json"))
    return {status:503,payload:null};

@@ -4,8 +4,39 @@ const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]
 export const MAIL_FROM="info@fbmn.vn";
 // 12,000 UTF-16 characters can occupy up to 72 KB in escaped JSON, plus subject and metadata.
 export const MAIL_MAX_REQUEST_BYTES=100_000;
+ // Vercel Function bodies max at 4.5MB; base64 expands files by about 4/3.
+ export const MAIL_MAX_ATTACHMENT_TOTAL_BYTES=3_000_000;
+ export const MAIL_MAX_ATTACHMENT_REQUEST_BYTES=4_300_000;
+ export const MAIL_MAX_ATTACHMENTS=5;
+ const ALLOWED_MAIL_EXTENSIONS=new Set([
+  "pdf","doc","docx","xls","xlsx","ppt","pptx","csv","txt","png","jpg","jpeg","webp"
+ ]);
+ export function parseMailAttachments(value){
+  if(value===undefined)return [];
+  if(!Array.isArray(value)||value.length>MAIL_MAX_ATTACHMENTS)return null;
+  let total=0;
+  const result=[];
+  for(const item of value){
+   if(!item||typeof item!=="object"||Array.isArray(item)||
+    Object.keys(item).some(k=>k!=="filename"&&k!=="content"))return null;
+   const filename=item.filename,content=item.content;
+   if(typeof filename!=="string"||filename.length<3||filename.length>160||
+     filename!==filename.trim()||/[\\/\u0000-\u001f\u007f]/.test(filename)||
+     !ALLOWED_MAIL_EXTENSIONS.has(filename.split(".").at(-1)?.toLowerCase())||
+     typeof content!=="string"||content.length===0||content.length>4_000_000||
+     !/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(content))return null;
+   const bytes=Buffer.from(content,"base64");
+   if(bytes.length===0||bytes.length>MAIL_MAX_ATTACHMENT_TOTAL_BYTES||
+     bytes.toString("base64")!==content)return null;
+   total+=bytes.length;
+   if(total>MAIL_MAX_ATTACHMENT_TOTAL_BYTES)return null;
+   result.push({filename,content});
+  }
+  return result;
+ }
+ 
 // Bound requests *while reading*, including chunked bodies without Content-Length.
-export async function readBoundedMailBody(request){
+export async function readBoundedMailBody(request,maxBytes=MAIL_MAX_REQUEST_BYTES){
  const reader=request.body?.getReader();
  if(!reader)return null;
  const decoder=new TextDecoder("utf-8",{fatal:true});
@@ -16,7 +47,7 @@ export async function readBoundedMailBody(request){
    const {done,value}=await reader.read();
    if(done)break;
    bytes+=value.byteLength;
-   if(bytes>MAIL_MAX_REQUEST_BYTES){
+   if(bytes>maxBytes){
     await reader.cancel();
     return {tooLarge:true};
    }
@@ -57,16 +88,18 @@ function exceedsVisibleCharacters(text,limit){
 }
 export function parseMailSend(raw){
  if(!raw||typeof raw!=="object"||Array.isArray(raw)||
-   Object.keys(raw).some(k=>!["to","subject","text","replyId","requestId"].includes(k)))return null;
+   Object.keys(raw).some(k=>!["to","subject","text","replyId","requestId","attachments"].includes(k)))return null;
  const text=raw.text,subject=raw.subject,replyId=raw.replyId,requestId=raw.requestId;
  if(typeof text!=="string"||!text.trim()||exceedsVisibleCharacters(text,12000)||
    typeof subject!=="string"||!subject.trim()||(!replyId&&exceedsVisibleCharacters(subject,180))||(replyId&&exceedsVisibleCharacters(subject,2000))||
    /[\r\n]/.test(subject)||raw.to!==undefined&&typeof raw.to!=="string"||
    replyId!==undefined&&(!UUID.test(replyId)||typeof replyId!=="string")||
    requestId!==undefined&&(typeof requestId!=="string"||!/^[a-z0-9_-]{12,100}$/i.test(requestId)))return null;
+ const attachments=parseMailAttachments(raw.attachments);
+ if(!attachments)return null;
  const to=replyId?null:addressOf(raw.to);
  if(!replyId&&!to)return null;
- return {to,subject:subject.trim(),text:text.trim(),replyId:replyId||null,requestId:requestId||null};
+ return {to,subject:subject.trim(),text:text.trim(),replyId:replyId||null,requestId:requestId||null,attachments};
 }
 export function isCompanyMailbox(item,box){
  if(!item||typeof item!=="object")return false;
