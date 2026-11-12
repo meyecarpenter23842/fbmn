@@ -118,50 +118,7 @@ class CeoApi implements CeoRepository {
   CeoAlerts.fromJson(await _data('/api/ceo/alerts'));
  @override Future<void> markAlertRead(String kind,String id)async{
   if(!['chat','mail'].contains(kind)||
-   !RegExp(r'^[a-f0-9-]{36}
-  if(!["contact","outsourcing"].contains(kind)||
-     !RegExp(r'^[0-9a-fA-F-]{36}' r'$').hasMatch(id)){
-   throw const CeoApiException(400);
-  }
-  final jwt=await _ownerJwt();
-  final response=await _request("POST","/api/ceo/reads",
-   json:{"kind":kind,"id":id},bearer:jwt);
-  final data=response["data"];
-  final stamp=data is Map<String,dynamic> ? data["viewedAt"] : null;
-  if(stamp is! String||DateTime.tryParse(stamp)==null)throw const CeoApiException(503);
-  return stamp;
- }
-
- @override Future<CeoMailPage> mailList(String box,{String? after})async{
-  if(box!='inbox'&&box!='sent'){throw const CeoApiException(400);}
-  final afterParam=after==null?'':'&after=$after';
-  final j=await _data('/api/ceo/mail?box=$box&limit=20$afterParam');
-  return CeoMailPage.fromJson(j);
- }
- @override Future<CeoMailItem> mailDetail(String box,String id)async{
-  if(!['inbox','sent'].contains(box)||id.length!=36){
-   throw const CeoApiException(400);
-  }
-  return CeoMailItem.fromJson(await _data('/api/ceo/mail/$id?box=$box'));
- }
- @override Future<String> mailSend({required String to,required String subject,
-  required String text,String? replyId,String? requestId,List<CeoMailAttachment> attachments=const []})async{
-  final jwt=await _ownerJwt();
-  final result=await _request('POST','/api/ceo/mail',bearer:jwt,timeout:const Duration(seconds:40),json:{
-   'to':to,'subject':subject,'text':text,
-   if(replyId!=null)'replyId':replyId,
-   if(requestId!=null)'requestId':requestId,
-   if(attachments.isNotEmpty)'attachments':attachments.map((a)=>a.toJson()).toList(),
-  });
-  final data=result['data'];
-  if(data is! Map<String,dynamic>||data['id'] is! String){
-   throw const CeoApiException(503);
-  }
-  return data['id'] as String;
- }
- @override void dispose()=>_client.close();
-}
-).hasMatch(id))throw const CeoApiException(400);
+   !RegExp(r'^[a-f0-9-]{36}$').hasMatch(id))throw const CeoApiException(400);
   final jwt=await _ownerJwt();
   await _request('POST','/api/ceo/alerts',bearer:jwt,json:{'kind':kind,'id':id});
  }
