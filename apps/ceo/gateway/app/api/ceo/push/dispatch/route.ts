@@ -39,7 +39,8 @@ export async function GET(request:Request){
       SELECT 'outsourcing:'||id::text,'outsourcing',id::text,created_at
       FROM fbmn_catalog_private.outsourcing_requests
       UNION ALL
-      SELECT 'chat:'||t.session_id||':'||t.id::text,'chat',
+      SELECT (CASE WHEN t.prev_at IS NULL THEN 'chat:'||t.session_id
+        ELSE 'chat:'||t.session_id||':'||t.id::text END),'chat',
         t.session_id,t.created_at
       FROM (
         SELECT session_id,id,created_at,
