@@ -18,6 +18,15 @@ function signal(data={}){
 test("Resend Svix signature checks raw bytes, old replays, malformed/forged signatures",()=>{
  const body=signal();
  assert.equal(verifyResendWebhook(body,signed(body),secret,now),true);
+ // Svix secrets use standard Base64 (with /, + and =), not only Base64url.
+ const standardKey=Buffer.alloc(32,255);
+ const standardSecret="whsec_"+standardKey.toString("base64");
+ const signedBytes=(id,ts,payload)=>createHmac("sha256",standardKey)
+  .update(id+"."+ts+"."+payload).digest("base64");
+ const standardTs=String(now/1000),standardId="msg_standardkey";
+ const standardHeaders=new Headers({"svix-id":standardId,
+  "svix-timestamp":standardTs,"svix-signature":"v1,"+signedBytes(standardId,standardTs,body)});
+ assert.equal(verifyResendWebhook(body,standardHeaders,standardSecret,now),true);
  assert.equal(verifyResendWebhook(body.replace("offer","quote"),signed(body),secret,now),false);
  assert.equal(verifyResendWebhook(body,signed(body,now-301000),secret,now),false);
  assert.equal(verifyResendWebhook(body,new Headers(),secret,now),false);
