@@ -61,16 +61,16 @@ class CeoRequest{
 }
 
 class CeoAlerts{
- final int chatCount,mailCount,contactCount,outsourcingCount,total;
+ final int chatCount,mailCount,contactCount,outsourcingCount,total,delayedPush;
  final List<String> chatIds,mailIds;
  const CeoAlerts({required this.chatCount,required this.mailCount,
   required this.contactCount,required this.outsourcingCount,
-  required this.total,required this.chatIds,required this.mailIds});
+  required this.total,required this.chatIds,required this.mailIds,this.delayedPush=0});
  factory CeoAlerts.fromJson(Object? input){
   final j=_object(input),chat=_object(j['chat']),mail=_object(j['mail']);
   return CeoAlerts(chatCount:_num(chat['count']),mailCount:_num(mail['count']),
    contactCount:_num(j['contact']),outsourcingCount:_num(j['outsourcing']),
-   total:_num(j['total']),
+   total:_num(j['total']),delayedPush:_num(j['delayedPush']),
    chatIds:_array(chat['ids']).whereType<String>().toList(growable:false),
    mailIds:_array(mail['ids']).whereType<String>().toList(growable:false));
  }
