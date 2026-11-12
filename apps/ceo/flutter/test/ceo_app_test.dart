@@ -322,7 +322,10 @@ void main(){
    await tester.tap(find.byTooltip('Xem thông báo và yêu cầu mới'));
    await tester.pumpAndSettle();
    final shortcut=find.text('Xem tất cả liên hệ');
-   await tester.ensureVisible(shortcut);
+   // The notification sheet uses a lazily built ListView: the last shortcut
+   // is not in the widget tree until the sheet scrolls to it.
+   await tester.scrollUntilVisible(shortcut,180,
+    scrollable:find.byType(Scrollable).last);
    await tester.tap(shortcut);
    await tester.pumpAndSettle();
    expect(tester.widget<ChoiceChip>(
