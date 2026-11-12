@@ -118,7 +118,9 @@ class CeoApi implements CeoRepository {
   CeoAlerts.fromJson(await _data('/api/ceo/alerts'));
  @override Future<void> markAlertRead(String kind,String id)async{
   if(!['chat','mail'].contains(kind)||
-   !RegExp(r'^[a-f0-9-]{36}$').hasMatch(id))throw const CeoApiException(400);
+   !RegExp(r'^[a-f0-9-]{36}$').hasMatch(id)){
+   throw const CeoApiException(400);
+  }
   final jwt=await _ownerJwt();
   await _request('POST','/api/ceo/alerts',bearer:jwt,json:{'kind':kind,'id':id});
  }
