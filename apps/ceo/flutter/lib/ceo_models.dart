@@ -58,3 +58,19 @@ class CeoRequest{
    interests:_array(j["interests"]).whereType<String>().toList(growable:false));
  }
 }
+
+class CeoAlerts{
+ final int chatCount,mailCount,contactCount,outsourcingCount,total;
+ final List<String> chatIds,mailIds;
+ const CeoAlerts({required this.chatCount,required this.mailCount,
+  required this.contactCount,required this.outsourcingCount,
+  required this.total,required this.chatIds,required this.mailIds});
+ factory CeoAlerts.fromJson(Object? input){
+  final j=_object(input),chat=_object(j['chat']),mail=_object(j['mail']);
+  return CeoAlerts(chatCount:_num(chat['count']),mailCount:_num(mail['count']),
+   contactCount:_num(j['contact']),outsourcingCount:_num(j['outsourcing']),
+   total:_num(j['total']),
+   chatIds:_array(chat['ids']).whereType<String>().toList(growable:false),
+   mailIds:_array(mail['ids']).whereType<String>().toList(growable:false));
+ }
+}
