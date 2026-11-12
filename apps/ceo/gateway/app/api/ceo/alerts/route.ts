@@ -36,6 +36,11 @@ export async function GET(request:Request){
      WHERE o.status='new' AND NOT EXISTS(
       SELECT 1 FROM fbmn_catalog_private.ceo_request_reads r
       WHERE r.owner_subject=$1 AND r.kind='outsourcing' AND r.request_id=o.id)`,[owner.subject]);
+   const delayed=await db.query<{n:string}>(`
+    SELECT count(*)::text AS n FROM fbmn_catalog_private.ceo_push_events
+    WHERE delivered_at IS NULL AND attempts<5
+    AND occurred_at<now()-interval '10 minutes'
+    AND occurred_at>now()-interval '3 days'`);
    const count=(rows:{total:string}[])=>rows.length?Number(rows[0].total):0;
    const contact=Number(requests.rows.find(r=>r.kind==="contact")?.total||0);
    const outsourcing=Number(requests.rows.find(r=>r.kind==="outsourcing")?.total||0);
@@ -44,6 +49,7 @@ export async function GET(request:Request){
     mail:{count:count(mail.rows),ids:mail.rows.map(r=>r.ref)},
     contact,outsourcing,
     // Display as an accurate aggregate; the app badge is intentionally bounded to 99.
+    delayedPush:Number(delayed.rows[0]?.n||0),
     total:count(chat.rows)+count(mail.rows)+contact+outsourcing
    }},{headers});
   });
