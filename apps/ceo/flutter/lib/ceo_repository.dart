@@ -58,16 +58,48 @@ class CeoApi implements CeoRepository {
  static final _jwtPattern=RegExp(r'^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$');
  /// Fetch a fresh managed Neon JWT from the same origin used by Futurebook Admin.
  /// The JWT is ephemeral: do not persist it or send it to analytics.
+ String? _validJwt(Object? value)=>
+  value is String&&value.length<=12000&&_jwtPattern.hasMatch(value)?value:null;
+ String? _authTokenFrom(Map<String,dynamic> json){
+  final data=json['data'];
+  final t=json['token']??(data is Map<String,dynamic>?data['token']:null);
+  return _validJwt(t);
+ }
+ String? _sessionTokenFrom(Map<String,dynamic> json){
+  // Same-origin Better Auth session refresh. Never store this JWT locally.
+  final data=json['data'];
+  final wrapped=data is Map<String,dynamic>?data:json;
+  final session=wrapped['session'];
+  return session is Map<String,dynamic>?
+   _validJwt(session['access_token']??session['accessToken']):null;
+ }
  Future<String> _ownerJwt() async{
-  final response=await _request("GET","/api/auth/token");
-  final data=response["data"];
-  // Raw Neon/Better Auth HTTP returns {"token":"..."} at the top level.
-  // The SDK client may expose data.token; accept both exact shapes.
-  final token=response["token"]??(data is Map<String,dynamic>?data["token"]:null);
-  if(token is! String||token.length>12000||!_jwtPattern.hasMatch(token)){
-   throw const CeoApiException(401);
+  // A signed proxy session-data cookie can expire before the underlying
+  // persistent Neon Auth session. Recover through the cookie-backed session
+  // endpoint before deciding that the Owner needs to sign in again.
+  try{
+   final token=_authTokenFrom(await _request('GET','/api/auth/token'));
+   if(token!=null)return token;
+  }on CeoApiException catch(e){
+   if(e.status!=401)rethrow;
   }
-  return token;
+  // get-session causes the managed auth layer to refresh its session cache and
+  // cookie when the underlying server session still exists.
+  try{
+   final token=_sessionTokenFrom(await _request('GET','/api/auth/get-session'));
+   if(token!=null)return token;
+  }on CeoApiException catch(e){
+   if(e.status!=401)rethrow;
+  }
+  // Some Neon versions omit access_token from get-session; retry the token API
+  // once after the session refresh rather than treating the first 401 as logout.
+  try{
+   final token=_authTokenFrom(await _request('GET','/api/auth/token'));
+   if(token!=null)return token;
+  }on CeoApiException catch(e){
+   if(e.status!=401)rethrow;
+  }
+  throw const CeoApiException(401);
  }
  @override Future<void> signIn(String email,String password) async{
   await _request("POST","/api/auth/sign-in/email",json:{
