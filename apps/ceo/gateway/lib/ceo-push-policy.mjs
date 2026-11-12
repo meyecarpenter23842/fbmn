@@ -1,5 +1,5 @@
 // DL12C. No arbitrary endpoints, external redirects, customer PII or staff access.
-export const pushKinds=Object.freeze(["chat","contact","outsourcing"]);
+export const pushKinds=Object.freeze(["chat","contact","outsourcing","mail"]);
 const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const chat=/^[a-f0-9]{36}$/;
 const base64url=/^[A-Za-z0-9_-]+$/;
