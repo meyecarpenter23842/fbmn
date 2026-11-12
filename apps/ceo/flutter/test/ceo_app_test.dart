@@ -19,7 +19,7 @@ class FakeRepo implements CeoRepository {
  @override Future<CeoPage<CeoRequest>> outsourcingRequests([int page=1])async=>CeoPage([],page,false);
  @override Future<String> markViewed(String kind,String id)async=>'2026-11-11T14:00:00.000Z';
  @override Future<CeoAlerts> loadAlerts()async=>throw const CeoApiException(503);
- @override Future<void> markAlertRead(String kind,String id)async{}
+ @override Future<void> markAlertRead(String kind,String id,{String? turnId})async{}
 
  @override Future<CeoMailPage> mailList(String box,{String? after})async=>
   const CeoMailPage([],null,false);
