@@ -19,7 +19,8 @@ String ceoMailDate(String raw){
 class CeoMailPanel extends StatefulWidget{
  final CeoRepository api;
  final String box;
- const CeoMailPanel({super.key,required this.api,required this.box});
+ final VoidCallback? onMarkedRead;
+ const CeoMailPanel({super.key,required this.api,required this.box,this.onMarkedRead});
  @override State<CeoMailPanel> createState()=>CeoMailPanelState();
 }
 class CeoMailPanelState extends State<CeoMailPanel>{
@@ -62,7 +63,13 @@ class CeoMailPanelState extends State<CeoMailPanel>{
     child:Column(children:[
      CeoSheetHeader(title:widget.box=='inbox'?'Chi tiết thư đến':'Thư đã gửi'),
      Expanded(child:FutureBuilder<CeoMailItem>(
-      future:widget.api.mailDetail(widget.box,id),
+      future:widget.api.mailDetail(widget.box,id).then((letter)async{
+       if(widget.box=='inbox'){
+        try{await widget.api.markAlertRead('mail',id);widget.onMarkedRead?.call();}
+        catch(_){/* Letter remains readable if receipt update fails. */}
+       }
+       return letter;
+      }),
       builder:(ctx,s){
        if(s.connectionState!=ConnectionState.done){
         return const Center(child:CircularProgressIndicator());
