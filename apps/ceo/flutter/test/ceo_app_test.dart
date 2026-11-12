@@ -337,6 +337,18 @@ void main(){
   }
  });
 
+ testWidgets('CEO-MAIL02 opens the exact inbound email from a push target', (tester)async{
+  final key=GlobalKey<CeoMailPanelState>();
+  await tester.pumpWidget(MaterialApp(home:Scaffold(body:
+   CeoMailPanel(key:key,api:FakeMailRepo(),box:'inbox'))));
+  await tester.pumpAndSettle();
+  await key.currentState!.openMailById('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa');
+  await tester.pumpAndSettle();
+  expect(find.text('Chi tiết thư đến'),findsOneWidget);
+  expect(find.text('Nội dung thử'),findsOneWidget);
+  expect(find.text('Trả lời'),findsOneWidget);
+ });
+
  testWidgets('CEO-MAIL01 supports compose dialog and provider sent list', (tester)async{
   await tester.pumpWidget(CeoApp(repository:FakeMailRepo()));
   await tester.pumpAndSettle();
