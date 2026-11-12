@@ -6,7 +6,7 @@ import {validRef} from "./ceo-push-policy.mjs";
 export const MAX_RESEND_WEBHOOK_BYTES=32_768;
 export function verifyResendWebhook(raw,headers,secret,now=Date.now()){
  if(typeof raw!=="string"||Buffer.byteLength(raw,"utf8")>MAX_RESEND_WEBHOOK_BYTES||
-    typeof secret!=="string"||!/^whsec_[A-Za-z0-9_-]{16,}$/.test(secret))return false;
+    typeof secret!=="string"||!/^whsec_[A-Za-z0-9+/_-]{16,}={0,2}$/.test(secret))return false;
  const id=headers.get("svix-id")||"",ts=headers.get("svix-timestamp")||"",
   signatures=headers.get("svix-signature")||"";
  if(!/^[A-Za-z0-9_-]{6,128}$/.test(id)||!/^[0-9]{10,13}$/.test(ts)||
