@@ -63,8 +63,8 @@
   return error?.message==="login_required"?"login_required":
    error?.message==="forbidden"?"forbidden":"service_error";
  }
- async function registerAndSync(){
-  const generation=pushGeneration;
+ async function registerAndSync(generation=pushGeneration){
+  if(generation!==pushGeneration)return "disabled";
   const cfg=await ceoApi("config","GET");
   if(generation!==pushGeneration)return "disabled";
   const key=cfg?.data?.vapidPublicKey;
@@ -93,6 +93,7 @@
   return "enabled";
  }
  window.fbmnPushStatus=async()=>{
+  const generation=pushGeneration;
   const support=supported();
   if(support!=="ok")return support;
   if(Notification.permission==="denied")return "denied";
@@ -100,12 +101,14 @@
   try{
    const reg=await navigator.serviceWorker.getRegistration(SCOPE);
    const sub=reg?await reg.pushManager.getSubscription():null;
+   if(generation!==pushGeneration)return "disabled";
    // Adopt pre-upgrade subscriptions, and recreate those lost during PWA updates.
-   if(remembered()||sub)return await registerAndSync();
+   if(remembered()||sub)return await registerAndSync(generation);
    return "disabled";
   }catch(error){return stateError(error);}
  };
  window.fbmnPushEnable=async()=>{
+  const generation=pushGeneration;
   const support=supported();
   if(support!=="ok")return support;
   if(Notification.permission==="denied")return "denied";
@@ -113,9 +116,10 @@
   let permission;
   try{permission=await Notification.requestPermission();}catch{return "denied";}
   if(permission!=="granted")return "denied";
+  if(generation!==pushGeneration)return "disabled";
   // Persist the user's positive choice even during a transient backend outage.
   remember(true);
-  try{return await registerAndSync();}catch(error){return stateError(error);}
+  try{return await registerAndSync(generation);}catch(error){return stateError(error);}
  };
  async function revoke(preservePreference){
   // The check must happen before the first await, so pending restores abort.
