@@ -124,12 +124,17 @@ class _CeoHomeState extends State<CeoHome>{
  // Keep an open notification route synchronized with async Owner data / push state.
  final ValueNotifier<int> alertsVersion=ValueNotifier<int>(0);
  @override void dispose(){searchController.dispose();alertsVersion.dispose();super.dispose();}
+ String? initialMailId;
  String? initialTarget;
  int? initialTab;
  @override void initState(){
   super.initState();
   final tab=Uri.base.queryParameters['tab'],id=Uri.base.queryParameters['id'];
   final tabNumber=switch(tab){'chat'=>1,'outsourcing'=>2,'contact'=>3,_=>null};
+  if(tab=='mail'&&id!=null&&
+    RegExp(r'^[0-9a-fA-F-]{36}$').hasMatch(id)){
+   selected=3;contactSection='inbox';initialMailId=id;
+  }
   if(tabNumber!=null&&id!=null&&
    (tabNumber==1?RegExp(r'^[a-f0-9]{36}$').hasMatch(id):
     RegExp(r'^[0-9a-fA-F-]{36}$').hasMatch(id))){
@@ -463,7 +468,7 @@ class _CeoHomeState extends State<CeoHome>{
   }
   if(loading&&((selected==0&&(conversations==null||outsourcing==null||contacts==null))||
    (selected==1&&conversations==null)||(selected==2&&outsourcing==null)||
-   (selected==3&&contacts==null))){
+   (selected==3&&contactSection=='requests'&&contacts==null))){
    return const Center(child:CircularProgressIndicator());
   }
   if(selected==0)return overview();
@@ -472,7 +477,19 @@ class _CeoHomeState extends State<CeoHome>{
   return requests(outsourcing,true);
  }
 
- Widget contactWorkspace()=>Column(children:[
+ Widget contactWorkspace(){
+  // Run after the first inbox render; consume id to avoid reopening on tab switch.
+  if(initialMailId!=null){
+   WidgetsBinding.instance.addPostFrameCallback((_){
+    if(!mounted||initialMailId==null)return;
+    final panel=inboxKey.currentState;
+    if(panel==null)return;
+    final id=initialMailId!;
+    initialMailId=null;
+    panel.openMailById(id);
+   });
+  }
+  return Column(children:[
   Padding(padding:const EdgeInsets.fromLTRB(12,10,12,5),child:Align(
    alignment:Alignment.centerLeft,
    child:Wrap(spacing:7,runSpacing:4,children:[
@@ -490,6 +507,7 @@ class _CeoHomeState extends State<CeoHome>{
   Expanded(child:contactSection=='requests'?requests(contacts,false):
    CeoMailPanel(key:contactSection=='inbox'?inboxKey:sentKey,api:widget.api,box:contactSection)),
  ]);
+ }
 
  Widget overview(){
   if(conversations==null||outsourcing==null||contacts==null){

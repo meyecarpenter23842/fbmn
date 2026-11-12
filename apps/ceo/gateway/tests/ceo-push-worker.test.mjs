@@ -36,6 +36,17 @@ test("push displays generic no-PII text with exact Owner deep-link",async()=>{
  await click(w,item.options.data.url);
  assert.deepEqual(w.opened,["https://ceo.fbmn.vn/ceo/index.html?tab=contact&id="+uuid]);
 });
+test("received mail push displays privacy-safe title and opens exact inbox item",async()=>{
+ const w=worker();
+ await push(w,{type:"mail",id:uuid,subject:"Giá NET bí mật",from:"contact@customer.test",badge:0});
+ const notice=w.notifications[0];
+ assert.equal(notice.options.body,"Email mới đến");
+ assert.equal(notice.options.data.url,"/ceo/index.html?tab=mail&id="+uuid);
+ assert.equal(JSON.stringify(notice).includes("Giá NET bí mật"),false);
+ assert.equal(JSON.stringify(notice).includes("contact@customer.test"),false);
+ await click(w,notice.options.data.url);
+ assert.deepEqual(w.opened,["https://ceo.fbmn.vn/ceo/index.html?tab=mail&id="+uuid]);
+});
 test("malformed payload never opens a foreign site",async()=>{
  const w=worker();
  await push(w,{type:"chat",id:"https://evil.test",badge:12});

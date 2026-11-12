@@ -5,6 +5,7 @@
 - App CEO → Liên hệ → Khách liên hệ / Hộp thư đến / Đã gửi.
 - Owner-only Next.js gateway: GET /api/ceo/mail?box=inbox|sent, GET /api/ceo/mail/[id]?box=..., POST /api/ceo/mail.
 - Provider: Resend verified fbmn.vn domain with sending + receiving enabled, info@fbmn.vn mailbox. Reads are explicitly on refresh/on open, no webhook required.
+- CEO-MAIL02 adds a separate signed Resend webhook for *new-email Web Push only*; see docs/web-ceo-mail02-push.md. Inbox refresh behavior remains unchanged.
 - Email from is fixed by server; all actions require verified Owner session/JWT, POST requires same origin, safe input validation and bounded payloads. Never expose API key to Flutter or Git. No unsolicited sends in tests.
 - Resend stores received/sent email history, Message-ID, delivery state and attachments. CEO-UI01 request read receipts and notifications are unchanged. **Email-specific read flags are not added** (Resend API offers no read/write mutation for these records); mail view has no fake unread badge.
 - New/reply compose with original Message-ID header for threading; server obtains reply recipient from incoming Resend email rather than trusting client. Branded HTML + text footer: transparent FBMN logo via https://www.fbmn.vn/brand/fbmn-transparent-logo.webp, business contact, https://www.facebook.com/futurebook.miennam.

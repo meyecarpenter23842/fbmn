@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:futurebook_ceo/main.dart';
 import 'package:futurebook_ceo/ceo_models.dart';
+import 'package:futurebook_ceo/ceo_mail.dart';
 import 'package:futurebook_ceo/ceo_mail_models.dart';
 import 'package:futurebook_ceo/ceo_repository.dart';
 
@@ -335,6 +336,21 @@ void main(){
    await tester.pumpWidget(const SizedBox.shrink());
    await tester.pumpAndSettle();
   }
+ });
+
+ testWidgets('CEO-MAIL02 opens the exact inbound email from a push target', (tester)async{
+  final key=GlobalKey<CeoMailPanelState>();
+  await tester.pumpWidget(MaterialApp(home:Scaffold(body:
+   CeoMailPanel(key:key,api:FakeMailRepo(),box:'inbox'))));
+  await tester.pumpAndSettle();
+  final opening=key.currentState!.openMailById('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa');
+  await tester.pumpAndSettle();
+  expect(find.text('Chi tiết thư đến'),findsOneWidget);
+  expect(find.text('Nội dung thử'),findsOneWidget);
+  expect(find.text('Trả lời'),findsOneWidget);
+  await tester.tap(find.byTooltip('Đóng chi tiết'));
+  await tester.pumpAndSettle();
+  await opening;
  });
 
  testWidgets('CEO-MAIL01 supports compose dialog and provider sent list', (tester)async{

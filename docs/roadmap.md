@@ -314,3 +314,5 @@ Thứ tự mới trước DL8: DL11A (Header một hàng, logo giữa 3+3 tab, t
 
 
 **CEO-MAIL01 — 11/11/2026, Owner yêu cầu:** App CEO Liên hệ mở tab con Khách liên hệ / Hộp thư đến / Đã gửi; chức năng soạn và trả lời email thực qua CEO Gateway Owner-only + Resend gửi/nhận domain đã xác minh; chữ ký thương hiệu logo trong suốt, thông tin info@fbmn.vn và Facebook chính thức. Không lưu API key vào Git, không đổi API/DL12E báo đã xem hoặc gửi email tự động, không chạy migration vì lịch sử/trạng thái gửi lưu và đọc từ Resend. Test Flutter/Gateway, CI/Codex PR repo phụ → đồng bộ repo chính → Vercel CEO production.
+
+**CEO-MAIL02 — 12/11/2026, owner feedback:** Bổ sung Web Push cho email mới nhận tại info@fbmn.vn; Resend webhook ký Svix, ghi sự kiện mail ID vào private Neon push queue, Cron hiện hữu phát tới Owner đã đăng ký và click mở đúng thư trong Liên hệ → Hộp thư đến. Không chứa tên/tiêu đề/nội dung thư trong push, không đặt unread badge giả. Có migration riêng để mở rộng event kind; chỉ migration/đăng ký webhook/deploy production khi Owner phê duyệt. Xem docs/web-ceo-mail02-push.md.

@@ -52,14 +52,16 @@ class CeoMailPanelState extends State<CeoMailPanel>{
    if(widget.box=='sent')load();
   }
  }
- Future<void> showLetter(CeoMailItem item)async{
+ Future<void> showLetter(CeoMailItem item)=>openMailById(item.id);
+ // Public to the Owner workspace for a validated notification deep link.
+ Future<void> openMailById(String id)async{
   await showModalBottomSheet<void>(context:context,isScrollControlled:true,
    useSafeArea:true,sheetAnimationStyle:ceoDetailSheetMotion(context),
    builder:(ctx)=>FractionallySizedBox(heightFactor:.94,
     child:Column(children:[
      CeoSheetHeader(title:widget.box=='inbox'?'Chi tiết thư đến':'Thư đã gửi'),
      Expanded(child:FutureBuilder<CeoMailItem>(
-      future:widget.api.mailDetail(widget.box,item.id),
+      future:widget.api.mailDetail(widget.box,id),
       builder:(ctx,s){
        if(s.connectionState!=ConnectionState.done){
         return const Center(child:CircularProgressIndicator());
