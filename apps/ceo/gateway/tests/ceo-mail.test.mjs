@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {addressOf,parseMailboxQuery,parseMailDetail,parseMailSend,
- isCompanyMailbox,mailSignatureHtml,mailSignatureText,MAIL_FACEBOOK,MAIL_LOGO,MAIL_MAX_REQUEST_BYTES,readBoundedMailBody} from "../lib/ceo-mail-policy.mjs";
+ isCompanyMailbox,mailSignatureHtml,mailSignatureText,MAIL_FACEBOOK,MAIL_LOGO,MAIL_MAX_REQUEST_BYTES,MAIL_MAX_ATTACHMENT_TOTAL_BYTES,MAIL_MAX_ATTACHMENT_REQUEST_BYTES,parseMailAttachments,readBoundedMailBody} from "../lib/ceo-mail-policy.mjs";
 test("CEO-MAIL01 enforces bounded filters",()=>{
  assert.deepEqual(parseMailboxQuery("?box=inbox&limit=20"),{box:"inbox",limit:20,after:null});
  for(const invalid of ["?box=../../admin","?box=sent&box=inbox","?limit=99","?token=secret","?after=wrong"])
@@ -55,4 +55,34 @@ test("CEO-MAIL01 accepts allowed Vietnamese Unicode drafts within the bounded UT
  const tooLarge=new Request("https://ceo.fbmn.vn/api/ceo/mail",{
   method:"POST",body:JSON.stringify({...payload,text:"ệ".repeat(50000)})});
  assert.deepEqual(await readBoundedMailBody(tooLarge),{tooLarge:true});
+});
+
+test("CEO-MAIL03 accepts valid base64 docs and never trusts attachment URLs or headers",()=>{
+ const file={filename:"Báo giá đính kèm.pdf",content:Buffer.from("PDF test").toString("base64")};
+ const payload={to:"customer@example.com",subject:"Catalogue",text:"Xin chào",attachments:[file]};
+ assert.deepEqual(parseMailAttachments([file]),[file]);
+ assert.deepEqual(parseMailSend(payload)?.attachments,[file]);
+ for(const invalid of [
+  {...file,path:"https://other.test/file"}, {...file,filename:"../file.pdf"},
+  {...file,filename:"script.exe"}, {...file,content:"!!!"},
+  {...file,content:""}, {...file,content:"AQ=A"},
+  {...file,content:"AA=="+"A"}, {...file,filename:"a.pdf\nBcc:bad@evil.test"}
+ ])assert.equal(parseMailSend({...payload,attachments:[invalid]}),null);
+ assert.equal(parseMailSend({...payload,attachments:Array(6).fill(file)}),null);
+ assert.equal(parseMailSend({...payload,attachments:{filename:"a.pdf",content:"AAAA"}}),null);
+ assert.equal(parseMailSend({...payload,attachments:[{filename:"a.pdf",path:"https://attacker.test"}]}),null);
+});
+test("CEO-MAIL03 counts decoded attachment bytes and limits request body before JSON parse",async()=>{
+ const file={filename:"catalogue.pdf",content:Buffer.alloc(1_500_000,0x41).toString("base64")};
+ const send={to:"a@example.com",subject:"Catalogue",text:"Tệp thử",attachments:[file,file]};
+ assert.equal(Buffer.from(file.content,"base64").length,1_500_000);
+ assert.equal(parseMailSend(send)?.attachments.length,2);
+ assert.equal(MAIL_MAX_ATTACHMENT_TOTAL_BYTES,3_000_000);
+ assert.equal(parseMailSend({...send,attachments:[file,file,{filename:"a.pdf",content:"AA=="}]}),null);
+ const json=JSON.stringify(send);
+ assert.ok(Buffer.byteLength(json,"utf8")<MAIL_MAX_ATTACHMENT_REQUEST_BYTES);
+ const request=new Request("https://ceo.fbmn.vn/api/ceo/mail",{method:"POST",body:json});
+ assert.equal((await readBoundedMailBody(request,MAIL_MAX_ATTACHMENT_REQUEST_BYTES)).text.length,json.length);
+ const oversized=new Request("https://ceo.fbmn.vn/api/ceo/mail",{method:"POST",body:"A".repeat(4_300_020)});
+ assert.deepEqual(await readBoundedMailBody(oversized,MAIL_MAX_ATTACHMENT_REQUEST_BYTES),{tooLarge:true});
 });
