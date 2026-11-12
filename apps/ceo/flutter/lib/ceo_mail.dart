@@ -226,7 +226,7 @@ class _CeoMailComposerState extends State<CeoMailComposer>{
   }finally{if(mounted)setState(()=>picking=false);}
  }
  Future<void> send()async{
-  if(saving){return;}
+  if(saving||picking){return;}
   if(widget.reply==null&&(!recipient.text.contains('@')||recipient.text.length>320)){
    setState(()=>error='Nhập địa chỉ email hợp lệ.');return;
   }
@@ -320,7 +320,7 @@ class _CeoMailComposerState extends State<CeoMailComposer>{
     if(error.isNotEmpty)Padding(padding:const EdgeInsets.only(top:8),
      child:Text(error,style:const TextStyle(color:Colors.red,fontSize:13))),
     const SizedBox(height:14),
-    FilledButton.icon(onPressed:saving?null:send,
+    FilledButton.icon(onPressed:saving||picking?null:send,
      icon:const Icon(Icons.send,size:18),
      label:Text(saving?'Đang gửi...':'Gửi email')),
    ]))),
