@@ -1,4 +1,11 @@
-class CeoMailItem {
+/// A file selected locally by the Owner. Bytes are sent only to the CEO Gateway.
+ class CeoMailAttachment {
+  final String filename,content;
+  final int size;
+  const CeoMailAttachment({required this.filename,required this.content,required this.size});
+  Map<String,String> toJson()=>{'filename':filename,'content':content};
+ }
+ class CeoMailItem {
  final String id,from,subject,createdAt,status,messageId,text,replyTo;
  final List<String> to,attachments;
  const CeoMailItem({required this.id,required this.from,required this.subject,
