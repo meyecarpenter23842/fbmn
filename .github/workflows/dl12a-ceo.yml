@@ -44,6 +44,7 @@ jobs:
           persist-credentials: false
       - uses: subosito/flutter-action@v2
         with:
+          flutter-version: '3.47.9' # Last reviewed passing SDK; stable floated to 3.50.0 on 12 Nov.
           channel: stable
           cache: true
       - run: flutter pub get
