@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:futurebook_ceo/main.dart';
 import 'package:futurebook_ceo/ceo_models.dart';
+import 'package:futurebook_ceo/ceo_mail.dart';
 import 'package:futurebook_ceo/ceo_mail_models.dart';
 import 'package:futurebook_ceo/ceo_repository.dart';
 
