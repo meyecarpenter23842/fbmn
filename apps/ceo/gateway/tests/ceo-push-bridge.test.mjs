@@ -37,7 +37,7 @@ function pushSession(store,{permission="granted",oldSubscription=false,configWai
  const notification={permission,requestPermission:()=>{
   notices.prompts++;notification.permission="granted";
   return Promise.resolve("granted");}};
- const registration={pushManager:{
+ const registration={active:{scriptURL:"https://ceo.fbmn.vn/ceo/push-sw.js"},pushManager:{
   getSubscription:async()=>subscription,
   subscribe:async()=>{calls.push("subscribe");subscription=subscriptionObject();return subscription;}
  }};
@@ -56,6 +56,7 @@ function pushSession(store,{permission="granted",oldSubscription=false,configWai
  };
  const window={isSecureContext:true,PushManager:function(){},
   Notification:notification,navigator,localStorage:storage,
+  location:{href:"https://ceo.fbmn.vn/ceo/index.html"},
   matchMedia:()=>({matches:false})};
  const fetch=async(url,opts)=>{
   calls.push(String(url)+" "+opts.method);
@@ -69,6 +70,7 @@ function pushSession(store,{permission="granted",oldSubscription=false,configWai
   throw Error("Unexpected request: "+url);
  };
  vm.runInNewContext(source,{window,navigator,Notification:notification,fetch,
+  URL,clearTimeout,setTimeout,crypto:{getRandomValues:arr=>arr.fill(42)},
   atob:s=>Buffer.from(s,"base64").toString("binary"),Uint8Array});
  return {window,calls,notices,registry};
 }
