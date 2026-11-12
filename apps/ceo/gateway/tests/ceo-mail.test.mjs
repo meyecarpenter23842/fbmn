@@ -21,6 +21,14 @@ test("CEO-MAIL01 validates recipient, subject, body, reply ids and disallows spo
  assert.equal(addressOf("Customer <customer@example.com>"),"customer@example.com");
  assert.equal(addressOf("x@example.com\r\nBcc:bad@example.com"),null);
 });
+test("CEO-MAIL01 matches Flutter-visible Unicode grapheme limits",()=>{
+ const base={to:"a@example.com",subject:"Chào",text:"OK"};
+ assert.ok(parseMailSend({...base,text:"e\u0323\u0302".repeat(5000)}));
+ assert.ok(parseMailSend({...base,subject:"🙂".repeat(180)}));
+ assert.equal(parseMailSend({...base,subject:"🙂".repeat(181)}),null);
+ assert.ok(parseMailSend({...base,text:"🙂".repeat(12000)}));
+ assert.equal(parseMailSend({...base,text:"🙂".repeat(12001)}),null);
+});
 test("CEO-MAIL01 provider mailbox scope and branded html are safe",()=>{
  assert.equal(isCompanyMailbox({to:["info@fbmn.vn"]},"inbox"),true);
  assert.equal(isCompanyMailbox({to:["other@fbmn.vn"]},"inbox"),false);
