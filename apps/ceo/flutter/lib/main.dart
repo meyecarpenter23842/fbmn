@@ -5,6 +5,7 @@ import 'ceo_ui_tokens.dart';
 import 'ceo_detail_sheet.dart';
 import 'ceo_feedback.dart';
 import 'ceo_workspace.dart';
+import 'ceo_mail.dart';
 import 'push_stub.dart' if (dart.library.js_interop) 'push_web.dart' as push;
 
 void main() => runApp(const CeoApp());
@@ -113,6 +114,9 @@ class _CeoHomeState extends State<CeoHome>{
  CeoPage<CeoRequest>? outsourcing,contacts;
  final TextEditingController searchController=TextEditingController();
  String requestFilter='all';
+ String contactSection='requests';
+ final inboxKey=GlobalKey<CeoMailPanelState>();
+ final sentKey=GlobalKey<CeoMailPanelState>();
  final Map<String,String> confirmedViews={};
  final Set<String> viewWrites={};
  String pushState='unknown';
@@ -269,7 +273,7 @@ class _CeoHomeState extends State<CeoHome>{
        ListTile(
         title:const Text('Xem tất cả liên hệ'),
         trailing:const Icon(Icons.arrow_forward_ios,size:16),
-        onTap:(){Navigator.of(sheetContext).pop();choose(3);}),
+        onTap:(){Navigator.of(sheetContext).pop();showAllContactRequests();}),
       ])),
      ]));
     }),
@@ -327,6 +331,10 @@ class _CeoHomeState extends State<CeoHome>{
   finally{viewWrites.remove(key);}
  }
  Future<void> refresh()async{
+  if(selected==3&&contactSection!='requests'){
+   await (contactSection=='inbox'?inboxKey.currentState:sentKey.currentState)?.load();
+   return;
+  }
   if(loading){pendingRefresh=true;return;}
   final tabAtStart=selected;
   setState((){loading=true;error='';});
@@ -359,6 +367,15 @@ class _CeoHomeState extends State<CeoHome>{
   if(reload){Future.microtask(refresh);}
   else if(initialTarget!=null&&selected==previousTab){
    WidgetsBinding.instance.addPostFrameCallback((_){if(mounted)openDeepLinkedItem();});
+  }
+ }
+ // Notification shortcuts must open customer requests, even if the Owner was reading mail.
+ void showAllContactRequests(){
+  if(contactSection!='requests')setState(()=>contactSection='requests');
+  if(selected==3){
+   Future.microtask(refresh);
+  }else{
+   choose(3);
   }
  }
  void choose(int value){
@@ -451,8 +468,28 @@ class _CeoHomeState extends State<CeoHome>{
   }
   if(selected==0)return overview();
   if(selected==1)return chatList();
-  return requests(selected==2?outsourcing:contacts,selected==2);
+  if(selected==3)return contactWorkspace();
+  return requests(outsourcing,true);
  }
+
+ Widget contactWorkspace()=>Column(children:[
+  Padding(padding:const EdgeInsets.fromLTRB(12,10,12,5),child:Align(
+   alignment:Alignment.centerLeft,
+   child:Wrap(spacing:7,runSpacing:4,children:[
+    for(final tab in const <(String,String)>[
+     ('requests','Khách liên hệ'),('inbox','Hộp thư đến'),('sent','Đã gửi')])
+     ChoiceChip(
+      key:ValueKey('ceo-contact-${tab.$1}'),
+      label:Text(tab.$2),
+      selected:contactSection==tab.$1,
+      selectedColor:ceoLavender,
+      labelStyle:TextStyle(fontSize:13,fontWeight:FontWeight.w700,
+       color:contactSection==tab.$1?ceoPurple:ceoInk),
+      onSelected:(_)=>setState(()=>contactSection=tab.$1)),
+   ]))),
+  Expanded(child:contactSection=='requests'?requests(contacts,false):
+   CeoMailPanel(key:contactSection=='inbox'?inboxKey:sentKey,api:widget.api,box:contactSection)),
+ ]);
 
  Widget overview(){
   if(conversations==null||outsourcing==null||contacts==null){

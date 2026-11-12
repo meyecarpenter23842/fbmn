@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'ceo_models.dart';
+import 'ceo_mail_models.dart';
 import 'http_client_stub.dart' if (dart.library.js_interop) 'http_client_web.dart' as platform;
 
 /// Same-origin only. No token storage, credential logging or direct private Worker requests.
@@ -13,6 +14,9 @@ abstract class CeoRepository{
  Future<CeoPage<CeoRequest>> contactRequests([int page=1]);
  Future<CeoPage<CeoRequest>> outsourcingRequests([int page=1]);
  Future<String> markViewed(String kind,String id);
+ Future<CeoMailPage> mailList(String box,{String? after});
+ Future<CeoMailItem> mailDetail(String box,String id);
+ Future<String> mailSend({required String to,required String subject,required String text,String? replyId,String? requestId});
  void dispose();
 }
 class CeoApiException implements Exception{
@@ -21,6 +25,9 @@ class CeoApiException implements Exception{
  @override String toString()=>switch(status){
   401=>"Phiên đăng nhập chưa được xác nhận. Vui lòng đăng nhập lại.",
   403=>"Tài khoản không có quyền Owner.",
+  400=>"Thông tin email chưa hợp lệ.",
+  413=>"Nội dung thư quá dài.",
+  429=>"Dịch vụ email đang giới hạn lượt gửi; vui lòng thử lại.",
   503=>"Dịch vụ tạm thời không kết nối.",
   _=>"Chưa tải được dữ liệu. Vui lòng thử lại."};
 }
@@ -117,6 +124,33 @@ class CeoApi implements CeoRepository {
   final stamp=data is Map<String,dynamic> ? data["viewedAt"] : null;
   if(stamp is! String||DateTime.tryParse(stamp)==null)throw const CeoApiException(503);
   return stamp;
+ }
+
+ @override Future<CeoMailPage> mailList(String box,{String? after})async{
+  if(box!='inbox'&&box!='sent'){throw const CeoApiException(400);}
+  final afterParam=after==null?'':'&after=$after';
+  final j=await _data('/api/ceo/mail?box=$box&limit=20$afterParam');
+  return CeoMailPage.fromJson(j);
+ }
+ @override Future<CeoMailItem> mailDetail(String box,String id)async{
+  if(!['inbox','sent'].contains(box)||id.length!=36){
+   throw const CeoApiException(400);
+  }
+  return CeoMailItem.fromJson(await _data('/api/ceo/mail/$id?box=$box'));
+ }
+ @override Future<String> mailSend({required String to,required String subject,
+  required String text,String? replyId,String? requestId})async{
+  final jwt=await _ownerJwt();
+  final result=await _request('POST','/api/ceo/mail',bearer:jwt,json:{
+   'to':to,'subject':subject,'text':text,
+   if(replyId!=null)'replyId':replyId,
+   if(requestId!=null)'requestId':requestId,
+  });
+  final data=result['data'];
+  if(data is! Map<String,dynamic>||data['id'] is! String){
+   throw const CeoApiException(503);
+  }
+  return data['id'] as String;
  }
  @override void dispose()=>_client.close();
 }

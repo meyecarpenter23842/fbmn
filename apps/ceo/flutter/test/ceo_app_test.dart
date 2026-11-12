@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:futurebook_ceo/main.dart';
 import 'package:futurebook_ceo/ceo_models.dart';
+import 'package:futurebook_ceo/ceo_mail_models.dart';
 import 'package:futurebook_ceo/ceo_repository.dart';
 
 class FakeRepo implements CeoRepository {
@@ -16,6 +17,16 @@ class FakeRepo implements CeoRepository {
  @override Future<CeoPage<CeoRequest>> contactRequests([int page=1])async=>CeoPage([],page,false);
  @override Future<CeoPage<CeoRequest>> outsourcingRequests([int page=1])async=>CeoPage([],page,false);
  @override Future<String> markViewed(String kind,String id)async=>'2026-11-11T14:00:00.000Z';
+ @override Future<CeoMailPage> mailList(String box,{String? after})async=>
+  const CeoMailPage([],null,false);
+ @override Future<CeoMailItem> mailDetail(String box,String id)async=>
+  const CeoMailItem(id:'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+   from:'sender@example.com',subject:'Thư thử',createdAt:'2026-11-11T14:00:00Z',
+   status:'delivered',messageId:'<test@example.com>',text:'Nội dung thử',
+   to:['info@fbmn.vn'],attachments:[]);
+ @override Future<String> mailSend({required String to,required String subject,
+  required String text,String? replyId,String? requestId})async=>'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+
  @override void dispose(){}
 }
 
@@ -71,6 +82,22 @@ class FakeChatRepo extends FakeRepo {
  ];
 }
 
+
+class FakeMailRepo extends FakePendingRepo {
+ int fetches=0;
+ @override Future<CeoMailPage> mailList(String box,{String? after})async{
+  fetches++;
+  return
+  CeoMailPage([CeoMailItem(
+   id:'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+   from:box=='inbox'?'Đại lý <sender@example.com>':'Futurebook <info@fbmn.vn>',
+   subject:'Yêu cầu catalogue',createdAt:'2026-11-11T14:00:00Z',
+   status:box=='inbox'?'':'delivered',messageId:'<test@example.com>',
+   text:'Nội dung thử',to:box=='inbox'?const ['info@fbmn.vn']:
+   const ['sender@example.com'],attachments:const [],
+  )],null,false);
+ }
+}
 void main(){
  testWidgets('Anonymous session cannot see any Owner inbox', (tester)async{
   await tester.pumpWidget(CeoApp(repository:FakeRepo(false)));
@@ -245,6 +272,84 @@ void main(){
   expect(find.text('Khách hàng'),findsOneWidget);
   expect(find.text('Trợ lý Futurebook'),findsOneWidget);
   expect(find.text('Cho tôi xem mẫu bìa giấy'),findsOneWidget);
+ });
+
+
+ testWidgets('CEO-MAIL01 shows inbox and sent tabs on 360px mobile', (tester)async{
+  await tester.binding.setSurfaceSize(const Size(360,800));
+  await tester.pumpWidget(CeoApp(repository:FakeMailRepo()));
+  await tester.pumpAndSettle();
+  await tester.tap(find.text('Liên hệ').last);
+  await tester.pumpAndSettle();
+  expect(find.byKey(const ValueKey('ceo-contact-requests')),findsOneWidget);
+  await tester.tap(find.byKey(const ValueKey('ceo-contact-inbox')));
+  await tester.pumpAndSettle();
+  expect(find.text('Hộp thư đến'),findsWidgets);
+  expect(find.text('Yêu cầu catalogue'),findsOneWidget);
+  await tester.tap(find.text('Yêu cầu catalogue'));
+  await tester.pumpAndSettle();
+  expect(find.text('Nội dung thử'),findsOneWidget);
+  expect(find.text('Trả lời'),findsOneWidget);
+  expect(tester.takeException(),isNull);
+  await tester.pumpWidget(const SizedBox.shrink());
+  await tester.binding.setSurfaceSize(null);
+ });
+
+ testWidgets('CEO-MAIL01 global header refresh reloads visible mailbox', (tester)async{
+  final repo=FakeMailRepo();
+  await tester.pumpWidget(CeoApp(repository:repo));
+  await tester.pumpAndSettle();
+  await tester.tap(find.text('Liên hệ').last);
+  await tester.pumpAndSettle();
+  await tester.tap(find.byKey(const ValueKey('ceo-contact-inbox')));
+  await tester.pumpAndSettle();
+  final before=repo.fetches;
+  await tester.tap(find.byTooltip('Tải lại dữ liệu'));
+  await tester.pumpAndSettle();
+  expect(repo.fetches,greaterThan(before));
+ });
+
+ testWidgets('CEO-MAIL01 notification shortcut returns to customer requests from either mailbox', (tester)async{
+  for(final mailbox in const <String>['inbox','sent']){
+   await tester.pumpWidget(CeoApp(repository:FakeMailRepo()));
+   await tester.pumpAndSettle();
+   await tester.tap(find.text('Liên hệ').last);
+   await tester.pumpAndSettle();
+   await tester.tap(find.byKey(ValueKey('ceo-contact-$mailbox')));
+   await tester.pumpAndSettle();
+   expect(tester.widget<ChoiceChip>(
+    find.byKey(ValueKey('ceo-contact-$mailbox'))).selected,isTrue);
+   await tester.tap(find.byTooltip('Xem thông báo và yêu cầu mới'));
+   await tester.pumpAndSettle();
+   final shortcut=find.text('Xem tất cả liên hệ');
+   // The notification sheet uses a lazily built ListView: the last shortcut
+   // is not in the widget tree until the sheet scrolls to it.
+   await tester.scrollUntilVisible(shortcut,180,
+    scrollable:find.byType(Scrollable).last);
+   await tester.tap(shortcut);
+   await tester.pumpAndSettle();
+   expect(tester.widget<ChoiceChip>(
+    find.byKey(const ValueKey('ceo-contact-requests'))).selected,isTrue);
+   expect(find.text('Khách thử'),findsNWidgets(2));
+   expect(tester.takeException(),isNull);
+   await tester.pumpWidget(const SizedBox.shrink());
+   await tester.pumpAndSettle();
+  }
+ });
+
+ testWidgets('CEO-MAIL01 supports compose dialog and provider sent list', (tester)async{
+  await tester.pumpWidget(CeoApp(repository:FakeMailRepo()));
+  await tester.pumpAndSettle();
+  await tester.tap(find.text('Liên hệ').last);
+  await tester.pumpAndSettle();
+  await tester.tap(find.byKey(const ValueKey('ceo-contact-sent')));
+  await tester.pumpAndSettle();
+  expect(find.text('Thư đã gửi'),findsWidgets);
+  await tester.tap(find.text('Soạn thư'));
+  await tester.pumpAndSettle();
+  expect(find.text('Soạn email Futurebook'),findsOneWidget);
+  expect(find.textContaining('logo'),findsOneWidget);
+  expect(tester.takeException(),isNull);
  });
 
  testWidgets('Owner sees five tabs, no invented analytics', (tester)async{
