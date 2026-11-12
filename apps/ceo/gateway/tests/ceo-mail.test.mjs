@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {addressOf,parseMailboxQuery,parseMailDetail,parseMailSend,
- isCompanyMailbox,mailSignatureHtml,mailSignatureText,MAIL_FACEBOOK,MAIL_LOGO} from "../lib/ceo-mail-policy.mjs";
+ isCompanyMailbox,mailSignatureHtml,mailSignatureText,MAIL_FACEBOOK,MAIL_LOGO,MAIL_MAX_REQUEST_BYTES,readBoundedMailBody} from "../lib/ceo-mail-policy.mjs";
 test("CEO-MAIL01 enforces bounded filters",()=>{
  assert.deepEqual(parseMailboxQuery("?box=inbox&limit=20"),{box:"inbox",limit:20,after:null});
  for(const invalid of ["?box=../../admin","?box=sent&box=inbox","?limit=99","?token=secret","?after=wrong"])
@@ -34,4 +34,17 @@ test("CEO-MAIL01 provider mailbox scope and branded html are safe",()=>{
  assert.ok(html.includes("&lt;script&gt;"));
  assert.ok(html.includes(MAIL_LOGO)&&html.includes(MAIL_FACEBOOK));
  assert.match(mailSignatureText("Test"),/info@fbmn\.vn/);
+});
+
+test("CEO-MAIL01 accepts allowed Vietnamese Unicode drafts within the bounded UTF-8 request budget",async()=>{
+ const payload={to:"agent@example.com",subject:"Yêu cầu báo giá",text:"ệ".repeat(9000)};
+ assert.ok(parseMailSend(payload));
+ const json=JSON.stringify(payload);
+ assert.ok(Buffer.byteLength(json,"utf8")>18000);
+ assert.ok(Buffer.byteLength(json,"utf8")<MAIL_MAX_REQUEST_BYTES);
+ const request=new Request("https://ceo.fbmn.vn/api/ceo/mail",{method:"POST",body:json});
+ assert.deepEqual(await readBoundedMailBody(request),{text:json});
+ const tooLarge=new Request("https://ceo.fbmn.vn/api/ceo/mail",{
+  method:"POST",body:JSON.stringify({...payload,text:"ệ".repeat(50000)})});
+ assert.deepEqual(await readBoundedMailBody(tooLarge),{tooLarge:true});
 });
