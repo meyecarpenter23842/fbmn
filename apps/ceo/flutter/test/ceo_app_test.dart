@@ -309,6 +309,31 @@ void main(){
   expect(repo.fetches,greaterThan(before));
  });
 
+ testWidgets('CEO-MAIL01 notification shortcut returns to customer requests from either mailbox', (tester)async{
+  for(final mailbox in const <String>['inbox','sent']){
+   await tester.pumpWidget(CeoApp(repository:FakeMailRepo()));
+   await tester.pumpAndSettle();
+   await tester.tap(find.text('Liên hệ').last);
+   await tester.pumpAndSettle();
+   await tester.tap(find.byKey(ValueKey('ceo-contact-$mailbox')));
+   await tester.pumpAndSettle();
+   expect(tester.widget<ChoiceChip>(
+    find.byKey(ValueKey('ceo-contact-$mailbox'))).selected,isTrue);
+   await tester.tap(find.byTooltip('Xem thông báo và yêu cầu mới'));
+   await tester.pumpAndSettle();
+   final shortcut=find.text('Xem tất cả liên hệ');
+   await tester.ensureVisible(shortcut);
+   await tester.tap(shortcut);
+   await tester.pumpAndSettle();
+   expect(tester.widget<ChoiceChip>(
+    find.byKey(const ValueKey('ceo-contact-requests'))).selected,isTrue);
+   expect(find.text('Khách thử'),findsNWidgets(2));
+   expect(tester.takeException(),isNull);
+   await tester.pumpWidget(const SizedBox.shrink());
+   await tester.pumpAndSettle();
+  }
+ });
+
  testWidgets('CEO-MAIL01 supports compose dialog and provider sent list', (tester)async{
   await tester.pumpWidget(CeoApp(repository:FakeMailRepo()));
   await tester.pumpAndSettle();
