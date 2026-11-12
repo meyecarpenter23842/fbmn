@@ -188,6 +188,18 @@ class _CeoMailComposerState extends State<CeoMailComposer>{
   if(subject.text.trim().isEmpty||message.text.trim().isEmpty){
    setState(()=>error='Vui lòng nhập tiêu đề và nội dung.');return;
   }
+  // A grapheme can contain several UTF-8 code points. Check the same
+  // 100 KB request budget the Owner Gateway enforces before attempting send.
+  final requestBytes=utf8.encode(jsonEncode({
+   'to':recipient.text.trim(),'subject':subject.text.trim(),
+   'text':message.text.trim(),
+   if(widget.reply!=null)'replyId':widget.reply!.id,
+   'requestId':'x'*100, // Conservative upper bound for the request ID.
+  })).length;
+  if(requestBytes>100000){
+   setState(()=>error='Nội dung thư vượt giới hạn dung lượng. Vui lòng rút ngắn email.');
+   return;
+  }
   final payload=jsonEncode([recipient.text.trim(),subject.text.trim(),
    message.text.trim(),widget.reply?.id]);
   if(uncertainFailure&&payload!=lastPayload&&confirmNewPayload!=payload){
@@ -229,6 +241,7 @@ class _CeoMailComposerState extends State<CeoMailComposer>{
      decoration:const InputDecoration(labelText:'Gửi đến',hintText:'khachhang@example.com')),
     const SizedBox(height:12),
     TextField(controller:subject,readOnly:widget.reply!=null,
+     maxLength:widget.reply==null?180:null,
      decoration:const InputDecoration(labelText:'Tiêu đề')),
     const SizedBox(height:12),
     TextField(controller:message,minLines:6,maxLines:10,maxLength:12000,
