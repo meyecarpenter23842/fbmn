@@ -50,7 +50,12 @@ jobs:
       - run: flutter pub get
       - run: flutter analyze
       - run: flutter test
-      - run: flutter build web --release --base-href=/ceo/
+      - run: flutter build web --release --pwa-strategy=none --base-href=/ceo/
+      - name: Ensure Flutter never registers competing Push service worker
+        run: |
+          node --version || true
+          ! grep -E -q 'serviceWorkerSettings: \\{' build/web/flutter_bootstrap.js
+          grep -Fq '_flutter.loader.load();' build/web/flutter_bootstrap.js
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: '24'

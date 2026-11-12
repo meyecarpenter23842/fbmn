@@ -29,7 +29,7 @@ else
     cd "$FLUTTER_APP"
     flutter config --enable-web
     flutter pub get
-    flutter build web --release --base-href=/ceo/
+    flutter build web --release --pwa-strategy=none --base-href=/ceo/
   )
   rm -rf "$PUBLIC_APP"
   mkdir -p "$PUBLIC_APP"
@@ -40,6 +40,8 @@ fi
 test -s "$PUBLIC_APP/index.html" || { echo "Missing CEO Flutter index" >&2; exit 1; }
 test -s "$PUBLIC_APP/flutter_bootstrap.js" || { echo "Missing CEO Flutter bootstrap" >&2; exit 1; }
 test -s "$PUBLIC_APP/main.dart.js" || { echo "Missing CEO Flutter JS" >&2; exit 1; }
+# Never let the legacy Flutter offline service worker steal /ceo/ from Push.
+node "$GATEWAY_ROOT/scripts/check-ceo-push-bootstrap.mjs" "$PUBLIC_APP/flutter_bootstrap.js"
 test -s "$PUBLIC_APP/push-sw.js" || { echo "Missing DL12C push worker" >&2; exit 1; }
 test -s "$PUBLIC_APP/push_bridge.js" || { echo "Missing DL12C push bridge" >&2; exit 1; }
 grep -Fq '<base href="/ceo/">' "$PUBLIC_APP/index.html" || {

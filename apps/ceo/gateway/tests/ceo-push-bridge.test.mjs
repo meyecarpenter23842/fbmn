@@ -26,7 +26,7 @@ test("iPhone Safari must install PWA before notifications",async()=>{
 });
 
 function pushSession(store,{permission="granted",oldSubscription=false,configWait=null}={}){
- const calls=[],notices={prompts:0},registry={current:null};
+ const calls=[],notices={prompts:0},registry={current:null},messageListeners=new Set();
  let subscription=oldSubscription?subscriptionObject():null;
  function subscriptionObject(){return {
   endpoint:"https://fcm.googleapis.com/fcm/send/mock",
@@ -37,7 +37,7 @@ function pushSession(store,{permission="granted",oldSubscription=false,configWai
  const notification={permission,requestPermission:()=>{
   notices.prompts++;notification.permission="granted";
   return Promise.resolve("granted");}};
- const registration={pushManager:{
+ const registration={active:{scriptURL:"https://ceo.fbmn.vn/ceo/push-sw.js"},pushManager:{
   getSubscription:async()=>subscription,
   subscribe:async()=>{calls.push("subscribe");subscription=subscriptionObject();return subscription;}
  }};
@@ -45,6 +45,8 @@ function pushSession(store,{permission="granted",oldSubscription=false,configWai
  const navigator={userAgent:"Chrome",platform:"Linux",maxTouchPoints:0,
   standalone:true,serviceWorker:{
    ready:Promise.resolve(registration),
+   addEventListener:(kind,fn)=>{if(kind==="message")messageListeners.add(fn);},
+   removeEventListener:(kind,fn)=>{if(kind==="message")messageListeners.delete(fn);},
    getRegistration:async()=>registry.current,
    register:async(url,opts)=>{calls.push("register:"+url);
     registry.current=registration;return registration;}
@@ -56,6 +58,7 @@ function pushSession(store,{permission="granted",oldSubscription=false,configWai
  };
  const window={isSecureContext:true,PushManager:function(){},
   Notification:notification,navigator,localStorage:storage,
+  location:{href:"https://ceo.fbmn.vn/ceo/index.html"},
   matchMedia:()=>({matches:false})};
  const fetch=async(url,opts)=>{
   calls.push(String(url)+" "+opts.method);
@@ -66,9 +69,19 @@ function pushSession(store,{permission="granted",oldSubscription=false,configWai
    data:{vapidPublicKey:"a".repeat(87)}})}
   }
   if(url==="/api/ceo/push/subscription")return {ok:true,json:async()=>({data:{}})};
+  if(url==="/api/ceo/push/test"){
+   const {nonce}=JSON.parse(opts.body);
+   return {ok:true,json:async()=>{
+    queueMicrotask(()=>{for(const handler of messageListeners)
+     handler({data:{type:"FBMN_PUSH_TEST_RECEIVED",nonce}});});
+    return {data:{accepted:true}};
+   }};
+  }
   throw Error("Unexpected request: "+url);
  };
  vm.runInNewContext(source,{window,navigator,Notification:notification,fetch,
+  URL,clearTimeout,setTimeout,queueMicrotask,
+  crypto:{getRandomValues:arr=>arr.fill(42)},
   atob:s=>Buffer.from(s,"base64").toString("binary"),Uint8Array});
  return {window,calls,notices,registry};
 }
@@ -135,4 +148,18 @@ test("CEO-MAIL03 explicit Off wins over concurrent status resubscription",async(
  assert.equal(await restoring,"disabled");
  assert.equal(store.has("fbmn-ceo-push-opt-in-v1"),false);
  assert.equal(app.calls.some(c=>c.includes("/api/ceo/push/subscription POST")),false);
+});
+
+test("CEO-PUSH05 real test reaches an active Push SW and waits for its acknowledgement",async()=>{
+ const store=new Map([["fbmn-ceo-push-opt-in-v1","1"]]);
+ const app=pushSession(store);
+ assert.equal(await app.window.fbmnPushStatus(),"enabled");
+ assert.equal(await app.window.fbmnPushTest(),"received");
+ assert.ok(app.calls.some(x=>x.includes("/api/ceo/push/test POST")));
+});
+test("CEO-PUSH05 old Flutter worker never counts as a functioning Push receiver",async()=>{
+ const store=new Map([["fbmn-ceo-push-opt-in-v1","1"]]);
+ const app=pushSession(store,{oldSubscription:true});
+ app.registry.current.active.scriptURL="https://ceo.fbmn.vn/ceo/flutter_service_worker.js";
+ assert.equal(await app.window.fbmnPushTest(),"receiver_missing");
 });

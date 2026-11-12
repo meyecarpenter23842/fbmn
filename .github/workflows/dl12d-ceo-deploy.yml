@@ -84,7 +84,9 @@ jobs:
           flutter pub get
           flutter analyze
           flutter test
-          flutter build web --release --base-href=/ceo/
+          flutter build web --release --pwa-strategy=none --base-href=/ceo/
+          ! grep -E -q 'serviceWorkerSettings: \\{' build/web/flutter_bootstrap.js
+          grep -Fq '_flutter.loader.load();' build/web/flutter_bootstrap.js
       - name: Include Flutter PWA in same-origin CEO gateway
         run: |
           set -euo pipefail
