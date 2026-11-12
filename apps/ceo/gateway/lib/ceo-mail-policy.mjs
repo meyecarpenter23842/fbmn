@@ -2,6 +2,32 @@
 const EMAIL=/^[A-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?(?:\.[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?)+$/i;
 const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 export const MAIL_FROM="info@fbmn.vn";
+// 12,000 UTF-16 characters can occupy up to 72 KB in escaped JSON, plus subject and metadata.
+export const MAIL_MAX_REQUEST_BYTES=100_000;
+// Bound requests *while reading*, including chunked bodies without Content-Length.
+export async function readBoundedMailBody(request){
+ const reader=request.body?.getReader();
+ if(!reader)return null;
+ const decoder=new TextDecoder("utf-8",{fatal:true});
+ const fragments=[];
+ let bytes=0;
+ try{
+  while(true){
+   const {done,value}=await reader.read();
+   if(done)break;
+   bytes+=value.byteLength;
+   if(bytes>MAIL_MAX_REQUEST_BYTES){
+    await reader.cancel();
+    return {tooLarge:true};
+   }
+   fragments.push(decoder.decode(value,{stream:true}));
+  }
+  fragments.push(decoder.decode());
+  return {text:fragments.join("")};
+ }catch{return null;}
+ finally{reader.releaseLock();}
+}
+
 export function addressOf(value){
  if(typeof value!=="string"||value.length>320||/[\r\n]/.test(value))return null;
  const input=value.trim();
