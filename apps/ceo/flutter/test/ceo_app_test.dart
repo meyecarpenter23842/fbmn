@@ -343,11 +343,14 @@ void main(){
   await tester.pumpWidget(MaterialApp(home:Scaffold(body:
    CeoMailPanel(key:key,api:FakeMailRepo(),box:'inbox'))));
   await tester.pumpAndSettle();
-  await key.currentState!.openMailById('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa');
+  final opening=key.currentState!.openMailById('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa');
   await tester.pumpAndSettle();
   expect(find.text('Chi tiết thư đến'),findsOneWidget);
   expect(find.text('Nội dung thử'),findsOneWidget);
   expect(find.text('Trả lời'),findsOneWidget);
+  await tester.tap(find.byTooltip('Đóng chi tiết'));
+  await tester.pumpAndSettle();
+  await opening;
  });
 
  testWidgets('CEO-MAIL01 supports compose dialog and provider sent list', (tester)async{
