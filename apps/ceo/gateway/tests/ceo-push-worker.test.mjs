@@ -56,3 +56,14 @@ test("malformed payload never opens a foreign site",async()=>{
  await push(w,{type:"chat",id:session,badge:1});
  assert.equal(w.notifications[1].options.data.url,"/ceo/index.html?tab=chat&id="+session);
 });
+test("returning chat alerts again with a new event tag, without exposing message text",async()=>{
+ const w=worker();
+ await push(w,{type:"chat",id:session,event:"event_aAaAa11111",badge:2,
+  returning:true,body:"Private customer price"});
+ await push(w,{type:"chat",id:session,event:"event_bBbBb22222",badge:3,
+  returning:true,body:"Another private message"});
+ assert.equal(w.notifications.length,2);
+ assert.equal(w.notifications[0].options.body,"Khách quay lại nhắn tin");
+ assert.notEqual(w.notifications[0].options.tag,w.notifications[1].options.tag);
+ assert.equal(JSON.stringify(w.notifications).includes("Private customer price"),false);
+});
