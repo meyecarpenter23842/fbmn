@@ -61,30 +61,37 @@ export async function POST(request:Request){
  catch{return fail("invalid_body",400);}
  let value:unknown;
  try{value=JSON.parse(raw);}catch{return fail("invalid_body",400);}
- if(!value||typeof value!=="object"||Array.isArray(value)||
-  Object.keys(value).length!==2||!Object.hasOwn(value,"kind")||
-  !Object.hasOwn(value,"id"))return fail("invalid_body",400);
- const {kind,id}=value as {kind:unknown;id:unknown};
+ if(!value||typeof value!=="object"||Array.isArray(value))return fail("invalid_body",400);
+ const candidate=value as Record<string,unknown>;
+ const kind=candidate.kind,id=candidate.id,turnId=candidate.turnId;
  if((kind!=="chat"&&kind!=="mail")||typeof id!=="string"||
-  !validRef(kind,id))return fail("invalid_body",400);
+  !validRef(kind,id)||Object.keys(candidate).length!==(kind==="chat"?3:2)||
+  Object.keys(candidate).some(k=>!["kind","id","turnId"].includes(k))||
+  (kind==="chat"&&(typeof turnId!=="string"||!/^[1-9][0-9]{0,18}$/.test(turnId)))||
+  (kind==="mail"&&turnId!==undefined))return fail("invalid_body",400);
  try{
-  const rows=await withPushDb(async db=>{
-   const query=kind==="chat"?
-    `SELECT updated_at AS stamp FROM fbmn_catalog_private.chat_conversations
-      WHERE session_id=$1`:
-    `SELECT occurred_at AS stamp FROM fbmn_catalog_private.ceo_push_events
-      WHERE kind='mail' AND ref=$1 ORDER BY occurred_at DESC LIMIT 1`;
-   const result=await db.query<{stamp:Date}>(query,[id]);
-   if(!result.rows.length)return false;
-   await db.query(`
-    INSERT INTO fbmn_catalog_private.ceo_inbox_reads(owner_subject,kind,ref,read_through)
-    VALUES($1,$2,$3,$4)
+  const marked=await withPushDb(async db=>{
+   // Keep PostgreSQL microseconds intact. Never round-trip timestamptz via JS Date.
+   const sql=kind==="chat"?`
+    INSERT INTO fbmn_catalog_private.ceo_inbox_reads
+      (owner_subject,kind,ref,read_through)
+    SELECT $1,'chat',$2,t.created_at FROM fbmn_catalog_private.chat_turns t
+    WHERE t.session_id=$2 AND t.id=$3::bigint
     ON CONFLICT(owner_subject,kind,ref)
     DO UPDATE SET read_through=GREATEST(
-      fbmn_catalog_private.ceo_inbox_reads.read_through,excluded.read_through)`,
-    [owner.subject,kind,id,result.rows[0].stamp]);
-   return true;
+      fbmn_catalog_private.ceo_inbox_reads.read_through,excluded.read_through)`:`
+    INSERT INTO fbmn_catalog_private.ceo_inbox_reads
+      (owner_subject,kind,ref,read_through)
+    SELECT $1,'mail',$2,e.occurred_at
+    FROM fbmn_catalog_private.ceo_push_events e
+    WHERE e.kind='mail' AND e.ref=$2
+    ORDER BY e.occurred_at DESC LIMIT 1
+    ON CONFLICT(owner_subject,kind,ref)
+    DO UPDATE SET read_through=GREATEST(
+      fbmn_catalog_private.ceo_inbox_reads.read_through,excluded.read_through)`;
+   const row=await db.query(sql,kind==="chat"?[owner.subject,id,turnId]:[owner.subject,id]);
+   return (row.rowCount||0)>0;
   });
-  return rows?Response.json({data:{read:true}},{headers}):fail("not_found",404);
+  return marked?Response.json({data:{read:true}},{headers}):fail("not_found",404);
  }catch{return fail("alerts_unavailable",503);}
 }
