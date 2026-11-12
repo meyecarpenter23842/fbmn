@@ -18,3 +18,7 @@ external JSPromise<JSString> _badge(JSNumber count);
 Future<void> badge(int count)async{
  try{await _badge(count.toJS).toDart;}catch(_){}
 }
+
+@JS('fbmnPushTest')
+external JSPromise<JSString> _test();
+Future<String> test()async=>(await _test().toDart).toDart;
