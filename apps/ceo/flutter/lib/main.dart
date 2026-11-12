@@ -292,6 +292,11 @@ class _CeoHomeState extends State<CeoHome> with WidgetsBindingObserver{
            onPressed:togglePush, // Preserve the browser user gesture.
            child:Text(pushState=='enabled'?'Tắt':'Bật')),
         ))),
+      if((alerts?.delayedPush??0)>0)Padding(
+       padding:const EdgeInsets.fromLTRB(12,5,12,4),
+       child:Text('Có ${alerts!.delayedPush} sự kiện Push tồn đọng trên 10 phút. '
+        'Hệ thống phát thông báo cần được kiểm tra.',
+        style:const TextStyle(fontSize:12,color:Color(0xFFB45309)))),
       Expanded(child:ListView(padding:const EdgeInsets.fromLTRB(12,8,12,20),children:[
        ListTile(
         leading:const Icon(Icons.notifications_active_outlined,color:brand),
