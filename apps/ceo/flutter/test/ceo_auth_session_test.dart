@@ -74,7 +74,7 @@ void main(){
   var calls=0;
   final api=CeoApi(client:MockClient((request)async{
    calls++;
-   if(request.url.path=='/api/auth/get-session')return http.Response('{"session":null}',200);
+   if(request.url.path=='/api/auth/get-session')return http.Response('null',200);
    return http.Response('{}',401);
   }));
   expect(await api.ownerSession(),false);
