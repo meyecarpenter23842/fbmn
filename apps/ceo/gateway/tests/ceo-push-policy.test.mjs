@@ -19,6 +19,8 @@ test("push target route is bounded and never leaks customer data",()=>{
  const id="11111111-1111-4111-8111-111111111111";
  assert.equal(validRef("contact",id),true);
  assert.equal(pushRoute("contact",id),"/ceo/index.html?tab=contact&id="+id);
+ assert.equal(pushRoute("mail",id),"/ceo/index.html?tab=mail&id="+id);
+ assert.equal(JSON.parse(pushPayload("mail",id,0)).type,"mail");
  assert.equal(pushRoute("contact","../../admin"),"/ceo/index.html");
  assert.equal(JSON.parse(pushPayload("outsourcing",id,500)).badge,99);
  assert.throws(()=>pushPayload("contact","../../admin",5));
