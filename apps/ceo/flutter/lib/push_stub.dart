@@ -5,3 +5,5 @@ Future<String> disable()async=>'unsupported';
 Future<String> logout()async=>'unsupported';
 
 Future<void> badge(int count)async{}
+
+Future<String> test()async=>'unsupported';
