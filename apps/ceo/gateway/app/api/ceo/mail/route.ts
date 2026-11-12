@@ -31,7 +31,7 @@ export async function POST(request:Request){
  if(!allowedOrigin(request))return fail(403,"origin_forbidden");
  if(request.headers.get("content-type")?.split(";")[0]!=="application/json")return fail(415,"invalid_content_type");
  const lengthHeader=request.headers.get("content-length");
- if(lengthHeader!==null&&(!/^\\d+$/.test(lengthHeader)||Number(lengthHeader)>MAIL_MAX_REQUEST_BYTES))
+ if(lengthHeader!==null&&(!/^\d+$/.test(lengthHeader)||Number(lengthHeader)>MAIL_MAX_REQUEST_BYTES))
   return fail(413,"body_too_large");
  const gate=await requireOwner(request);
  if(gate.status!==200||!gate.subject)return fail(gate.status,"owner_required");
