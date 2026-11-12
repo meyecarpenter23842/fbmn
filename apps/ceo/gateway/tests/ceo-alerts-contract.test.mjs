@@ -9,8 +9,11 @@ test("CEO-NOTIFY04 alert API is Owner-only, global, and read cursor is server de
  assert.match(route,/allowedOrigin\(request\)/);
  assert.match(route,/count\(\*\) OVER\(\)/);
  assert.match(route,/GREATEST\(/);
- assert.match(route,/updated_at AS stamp/);
- assert.match(route,/occurred_at AS stamp/);
+ assert.match(route,/t\.created_at/);
+ assert.match(route,/e\.occurred_at/);
+ assert.match(route,/ON CONFLICT\(owner_subject,kind,ref\)/);
+ assert.match(route,/turnId/);
+ assert.doesNotMatch(route,/new Date\(/);
  assert.doesNotMatch(route,/question|email_body|authorization.*localStorage/i);
  assert.equal(validRef("chat","aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"),true);
  assert.equal(validRef("mail","aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"),true);
