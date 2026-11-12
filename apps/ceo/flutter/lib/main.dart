@@ -626,7 +626,17 @@ class _CeoHomeState extends State<CeoHome> with WidgetsBindingObserver{
      ('requests','Khách liên hệ'),('inbox','Hộp thư đến'),('sent','Đã gửi')])
      ChoiceChip(
       key:ValueKey('ceo-contact-${tab.$1}'),
-      label:Text(tab.$2),
+      label:Row(mainAxisSize:MainAxisSize.min,children:[
+       Text(tab.$2),
+       if((tab.$1=='requests'?(alerts?.contactCount??0):
+         tab.$1=='inbox'?(alerts?.mailCount??0):0)>0)...[
+        const SizedBox(width:7),
+        Container(padding:const EdgeInsets.symmetric(horizontal:6,vertical:2),
+         decoration:BoxDecoration(color:ceoBadgeRed,borderRadius:BorderRadius.circular(9)),
+         child:Text('${tab.$1=='requests'?alerts!.contactCount:alerts!.mailCount}',
+          style:const TextStyle(fontSize:10,fontWeight:FontWeight.w700,color:Colors.white))),
+       ],
+      ]),
       selected:contactSection==tab.$1,
       selectedColor:ceoLavender,
       labelStyle:TextStyle(fontSize:13,fontWeight:FontWeight.w700,
@@ -668,7 +678,7 @@ class _CeoHomeState extends State<CeoHome> with WidgetsBindingObserver{
        SizedBox(width:cols==2&&i==2?box.maxWidth:width,child:items[i]),
      ]);
     })),
-   CeoPanel(title:'Gia công mới',subtitle:'Yêu cầu gần nhất trong danh sách đã tải',
+   CeoPanel(title:'Gia công gần đây',subtitle:'Đã xem và chưa xử lý là hai trạng thái riêng biệt',
     icon:Icons.handyman_outlined,
     child:outsourcing!.items.isEmpty?
      const CeoEmptyResult(title:'Chưa có yêu cầu gia công',detail:'Khi có yêu cầu mới, dữ liệu sẽ hiển thị tại đây.'):
@@ -739,7 +749,7 @@ class _CeoHomeState extends State<CeoHome> with WidgetsBindingObserver{
      const SizedBox(height:12),
      Wrap(spacing:8,runSpacing:8,children:[
       for(final pair in const <(String,String)>[
-       ('all','Tất cả'),('new','Mới'),('handled','Đã xử lý')])
+       ('all','Tất cả'),('new','Chưa xử lý'),('handled','Đã xử lý')])
        ChoiceChip(
         key:ValueKey('ceo-filter-${pair.$1}'),
         label:Text(pair.$2),
@@ -789,7 +799,7 @@ class _CeoHomeState extends State<CeoHome> with WidgetsBindingObserver{
   meta:dateString(item.createdAt),
   trailing:Wrap(spacing:5,runSpacing:4,children:[
    if(item.unread)const CeoStatusPill(text:'Chưa xem',highlighted:true),
-   CeoStatusPill(text:item.pending?'Mới':'Đã xử lý',highlighted:item.pending),
+   CeoStatusPill(text:item.pending?'Chưa xử lý':'Đã xử lý',highlighted:false),
   ]),
   onTap:()=>showCase(item,outsource));
 
@@ -863,7 +873,7 @@ class _CeoHomeState extends State<CeoHome> with WidgetsBindingObserver{
     CeoDetailGroup(title:'Thông tin yêu cầu',icon:Icons.assignment_outlined,
      children:[
       Row(children:[
-       Expanded(child:field('Trạng thái',item.pending?'Mới · chưa xử lý':'Đã xử lý')),
+       Expanded(child:field('Trạng thái',item.pending?'Chưa xử lý':'Đã xử lý')),
        const SizedBox(width:8),
        Expanded(child:field('Đã xem',item.viewedAt!=null||
         confirmedViews.containsKey('$kind:${item.id}')?'Đã xem':'Chưa xem')),

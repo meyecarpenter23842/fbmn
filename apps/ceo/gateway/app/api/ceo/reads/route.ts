@@ -34,8 +34,8 @@ export async function POST(request:Request){
     "WHERE owner_subject=$1 AND kind=$2 AND request_id=$3::uuid",
     [owner.subject,parsed.kind,parsed.id])).rows[0];
    if(!found)return null;
-   // Prune stale metadata without touching customer inbox records.
-   await db.query("DELETE FROM fbmn_catalog_private.ceo_request_reads WHERE viewed_at < now()-interval '90 days'");
+   // Read receipts must survive for the life of the source request.
+   // Age-based pruning reclassifies old 'new' requests as unread again.
    return new Date(found.viewed_at).toISOString();
   });
   if(!viewedAt)return fail(404,"not_found");

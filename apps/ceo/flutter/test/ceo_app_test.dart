@@ -84,6 +84,21 @@ class FakeAlertsRepo extends FakePendingRepo{
   mailIds:['aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa']);
 }
 
+class FakeAlreadyViewedRepo extends FakePendingRepo{
+ @override Future<CeoPage<CeoRequest>> contactRequests([int page=1])async=>
+  CeoPage([item('contact-viewed','new').markViewedAt('2026-11-11T14:27:17.721Z')],page,false);
+ @override Future<CeoPage<CeoRequest>> outsourcingRequests([int page=1])async=>
+  CeoPage([item('out-viewed','new').markViewedAt('2026-11-11T14:27:23.508Z')],page,false);
+ @override Future<CeoAlerts> loadAlerts()async=>const CeoAlerts(
+  chatCount:0,mailCount:0,contactCount:0,outsourcingCount:0,total:0,
+  chatIds:[],mailIds:[]);
+}
+class FakeMailOnlyAlertsRepo extends FakeAlreadyViewedRepo{
+ @override Future<CeoAlerts> loadAlerts()async=>const CeoAlerts(
+  chatCount:0,mailCount:2,contactCount:0,outsourcingCount:0,total:2,
+  chatIds:[],mailIds:[]);
+}
+
 class FakeChatRepo extends FakeRepo {
  FakeChatRepo():super(true);
  @override Future<CeoPage<CeoConversation>> conversations([int page=1])async=>CeoPage([
@@ -222,7 +237,7 @@ void main(){
   expect(find.text('4 mục chưa xem'),findsOneWidget);
  });
 
- testWidgets('Viewing request clears Owner badge but retains Mới workflow status', (tester)async{
+ testWidgets('Viewing request clears Owner badge but retains separate unprocessed workflow status', (tester)async{
   await tester.pumpWidget(CeoApp(repository:FakePendingRepo()));
   await tester.pumpAndSettle();
   final bell=find.byTooltip('Xem thông báo và yêu cầu mới');
@@ -232,7 +247,8 @@ void main(){
   await tester.tap(find.text('Liên hệ · Khách thử'));
   await tester.pumpAndSettle();
   expect(find.text('Chi tiết liên hệ'),findsOneWidget);
-  expect(find.text('Mới · chưa xử lý'),findsOneWidget);
+  expect(find.text('Chưa xử lý'),findsWidgets);
+  expect(find.text('Mới'),findsNothing);
   expect(find.text('Đã xem'),findsWidgets);
   expect(find.descendant(of:bell,matching:find.text('2')),findsOneWidget);
   await tester.tap(find.byTooltip('Đóng chi tiết'));
@@ -241,6 +257,31 @@ void main(){
   await tester.pumpAndSettle();
   expect(find.text('2 mục chưa xem'),findsOneWidget);
   expect(find.text('Liên hệ · Khách thử'),findsNothing);
+ });
+
+ testWidgets('Previously viewed contact and outsourcing do not retain red Mới labels or unread badges',(tester)async{
+  await tester.pumpWidget(CeoApp(repository:FakeAlreadyViewedRepo()));
+  await tester.pumpAndSettle();
+  for(final tab in const <String>['Gia công','Liên hệ']){
+   await tester.tap(find.text(tab).last);
+   await tester.pumpAndSettle();
+   expect(find.text('Chưa xử lý'),findsWidgets);
+   expect(find.text('Mới'),findsNothing);
+   expect(find.text('Chưa xem'),findsNothing);
+   final bell=find.byTooltip('Xem thông báo và yêu cầu mới');
+   expect(find.descendant(of:bell,matching:find.byType(Badge)),findsNothing);
+  }
+ });
+ testWidgets('Unread mail is isolated inside Hộp thư đến, not mislabeled as unread contact',(tester)async{
+  await tester.pumpWidget(CeoApp(repository:FakeMailOnlyAlertsRepo()));
+  await tester.pumpAndSettle();
+  await tester.tap(find.text('Liên hệ').last);
+  await tester.pumpAndSettle();
+  final contact=find.byKey(const ValueKey('ceo-contact-requests'));
+  final inbox=find.byKey(const ValueKey('ceo-contact-inbox'));
+  expect(find.descendant(of:contact,matching:find.text('2')),findsNothing);
+  expect(find.descendant(of:inbox,matching:find.text('2')),findsOneWidget);
+  expect(find.text('Mới'),findsNothing);
  });
 
  testWidgets('CEO bell hides number when no status-new requests exist', (tester)async{
@@ -305,7 +346,7 @@ void main(){
   await tester.tap(find.byKey(const ValueKey('ceo-filter-new')));
   await tester.pumpAndSettle();
   expect(find.text('Khách thử'),findsOneWidget);
-  expect(find.text('Mới'),findsWidgets);
+  expect(find.text('Chưa xử lý'),findsWidgets);
  });
 
  testWidgets('CEO-UI01 chat detail shows customer and assistant bubbles', (tester)async{

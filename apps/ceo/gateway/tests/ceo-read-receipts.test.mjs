@@ -29,6 +29,10 @@ test("DL12E Owner POST is origin-checked, bounded, and never mutates business st
  assert.match(route,/allowedOrigin\(request\)/);
  assert.match(route,/requireOwner\(request\)/);
  assert.match(route,/ON CONFLICT DO NOTHING/);
+ assert.doesNotMatch(route,/DELETE FROM fbmn_catalog_private\\.ceo_request_reads WHERE viewed_at/);
+ // A viewed but still unhandled request must not regain "unread" after 90d.
+ assert.match(route,/Read receipts must survive for the life of the source request/);
+ 
  assert.doesNotMatch(route,/UPDATE\s+fbmn_catalog_private\.(contact_requests|outsourcing_requests)/);
  assert.match(gate,/attachReadReceipts/);
  assert.match(migration,/PRIMARY KEY\(owner_subject,kind,request_id\)/);
