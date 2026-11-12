@@ -16,13 +16,18 @@ self.addEventListener("push",event=>{
   const url=target(payload);
   const title=payload.type==="contact"?"Liên hệ mới":
    payload.type==="outsourcing"?"Yêu cầu gia công mới":
-   payload.type==="chat"?"Hội thoại khách mới":
+   payload.type==="chat"?(payload.returning===true?
+    "Khách quay lại nhắn tin":"Hội thoại khách mới") :
    payload.type==="mail"?"Email mới đến":"Thông báo Futurebook";
   const badge=Number.isSafeInteger(payload.badge)?
    Math.min(99,Math.max(0,payload.badge)):0;
   await self.registration.showNotification("Futurebook CEO",{
    body:title,icon:"/ceo/icons/fbmn.svg",badge:"/ceo/icons/fbmn.svg",
-   tag:"fbmn-ceo-"+String(payload.type||"news")+"-"+String(payload.id||""),
+   // Distinct inactivity-bucket event tags permit a returning chat to alert again.
+   // Only the trusted server-generated hash is accepted; no customer data.
+   tag:"fbmn-ceo-"+String(payload.type||"news")+"-"+
+     (/^[A-Za-z0-9_-]{8,32}$/.test(payload.event||"")?
+       payload.event:String(payload.id||"")),
    renotify:false,data:{url},silent:false
   });
   if(self.navigator?.setAppBadge)try{

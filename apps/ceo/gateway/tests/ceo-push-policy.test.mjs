@@ -40,3 +40,9 @@ test("retries exclude already accepted delivery receipts",()=>{
   {endpoint:"late",created_at:new Date("2026-11-11T07:00:00Z")}];
  assert.deepEqual(pendingTargets(subs,["one"],now).map(x=>x.endpoint),["two"]);
 });
+test("returning chat push uses a distinct non-PII event topic and accurate badge",()=>{
+ const id="a".repeat(36),topic="pkvQxwnvAHpKy8quxE_CNgf4g";
+ const v=JSON.parse(pushPayload("chat",id,7,topic,true));
+ assert.deepEqual(v,{type:"chat",id,badge:7,event:topic,returning:true});
+ assert.throws(()=>pushPayload("chat",id,7,"any suspicious personal text",true));
+});

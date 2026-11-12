@@ -140,6 +140,14 @@
    return "disabled";
   }catch(error){return stateError(error);}
  }
+ window.fbmnPushBadge=async(count)=>{
+  if(!Number.isSafeInteger(count)||count<0)return "invalid";
+  try{
+   if(count>0&&navigator.setAppBadge)await navigator.setAppBadge(Math.min(count,99));
+   else if(count===0&&navigator.clearAppBadge)await navigator.clearAppBadge();
+  }catch{/* App Badge API is optional. */}
+  return "ok";
+ };
  window.fbmnPushDisable=()=>revoke(false);
  // Logout revokes live device delivery, but does not erase the explicit user preference.
  window.fbmnPushLogout=()=>revoke(true);

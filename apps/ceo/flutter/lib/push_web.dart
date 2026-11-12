@@ -12,3 +12,9 @@ Future<String> enable()async=>(await _enable().toDart).toDart;
 Future<String> disable()async=>(await _disable().toDart).toDart;
 
 Future<String> logout()async=>(await _logout().toDart).toDart;
+
+@JS('fbmnPushBadge')
+external JSPromise<JSString> _badge(JSNumber count);
+Future<void> badge(int count)async{
+ try{await _badge(count.toJS).toDart;}catch(_){}
+}

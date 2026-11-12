@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'ceo_models.dart';
 import 'ceo_repository.dart';
@@ -29,18 +30,32 @@ class CeoApp extends StatefulWidget {
 class _CeoAppState extends State<CeoApp>{
  late final CeoRepository api=widget.repository??CeoApi();
  bool? owner;
+ bool checkingFailed=false;
  String notice='';
  @override void initState(){super.initState();check();}
  Future<void> check()async{
-  setState((){owner=null;notice='';});
+  setState((){owner=null;notice='';checkingFailed=false;});
   try{final valid=await api.ownerSession();if(mounted)setState(()=>owner=valid);}
-  catch(e){if(mounted)setState((){owner=false;notice=userError(e);});}
+  catch(e){if(mounted)setState((){owner=null;checkingFailed=true;notice=userError(e);});}
  }
  @override void dispose(){if(widget.repository==null)api.dispose();super.dispose();}
  @override Widget build(BuildContext context)=>LayoutBuilder(builder:(context,size)=>MaterialApp(
   title:'Futurebook CEO',debugShowCheckedModeBanner:false,
   theme:ceoTheme(size.maxWidth),
-  home:owner==null?const Scaffold(body:Center(child:CircularProgressIndicator())):
+  home:owner==null?(checkingFailed?
+    Scaffold(body:Center(child:ConstrainedBox(constraints:const BoxConstraints(maxWidth:420),
+     child:Padding(padding:const EdgeInsets.all(22),child:Column(
+      mainAxisSize:MainAxisSize.min,children:[
+       Image.asset('assets/brand/fbmn-official-logo.webp',height:60,fit:BoxFit.contain),
+       const SizedBox(height:18),
+       const Text('Không xác minh được phiên hiện tại',style:TextStyle(fontSize:18,fontWeight:FontWeight.w700)),
+       const SizedBox(height:8),
+       Text(notice,textAlign:TextAlign.center),
+       const SizedBox(height:14),
+       FilledButton.icon(onPressed:check,icon:const Icon(Icons.refresh),
+        label:const Text('Thử kết nối lại')),
+      ]))))):
+    const Scaffold(body:Center(child:CircularProgressIndicator()))):
    owner!?CeoHome(api:api,onSignOut:()=>setState(()=>owner=false)):
     CeoLogin(api:api,notice:notice,onSignIn:()=>setState(()=>owner=true),onRetry:check)));
 }
@@ -105,11 +120,13 @@ class CeoHome extends StatefulWidget{
  const CeoHome({super.key,required this.api,required this.onSignOut});
  @override State<CeoHome> createState()=>_CeoHomeState();
 }
-class _CeoHomeState extends State<CeoHome>{
+class _CeoHomeState extends State<CeoHome> with WidgetsBindingObserver{
  int selected=0;
  bool loading=false;
  String error='';
  bool pendingRefresh=false;
+ CeoAlerts? alerts;
+ Timer? alertsTimer;
  CeoPage<CeoConversation>? conversations;
  CeoPage<CeoRequest>? outsourcing,contacts;
  final TextEditingController searchController=TextEditingController();
@@ -123,7 +140,28 @@ class _CeoHomeState extends State<CeoHome>{
  bool pushBusy=false;
  // Keep an open notification route synchronized with async Owner data / push state.
  final ValueNotifier<int> alertsVersion=ValueNotifier<int>(0);
- @override void dispose(){searchController.dispose();alertsVersion.dispose();super.dispose();}
+ @override void dispose(){
+  alertsTimer?.cancel();WidgetsBinding.instance.removeObserver(this);
+  searchController.dispose();alertsVersion.dispose();super.dispose();
+ }
+ @override void didChangeAppLifecycleState(AppLifecycleState state){
+  if(state==AppLifecycleState.resumed){
+   Future.microtask(loadAlerts);Future.microtask(loadPushState);
+  }
+ }
+ Future<void> loadAlerts()async{
+  try{
+   final incoming=await widget.api.loadAlerts();
+   if(!mounted)return;
+   setState(()=>alerts=incoming);
+   alertsVersion.value++;
+   await push.badge(incoming.total);
+  }catch(_){/* Keep previous unread badge on transient failures. */}
+ }
+ Future<void> markAlertRead(String kind,String id,{String? turnId})async{
+  try{await widget.api.markAlertRead(kind,id,turnId:turnId);await loadAlerts();}
+  catch(_){/* Do not clear unconfirmed read receipts. */}
+ }
  String? initialMailId;
  String? initialTarget;
  int? initialTab;
@@ -142,6 +180,9 @@ class _CeoHomeState extends State<CeoHome>{
   }
   Future.microtask(refresh);
   Future.microtask(loadPushState);
+  Future.microtask(loadAlerts);
+  WidgetsBinding.instance.addObserver(this);
+  alertsTimer=Timer.periodic(const Duration(seconds:60),(_)=>loadAlerts());
  }
  Future<void> loadPushState()async{
   final status=await push.status();
@@ -178,8 +219,11 @@ class _CeoHomeState extends State<CeoHome>{
   }}
  }
  int countNew(int tab){
-  if(tab==2)return outsourcing?.items.where((r)=>r.unread).length??0;
-  if(tab==3)return contacts?.items.where((r)=>r.unread).length??0;
+  if(tab==1){return alerts?.chatCount??0;}
+  if(tab==2){return alerts?.outsourcingCount??
+   (outsourcing?.items.where((r)=>r.unread).length??0);}
+  if(tab==3){return (alerts?.contactCount??(contacts?.items.where((r)=>r.unread).length??0))+
+   (alerts?.mailCount??0);}
   return 0;
  }
  Widget redCountBadge(int count,Widget icon){
@@ -195,7 +239,7 @@ class _CeoHomeState extends State<CeoHome>{
  // Badge counts are real, unhandled AND unseen Owner requests in loaded pages.
  // Chat has no read receipts; never invent a chat-unread count.
  Widget bellIcon()=>redCountBadge(
-  countNew(2)+countNew(3),
+  alerts?.total??(countNew(1)+countNew(2)+countNew(3)),
   Icon(pushState=='enabled'?Icons.notifications_active:
    pushState=='denied'?Icons.notifications_off_outlined:
    Icons.notifications_none_outlined));
@@ -223,7 +267,9 @@ class _CeoHomeState extends State<CeoHome>{
     builder:(sheetContext,_,__){
      final newOut=outsourcing?.items.where((r)=>r.unread).toList()??<CeoRequest>[];
      final newContacts=contacts?.items.where((r)=>r.unread).toList()??<CeoRequest>[];
-     final total=newOut.length+newContacts.length;
+     final total=alerts?.total??(newOut.length+newContacts.length);
+     final chatIds=alerts?.chatIds??const <String>[];
+     final mailIds=alerts?.mailIds??const <String>[];
      void openRequest(CeoRequest request,bool isOutsourcing){
       Navigator.of(sheetContext).pop();
       Future.delayed(const Duration(milliseconds:250),(){
@@ -246,16 +292,52 @@ class _CeoHomeState extends State<CeoHome>{
            onPressed:togglePush, // Preserve the browser user gesture.
            child:Text(pushState=='enabled'?'Tắt':'Bật')),
         ))),
+      if((alerts?.delayedPush??0)>0)Padding(
+       padding:const EdgeInsets.fromLTRB(12,5,12,4),
+       child:Text('Có ${alerts!.delayedPush} sự kiện Push tồn đọng trên 10 phút. '
+        'Hệ thống phát thông báo cần được kiểm tra.',
+        style:const TextStyle(fontSize:12,color:Color(0xFFB45309)))),
       Expanded(child:ListView(padding:const EdgeInsets.fromLTRB(12,8,12,20),children:[
        ListTile(
-        leading:const Icon(Icons.mark_email_unread_outlined,color:brand),
-        title:Text('$total yêu cầu chưa xem',
+        leading:const Icon(Icons.notifications_active_outlined,color:brand),
+        title:Text('$total mục chưa xem',
          style:const TextStyle(fontWeight:FontWeight.w800,fontSize:16)),
-        subtitle:const Text('Đếm yêu cầu Mới chưa xem trong các trang đã tải; xem không đồng nghĩa đã xử lý.'),
+        subtitle:Text(alerts==null?
+         'Chưa tải đủ bộ đếm; sẽ tự đồng bộ khi có mạng.':
+         'Hội thoại ${alerts!.chatCount} · Email ${alerts!.mailCount} · '
+         'Liên hệ ${alerts!.contactCount} · Gia công ${alerts!.outsourcingCount}'),
        ),
-       if(total==0)
-        const Padding(padding:EdgeInsets.all(16),
-         child:Text('Không còn yêu cầu Mới chưa xem trong danh sách đã tải.')),
+       if(total==0)const Padding(padding:EdgeInsets.all(16),
+        child:Text('Không còn thông báo chưa xem.')),
+       for(final id in chatIds.take(15))ListTile(
+        leading:const Icon(Icons.forum_outlined,color:brand),
+        title:Text('Hội thoại có tin mới · ${id.substring(0,8)}'),
+        subtitle:const Text('Khách vừa nhắn vào hội thoại mới hoặc cũ'),
+        trailing:const Icon(Icons.chevron_right),
+        onTap:(){
+         Navigator.of(sheetContext).pop();
+         setState(()=>selected=1);
+         showChat(CeoConversation(session:id,createdAt:'',updatedAt:'',
+          latest:'',messageCount:0));
+        }),
+       for(final id in mailIds.take(15))ListTile(
+        leading:const Icon(Icons.email_outlined,color:brand),
+        title:const Text('Email mới chưa xem'),
+        subtitle:Text('Mã thư ${id.substring(0,8)}'),
+        trailing:const Icon(Icons.chevron_right),
+        onTap:(){
+         Navigator.of(sheetContext).pop();
+         setState((){selected=3;contactSection='inbox';initialMailId=id;});
+        }),
+       if((alerts?.chatCount??0)>chatIds.take(15).length)ListTile(
+        title:const Text('Xem thêm hội thoại có tin mới'),
+        onTap:(){Navigator.of(sheetContext).pop();choose(1);}),
+       if((alerts?.mailCount??0)>mailIds.take(15).length)ListTile(
+        title:const Text('Xem thêm email mới'),
+        onTap:(){
+         Navigator.of(sheetContext).pop();
+         setState((){selected=3;contactSection='inbox';});
+        }),
        for(final item in newOut)
         ListTile(
          leading:const Icon(Icons.handyman_outlined,color:brand),
@@ -332,6 +414,7 @@ class _CeoHomeState extends State<CeoHome>{
     if(!outsource&&contacts!=null)contacts=applyConfirmedViews(contacts!,kind);
    });
    alertsVersion.value++;
+   Future.microtask(loadAlerts);
   }catch(e){if(mounted)setState(()=>error=userError(e));}
   finally{viewWrites.remove(key);}
  }
@@ -362,6 +445,7 @@ class _CeoHomeState extends State<CeoHome>{
   finally{
    endLoad(tabAtStart);
    if(mounted)alertsVersion.value++;
+   if(tabAtStart!=4)Future.microtask(loadAlerts);
   }
  }
  void endLoad(int previousTab){
@@ -423,8 +507,8 @@ class _CeoHomeState extends State<CeoHome>{
   final wide=box.maxWidth>=850;
   return Scaffold(
    appBar:AppBar(backgroundColor:Colors.white,title:Column(crossAxisAlignment:CrossAxisAlignment.start,
-    children:[const Text('Futurebook CEO',style:TextStyle(fontWeight:FontWeight.w800,fontSize:20)),
-     Text(names[selected],style:const TextStyle(fontSize:12,color:Color(0xFF667085)))]),
+    children:[Image.asset('assets/brand/fbmn-official-logo.webp',height:42,width:152,
+     fit:BoxFit.contain,alignment:Alignment.centerLeft)]),
     actions:[
      IconButton(
       tooltip:'Xem thông báo và yêu cầu mới',
@@ -505,7 +589,8 @@ class _CeoHomeState extends State<CeoHome>{
       onSelected:(_)=>setState(()=>contactSection=tab.$1)),
    ]))),
   Expanded(child:contactSection=='requests'?requests(contacts,false):
-   CeoMailPanel(key:contactSection=='inbox'?inboxKey:sentKey,api:widget.api,box:contactSection)),
+   CeoMailPanel(key:contactSection=='inbox'?inboxKey:sentKey,api:widget.api,
+    box:contactSection,onMarkedRead:()=>Future.microtask(loadAlerts))),
  ]);
  }
 
@@ -642,8 +727,11 @@ class _CeoHomeState extends State<CeoHome>{
   title:'Phiên ${item.session.length>=8?item.session.substring(0,8):item.session}',
   subtitle:item.latest.isEmpty?'Chưa có nội dung phản hồi':item.latest,
   meta:dateString(item.updatedAt),
-  trailing:item.messageCount>0?
-   CeoStatusPill(text:'${item.messageCount} lượt'):null,
+  trailing:Wrap(spacing:6,runSpacing:4,children:[
+   if(alerts?.chatIds.contains(item.session)==true)
+    const CeoStatusPill(text:'Tin mới',highlighted:true),
+   if(item.messageCount>0)CeoStatusPill(text:'${item.messageCount} lượt'),
+  ]),
   onTap:()=>showChat(item));
 
  Widget caseRow(CeoRequest item,bool outsource)=>_listRow(
@@ -770,11 +858,18 @@ class _CeoHomeState extends State<CeoHome>{
   if(item.unread)Future.microtask(()=>markViewed(item,outsource));
  }
 
+ Future<List<CeoTurn>> fetchChatForRead(String session)async{
+  final turns=await widget.api.turns(session);
+  if(turns.isNotEmpty&&turns.last.id.isNotEmpty){
+   await markAlertRead('chat',session,turnId:turns.last.id);
+  }
+  return turns;
+ }
  void showChat(CeoConversation item){
   openDetail((ctx)=>Column(children:[
    const CeoSheetHeader(title:'Nội dung hội thoại'),
    Expanded(child:FutureBuilder<List<CeoTurn>>(
-    future:widget.api.turns(item.session),
+    future:fetchChatForRead(item.session),
     builder:(context,s){
      if(s.connectionState!=ConnectionState.done){
       return const Center(child:CircularProgressIndicator());
@@ -788,7 +883,7 @@ class _CeoHomeState extends State<CeoHome>{
       Container(padding:const EdgeInsets.all(12),
        decoration:BoxDecoration(color:ceoLavender,
         borderRadius:BorderRadius.circular(12)),
-       child:const Text('Lịch sử chatbot · Chỉ hiển thị 25 lượt đầu. Hội thoại dài hơn xem trong Admin.',
+       child:const Text('25 lượt hội thoại gần nhất. Xem đầy đủ lịch sử trong Admin.',
         style:TextStyle(fontSize:12.5,color:ceoInk,height:1.4))),
       const SizedBox(height:18),
       if(turns.isEmpty)const CeoEmptyResult(title:'Chưa có tin nhắn',

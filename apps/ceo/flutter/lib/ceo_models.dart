@@ -23,11 +23,12 @@ class CeoConversation {
  }
 }
 class CeoTurn{
- final String question,answer,createdAt;
- const CeoTurn({required this.question,required this.answer,required this.createdAt});
+ final String id,question,answer,createdAt;
+ const CeoTurn({this.id='',required this.question,required this.answer,required this.createdAt});
  factory CeoTurn.fromJson(Object? input){
   final j=_object(input);
-  return CeoTurn(question:_str(j["question"]),answer:_str(j["answer"]),createdAt:_str(j["createdAt"]));
+  return CeoTurn(id:_str(j['id']),question:_str(j["question"]),
+   answer:_str(j["answer"]),createdAt:_str(j["createdAt"]));
  }
 }
 class CeoRequest{
@@ -56,5 +57,21 @@ class CeoRequest{
    message:_str(j["message"]),createdAt:_str(j["createdAt"]),status:_str(j["status"]),
    viewedAt:j["viewedAt"] is String ? j["viewedAt"] as String : null,
    interests:_array(j["interests"]).whereType<String>().toList(growable:false));
+ }
+}
+
+class CeoAlerts{
+ final int chatCount,mailCount,contactCount,outsourcingCount,total,delayedPush;
+ final List<String> chatIds,mailIds;
+ const CeoAlerts({required this.chatCount,required this.mailCount,
+  required this.contactCount,required this.outsourcingCount,
+  required this.total,required this.chatIds,required this.mailIds,this.delayedPush=0});
+ factory CeoAlerts.fromJson(Object? input){
+  final j=_object(input),chat=_object(j['chat']),mail=_object(j['mail']);
+  return CeoAlerts(chatCount:_num(chat['count']),mailCount:_num(mail['count']),
+   contactCount:_num(j['contact']),outsourcingCount:_num(j['outsourcing']),
+   total:_num(j['total']),delayedPush:_num(j['delayedPush']),
+   chatIds:_array(chat['ids']).whereType<String>().toList(growable:false),
+   mailIds:_array(mail['ids']).whereType<String>().toList(growable:false));
  }
 }

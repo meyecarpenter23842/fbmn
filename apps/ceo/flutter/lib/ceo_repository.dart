@@ -14,6 +14,8 @@ abstract class CeoRepository{
  Future<CeoPage<CeoRequest>> contactRequests([int page=1]);
  Future<CeoPage<CeoRequest>> outsourcingRequests([int page=1]);
  Future<String> markViewed(String kind,String id);
+ Future<CeoAlerts> loadAlerts();
+ Future<void> markAlertRead(String kind,String id,{String? turnId});
  Future<CeoMailPage> mailList(String box,{String? after});
  Future<CeoMailItem> mailDetail(String box,String id);
  Future<String> mailSend({required String to,required String subject,required String text,String? replyId,String? requestId,List<CeoMailAttachment> attachments=const []});
@@ -69,7 +71,7 @@ class CeoApi implements CeoRepository {
  }
  @override Future<void> signIn(String email,String password) async{
   await _request("POST","/api/auth/sign-in/email",json:{
-   "email":email.trim().toLowerCase(),"password":password,"rememberMe":false});
+   "email":email.trim().toLowerCase(),"password":password,"rememberMe":true});
   if(!await ownerSession())throw const CeoApiException(401);
  }
  @override Future<void> signOut() async{
@@ -99,8 +101,19 @@ class CeoApi implements CeoRepository {
  }
  @override Future<List<CeoTurn>> turns(String session) async{
   if(!RegExp(r'^[a-f0-9]{36}$').hasMatch(session))throw const CeoApiException(400);
-  final j=await _data("/api/ceo/chat-history?session=$session&page=1");
-  return (j["turns"] as List? ?? const []).map(CeoTurn.fromJson).toList(growable:false);
+  // The existing Worker uses oldest-first pages. Read every available page and
+  // display only the latest 25; never acknowledge a turn the Owner did not see.
+  var latest=<CeoTurn>[];
+  for(var page=1;page<=100;page++){
+   final j=await _data('/api/ceo/chat-history?session=$session&page=$page');
+   final batch=(j['turns'] as List? ?? const [])
+    .map(CeoTurn.fromJson).toList(growable:false);
+   latest=[...latest,...batch];
+   if(latest.length>25)latest=latest.sublist(latest.length-25);
+   if(j['hasMore']!=true)return latest;
+  }
+  // Overlong history is not silently marked read, until pagination is supported.
+  throw const CeoApiException(503);
  }
  @override Future<CeoPage<CeoRequest>> contactRequests([int page=1]) async{
   final j=await _data("/api/ceo/contact-requests?page=$page");
@@ -111,6 +124,17 @@ class CeoApi implements CeoRepository {
   final j=await _data("/api/ceo/outsourcing-requests?page=$page");
   return CeoPage((j["requests"] as List? ?? const [])
     .map(CeoRequest.fromJson).toList(growable:false),j["page"] as int? ?? page,j["hasMore"]==true);
+ }
+ @override Future<CeoAlerts> loadAlerts()async=>
+  CeoAlerts.fromJson(await _data('/api/ceo/alerts'));
+ @override Future<void> markAlertRead(String kind,String id,{String? turnId})async{
+  if(!['chat','mail'].contains(kind)||!RegExp(r'^[a-f0-9-]{36}$').hasMatch(id)||
+    (kind=='chat'&&(turnId==null||!RegExp(r'^[1-9][0-9]{0,18}$').hasMatch(turnId)))){
+   throw const CeoApiException(400);
+  }
+  final jwt=await _ownerJwt();
+  await _request('POST','/api/ceo/alerts',bearer:jwt,
+   json:{'kind':kind,'id':id,if(kind=='chat')'turnId':turnId});
  }
  @override Future<String> markViewed(String kind,String id)async{
   if(!["contact","outsourcing"].contains(kind)||

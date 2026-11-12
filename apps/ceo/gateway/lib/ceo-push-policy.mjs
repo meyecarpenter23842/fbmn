@@ -43,10 +43,14 @@ export function pendingTargets(subscriptions,sentEndpoints,occurredAt){
  return subscriptions.filter(sub=>!sent.has(sub.endpoint)&&
   new Date(sub.created_at).getTime()<=timestamp);
 }
-export function pushPayload(kind,ref,badge){
- if(!validRef(kind,ref))throw Error("invalid_push_target");
- return JSON.stringify({type:kind,id:ref,badge:Number.isSafeInteger(badge)?
-  Math.min(Math.max(badge,0),99):0});
+export function pushPayload(kind,ref,badge,topic="",returning=false){
+ if(!validRef(kind,ref)||typeof topic!=="string"||
+    (topic!==""&&!/^[A-Za-z0-9_-]{8,32}$/.test(topic)))
+   throw Error("invalid_push_target");
+ return JSON.stringify({type:kind,id:ref,
+  badge:Number.isSafeInteger(badge)?Math.min(Math.max(badge,0),99):0,
+  ...(topic?{event:topic}:{}),
+  ...(kind==="chat"&&returning?{returning:true}:{})});
 }
 export function allowedOrigin(request){
  const origin=request.headers.get("origin");

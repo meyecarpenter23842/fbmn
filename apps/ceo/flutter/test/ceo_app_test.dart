@@ -18,6 +18,9 @@ class FakeRepo implements CeoRepository {
  @override Future<CeoPage<CeoRequest>> contactRequests([int page=1])async=>CeoPage([],page,false);
  @override Future<CeoPage<CeoRequest>> outsourcingRequests([int page=1])async=>CeoPage([],page,false);
  @override Future<String> markViewed(String kind,String id)async=>'2026-11-11T14:00:00.000Z';
+ @override Future<CeoAlerts> loadAlerts()async=>throw const CeoApiException(503);
+ @override Future<void> markAlertRead(String kind,String id,{String? turnId})async{}
+
  @override Future<CeoMailPage> mailList(String box,{String? after})async=>
   const CeoMailPage([],null,false);
  @override Future<CeoMailItem> mailDetail(String box,String id)async=>
@@ -70,6 +73,17 @@ class FakePaginatedRepo extends FakePendingRepo {
 }
 
 
+class FakeOfflineRepo extends FakeRepo{
+ FakeOfflineRepo():super(true);
+ @override Future<bool> ownerSession()async=>throw const CeoApiException(503);
+}
+class FakeAlertsRepo extends FakePendingRepo{
+ @override Future<CeoAlerts> loadAlerts()async=>const CeoAlerts(
+  chatCount:1,mailCount:1,contactCount:1,outsourcingCount:2,total:5,
+  chatIds:['aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'],
+  mailIds:['aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa']);
+}
+
 class FakeChatRepo extends FakeRepo {
  FakeChatRepo():super(true);
  @override Future<CeoPage<CeoConversation>> conversations([int page=1])async=>CeoPage([
@@ -113,6 +127,25 @@ void main(){
   await tester.binding.setSurfaceSize(null);
  });
 
+ testWidgets('CEO-NOTIFY04 Owner badge includes chat returns and mail, not only forms',(tester)async{
+  await tester.pumpWidget(CeoApp(repository:FakeAlertsRepo()));
+  await tester.pumpAndSettle();
+  final bell=find.byTooltip('Xem thông báo và yêu cầu mới');
+  expect(find.descendant(of:bell,matching:find.text('5')),findsOneWidget);
+  await tester.tap(bell);
+  await tester.pumpAndSettle();
+  expect(find.text('5 mục chưa xem'),findsOneWidget);
+  expect(find.textContaining('Hội thoại có tin mới'),findsOneWidget);
+  expect(find.text('Email mới chưa xem'),findsOneWidget);
+ });
+ testWidgets('CEO-NOTIFY04 keeps session recovery UI on temporary server outage',(tester)async{
+  await tester.pumpWidget(CeoApp(repository:FakeOfflineRepo()));
+  await tester.pumpAndSettle();
+  expect(find.text('Không xác minh được phiên hiện tại'),findsOneWidget);
+  expect(find.text('Thử kết nối lại'),findsOneWidget);
+  expect(find.text('Đăng nhập'),findsNothing);
+ });
+
  testWidgets('Anonymous session cannot see any Owner inbox', (tester)async{
   await tester.pumpWidget(CeoApp(repository:FakeRepo(false)));
   await tester.pumpAndSettle();
@@ -144,7 +177,7 @@ void main(){
   await tester.pumpAndSettle();
 
   expect(find.text('Thông báo & yêu cầu mới'),findsOneWidget);
-  expect(find.text('3 yêu cầu chưa xem'),findsOneWidget);
+  expect(find.text('3 mục chưa xem'),findsOneWidget);
   expect(find.text('Web Push trên thiết bị'),findsOneWidget);
   expect(find.text('Gia công · Khách thử'),findsNWidgets(2));
   expect(find.text('Liên hệ · Khách thử'),findsOneWidget);
@@ -162,12 +195,12 @@ void main(){
 
   await tester.tap(find.byTooltip('Xem thông báo và yêu cầu mới'));
   await tester.pump(const Duration(milliseconds:350));
-  expect(find.text('0 yêu cầu chưa xem'),findsOneWidget);
+  expect(find.text('0 mục chưa xem'),findsOneWidget);
 
   repo.finishLoading();
   await tester.pump();
   await tester.pumpAndSettle();
-  expect(find.text('3 yêu cầu chưa xem'),findsOneWidget);
+  expect(find.text('3 mục chưa xem'),findsOneWidget);
  });
 
  testWidgets('Bell updates when a second request page finishes loading', (tester)async{
@@ -181,12 +214,12 @@ void main(){
   await tester.pump();
   await tester.tap(find.byTooltip('Xem thông báo và yêu cầu mới'));
   await tester.pump(const Duration(milliseconds:350));
-  expect(find.text('3 yêu cầu chưa xem'),findsOneWidget);
+  expect(find.text('3 mục chưa xem'),findsOneWidget);
 
   repo.finishSecondPage();
   await tester.pump();
   await tester.pumpAndSettle();
-  expect(find.text('4 yêu cầu chưa xem'),findsOneWidget);
+  expect(find.text('4 mục chưa xem'),findsOneWidget);
  });
 
  testWidgets('Viewing request clears Owner badge but retains Mới workflow status', (tester)async{
@@ -206,7 +239,7 @@ void main(){
   await tester.pumpAndSettle();
   await tester.tap(bell);
   await tester.pumpAndSettle();
-  expect(find.text('2 yêu cầu chưa xem'),findsOneWidget);
+  expect(find.text('2 mục chưa xem'),findsOneWidget);
   expect(find.text('Liên hệ · Khách thử'),findsNothing);
  });
 

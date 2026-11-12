@@ -15,13 +15,21 @@ test("cron calls only pinned CEO HTTPS endpoint with bearer secret",async()=>{
  assert.equal(await deliverScheduledPush({FBMN_CEO_PUSH_DISPATCH_SECRET:secret},
   async(url,opts)=>{
    sent.push({url,auth:opts.headers.Authorization,method:opts.method,redirect:opts.redirect});
-   return {ok:true};
+   return {ok:true,status:200};
   }),true);
  assert.deepEqual(sent,[{url:"https://ceo.fbmn.vn/api/ceo/push/dispatch",
-  auth:"Bearer "+secret,method:"GET",redirect:"error"}]);
+  auth:"Bearer "+secret,method:"GET",redirect:"manual"}]);
 });
 test("cron HTTP failures surface without leaking secret",async()=>{
  const secret="s".repeat(40);
  await assert.rejects(()=>deliverScheduledPush({FBMN_CEO_PUSH_DISPATCH_SECRET:secret},
   async()=>({ok:false})),/unavailable/);
+});
+test("Cloudflare Cron never follows a dispatcher redirect",async()=>{
+ await assert.rejects(()=>deliverScheduledPush(
+  {FBMN_CEO_PUSH_DISPATCH_SECRET:"a".repeat(40)},
+  async(_url,options)=>{
+   assert.equal(options.redirect,"manual");
+   return {ok:false,status:302};
+  }),/unavailable/);
 });
