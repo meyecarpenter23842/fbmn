@@ -46,6 +46,30 @@ void main(){
   expect(calls,2);
   api.dispose();
  });
+ test('A stale JWT rejected by Owner Worker is renewed from the still-valid cookie',()async{
+  const renewed='eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJvd25lciIsImV4cCI6MTk5OTk5OTk5OX0.newsig';
+  var roles=0,sessionRefresh=0;
+  final api=CeoApi(client:MockClient((request)async{
+   if(request.url.path=='/api/auth/token')return http.Response('{"token":"$jwt"}',200);
+   if(request.url.path=='/api/auth/get-session'){
+    sessionRefresh++;
+    return http.Response('{"session":{"access_token":"$renewed"}}',200);
+   }
+   if(request.url.path=='/api/ceo/session'){
+    roles++;
+    final bearer=request.headers.entries.firstWhere(
+      (entry)=>entry.key.toLowerCase()=='authorization').value;
+    return bearer=='Bearer $renewed'?
+     http.Response('{"data":{"role":"owner"}}',200):
+     http.Response('{"error":{"code":"unauthenticated"}}',401);
+   }
+   throw StateError('Unexpected request');
+  }));
+  expect(await api.ownerSession(),true);
+  expect(roles,2);
+  expect(sessionRefresh,1);
+  api.dispose();
+ });
  test('Genuinely revoked session remains unauthenticated and never grants Owner',()async{
   var calls=0;
   final api=CeoApi(client:MockClient((request)async{
