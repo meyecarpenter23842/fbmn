@@ -23,11 +23,12 @@ class CeoConversation {
  }
 }
 class CeoTurn{
- final String question,answer,createdAt;
- const CeoTurn({required this.question,required this.answer,required this.createdAt});
+ final String id,question,answer,createdAt;
+ const CeoTurn({this.id='',required this.question,required this.answer,required this.createdAt});
  factory CeoTurn.fromJson(Object? input){
   final j=_object(input);
-  return CeoTurn(question:_str(j["question"]),answer:_str(j["answer"]),createdAt:_str(j["createdAt"]));
+  return CeoTurn(id:_str(j['id']),question:_str(j["question"]),
+   answer:_str(j["answer"]),createdAt:_str(j["createdAt"]));
  }
 }
 class CeoRequest{
