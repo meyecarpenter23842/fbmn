@@ -267,7 +267,9 @@ class _CeoHomeState extends State<CeoHome> with WidgetsBindingObserver{
     builder:(sheetContext,_,__){
      final newOut=outsourcing?.items.where((r)=>r.unread).toList()??<CeoRequest>[];
      final newContacts=contacts?.items.where((r)=>r.unread).toList()??<CeoRequest>[];
-     final total=newOut.length+newContacts.length;
+     final total=alerts?.total??(newOut.length+newContacts.length);
+     final chatIds=alerts?.chatIds??const <String>[];
+     final mailIds=alerts?.mailIds??const <String>[];
      void openRequest(CeoRequest request,bool isOutsourcing){
       Navigator.of(sheetContext).pop();
       Future.delayed(const Duration(milliseconds:250),(){
@@ -292,14 +294,45 @@ class _CeoHomeState extends State<CeoHome> with WidgetsBindingObserver{
         ))),
       Expanded(child:ListView(padding:const EdgeInsets.fromLTRB(12,8,12,20),children:[
        ListTile(
-        leading:const Icon(Icons.mark_email_unread_outlined,color:brand),
-        title:Text('$total yêu cầu chưa xem',
+        leading:const Icon(Icons.notifications_active_outlined,color:brand),
+        title:Text('$total mục chưa xem',
          style:const TextStyle(fontWeight:FontWeight.w800,fontSize:16)),
-        subtitle:const Text('Đếm yêu cầu Mới chưa xem trong các trang đã tải; xem không đồng nghĩa đã xử lý.'),
+        subtitle:Text(alerts==null?
+         'Chưa tải đủ bộ đếm; sẽ tự đồng bộ khi có mạng.':
+         'Hội thoại ${alerts!.chatCount} · Email ${alerts!.mailCount} · '
+         'Liên hệ ${alerts!.contactCount} · Gia công ${alerts!.outsourcingCount}'),
        ),
-       if(total==0)
-        const Padding(padding:EdgeInsets.all(16),
-         child:Text('Không còn yêu cầu Mới chưa xem trong danh sách đã tải.')),
+       if(total==0)const Padding(padding:EdgeInsets.all(16),
+        child:Text('Không còn thông báo chưa xem.')),
+       for(final id in chatIds.take(15))ListTile(
+        leading:const Icon(Icons.forum_outlined,color:brand),
+        title:Text('Hội thoại có tin mới · ${id.substring(0,8)}'),
+        subtitle:const Text('Khách vừa nhắn vào hội thoại mới hoặc cũ'),
+        trailing:const Icon(Icons.chevron_right),
+        onTap:(){
+         Navigator.of(sheetContext).pop();
+         setState(()=>selected=1);
+         showChat(CeoConversation(session:id,createdAt:'',updatedAt:'',
+          latest:'',messageCount:0));
+        }),
+       for(final id in mailIds.take(15))ListTile(
+        leading:const Icon(Icons.email_outlined,color:brand),
+        title:const Text('Email mới chưa xem'),
+        subtitle:Text('Mã thư ${id.substring(0,8)}'),
+        trailing:const Icon(Icons.chevron_right),
+        onTap:(){
+         Navigator.of(sheetContext).pop();
+         setState((){selected=3;contactSection='inbox';initialMailId=id;});
+        }),
+       if((alerts?.chatCount??0)>chatIds.take(15).length)ListTile(
+        title:const Text('Xem thêm hội thoại có tin mới'),
+        onTap:(){Navigator.of(sheetContext).pop();choose(1);}),
+       if((alerts?.mailCount??0)>mailIds.take(15).length)ListTile(
+        title:const Text('Xem thêm email mới'),
+        onTap:(){
+         Navigator.of(sheetContext).pop();
+         setState((){selected=3;contactSection='inbox';});
+        }),
        for(final item in newOut)
         ListTile(
          leading:const Icon(Icons.handyman_outlined,color:brand),
