@@ -273,7 +273,7 @@ class _CeoHomeState extends State<CeoHome>{
        ListTile(
         title:const Text('Xem tất cả liên hệ'),
         trailing:const Icon(Icons.arrow_forward_ios,size:16),
-        onTap:(){Navigator.of(sheetContext).pop();choose(3);}),
+        onTap:(){Navigator.of(sheetContext).pop();showAllContactRequests();}),
       ])),
      ]));
     }),
@@ -367,6 +367,15 @@ class _CeoHomeState extends State<CeoHome>{
   if(reload){Future.microtask(refresh);}
   else if(initialTarget!=null&&selected==previousTab){
    WidgetsBinding.instance.addPostFrameCallback((_){if(mounted)openDeepLinkedItem();});
+  }
+ }
+ // Notification shortcuts must open customer requests, even if the Owner was reading mail.
+ void showAllContactRequests(){
+  if(contactSection!='requests')setState(()=>contactSection='requests');
+  if(selected==3){
+   Future.microtask(refresh);
+  }else{
+   choose(3);
   }
  }
  void choose(int value){
