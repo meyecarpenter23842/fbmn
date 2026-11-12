@@ -5,7 +5,7 @@ const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]
 const SESSION=/^[a-f0-9]{36}$/;
 function target(payload){
  const type=payload&&payload.type,ref=payload&&payload.id;
- if(!["contact","outsourcing","chat"].includes(type)||typeof ref!=="string"||
+ if(!["contact","outsourcing","chat","mail"].includes(type)||typeof ref!=="string"||
     !(type==="chat"?SESSION.test(ref):UUID.test(ref)))return ENTRY;
  return ENTRY+"?tab="+encodeURIComponent(type)+"&id="+encodeURIComponent(ref);
 }
@@ -16,7 +16,8 @@ self.addEventListener("push",event=>{
   const url=target(payload);
   const title=payload.type==="contact"?"Liên hệ mới":
    payload.type==="outsourcing"?"Yêu cầu gia công mới":
-   payload.type==="chat"?"Hội thoại khách mới":"Thông báo Futurebook";
+   payload.type==="chat"?"Hội thoại khách mới":
+   payload.type==="mail"?"Email mới đến":"Thông báo Futurebook";
   const badge=Number.isSafeInteger(payload.badge)?
    Math.min(99,Math.max(0,payload.badge)):0;
   await self.registration.showNotification("Futurebook CEO",{
