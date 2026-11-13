@@ -20,13 +20,13 @@ class CeoStatDay{
 int _n(Object? value)=>value is num&&value>=0?value.toInt():0;
 class CeoWebStatistics{
  final String period,timezone,generatedAt;
- final bool cached;
+ final bool cached,labelsUnavailable;
  final Map<String,int> metrics;
  final List<CeoStatDay> daily;
  final List<CeoStatRank> sources,products,categories;
  const CeoWebStatistics({required this.period,required this.timezone,required this.generatedAt,
   required this.metrics,required this.daily,required this.sources,required this.products,required this.categories,
-  this.cached=false});
+  this.cached=false,this.labelsUnavailable=false});
  int metric(String key)=>metrics[key]??0;
  bool get hasEvents=>metrics.values.any((n)=>n>0);
  factory CeoWebStatistics.fromJson(Map<String,dynamic> json){
@@ -36,7 +36,7 @@ class CeoWebStatistics{
   return CeoWebStatistics(period:json['period'] is String?json['period'] as String:'7d',
    timezone:json['timezone'] is String?json['timezone'] as String:'UTC',
    generatedAt:json['generatedAt'] is String?json['generatedAt'] as String:'',
-   cached:json['cached']==true,
+   cached:json['cached']==true,labelsUnavailable:json['labelsUnavailable']==true,
    metrics:m.map((k,v)=>MapEntry(k,_n(v))),
    daily:(json['daily'] as List? ?? const []).map(CeoStatDay.fromJson).toList(growable:false),
    sources:rank('sources'),products:rank('products'),categories:rank('categories'));
