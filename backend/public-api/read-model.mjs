@@ -335,8 +335,10 @@ export function createReadModel(query,{enableP5=false}={}) {
     async getPublicSeoSettings({cmsEnabled=false}={}){
       // Never return private table rows directly. Compare every requested slug
       // against the current published read model, including legacy product URLs.
-      const [rows,catalog,content]=await Promise.all([
-        execute("seoSettings",10000),this.getPublicCatalog(),
+      const rows=await execute("seoSettings",10000);
+      if(!rows.some(row=>row.mode!=="auto"))return [];
+      const [catalog,content]=await Promise.all([
+        this.getPublicCatalog(),
         cmsEnabled?this.getPublicCms():this.getPublicContent()
       ]);
       const products=new Map(),activeCategoryIds=new Set();

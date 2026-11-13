@@ -48,3 +48,8 @@ test("Canonical auto can override a legacy noindex and selected OG is not capped
  assert.match(seo,/approvedProductSeoImages\(product:PublicProduct\)/);
  assert.match(detail,/approvedProductSeoImages\(product\)/);
 });
+
+test("SEO02C Worker deployment config explicitly enables the policy route",()=>{
+ assert.match(read("backend/public-api/wrangler.jsonc"),/"PUBLIC_SEO02_ENABLED": "true"/);
+ assert.match(read("backend/public-api/read-model.mjs"),/if\(!rows\.some\(row=>row\.mode!=="auto"\)\)return \[\]/);
+});
