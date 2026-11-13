@@ -21,7 +21,7 @@ test("category filters retain noindex; articles are structured from published co
  const news=read("app/tin-tuc/[slug]/page.tsx");
  assert.match(category,/robots:\{index:false,follow:true\}/);
  assert.match(category,/breadcrumbSchema/);
- assert.match(category,/categorySeoSummary\(category,catalog\)/);
+ assert.match(category,/categorySeoSummary\(category,catalog,modes\)/);
  assert.match(news,/articleMetadata\(item\)/);
  assert.match(news,/articleSchema\(item\)/);
  assert.match(news,/notFound\(\)/);
