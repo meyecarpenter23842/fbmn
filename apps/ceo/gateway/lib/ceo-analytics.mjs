@@ -40,11 +40,11 @@ export function queriesFor(period){
   " AND notEmpty(toString(properties.page_key)) GROUP BY label ORDER BY total DESC LIMIT 10";
  // PH01: ordered in-session (30-minute inactivity ID) steps within 24 hours.
  // One row per anonymous website session, not per person or form submission.
- // PostHog DateTime64 must be cast before windowFunnel.
+ // Preserve subsecond order; HogQL windowFunnel needs an unsigned millisecond timestamp.
  const funnel="SELECT countIf(funnel_stage >= 1) AS viewedSessions, "+
   "countIf(funnel_stage >= 2) AS ctaSessions, "+
   "countIf(funnel_stage >= 3) AS submittedSessions "+
-  "FROM (SELECT distinct_id, windowFunnel(86400)(toDateTime(timestamp), "+
+  "FROM (SELECT distinct_id, windowFunnel(86400000)(accurateCast(toUnixTimestamp64Milli(timestamp), 'UInt64'), "+
    "event = 'web_product_view', event = 'web_lead_cta_click', "+
    "event IN ('web_contact_submit_success','web_outsourcing_submit_success')) AS funnel_stage"+
    base+" AND event IN ('web_product_view','web_lead_cta_click',"+
