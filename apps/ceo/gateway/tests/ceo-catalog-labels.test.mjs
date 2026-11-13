@@ -27,5 +27,5 @@ test('requires HTTPS fixed API origin and rejects invalid read models',async()=>
 });
 test('zero rankings do not request a remote catalogue',async()=>{
  const s={...base,products:[],categories:[]};
- assert.equal(await attachCatalogNames(s,'',()=>{throw Error('must not run')}),s);
+ assert.deepEqual(await attachCatalogNames(s,'',()=>{throw Error('must not run')}),{...s,labelsUnavailable:false});
 });
