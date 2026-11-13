@@ -19,6 +19,13 @@ export default function CmsHeroCarousel({items}:{items:PublicCmsItem[]}){
   motion:item.motion??DEFAULT_MOTION
  }))).slice(0,MAX_HERO_SLIDES);
  const [active,setActive]=useState(0);
+ // Avoid requesting every overlapping full-size Hero image on first paint.
+ // Keep visited slides mounted to preserve the Owner-approved fade/slide transitions.
+ const [prepared,setPrepared]=useState<ReadonlySet<number>>(()=>new Set([0]));
+ const reveal=(next:number)=>{
+  setPrepared(previous=>previous.has(next)?previous:new Set([...previous,next]));
+  setActive(next);
+ };
  const hovered=useRef(false),focused=useRef(false);
  const index=active%Math.max(slides.length,1);
  const current=slides[index];
@@ -27,9 +34,20 @@ export default function CmsHeroCarousel({items}:{items:PublicCmsItem[]}){
   const reduce=window.matchMedia("(prefers-reduced-motion: reduce)");
   const timer=window.setInterval(()=>{
    if(reduce.matches||document.hidden||hovered.current||focused.current)return;
-   setActive(previous=>(previous+1)%slides.length);
+   reveal((index+1)%slides.length);
   },current.motion.intervalMs);
   return ()=>window.clearInterval(timer);
+ },[slides.length,index,current?.motion.enabled,current?.motion.autoplay,current?.motion.intervalMs]);
+ useEffect(()=>{
+  if(slides.length<2||!current?.motion.enabled||!current.motion.autoplay)return;
+  // Warm only the NEXT approved slide after initial render, ahead of autoplay.
+  // A delayed warm-up leaves the first image as the only initial Hero request.
+  const next=(index+1)%slides.length;
+  const warm=window.setTimeout(()=>{
+   if(document.hidden||window.matchMedia("(prefers-reduced-motion: reduce)").matches)return;
+   setPrepared(previous=>previous.has(next)?previous:new Set([...previous,next]));
+  },Math.max(2500,current.motion.intervalMs-2500));
+  return ()=>window.clearTimeout(warm);
  },[slides.length,index,current?.motion.enabled,current?.motion.autoplay,current?.motion.intervalMs]);
  if(!current)return null;
  const style={"--cms-hero-duration":current.motion.enabled?
@@ -49,13 +67,14 @@ export default function CmsHeroCarousel({items}:{items:PublicCmsItem[]}){
    {slides.map((item,i)=><div key={item.id+":"+item.slide}
      className={"cms-hero-slide"+(i===index?" is-active":"")}
      aria-hidden={i!==index}>
-    <picture className="cms-hero-picture">
+    {prepared.has(i)&&<picture className="cms-hero-picture">
      {item.hasMobile&&<source media="(max-width: 800px)"
       srcSet={mediaUrl(item.id,"mobile",item.slide)}/>}
      <Image src={mediaUrl(item.id,"desktop",item.slide)} alt={item.title}
       width={1200} height={900} sizes="(max-width: 800px) 100vw, 57vw"
-      className="cms-hero-image" priority={i===0} unoptimized draggable={false}/>
-    </picture>
+      className="cms-hero-image" priority={i===0}
+      loading={i===0?undefined:"lazy"} unoptimized draggable={false}/>
+    </picture>}
    </div>)}
   </div>
   {slides.length>1&&<div className="cms-hero-controls" role="group" aria-label="Chọn ảnh Hero">
@@ -63,7 +82,7 @@ export default function CmsHeroCarousel({items}:{items:PublicCmsItem[]}){
     className={"cms-hero-dot"+(i===index?" is-active":"")}
     aria-label={"Xem Slide "+(i+1)+" / "+slides.length}
     aria-pressed={i===index}
-    onClick={()=>setActive(i)}>
+    onClick={()=>reveal(i)}>
      <span aria-hidden="true"/>
     </button>)}
   </div>}

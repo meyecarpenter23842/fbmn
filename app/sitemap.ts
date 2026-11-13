@@ -2,6 +2,8 @@ import type {MetadataRoute} from "next";
 import {getPublicCatalog} from "@/lib/catalog/adapter";
 import {getPublicContent} from "@/lib/content/adapter";
 import {getPublishedSeo,isNoindex} from "@/lib/seo/public-settings";
+import {getPublicCategoryDisplay} from "@/lib/catalog/category-display";
+import {catalogueListingCards} from "@/lib/catalog/query";
 
 // Derived from the approved public read models only: never include draft, private or protected fields.
 export const dynamic="force-dynamic";
@@ -13,12 +15,12 @@ const STATIC=[
 const safeSlug=(value:string)=>/^[a-z0-9][a-z0-9_-]{0,119}$/i.test(value);
 const url=(path:string)=>ORIGIN+path;
 export default async function sitemap():Promise<MetadataRoute.Sitemap>{
- const [catalog,content,seo]=await Promise.all([getPublicCatalog(),getPublicContent(),getPublishedSeo()]);
- const activeCategoryIds=new Set<string>();
- for(const product of catalog.products){
-  activeCategoryIds.add(product.categoryId);
-  for(const variant of product.variants){if(variant.categoryId)activeCategoryIds.add(variant.categoryId);}
- }
+ const [catalog,content,seo,modes]=await Promise.all([
+  getPublicCatalog(),getPublicContent(),getPublishedSeo(),getPublicCategoryDisplay()
+ ]);
+ // Match the same family/SKU display projection as category pages. A variant
+ // in another category must not create a sitemap URL for an empty listing.
+ const activeCategoryIds=new Set(catalogueListingCards(catalog,modes).map(card=>card.categoryId));
  const paths=[...STATIC];
  for(const category of catalog.categories){
   if(activeCategoryIds.has(category.id)&&category.id!=="p5-uncategorized"&&safeSlug(category.slug)&&

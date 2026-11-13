@@ -28,7 +28,9 @@ export function CatalogBreadcrumb({ trail }: { trail: Array<{ label: string; hre
   </nav>;
 }
 
-export function ProductCard({ product, glass = false }: { product: ListingProduct; glass?: boolean }) {
+export function ProductCard({ product, glass = false, priority = false }: {
+  product: ListingProduct; glass?: boolean; priority?: boolean
+}) {
   const media = product.listingSku
     ? (product.media.find(m=>m.sku===product.listingSku) ?? product.media[0])
     : product.media[0];
@@ -46,7 +48,9 @@ export function ProductCard({ product, glass = false }: { product: ListingProduc
     aria-label={"Xem sản phẩm " + product.name}
     className={glass ? "fb-song-related-hit" : "catalog-product__hit"}>
     <div className={glass ? "fb-song-related-image" : "catalog-product__image"}>
-      <CatalogProductImage src={image} alt={productSeoImageAlt(product,media?.alt??"",product.listingSku??media?.sku)} className="catalog-image-compact"/>
+      <CatalogProductImage src={image} alt={productSeoImageAlt(product,media?.alt??"",product.listingSku??media?.sku)}
+        priority={priority} sizes="(max-width: 700px) 150px, (max-width: 1000px) 34vw, 300px"
+        className="catalog-image-compact"/>
     </div>
     <div className={glass ? "fb-song-related-body" : "catalog-product__body"}>
       <h3>{product.listingSku ? product.variants[0]?.name || product.name : product.name}</h3>
@@ -121,7 +125,8 @@ export function CatalogListing({ data, heading, description, filters, actionPath
         <div className="catalog-results__heading"><h2>Sản phẩm đã xác minh</h2>
           <span>{results.total} thẻ sản phẩm</span></div>
         {results.total ? <>
-          <div className="catalog-grid">{results.items.map(product => <ProductCard key={product.id} product={product} glass/>)}</div>
+          <div className="catalog-grid">{results.items.map((product,index) =>
+            <ProductCard key={product.id} product={product} glass priority={index===0}/>)}</div>
           {results.pages > 1 && <nav aria-label="Phân trang sản phẩm" className="catalog-pagination">
             {results.page > 1 && <Link href={actionPath + "?" + filtersToParams(filters, results.page - 1)} prefetch={false}>Trang trước</Link>}
             <span>Trang {results.page}/{results.pages}</span>

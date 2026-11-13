@@ -10,11 +10,16 @@ export const SEO_ORIGIN="https://www.fbmn.vn";
 const BRAND="Futurebook Miền Nam";
 const absolute=(path:string)=>new URL(path,SEO_ORIGIN).href;
 const text=(value:string,max:number)=>value.trim().replace(/\s+/g," ").slice(0,max);
+// "Chưa phân loại" is an internal placeholder, not a search phrase.
+const visibleCategory=(category?:PublicCategory)=>category&&
+  category.id!=="p5-uncategorized"&&
+  category.name.trim().toLocaleLowerCase("vi")!=="chưa phân loại"?category:null;
 
 export function productSeoDescription(product:PublicProduct,category?:PublicCategory):string{
  const productName=text(product.name,150);
- const categoryName=category&&!productName.toLocaleLowerCase("vi").includes(category.name.toLocaleLowerCase("vi"))
-  ?category.name:"";
+ const actualCategory=visibleCategory(category);
+ const categoryName=actualCategory&&!productName.toLocaleLowerCase("vi").includes(actualCategory.name.toLocaleLowerCase("vi"))
+  ?actualCategory.name:"";
  const prefix=productName+(categoryName?" – "+categoryName:"");
  const supplied=text(product.description??"",260);
  if(supplied)return text(prefix+". "+supplied,300);
@@ -46,8 +51,9 @@ export function productApprovedSeoImages(product:PublicProduct):string[]{
  return [...unique];
 }
 export function productMetadata(product:PublicProduct,category?:PublicCategory):Metadata{
- const categoryName=category&&!product.name.toLocaleLowerCase("vi").includes(category.name.toLocaleLowerCase("vi"))
-  ?" – "+category.name:"";
+ const actualCategory=visibleCategory(category);
+ const categoryName=actualCategory&&!product.name.toLocaleLowerCase("vi").includes(actualCategory.name.toLocaleLowerCase("vi"))
+  ?" – "+actualCategory.name:"";
  const title=text(product.name+categoryName,120)+" | "+BRAND;
  const description=productSeoDescription(product,category);
  const url="/san-pham/"+encodeURIComponent(product.slug);
