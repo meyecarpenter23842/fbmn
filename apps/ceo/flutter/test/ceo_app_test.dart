@@ -507,7 +507,10 @@ void main(){
   await tester.tap(find.text('Hội thoại').last);
   await tester.pumpAndSettle();
   await tester.tap(find.textContaining('Phiên 7506d77a'));
-  await tester.pumpAndSettle();
+  // Do not pumpAndSettle while an intentionally pending Future keeps the
+  // "Đang lưu đã xem..." spinner alive; this reproduces closing mid-request.
+  await tester.pump(const Duration(milliseconds:400));
+  await tester.pump();
   expect(repo.readWrites,1);
   await tester.tap(find.byTooltip('Đóng chi tiết'));
   await tester.pumpAndSettle();
