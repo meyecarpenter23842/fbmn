@@ -6,7 +6,7 @@ import "./policy.css";
 export const metadata: Metadata = {
   title: "Chính sách bảo mật | Futurebook Miền Nam",
   description: "Chính sách bảo mật và hướng dẫn yêu cầu xóa dữ liệu của Futurebook Miền Nam.",
-  alternates: { canonical: "https://fbmn.vn/policy" },
+  alternates: { canonical: "https://www.fbmn.vn/policy" },
   robots: { index: true, follow: true },
 };
 

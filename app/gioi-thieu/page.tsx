@@ -4,7 +4,8 @@ import { ContentShell, ContentBreadcrumb, PageHeading } from "@/components/conte
 import { getPublicContent } from "@/lib/content/adapter";
 import { officialContact as contact } from "@/lib/content/official-contact";
 
-export const metadata: Metadata = { title: "Giới thiệu | Futurebook Miền Nam", description: "Giới thiệu tập vở, sổ và văn phòng phẩm Futurebook Miền Nam." };
+export const metadata: Metadata = { title: "Giới thiệu | Futurebook Miền Nam", description: "Giới thiệu tập vở, sổ và văn phòng phẩm Futurebook Miền Nam.", alternates: { canonical: "/gioi-thieu" },
+};
 const groups = [
   { title: "Tập học sinh", description: "Tập học sinh theo khổ, số trang và loại bìa." },
   { title: "Tập sinh viên", description: "Các dòng tập phục vụ học tập và ghi chép." },

@@ -7,6 +7,7 @@ import "./flipbook.css";
 export const metadata: Metadata={
  title:"Catalogue | Futurebook Miền Nam",
  description:"Lật xem các cuốn Catalogue Futurebook Miền Nam chính thức được duyệt và phát hành.",
+  alternates: { canonical: "/catalogue" },
 };
 export default function CataloguePage(){
  return <ContentShell>

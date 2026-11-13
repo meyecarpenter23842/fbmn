@@ -7,6 +7,7 @@ export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
   title: "Tin tức | Futurebook Miền Nam",
   description: "Tin tức và thông báo Futurebook Miền Nam.",
+  alternates: { canonical: "/tin-tuc" },
 };
 
 export default async function NewsPage() {
