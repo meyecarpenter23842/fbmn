@@ -41,6 +41,11 @@ test("MAIL07 never treats every historical provider message as unread",()=>{
  assert.match(index,/occurred_at >= \$3::timestamptz/);
  assert.match(migration,/cutover_at timestamptz NOT NULL DEFAULT now\(\)/);
  assert.match(migration,/GRANT SELECT,INSERT,UPDATE ON fbmn_catalog_private.ceo_mail_catalog/);
+ assert.equal((migration.match(/BEGIN;/g)||[]).length,1);
+ assert.equal((migration.match(/COMMIT;/g)||[]).length,1);
+ assert.equal((migration.match(/CREATE TABLE IF NOT EXISTS/g)||[]).length,2);
+ assert.match(migration,/scan_cursor ~\\* '[^']+'\\s*\\)\\s*\\);/);
+ 
  assert.match(index,/scan_cursor/);
  assert.match(index,/&after=/);
  assert.match(index,/cutover_at/);
