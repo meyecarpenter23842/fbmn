@@ -30,27 +30,52 @@ export async function inboxUnread(db:PoolClient,ownerSubject:string,ids:string[]
  return new Set(query.rows.map(x=>x.ref));
 }
 // Provider catch-up protects unread badge when a webhook is delayed/missing.
-// One Owner request claims a 2-minute scan lease; other clients reuse Neon.
+// A scan progresses by provider cursor instead of revisiting only page one.
+// A page crossing the original cutover boundary ends the scan; older messages
+// are historical and do not retroactively appear unread.
 export async function refreshMailIndexIfDue():Promise<void>{
- const lease=await withPushDb(async db=>(await db.query(`
+ const lease=await withPushDb(async db=>(await db.query<{
+  scan_cursor:string|null;cutover_at:Date
+ }>(`
   UPDATE fbmn_catalog_private.ceo_mail_scan SET scanned_at=now()
    WHERE id=1 AND (scanned_at IS NULL OR scanned_at<now()-interval '2 minutes')
-  RETURNING id`)).rows.length>0);
+  RETURNING scan_cursor,cutover_at`)).rows[0]);
  if(!lease)return;
- const up=await resendRequest("/emails/receiving?limit=100");
+ const cursor=lease.scan_cursor;
+ const up=await resendRequest("/emails/receiving?limit=100"+
+  (cursor?"&after="+encodeURIComponent(cursor):""));
  if(up.status!==200||!Array.isArray(up.payload?.data)){
   await resetScan().catch(()=>{});
   return;
  }
  try{
   await withPushDb(async db=>{
-   await indexReceived(db,up.payload!.data as unknown[]);
+   const items=up.payload!.data as unknown[];
+   await indexReceived(db,items);
+   const rawLast=items.at(-1);
+   const lastId=rawLast&&typeof rawLast==="object"&&"id" in rawLast?
+    (rawLast as {id:unknown}).id:null;
+   const list=mailCandidates(items) as Candidate[];
+   const crossesBaseline=list.some(item=>
+    Date.parse(item.occurredAt)<lease.cutover_at.getTime());
+   const hasMore=up.payload!.has_more===true;
+   const finished=!hasMore||crossesBaseline;
+   if(!finished&&(typeof lastId!=="string"||
+      !/^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(lastId))){
+    throw new Error("mail_scan_bad_cursor");
+   }
+   await db.query(`
+    UPDATE fbmn_catalog_private.ceo_mail_scan
+      SET scan_cursor=$1,
+       scanned_at=CASE WHEN $1::text IS NULL THEN now() ELSE NULL END
+    WHERE id=1`,[finished?null:lastId]);
   });
  }catch{
   await resetScan().catch(()=>{});
  }
 }
 async function resetScan(){
+ // Preserve scan_cursor, so an interrupted multi-page run retries its page.
  await withPushDb(db=>db.query(`
   UPDATE fbmn_catalog_private.ceo_mail_scan SET scanned_at=NULL WHERE id=1`));
 }
