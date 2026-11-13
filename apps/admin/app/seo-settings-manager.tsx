@@ -50,7 +50,10 @@ async function seoRequest<T>(body?:object,page=1):Promise<T>{
 function SeoModalFooter({saving,canSave,onSave}:{saving:boolean;canSave:boolean;onSave:()=>Promise<boolean|undefined>}){
  const close=useProductModalClose();
  const [closeAfterSave,setCloseAfterSave]=useState(false);
- useEffect(()=>{if(closeAfterSave&&!saving){close();setCloseAfterSave(false);}},[closeAfterSave,saving,close]);
+ useEffect(()=>{if(!closeAfterSave||saving)return;
+  const frame=window.requestAnimationFrame(()=>{close();setCloseAfterSave(false);});
+  return ()=>window.cancelAnimationFrame(frame);
+ },[closeAfterSave,saving,close]);
  return <>
   <button className="fb-ui-button fb-ui-button--secondary" type="button"
    disabled={saving} onClick={close}>Đóng</button>
