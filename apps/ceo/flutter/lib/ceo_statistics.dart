@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'ceo_repository.dart';
 import 'ceo_stats_models.dart';
+import 'ceo_marketing.dart';
 import 'ceo_ui_tokens.dart';
 import 'ceo_workspace.dart';
 
@@ -13,6 +14,7 @@ class CeoStatisticsTab extends StatefulWidget{
 }
 class CeoStatisticsTabState extends State<CeoStatisticsTab>{
  String period='7d';
+ int section=0;
  CeoWebStatistics? data;
  bool loading=true;
  String error='';
@@ -169,6 +171,56 @@ class CeoStatisticsTabState extends State<CeoStatisticsTab>{
     ])),
   ]);
  }
+ Widget sectionPicker(){
+  const tabs=['Tổng quan','Chuyển đổi','Marketing','Sản phẩm','SEO'];
+  final mobile=MediaQuery.sizeOf(context).width<=780;
+  return SingleChildScrollView(key:const ValueKey('ceo-stats-subtabs'),
+   scrollDirection:Axis.horizontal,child:Row(children:[
+    for(var i=0;i<tabs.length;i++)Padding(padding:EdgeInsets.only(right:i==tabs.length-1?0:8),
+     child:ConstrainedBox(constraints:BoxConstraints(minHeight:mobile?44:36),
+      child:ChoiceChip(key:ValueKey('ceo-stats-tab-$i'),
+       label:Text(tabs[i]),labelStyle:const TextStyle(fontSize:13),
+       selected:section==i,
+       onSelected:(_){if(section!=i)setState(()=>section=i);}))),
+   ]));
+ }
+ List<Widget> selectedPanels(CeoWebStatistics value)=>switch(section){
+  1=>[
+   CeoPanel(title:'PH01 · Funnel B2B',
+    subtitle:'Xem sản phẩm → Liên hệ → Yêu cầu thành công',
+    icon:Icons.filter_alt_outlined,child:funnelPanel(value)),
+  ],
+  2=>[CeoMarketingPanel(stats:value.marketing)],
+  3=>[
+   CeoPanel(title:'Sản phẩm được xem',
+    subtitle:value.labelsUnavailable?'Không lấy được tên · đang hiển thị mã gốc':
+      'Tên sản phẩm theo danh mục đang công khai',
+    icon:Icons.inventory_outlined,child:ranking(value.products)),
+   CeoPanel(title:'Danh mục được xem',
+    subtitle:value.labelsUnavailable?'Không lấy được tên · đang hiển thị mã gốc':
+      'Tên danh mục theo dữ liệu đang công khai',
+    icon:Icons.category_outlined,child:ranking(value.categories)),
+  ],
+  4=>[
+   CeoPanel(title:'SEO · Google tự nhiên',
+    subtitle:'Nguồn truy cập và chuyển đổi đo bằng PostHog',
+    icon:Icons.travel_explore_outlined,child:seoPanel(value)),
+  ],
+  _=>[
+   CeoPanel(title:'Tổng quan Website',subtitle:'Chỉ số thật theo kỳ đã chọn',
+    icon:Icons.dashboard_outlined,child:Column(
+     crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+      summary(value),
+      if(!value.hasEvents)const Padding(padding:EdgeInsets.only(top:16),
+       child:Text('Chưa phát sinh sự kiện Website trong khoảng thời gian này.',
+        style:TextStyle(fontSize:12,color:ceoMuted))),
+     ])),
+   CeoPanel(title:'Xu hướng truy cập',subtitle:'Số phiên theo ngày',
+    icon:Icons.show_chart,child:timeline(value)),
+   CeoPanel(title:'Nguồn truy cập',subtitle:'Nguồn ghi nhận theo phiên (dữ liệu gốc)',
+    icon:Icons.hub_outlined,child:ranking(value.sources)),
+  ],
+ };
  @override Widget build(BuildContext context){
   final value=data;
   return ListView(physics:const AlwaysScrollableScrollPhysics(),
@@ -184,6 +236,8 @@ class CeoStatisticsTabState extends State<CeoStatisticsTab>{
        ChoiceChip(label:Text(choice.$2),selected:period==choice.$1,
         onSelected:loading?null:(_)=>load(range:choice.$1,fresh:true)),
      ]),
+     const SizedBox(height:12),
+     sectionPicker(),
      if(loading)const Padding(padding:EdgeInsets.symmetric(vertical:28),
       child:Center(child:CircularProgressIndicator()))
      else if(error.isNotEmpty)Padding(padding:const EdgeInsets.symmetric(vertical:20),
@@ -202,31 +256,9 @@ class CeoStatisticsTabState extends State<CeoStatisticsTab>{
       if(value.cached)const Padding(padding:EdgeInsets.only(top:5),
        child:Text('Đang hiển thị kết quả đã lưu tạm từ PostHog.',
         style:TextStyle(fontSize:11,color:ceoMuted))),
-      const SizedBox(height:14),
-      summary(value),
-      if(!value.hasEvents)const Padding(padding:EdgeInsets.only(top:16),
-       child:Text('Chưa phát sinh sự kiện Website trong khoảng thời gian này.',
-        style:TextStyle(fontSize:12,color:ceoMuted))),
-     ]
+     ],
     ])),
-   if(value!=null&&!loading&&error.isEmpty)...[
-    CeoPanel(title:'PH01 · Funnel B2B',subtitle:'Xem sản phẩm → Liên hệ → Yêu cầu thành công',
-     icon:Icons.filter_alt_outlined,child:funnelPanel(value)),
-    CeoPanel(title:'SEO · Google tự nhiên',subtitle:'Nguồn truy cập và chuyển đổi đo bằng PostHog',
-     icon:Icons.travel_explore_outlined,child:seoPanel(value)),
-    CeoPanel(title:'Xu hướng truy cập',subtitle:'Số phiên theo ngày',
-     icon:Icons.show_chart,child:timeline(value)),
-    CeoPanel(title:'Nguồn truy cập',subtitle:'Nguồn ghi nhận theo phiên',
-     icon:Icons.hub_outlined,child:ranking(value.sources)),
-    CeoPanel(title:'Sản phẩm được xem',
-     subtitle:value.labelsUnavailable?'Không lấy được tên · đang hiển thị mã gốc':
-       'Tên sản phẩm theo danh mục đang công khai',
-     icon:Icons.inventory_outlined,child:ranking(value.products)),
-    CeoPanel(title:'Danh mục được xem',
-     subtitle:value.labelsUnavailable?'Không lấy được tên · đang hiển thị mã gốc':
-       'Tên danh mục theo dữ liệu đang công khai',
-     icon:Icons.category_outlined,child:ranking(value.categories)),
-   ],
+   if(value!=null&&!loading&&error.isEmpty)...selectedPanels(value),
   ]);
  }
 }

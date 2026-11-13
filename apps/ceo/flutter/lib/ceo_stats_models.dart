@@ -62,6 +62,41 @@ class CeoFunnelOverview{
   return CeoFunnelOverview(viewedSessions:views,ctaSessions:clicks,submittedSessions:leads);
  }
 }
+// PH02 totals are sessions with a verified first-touch source, not unique people.
+class CeoMarketingRow{
+ final String channel,campaign;
+ final int sessions,productSessions,ctaSessions,leadSessions,contactSessions,outsourcingSessions;
+ const CeoMarketingRow({required this.channel,this.campaign='',required this.sessions,
+  required this.productSessions,required this.ctaSessions,required this.leadSessions,
+  this.contactSessions=0,this.outsourcingSessions=0});
+ double? get leadRatePercent=>sessions==0?null:
+  (leadSessions/sessions*100).clamp(0,100).toDouble();
+ factory CeoMarketingRow.fromJson(Object? value){
+  final m=value is Map<String,dynamic>?value:<String,dynamic>{};
+  return CeoMarketingRow(
+   channel:m['channel'] is String?m['channel'] as String:'other',
+   campaign:m['campaign'] is String?m['campaign'] as String:'',
+   sessions:_n(m['sessions']),productSessions:_n(m['productSessions']),
+   ctaSessions:_n(m['ctaSessions']),leadSessions:_n(m['leadSessions']),
+   contactSessions:_n(m['contactSessions']),outsourcingSessions:_n(m['outsourcingSessions']));
+ }
+}
+class CeoMarketingOverview{
+ final List<CeoMarketingRow> channels,campaigns;
+ const CeoMarketingOverview({this.channels=const [],this.campaigns=const []});
+ int get sessions=>channels.fold(0,(sum,row)=>sum+row.sessions);
+ int get leadSessions=>channels.fold(0,(sum,row)=>sum+row.leadSessions);
+ int get productSessions=>channels.fold(0,(sum,row)=>sum+row.productSessions);
+ int get ctaSessions=>channels.fold(0,(sum,row)=>sum+row.ctaSessions);
+ double? get leadRatePercent=>sessions==0?null:
+  (leadSessions/sessions*100).clamp(0,100).toDouble();
+ factory CeoMarketingOverview.fromJson(Object? value){
+  final m=value is Map<String,dynamic>?value:<String,dynamic>{};
+  List<CeoMarketingRow> parse(String key)=>(m[key] as List? ?? const [])
+   .map(CeoMarketingRow.fromJson).toList(growable:false);
+  return CeoMarketingOverview(channels:parse('channels'),campaigns:parse('campaigns'));
+ }
+}
 class CeoWebStatistics{
  final String period,timezone,generatedAt;
  final bool cached,labelsUnavailable;
@@ -70,9 +105,11 @@ class CeoWebStatistics{
  final List<CeoStatRank> sources,products,categories,seoPages;
  final CeoSeoOverview seo;
  final CeoFunnelOverview funnel;
+ final CeoMarketingOverview marketing;
  const CeoWebStatistics({required this.period,required this.timezone,required this.generatedAt,
   required this.metrics,required this.daily,required this.sources,required this.products,required this.categories,
   this.seo=const CeoSeoOverview(),this.seoPages=const [],this.funnel=const CeoFunnelOverview(),
+  this.marketing=const CeoMarketingOverview(),
   this.cached=false,this.labelsUnavailable=false});
  int metric(String key)=>metrics[key]??0;
  bool get hasEvents=>metrics.values.any((n)=>n>0);
@@ -88,6 +125,7 @@ class CeoWebStatistics{
    daily:(json['daily'] as List? ?? const []).map(CeoStatDay.fromJson).toList(growable:false),
    sources:rank('sources'),products:rank('products'),categories:rank('categories'),
    seo:CeoSeoOverview.fromJson(json['seo']),seoPages:rank('seoPages'),
-   funnel:CeoFunnelOverview.fromJson(json['funnel']));
+   funnel:CeoFunnelOverview.fromJson(json['funnel']),
+   marketing:CeoMarketingOverview.fromJson(json['marketing']));
  }
 }

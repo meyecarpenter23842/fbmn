@@ -43,7 +43,7 @@ export async function GET(request:Request){
  if(!/^phx_[A-Za-z0-9_-]{20,200}$/.test(key))return fail(503,"statistics_not_configured");
  try{
   const requests=queriesFor(period);
-  // Eight bounded read-only aggregate queries, batches max three per PostHog project.
+  // Ten bounded read-only aggregate queries, batches max three per PostHog project.
   // No raw events, visitor IDs, PII or browser-supplied SQL leave the gateway.
   const named=Object.entries(requests);
   const responses:Record<string,{results:unknown[][];is_cached?:boolean;last_refresh?:string}>={};
