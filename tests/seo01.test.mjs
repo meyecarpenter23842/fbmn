@@ -27,6 +27,11 @@ test("filtered catalogue routes excluded from index without hiding links",()=>{
  for(const f of ["app/san-pham/page.tsx","app/danh-muc/[slug]/page.tsx"]){
   const source=read(f);
   assert.match(source,/robots:\{index:false,follow:true\}/);
-  assert.match(source,/alternates:\{canonical:/);
+  if(f==="app/san-pham/page.tsx"){
+   assert.match(source,/alternates:\{canonical:/);
+  }else{
+   assert.match(source,/categoryMetadata\(category\)/);
+   assert.match(read("lib/seo/structured-data.ts"),/alternates:\{canonical:url\}/);
+  }
  }
 });

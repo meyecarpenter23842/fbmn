@@ -79,6 +79,6 @@ test("G04R preserves catalogue API, Admin, product data, SEO and gallery", () =>
   assert.match(layout, /import "\.\/glass-foundation\.css";/);
   assert.match(page, /getPublicCatalog\(\)/);
   assert.match(page, /getPublishedProductImageUrl\(media\.r2Key,process\.env\.NEXT_PUBLIC_MEDIA_BASE_URL\)/);
-  assert.match(page, /<CatalogueProductOptions product=\{product\} photos=\{images\} glass=\{glass\}[\s\S]*?initialSku=\{typeof query\.sku/);
+  assert.match(page, /<CatalogueProductOptions product=\{product\} photos=\{images\} glass=\{glass\}[\s\S]*?initialSku=\{selectedSku\}/);
   assert.match(page, /generateMetadata/);
 });
