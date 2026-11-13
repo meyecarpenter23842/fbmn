@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import SeoLeadLink from "@/components/seo-lead-link";
 import { ContentShell, ContentBreadcrumb, PageHeading } from "@/components/content-ui";
 import { getPublicContent } from "@/lib/content/adapter";
 
@@ -30,7 +31,9 @@ export default async function DealerPage() {
           {dealerInformation.paragraphs.map((paragraph, index) => <p key={index}>{paragraph}</p>)}
           <p>{dealerInformation.contactInstructions}</p>
         </> : <p>Liên hệ Futurebook Miền Nam để trao đổi về khu vực phân phối, báo giá sỉ và điều kiện hợp tác.</p>}
-        <Link className="content-text-link" href="/lien-he#thong-tin-lien-he">Thông tin liên hệ dành cho đại lý</Link>
+        <SeoLeadLink className="content-text-link" href="/lien-he#thong-tin-lien-he" location="dealer">
+          Thông tin liên hệ dành cho đại lý
+        </SeoLeadLink>
         <p>Chính sách giá, chiết khấu, khu vực phân phối và điều kiện hợp tác chỉ được xác nhận trong trao đổi riêng; thông tin trên Website không phải báo giá hoặc cam kết giao hàng.</p>
       </div>
     </section>

@@ -73,6 +73,48 @@ class CeoStatisticsTabState extends State<CeoStatisticsTab>{
     style:TextStyle(fontSize:11,color:ceoMuted)),
   ]);
  }
+ Widget seoPanel(CeoWebStatistics value){
+  final seo=value.seo;
+  final rate=seo.leadRatePercent;
+  final cards=<({String name,int value,IconData icon})>[
+   (name:'Phiên từ Google tự nhiên',value:seo.organicSessions,icon:Icons.search),
+   (name:'Phiên xem sản phẩm',value:seo.organicProductSessions,icon:Icons.inventory_2_outlined),
+   (name:'Phiên gửi liên hệ',value:seo.organicContactSessions,icon:Icons.contact_mail_outlined),
+   (name:'Phiên gửi gia công',value:seo.organicOutsourcingSessions,icon:Icons.handyman_outlined),
+   (name:'Phiên có yêu cầu thành công',value:seo.organicLeadSessions,icon:Icons.verified_outlined),
+   (name:'Lượt bấm CTA',value:seo.organicCtaClicks,icon:Icons.ads_click_outlined),
+  ];
+  return Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+   const Text('Phân loại theo nguồn truy cập đầu phiên. Không tính quảng cáo Google vào Organic.',
+    style:TextStyle(fontSize:12,color:ceoMuted)),
+   const SizedBox(height:10),
+   LayoutBuilder(builder:(context,box){
+    final columns=box.maxWidth>=720?3:2;
+    final width=math.max(124.0,(box.maxWidth-(columns-1)*10)/columns);
+    return Wrap(spacing:10,runSpacing:10,children:[
+     for(final item in cards)SizedBox(width:width,
+      child:CeoMetricCard(label:item.name,count:item.value,icon:item.icon))
+    ]);
+   }),
+   const SizedBox(height:12),
+   Text(rate==null?'Tỷ lệ phiên gửi yêu cầu: chưa có phiên Organic':
+    'Tỷ lệ phiên gửi yêu cầu: ${rate.toStringAsFixed(1)}%',
+    style:const TextStyle(fontSize:13,fontWeight:FontWeight.w700,color:ceoPurple)),
+   Text('Google Ads: ${seo.googlePaidSessions} phiên · Google chưa phân loại: ${seo.googleUnclassifiedSessions} phiên',
+    style:const TextStyle(fontSize:12,color:ceoMuted)),
+   const SizedBox(height:10),
+   const Text('Số phiên Organic và chuyển đổi chỉ tính từ lúc SEO05 có dữ liệu phân kênh. Không phải số lượt nhấp, hiển thị, CTR hay thứ hạng của Google Search Console.',
+    style:TextStyle(fontSize:12,color:ceoMuted)),
+   const SizedBox(height:12),
+   const Text('Trang được xem từ Google tự nhiên',style:TextStyle(
+    fontWeight:FontWeight.w700,fontSize:13,color:ceoInk)),
+   const SizedBox(height:6),
+   ranking(value.seoPages),
+   const SizedBox(height:10),
+   const Text('Đối chiếu Google Search Console riêng: Hiệu suất → Truy vấn/Trang (lượt nhấp, hiển thị, CTR, vị trí trung bình). Dữ liệu Google chưa kết nối vào báo cáo này.',
+    style:TextStyle(fontSize:12,color:ceoMuted)),
+  ]);
+ }
  Widget ranking(List<CeoStatRank> items){
   if(items.isEmpty){return const CeoEmptyResult(title:'Chưa có dữ liệu',
    detail:'Chỉ hiển thị khi có tương tác thực tế.',icon:Icons.insights_outlined);}
@@ -127,6 +169,8 @@ class CeoStatisticsTabState extends State<CeoStatisticsTab>{
      ]
     ])),
    if(value!=null&&!loading&&error.isEmpty)...[
+    CeoPanel(title:'SEO · Google tự nhiên',subtitle:'Nguồn truy cập và chuyển đổi đo bằng PostHog',
+     icon:Icons.travel_explore_outlined,child:seoPanel(value)),
     CeoPanel(title:'Xu hướng truy cập',subtitle:'Số phiên theo ngày',
      icon:Icons.show_chart,child:timeline(value)),
     CeoPanel(title:'Nguồn truy cập',subtitle:'Nguồn ghi nhận theo phiên',
