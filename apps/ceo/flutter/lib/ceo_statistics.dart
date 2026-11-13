@@ -29,9 +29,9 @@ class CeoStatisticsTabState extends State<CeoStatisticsTab>{
    final value=await widget.api.websiteStatistics(period);
    if(mounted&&id==generation)setState((){data=value;loading=false;});
   }catch(_){
-   if(mounted&&id==generation)setState((){
+   if(mounted&&id==generation){setState((){
     data=null;loading=false;error='Không tải được số liệu PostHog. Kiểm tra kết nối rồi thử lại.';
-   });
+   });}
   }
  }
  @override void dispose(){generation++;super.dispose();}
@@ -55,8 +55,8 @@ class CeoStatisticsTabState extends State<CeoStatisticsTab>{
  });
  Widget timeline(CeoWebStatistics value){
   final days=value.daily.length>14?value.daily.sublist(value.daily.length-14):value.daily;
-  if(days.isEmpty)return const CeoEmptyResult(title:'Chưa có lượt truy cập',
-   detail:'Biểu đồ sẽ xuất hiện khi có sự kiện Website.',icon:Icons.show_chart);
+  if(days.isEmpty){return const CeoEmptyResult(title:'Chưa có lượt truy cập',
+   detail:'Biểu đồ sẽ xuất hiện khi có sự kiện Website.',icon:Icons.show_chart);}
   final maximum=days.fold<int>(0,(a,b)=>math.max(a,b.visits));
   return Column(children:[
    for(final day in days)Padding(padding:const EdgeInsets.symmetric(vertical:6),
@@ -66,7 +66,7 @@ class CeoStatisticsTabState extends State<CeoStatisticsTab>{
      Expanded(child:LinearProgressIndicator(value:maximum==0?0:day.visits/maximum,
       minHeight:9,color:ceoPurple,backgroundColor:ceoLavender)),
      const SizedBox(width:8),
-     SizedBox(width:64,child:Text(day.visits.toString()+' phiên',textAlign:TextAlign.end,
+     SizedBox(width:64,child:Text('${day.visits} phiên',textAlign:TextAlign.end,
       style:const TextStyle(fontSize:11,fontWeight:FontWeight.w700))),
     ])),
    const Text('Tối đa 14 ngày gần nhất · thời gian UTC',
@@ -74,8 +74,8 @@ class CeoStatisticsTabState extends State<CeoStatisticsTab>{
   ]);
  }
  Widget ranking(List<CeoStatRank> items){
-  if(items.isEmpty)return const CeoEmptyResult(title:'Chưa có dữ liệu',
-   detail:'Chỉ hiển thị khi có tương tác thực tế.',icon:Icons.insights_outlined);
+  if(items.isEmpty){return const CeoEmptyResult(title:'Chưa có dữ liệu',
+   detail:'Chỉ hiển thị khi có tương tác thực tế.',icon:Icons.insights_outlined);}
   return Column(children:[
    for(final item in items)Padding(padding:const EdgeInsets.symmetric(vertical:7),
     child:Row(children:[
@@ -113,8 +113,8 @@ class CeoStatisticsTabState extends State<CeoStatisticsTab>{
       ]))
      else if(value!=null)...[
       const SizedBox(height:12),
-      Text('Cập nhật '+value.generatedAt.substring(0,math.min(10,value.generatedAt.length))+
-       ' · '+value.timezone,style:const TextStyle(fontSize:11,color:ceoMuted)),
+      Text('Cập nhật ${value.generatedAt.substring(0,math.min(10,value.generatedAt.length))} · ${value.timezone}',
+       style:const TextStyle(fontSize:11,color:ceoMuted)),
       const SizedBox(height:14),
       summary(value),
       if(!value.hasEvents)const Padding(padding:EdgeInsets.only(top:16),

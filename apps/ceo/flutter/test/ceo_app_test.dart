@@ -666,6 +666,6 @@ void main(){
   await tester.tap(find.text('Thống kê').last);
   await tester.pumpAndSettle();
   expect(find.text('Phiên truy cập'),findsOneWidget);
-  expect(find.text('Nguồn truy cập'),findsOneWidget);
+  expect(find.text('Lượt xem trang'),findsOneWidget);
  });
 }
