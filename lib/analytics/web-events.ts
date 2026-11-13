@@ -33,14 +33,14 @@ const PUBLIC_PAGE=/^(?:\/|\/(?:san-pham|catalogue|lien-he|gia-cong|dai-ly)|\/(?:
 const MEDIUMS=new Set(["organic","cpc","paid","paid_search","paid_social","social","referral","email","other"]);
 const PAGES=new Set(["home","products","product","category","catalogue","contact","outsourcing","dealer","news","promotion","other"]);
 const DETAILS:Record<WebEvent,readonly string[]>={
-  web_session_start:[],web_page_view:["page_type","page_key"],
+  web_session_start:[],web_page_view:["page_type"],
   web_category_view:["category_key"],web_product_view:["product_key"],
   web_sku_view:["product_key","sku"],web_catalogue_view:["book_id"],
   web_pdf_view_request:["book_id"],web_pdf_download_request:["book_id"],
   web_pdf_view_served:["book_id"],web_pdf_download_served:["book_id"],
   web_chat_open:[],web_contact_submit_attempt:[],web_contact_submit_success:[],
   web_outsourcing_submit_attempt:[],web_outsourcing_submit_success:[],
-  web_lead_cta_click:["cta_location","product_key"]
+  web_lead_cta_click:["cta_location"]
 };
 export function parseWebAnalytics(value:unknown):WebAnalyticsRecord|null{
  if(!value||typeof value!=="object"||Array.isArray(value))return null;
@@ -50,7 +50,7 @@ export function parseWebAnalytics(value:unknown):WebAnalyticsRecord|null{
  const event=v.event as WebEvent;
  // PDF served events are reserved for the trusted GET proxy, never public POST.
  if(event==="web_pdf_view_served"||event==="web_pdf_download_served")return null;
- const allowed=new Set(["event","session_id","traffic_source","traffic_channel","utm_medium","utm_campaign",...DETAILS[event]]);
+ const allowed=new Set(["event","session_id","traffic_source","traffic_channel","utm_medium","utm_campaign",...DETAILS[event],...(event==="web_page_view"?["page_key"]:[]),...(event==="web_lead_cta_click"?["product_key"]:[])]);
  if(Object.keys(v).some(k=>!allowed.has(k)))return null;
  if(v.utm_medium!==undefined&&!MEDIUMS.has(String(v.utm_medium)))return null;
  if(v.traffic_channel!==undefined){

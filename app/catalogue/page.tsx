@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import SeoLeadLink from "@/components/seo-lead-link";
 import {ContentShell,ContentBreadcrumb,PageHeading} from "@/components/content-ui";
 import CatalogueFlipbook from "./catalogue-flipbook";
 import "./flipbook.css";
@@ -17,7 +18,9 @@ export default function CataloguePage(){
   <CatalogueFlipbook/>
   <nav className="fb-catalogue-related" aria-label="Liên kết hỗ trợ Catalogue">
    <Link href="/san-pham">Xem sản phẩm Futurebook</Link>
-   <Link href="/lien-he#thong-tin-lien-he">Liên hệ nhận tư vấn tài liệu</Link>
+   <SeoLeadLink href="/lien-he#thong-tin-lien-he" location="catalogue">
+    Liên hệ nhận tư vấn tài liệu
+   </SeoLeadLink>
   </nav>
  </ContentShell>;
 }

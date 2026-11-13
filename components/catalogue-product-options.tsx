@@ -78,6 +78,8 @@ export default function CatalogueProductOptions({product,photos,glass=false,init
   const selectedAudience=variantAudience(selected);
   const selectedFormat=variantPaperFormat(selected);
   const quoteLabel=<>Liên hệ báo giá <span aria-hidden="true">→</span></>;
+  const trackQuote=(cta_location:"product_primary"|"product_mobile")=>
+   trackWebEvent("web_lead_cta_click",{cta_location,product_key:product.slug});
   const specs=selected.specifications;
   const extraInfo:{label:string;value:string}[]=[];
   if(specs.binding)extraInfo.push({label:"Đóng gáy",value:specs.binding});
@@ -155,10 +157,12 @@ export default function CatalogueProductOptions({product,photos,glass=false,init
         {selectedAudience&&<span>{selectedAudience}</span>}
         {selectedFormat&&<span>{selectedFormat}</span>}
         {glass
-          ? <GlassButtonLink ref={primaryQuoteRef} href="/#contact" pill className="fb-song-quote">
+          ? <GlassButtonLink ref={primaryQuoteRef} href="/#contact" pill className="fb-song-quote"
+              onClick={()=>trackQuote("product_primary")}>
               {quoteLabel}
             </GlassButtonLink>
-          : <Link href="/#contact" className="catalog-button catalogue-selected-summary__action">
+          : <Link href="/#contact" className="catalog-button catalogue-selected-summary__action"
+              onClick={()=>trackQuote("product_primary")}>
               {quoteLabel}
             </Link>}
       </div>
@@ -185,7 +189,8 @@ export default function CatalogueProductOptions({product,photos,glass=false,init
     </div>
     {glass&&showMobileQuote&&<div className="fb-song-mobile-cta">
       <span>Mã <strong>{selected.sku}</strong></span>
-      <GlassButtonLink href="/#contact" pill>Liên hệ báo giá</GlassButtonLink>
+      <GlassButtonLink href="/#contact" pill onClick={()=>trackQuote("product_mobile")}>
+        Liên hệ báo giá</GlassButtonLink>
     </div>}
   </>;
 }
