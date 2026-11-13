@@ -1,4 +1,5 @@
-import {requireOwner} from "@/lib/owner-gate";
+import {requireOwner,workerOrigin} from "@/lib/owner-gate";
+import {attachCatalogNames} from "@/lib/ceo-catalog-labels.mjs";
 import {PERIOD_DAYS,queriesFor,formatStatistics} from "@/lib/ceo-analytics.mjs";
 
 export const runtime="nodejs";
@@ -49,7 +50,12 @@ export async function GET(request:Request){
   const second=await Promise.all(named.slice(3).map(([name,sql])=>runQuery(key,sql,force,name)));
   const [summary,daily,sources,products,categories]=[...first,...second];
   const data=formatStatistics(period,{summary,daily,sources,products,categories});
-  return Response.json({data},{status:200,headers:HEADERS});
+  // Resolve historical product/category keys against the same approved public catalogue
+  // the Website renders. Catalogue failures must never hide real PostHog counts.
+  let enriched={...data,labelsUnavailable:true};
+  try{enriched=await attachCatalogNames(data,workerOrigin()||"");}
+  catch{/* Keep the original identifiers and warn the Owner in Flutter. */}
+  return Response.json({data:enriched},{status:200,headers:HEADERS});
  }catch(error){
   const message=error instanceof Error?error.message:"";
   if(message==="posthog_key_denied")return fail(503,"statistics_permission_denied");
