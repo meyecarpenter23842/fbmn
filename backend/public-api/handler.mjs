@@ -154,7 +154,7 @@ const QUERY_KEYS = {
   "/v1/public/cms": new Set(),
   "/v1/public/home-layout": new Set(),
   "/v1/public/category-display": new Set(),
-  "/v1/public/seo": new Set(),
+  "/v1/public/seo": new Set(["contentSource"]),
 };
 function integerParam(input, defaultValue, max) {
   if (input === null) return defaultValue;
@@ -257,7 +257,9 @@ export function createPublicApi({ getPublicCatalog, getPublicContent, getPublicC
         if (url.pathname === "/v1/public/seo") {
           if(!seoEnabled||typeof getPublicSeoSettings!=="function")
             return failure(404,"not_found",corsOrigin);
-          const settings=await getPublicSeoSettings();
+          const contentSource=url.searchParams.get("contentSource");
+          if(!["cms","legacy"].includes(contentSource))return failure(400,"invalid_query",corsOrigin);
+          const settings=await getPublicSeoSettings({contentSource});
           guard(Array.isArray(settings)&&settings.length<=10000);
           const seen=new Set();
           const items=settings.map(s=>{

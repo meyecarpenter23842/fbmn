@@ -15,6 +15,10 @@ export async function getPublicContent(): Promise<PublicContent> {
       // Preserve previously approved content during a transient CMS outage.
       // An empty successful CMS snapshot still correctly removes hidden items.
       console.error("[Futurebook CMS] editorial read temporarily unavailable");
+      // CMS SEO policy is only valid for the CMS publication source.
+      // An active SEO02 must fail closed rather than fallback and re-index old pages.
+      if(process.env.FBMN_SEO02_ENABLED==="true")
+        throw Error("SEO02 requires a consistent published CMS snapshot");
       return base;
     }
     return {

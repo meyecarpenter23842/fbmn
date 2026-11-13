@@ -28,6 +28,16 @@ export function productSeoImages(product:PublicProduct):string[]{
  }
  return [...unique];
 }
+// Owner-selected Open Graph photos may be any published variant, not only the
+// first four images chosen for the default SEO metadata preview.
+export function productApprovedSeoImages(product:PublicProduct):string[]{
+ const unique=new Set<string>();
+ for(const item of product.media){
+  const path=getPublishedProductImageUrl(item.r2Key,process.env.NEXT_PUBLIC_MEDIA_BASE_URL);
+  if(path)unique.add(absolute(path));
+ }
+ return [...unique];
+}
 export function productMetadata(product:PublicProduct):Metadata{
  const title=text(product.name,160)+" | "+BRAND;
  const description=productSeoDescription(product);

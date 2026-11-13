@@ -3,6 +3,7 @@
 import {cache} from "react";
 import type {Metadata} from "next";
 import {SEO_ORIGIN} from "./structured-data";
+import {cmsEnabled} from "@/lib/content/cms";
 type Kind="product"|"category"|"article"|"promotion";
 type Mode="custom"|"noindex";
 export type PublishedSeoSetting={kind:Kind;slug:string;mode:Mode;title?:string;description?:string;image?:string};
@@ -16,7 +17,8 @@ export const getPublishedSeo=cache(async():Promise<PublishedSeoMap>=>{
  const base=new URL(process.env.FBMN_PUBLIC_API_BASE_URL||"");
  if(base.protocol!=="https:"||base.pathname!=="/"||base.search||base.hash||
     base.username||base.password)throw Error("Invalid SEO02C API origin");
- const response=await fetch(base.origin+"/v1/public/seo",{
+ const contentSource=cmsEnabled()?"cms":"legacy";
+ const response=await fetch(base.origin+"/v1/public/seo?contentSource="+contentSource,{
   method:"GET",headers:{Accept:"application/json"},cache:"no-store",
   signal:AbortSignal.timeout(5000)
  });

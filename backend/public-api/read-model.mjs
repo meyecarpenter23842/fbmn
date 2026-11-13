@@ -332,12 +332,13 @@ export function createReadModel(query,{enableP5=false}={}) {
       return result.length===1?{key:String(result[0].r2_key),
        bytes:Number(result[0].byte_size),mime:String(result[0].mime_type)}:null;
     },
-    async getPublicSeoSettings({cmsEnabled=false}={}){
+    async getPublicSeoSettings({contentSource="legacy"}={}){
+      if(!["legacy","cms"].includes(contentSource))throw Error("Invalid SEO content source");
       // Never return private table rows directly. Compare every requested slug
       // against the current published read model, including legacy product URLs.
       const [rows,catalog,content]=await Promise.all([
         execute("seoSettings",10000),this.getPublicCatalog(),
-        cmsEnabled?this.getPublicCms():this.getPublicContent()
+        contentSource==="cms"?this.getPublicCms():this.getPublicContent()
       ]);
       const products=new Map(),activeCategoryIds=new Set();
       for(const product of catalog.products){
@@ -347,13 +348,13 @@ export function createReadModel(query,{enableP5=false}={}) {
         for(const variant of product.variants){if(variant.categoryId)activeCategoryIds.add(variant.categoryId);}
       }
       const categories=new Set(catalog.categories.filter(c=>activeCategoryIds.has(c.id)).map(c=>c.slug));
-      const articles=new Set((cmsEnabled?content.filter(c=>c.kind==="article"):content.articles).map(c=>c.slug));
-      const promotions=new Set((cmsEnabled?content.filter(c=>c.kind==="promotion"):content.promotions).map(c=>c.slug));
+      const articles=new Set((contentSource==="cms"?content.filter(c=>c.kind==="article"):content.articles).map(c=>c.slug));
+      const promotions=new Set((contentSource==="cms"?content.filter(c=>c.kind==="promotion"):content.promotions).map(c=>c.slug));
       const settings=new Map();
       for(const row of rows){
         const kind=String(row.kind),requested=String(row.slug),mode=String(row.mode);
         if(!["product","category","article","promotion"].includes(kind)||
-          !["custom","noindex"].includes(mode))continue;
+          !["auto","custom","noindex"].includes(mode))continue;
         const product=kind==="product"?products.get(requested):null;
         if((kind==="product"&&!product)||
           (kind==="category"&&!categories.has(requested))||
@@ -374,7 +375,9 @@ export function createReadModel(query,{enableP5=false}={}) {
         // Prefer canonical override when a legacy alias is also configured.
         if(!settings.has(id)||requested===slug)settings.set(id,item);
       }
-      return [...settings.values()];
+      // Mode auto at the canonical slug cancels overrides saved on legacy slugs.
+      // Drop all auto records only after applying canonical precedence.
+      return [...settings.values()].filter(item=>item.mode!=="auto");
     },
     async getPublicContent() {
       const [articles,promotions,companies,dealers] = await Promise.all([

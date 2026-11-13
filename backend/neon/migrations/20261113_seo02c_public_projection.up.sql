@@ -12,7 +12,7 @@ CREATE VIEW fbmn_public.v_web_seo_settings WITH (security_barrier=true) AS
    CASE WHEN mode='custom' THEN seo_title ELSE '' END AS title,
    CASE WHEN mode='custom' THEN meta_description ELSE '' END AS description,
    CASE WHEN mode='custom' AND kind='product' THEN og_image_path ELSE NULL END AS image
- FROM fbmn_catalog_private.web_seo_settings WHERE mode IN ('custom','noindex');
+ FROM fbmn_catalog_private.web_seo_settings WHERE mode IN ('auto','custom','noindex');
 REVOKE ALL ON fbmn_public.v_web_seo_settings FROM PUBLIC;
 GRANT SELECT ON fbmn_public.v_web_seo_settings TO fbmn_public_reader;
 COMMIT;

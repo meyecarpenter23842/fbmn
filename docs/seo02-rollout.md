@@ -14,7 +14,9 @@ Do not enable either SEO02 flag before its preceding steps are completed.
    unpublished product cannot appear in public API.
 4. Enable PUBLIC_SEO02_ENABLED=true on Public Worker, test /v1/public/seo
    has only currently published slugs and only approved product media; response
-   no-store. Test noindex and custom records.
+   no-store. Verify ?contentSource=legacy and ?contentSource=cms each match the
+   Website CMS mode, noindex + custom records, and canonical auto suppresses
+   overrides on legacy aliases.
 5. Deploy Website with FBMN_SEO02_ENABLED=true (and FBMN_PUBLIC_API_ENABLED=true),
    test product/category/article/promotion metadata and sitemap end to end.
    Both flags default OFF. If public SEO API is unavailable while Website enabled,
