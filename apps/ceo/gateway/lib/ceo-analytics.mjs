@@ -54,8 +54,7 @@ function pairs(input,limit){
 }
 // Defense-in-depth for labels returned from the analytics provider.
 function safeSeoPage(value){
- if(["/","/san-pham","/catalogue","/lien-he","/gia-cong","/dai-ly"].includes(value))return true;
- return /^\/(?:san-pham|danh-muc)\/[a-z0-9][a-z0-9_-]{0,119}$/i.test(value);
+ return ["/","/san-pham","/catalogue","/lien-he","/gia-cong","/dai-ly"].includes(value);
 }
 export function formatStatistics(period,input){
  if(!PERIOD_DAYS[period])throw new Error("invalid_period");

@@ -14,6 +14,11 @@ test("Google search referrer is organic but paid tags/click marker remain paid",
  assert.equal(get("?gclid=private-click-token").channel,"google_paid");
  assert.equal(get("?gbraid=private-click-token").channel,"google_paid");
  assert.equal(get("?utm_source=google").channel,"google_unclassified");
+ assert.equal(get("","https://mail.google.com/mail/u/0/").channel,"referral");
+ assert.equal(get("","https://docs.google.com/document/d/foo").channel,"referral");
+ assert.equal(get("?utm_medium=paid_social","https://www.google.com/").channel,"google_unclassified");
+ assert.equal(get("?utm_medium=email","https://www.google.com/").channel,"google_unclassified");
+ assert.equal(get("?utm_medium=referral","https://www.google.com/").channel,"google_unclassified");
  assert.equal(get("?utm_source=facebook&utm_medium=paid_social").channel,"social");
  assert.equal(get("","https://www.fbmn.com.vn/san-pham").channel,"direct");
  assert.equal(get("","https://www.fbmn.vn/san-pham").channel,"direct");
@@ -31,10 +36,11 @@ test("Attribution never returns raw referrer, query, click ID or unsafe campaign
  assert.equal(get("?utm_campaign=alice@example.com").campaign,undefined);
 });
 test("Only public canonical routes are eligible as page keys",()=>{
- for(const path of ["/","/san-pham","/catalogue","/lien-he","/gia-cong","/dai-ly",
-  "/san-pham/sku-3ac08ff247847c1e77bfccb0e806ed29","/danh-muc/school"])
+ for(const path of ["/","/san-pham","/catalogue","/lien-he","/gia-cong","/dai-ly"])
   assert.equal(analyticsPublicPageKey(path),path);
- for(const path of ["/policy","/admin","/api/contact","/san-pham?q=private",
+ for(const path of ["/policy","/admin","/api/contact",
+  "/san-pham/sku-3ac08ff247847c1e77bfccb0e806ed29","/danh-muc/school",
+  "/san-pham/0912345678","/danh-muc/alice-name","/san-pham?q=private",
   "/dai-ly#mail","/san-pham/sku?email=abc","/san-pham/a/b",
   "/danh-muc/%3Fquery","/danh-muc/alice@example.com"])
   assert.equal(analyticsPublicPageKey(path),undefined);

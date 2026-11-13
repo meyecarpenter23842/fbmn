@@ -8,14 +8,15 @@ const base={session_id:"123e4567-e89b-42d3-a456-426614174000",
 
 test("SEO05 refuses PII and arbitrary URL, preserves legacy pageview payload",()=>{
  const event={...base,event:"web_page_view",page_type:"product",
-  page_key:"/san-pham/sku-3ac08ff247847c1e77bfccb0e806ed29"};
+  page_key:"/san-pham"};
  assert.deepEqual(parseWebAnalytics(event),event);
  const legacy={event:"web_page_view",session_id:base.session_id,
   traffic_source:"google",page_type:"home"};
  assert.deepEqual(parseWebAnalytics(legacy),legacy);
  for(const bad of [{email:"alice@example.com"},{phone:"0912345678"},
   {url:"https://www.fbmn.vn?email=alice"},{referrer:"google.com?q=secret"},
-  {page_key:"/admin"},{page_key:"/san-pham?email=x"},{traffic_channel:"google_paid",traffic_source:"direct"},
+  {page_key:"/admin"},{page_key:"/san-pham?email=x"},
+  {page_key:"/san-pham/0912345678"},{page_key:"/danh-muc/alice-name"},{traffic_channel:"google_paid",traffic_source:"direct"},
   {traffic_channel:"google_organic",traffic_source:"facebook"}]){
   assert.equal(parseWebAnalytics({...event,...bad}),null);
  }

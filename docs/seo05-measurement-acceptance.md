@@ -26,7 +26,7 @@
 4. `web_contact_submit_success` hoặc `web_outsourcing_submit_success`: chỉ khi endpoint xác nhận HTTP 201 thành công. Đếm duy nhất một lần theo phiên, dù gửi cả hai biểu mẫu.
 5. Tỷ lệ phiên có yêu cầu = `organicLeadSessions / organicSessions × 100%`. Nếu mẫu số 0, hiện "Chưa có phiên Organic", **không hiển thị 0% giả**. Biên thời gian có thể cắt phiên.
 
-`web_page_view.page_key` chỉ gồm URL canonical **đã allowlist** (/`, /san-pham, /catalogue, /dai-ly, /lien-he, /gia-cong, trang sản phẩm/danh mục dạng slug). Không ghi URL search/query/hash. **Top trang Organic hiện là số lượt xem trang, không phải số phiên landing page**, không phải thứ hạng SERP.
+`web_page_view.page_key` chỉ gồm URL canonical **đã allowlist** (` / `, /san-pham, /catalogue, /dai-ly, /lien-he, /gia-cong); không ghi đường dẫn động do khách nhập. Sản phẩm/danh mục thật đã ghi bằng `web_product_view` / `web_category_view` sau khi server kiểm tra công khai. Không ghi URL search/query/hash. **Top trang Organic chỉ gồm các trang tĩnh; là số lượt xem trang, không phải số phiên landing page**, không phải thứ hạng SERP.
 
 CEO Gateway Owner-only: 7 truy vấn read-only giới hạn 7/30/90 ngày; ≤3 truy vấn song song; API key PostHog ở Vercel server, không ra Flutter; trả chỉ số tổng hợp, top 10 trang. Không đổi Neon, Worker, policy. CEO UI tái sử dụng thẻ/lưới hiện tại, responsive, có ghi rõ nguồn Google Search Console chưa kết nối.
 

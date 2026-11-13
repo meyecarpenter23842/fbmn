@@ -16,7 +16,7 @@ export function classifyWebsiteTraffic(search:string,referrer:string,currentHost
   const host=new URL(referrer).hostname.toLowerCase();
   const own=new Set(["fbmn.vn","www.fbmn.vn","fbmn.com.vn","www.fbmn.com.vn",currentHostname.toLowerCase()]);
   if(!own.has(host)){
-   if(/(^|\.)google\.[a-z.]+$/.test(host)){
+   if(/^(?:(?:www|m)\.)?google\.(?:com(?:\.[a-z]{2})?|co\.[a-z]{2}|[a-z]{2,3})$/.test(host)){
     referrerSource="google";referrerIsGoogle=true;
    }else if(/(^|\.)(facebook\.com|fb\.com|instagram\.com)$/.test(host))referrerSource="facebook";
    else if(/(^|\.)(zalo\.me|zaloapp\.com)$/.test(host))referrerSource="zalo";
@@ -33,7 +33,7 @@ export function classifyWebsiteTraffic(search:string,referrer:string,currentHost
  if(source==="google"){
   if(clickMarker||["googleads","gads"].includes(utm)||
    ["cpc","paid","paid_search"].includes(medium||""))channel="google_paid";
-  else if(medium==="organic"||(!utm&&referrerIsGoogle))channel="google_organic";
+  else if(medium==="organic"||(!utm&&!medium&&referrerIsGoogle))channel="google_organic";
   else channel="google_unclassified";
  }else if(source==="facebook"||source==="zalo")channel="social";
  else if(source==="referral")channel="referral";
@@ -44,6 +44,7 @@ export function classifyWebsiteTraffic(search:string,referrer:string,currentHost
 // search phrases, private IDs, visitor input or fragments.
 export function analyticsPublicPageKey(path:string):string|undefined{
  if(["/","/san-pham","/catalogue","/lien-he","/gia-cong","/dai-ly"].includes(path))return path;
- if(/^\/(?:san-pham|danh-muc)\/[a-z0-9][a-z0-9_-]{0,119}$/i.test(path))return path;
+ // Never trust user-written slugs. Published records are tracked separately
+ // through WebInterestView after server resolution, not pageview paths.
  return undefined;
 }
