@@ -46,7 +46,7 @@ test("L04 is fail-closed and cannot use PostHog autocapture or session replay", 
   assert.match(endpoint,/FBMN_ADMIN_POSTHOG_ENABLED !== "1"/);
   assert.match(endpoint,/v1\/admin\/session/);
   assert.match(endpoint,/request\.headers\.get\("origin"\)/);
-  assert.match(page,/authState==="authorised" && <>{section!=="contact-requests"&&section!=="chatbot-config"&&section!=="chat-history"&&<AdminTelemetry section={section}\/>}/);
+  assert.match(page,/authState==="authorised" && <>{section!=="contact-requests"&&section!=="chatbot-config"&&section!=="chat-history"&&section!=="seo-settings"&&<AdminTelemetry section={section}\/>}/);
   assert.equal(parseAdminTelemetry({event:"admin_section_view",section:"contact-requests"}),null);
   assert.equal(parseAdminTelemetry({event:"admin_section_view",section:"chatbot-config"}),null);
   assert.doesNotMatch(client+endpoint,/posthog-js|autocapture:\s*true|session_recording:\s*true/);
