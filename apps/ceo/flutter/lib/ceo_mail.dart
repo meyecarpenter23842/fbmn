@@ -105,7 +105,9 @@ class CeoMailPanelState extends State<CeoMailPanel>{
            Text(readWarning!,style:const TextStyle(fontSize:12.5,color:Color(0xFF92400E))),
            Align(alignment:Alignment.centerRight,child:TextButton(
             onPressed:()async{
-             if(await saveRead()){setModal(()=>readWarning=null);}
+             final ok=await saveRead();
+             if(!ctx.mounted)return;
+             if(ok){setModal(()=>readWarning=null);}
              else{setModal(()=>readWarning='Chưa lưu được đã xem. Anh thử lại.');}
             },child:const Text('Thử lưu đã xem lại')))
           ]))),
