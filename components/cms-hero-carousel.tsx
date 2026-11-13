@@ -21,6 +21,25 @@ export default function CmsHeroCarousel({items}:{items:PublicCmsItem[]}){
  }))).slice(0,MAX_HERO_SLIDES);
  const [state,dispatch]=useReducer(heroSlideReducer,initialHeroSlideState);
  const hovered=useRef(false),focused=useRef(false);
+ const resumeAuto=()=>{
+  if(!hovered.current&&!focused.current&&!document.hidden&&
+     !window.matchMedia("(prefers-reduced-motion: reduce)").matches)
+   dispatch({type:"resume"});
+ };
+ useEffect(()=>{
+  const resumeIfVisible=()=>{
+   if(!document.hidden&&!hovered.current&&!focused.current&&
+      !window.matchMedia("(prefers-reduced-motion: reduce)").matches)
+    dispatch({type:"resume"});
+  };
+  const reduce=window.matchMedia("(prefers-reduced-motion: reduce)");
+  document.addEventListener("visibilitychange",resumeIfVisible);
+  reduce.addEventListener("change",resumeIfVisible);
+  return ()=>{
+   document.removeEventListener("visibilitychange",resumeIfVisible);
+   reduce.removeEventListener("change",resumeIfVisible);
+  };
+ },[]);
  const index=state.active%Math.max(slides.length,1);
  const current=slides[index];
  useEffect(()=>{
@@ -32,7 +51,7 @@ export default function CmsHeroCarousel({items}:{items:PublicCmsItem[]}){
    for(let step=1;step<slides.length;step++){
     const next=(index+step)%slides.length;
     if(!state.failed.includes(next)){
-     dispatch({type:"request",index:next});break;
+     dispatch({type:"request",index:next,source:"auto"});break;
     }
    }
   },current.motion.intervalMs);
@@ -58,11 +77,11 @@ export default function CmsHeroCarousel({items}:{items:PublicCmsItem[]}){
   data-effect={current.motion.effect} data-motion={current.motion.enabled?"on":"off"}
   style={style}
   onMouseEnter={()=>{hovered.current=true;}}
-  onMouseLeave={()=>{hovered.current=false;}}
+  onMouseLeave={()=>{hovered.current=false;resumeAuto();}}
   onFocusCapture={()=>{focused.current=true;}}
   onBlurCapture={event=>{
    if(!event.currentTarget.contains(event.relatedTarget as Node|null))
-    focused.current=false;
+    focused.current=false;resumeAuto();
   }}>
   <div className="cms-hero-stage" aria-live="off">
    {slides.map((item,i)=><div key={item.id+":"+item.slide}
@@ -83,9 +102,13 @@ export default function CmsHeroCarousel({items}:{items:PublicCmsItem[]}){
         // Image decode completes before a new slide becomes visible.
         const img=event.currentTarget;
         if(typeof img.decode==="function"){
-         void img.decode().then(()=>dispatch({type:"loaded",index:i}))
+         void img.decode().then(()=>dispatch({type:"loaded",index:i,
+            paused:hovered.current||focused.current||document.hidden||
+             window.matchMedia("(prefers-reduced-motion: reduce)").matches}))
           .catch(()=>dispatch({type:"failed",index:i}));
-        }else dispatch({type:"loaded",index:i});
+        }else dispatch({type:"loaded",index:i,
+         paused:hovered.current||focused.current||document.hidden||
+          window.matchMedia("(prefers-reduced-motion: reduce)").matches});
        }}
        onError={()=>dispatch({type:"failed",index:i})}/>
      </picture>}
@@ -96,7 +119,7 @@ export default function CmsHeroCarousel({items}:{items:PublicCmsItem[]}){
     className={"cms-hero-dot"+(i===index?" is-active":"")}
     aria-label={"Xem Slide "+(i+1)+" / "+slides.length}
     aria-pressed={i===index} disabled={state.failed.includes(i)}
-    onClick={()=>dispatch({type:"request",index:i})}>
+    onClick={()=>dispatch({type:"request",index:i,source:"manual"})}>
      <span aria-hidden="true"/>
     </button>)}
   </div>}

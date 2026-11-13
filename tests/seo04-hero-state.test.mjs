@@ -39,3 +39,32 @@ test("Warmed and decoded image transitions immediately, but no other slide is fe
  assert.equal(state.active,1);
  assert.equal(state.pending,null);
 });
+
+test("Autoplay loaded image pauses on hover/focus/hidden until resume",()=>{
+ let state=heroSlideReducer(initialHeroSlideState,{type:"request",index:1,source:"auto"});
+ assert.equal(state.active,0);
+ assert.equal(state.pendingSource,"auto");
+ state=heroSlideReducer(state,{type:"loaded",index:1,paused:true});
+ assert.equal(state.active,0);
+ assert.equal(state.pending,1);
+ assert.equal(state.pendingSource,"auto");
+ state=heroSlideReducer(state,{type:"resume"});
+ assert.equal(state.active,1);
+ assert.equal(state.pending,null);
+ assert.equal(state.pendingSource,null);
+});
+test("Manual request can activate while hovered and override pending autoplay",()=>{
+ let state=heroSlideReducer(initialHeroSlideState,{type:"request",index:1,source:"auto"});
+ state=heroSlideReducer(state,{type:"request",index:1,source:"manual"});
+ assert.equal(state.pendingSource,"manual");
+ state=heroSlideReducer(state,{type:"loaded",index:1,paused:true});
+ assert.equal(state.active,1);
+ assert.equal(state.pending,null);
+});
+test("Automatic transition never resumes before image decode, or after failure",()=>{
+ let state=heroSlideReducer(initialHeroSlideState,{type:"request",index:1,source:"auto"});
+ assert.strictEqual(heroSlideReducer(state,{type:"resume"}),state);
+ state=heroSlideReducer(state,{type:"failed",index:1});
+ assert.strictEqual(heroSlideReducer(state,{type:"resume"}),state);
+ assert.equal(state.active,0);
+});

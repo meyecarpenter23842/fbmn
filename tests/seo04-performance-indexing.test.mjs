@@ -12,7 +12,9 @@ test("SEO04 Hero does not request every overlapping slide on initial render",()=
  assert.match(hero,/onError=\{\(\)=>dispatch\(\{type:"failed",index:i\}\)\}/);
  assert.match(hero,/Math\.max\(2500,current\.motion\.intervalMs-2500\)/);
  assert.match(hero,/prefers-reduced-motion: reduce/);
- assert.match(hero,/onClick=\{\(\)=>dispatch\(\{type:"request",index:i\}\)\}/);
+ assert.match(hero,/onClick=\{\(\)=>dispatch\(\{type:"request",index:i,source:"manual"\}\)\}/);
+ assert.match(hero,/dispatch\(\{type:"request",index:next,source:"auto"\}\)/);
+ assert.match(hero,/onMouseLeave=\{\(\)=>\{hovered\.current=false;resumeAuto\(\);\}\}/);
  assert.match(hero,/priority=\{i===0\}/);
 });
 test("SEO04 prioritizes only main catalogue product image; other images remain lazy",()=>{
