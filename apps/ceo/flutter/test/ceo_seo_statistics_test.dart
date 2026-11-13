@@ -25,4 +25,29 @@ void main(){
   const empty=CeoSeoOverview();
   expect(empty.leadRatePercent,isNull);
  });
+ test('PH01 reports ordered session conversion and step drop-off',(){
+  final f=CeoFunnelOverview.fromJson({
+   'viewedSessions':20,'ctaSessions':5,'submittedSessions':2});
+  expect(f.viewToCtaPercent,25.0);
+  expect(f.ctaToSubmitPercent,40.0);
+  expect(f.overallPercent,10.0);
+  expect(f.notClicked,15);
+  expect(f.notSubmitted,3);
+  final response=CeoWebStatistics.fromJson({'funnel':{
+   'viewedSessions':20,'ctaSessions':5,'submittedSessions':2}});
+  expect(response.funnel.submittedSessions,2);
+ });
+ test('PH01 does not invent a percentage when the denominator is zero',(){
+  const empty=CeoFunnelOverview();
+  expect(empty.overallPercent,isNull);
+  expect(empty.viewToCtaPercent,isNull);
+  expect(empty.ctaToSubmitPercent,isNull);
+  final noClicks=CeoFunnelOverview.fromJson({
+   'viewedSessions':4,'ctaSessions':0,'submittedSessions':0});
+  expect(noClicks.viewToCtaPercent,0.0);
+  expect(noClicks.ctaToSubmitPercent,isNull);
+  expect(noClicks.overallPercent,0.0);
+  expect(CeoFunnelOverview.fromJson({
+   'viewedSessions':2,'ctaSessions':3,'submittedSessions':1}).viewedSessions,0);
+ });
 }

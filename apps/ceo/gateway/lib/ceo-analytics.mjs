@@ -38,7 +38,19 @@ export function queriesFor(period){
  const seoPages="SELECT toString(properties.page_key) AS label, count() AS total"+base+
   " AND event = 'web_page_view' AND "+organic+
   " AND notEmpty(toString(properties.page_key)) GROUP BY label ORDER BY total DESC LIMIT 10";
- return {summary,daily,sources,products,categories,seoSummary,seoPages};
+ // PH01: ordered in-session (30-minute inactivity ID) steps within 24 hours.
+ // One row per anonymous website session, not per person or form submission.
+ // PostHog DateTime64 must be cast before windowFunnel.
+ const funnel="SELECT countIf(funnel_stage >= 1) AS viewedSessions, "+
+  "countIf(funnel_stage >= 2) AS ctaSessions, "+
+  "countIf(funnel_stage >= 3) AS submittedSessions "+
+  "FROM (SELECT distinct_id, windowFunnel(86400)(toDateTime(timestamp), "+
+   "event = 'web_product_view', event = 'web_lead_cta_click', "+
+   "event IN ('web_contact_submit_success','web_outsourcing_submit_success')) AS funnel_stage"+
+   base+" AND event IN ('web_product_view','web_lead_cta_click',"+
+   "'web_contact_submit_success','web_outsourcing_submit_success')"+
+   " AND startsWith(distinct_id, 'fbmn-web-session-') GROUP BY distinct_id)";
+ return {summary,daily,sources,products,categories,seoSummary,seoPages,funnel};
 }
 const count=x=>{const n=Number(x);if(!Number.isSafeInteger(n)||n<0)throw new Error("invalid_count");return n;};
 function rows(x){
@@ -67,6 +79,12 @@ export function formatStatistics(period,input){
   "organicOutsourcingSessions","organicLeadSessions","googlePaidSessions",
   "googleUnclassifiedSessions","organicCtaClicks"];
  const seo=Object.fromEntries(keys.map((key,i)=>[key,count(seoRows[0][i])]));
+ // Reject missing/invalid funnel data rather than silently reporting zero conversions.
+ const funnelRows=rows(input.funnel);
+ if(funnelRows.length!==1||funnelRows[0].length!==3)throw Error("invalid_funnel");
+ const [viewedSessions,ctaSessions,submittedSessions]=funnelRows[0].map(count);
+ if(viewedSessions<ctaSessions||ctaSessions<submittedSessions)throw Error("invalid_funnel_order");
+ const funnel={viewedSessions,ctaSessions,submittedSessions};
  const daily=rows(input.daily).map(row=>{
   const day=String(row[0]??"");
   if(!/^\d{4}-\d{2}-\d{2}$/.test(day)||row.length!==5)throw new Error("invalid_date");
@@ -76,5 +94,5 @@ export function formatStatistics(period,input){
  return {period,timezone:"UTC",generatedAt:typeof input.summary.last_refresh==="string"?input.summary.last_refresh:"",
   cached:input.summary.is_cached===true,metrics,daily,
   sources:pairs(input.sources,10),products:pairs(input.products,10),categories:pairs(input.categories,10),
-  seo,seoPages:pairs(input.seoPages,10).filter(item=>safeSeoPage(item.label))};
+  seo,seoPages:pairs(input.seoPages,10).filter(item=>safeSeoPage(item.label)),funnel};
 }

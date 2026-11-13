@@ -6,12 +6,18 @@ import {readFileSync} from "node:fs";
 test("Only bounded periods and fixed read-only aggregate queries are accepted",()=>{
  for(const period of ["7d","30d","90d"]){
   const queries=queriesFor(period);
-  assert.equal(Object.keys(queries).length,7);
+  assert.equal(Object.keys(queries).length,8);
   assert.match(queries.seoSummary,/google_organic/);
   assert.match(queries.seoSummary,/google_paid/);
   assert.match(queries.seoSummary,/uniqIf\(distinct_id/);
   assert.match(queries.seoSummary,/web_contact_submit_success/);
   assert.match(queries.seoPages,/page_key/);
+  assert.match(queries.funnel,/windowFunnel\(86400\)\(toDateTime\(timestamp\)/);
+  assert.match(queries.funnel,/GROUP BY distinct_id/);
+  assert.match(queries.funnel,/startsWith\(distinct_id, 'fbmn-web-session-'\)/);
+  assert.match(queries.funnel,/event = 'web_product_view', event = 'web_lead_cta_click'/);
+  assert.match(queries.funnel,/web_contact_submit_success','web_outsourcing_submit_success/);
+  assert.doesNotMatch(queries.funnel,/properties\.(email|phone|name|message|ip|referrer)/i);
   assert.doesNotMatch(queries.seoSummary,/person|email|utm_campaign|referrer/i);
   for(const sql of Object.values(queries)){
    assert.match(sql,/SELECT /);
@@ -31,6 +37,7 @@ test("Real rows map into aggregates with no fabricated defaults",()=>{
   products:{results:[["sku-abc",3]]},
   categories:{results:[["notebooks",2]]},
   seoSummary:{results:[[1,1,1,0,1,0,0,2]]},
+  funnel:{results:[[5,3,2]]},
   seoPages:{results:[["/san-pham",2],["/san-pham/0912345678",10],["/admin",99]]}
  });
  assert.equal(result.metrics.visits,2);
@@ -40,6 +47,7 @@ test("Real rows map into aggregates with no fabricated defaults",()=>{
  assert.equal(result.timezone,"UTC");
  assert.equal(result.generatedAt,"2026-11-13T02:00:00Z");
  assert.equal(result.cached,true);
+ assert.deepEqual(result.funnel,{viewedSessions:5,ctaSessions:3,submittedSessions:2});
  assert.equal(result.seo.organicSessions,1);
  assert.equal(result.seo.organicLeadSessions,1);
  assert.equal(result.seo.organicCtaClicks,2);
@@ -48,7 +56,7 @@ test("Real rows map into aggregates with no fabricated defaults",()=>{
  assert.throws(()=>formatStatistics("7d",{summary:{results:[]}}));
  assert.throws(()=>formatStatistics("7d",{
   summary:{results:[[1,-1,0,0,0,0,0,0]]},seoSummary:{results:[[0,0,0,0,0,0,0,0]]},seoPages:{results:[]},
-  daily:{results:[]},sources:{results:[]},products:{results:[]},categories:{results:[]}
+  daily:{results:[]},sources:{results:[]},products:{results:[]},categories:{results:[]},funnel:{results:[[1,2,1]]}
  }));
 });
 test("Analytics endpoint is server-only, Owner-guarded and does not embed credentials",()=>{
@@ -62,4 +70,18 @@ test("Analytics endpoint is server-only, Owner-guarded and does not embed creden
  assert.match(route,/force_blocking/);
  assert.match(route,/slice\(index,index\+3\)/);
  assert.doesNotMatch(route,/phx_[A-Za-z0-9]{25}/);
+});
+
+test("PH01 refuses missing or inconsistent funnel counts; true zero stays zero",()=>{
+ const base={
+  summary:{results:[[0,0,0,0,0,0,0,0]]},
+  daily:{results:[]},sources:{results:[]},products:{results:[]},categories:{results:[]},
+  seoSummary:{results:[[0,0,0,0,0,0,0,0]]},seoPages:{results:[]}
+ };
+ assert.throws(()=>formatStatistics("7d",base),/invalid_funnel/);
+ assert.throws(()=>formatStatistics("7d",{...base,funnel:{results:[[1,2,1]]}}),/invalid_funnel_order/);
+ assert.throws(()=>formatStatistics("7d",{...base,funnel:{results:[[3,-1,0]]}}),/invalid_count/);
+ assert.throws(()=>formatStatistics("7d",{...base,funnel:{results:[[3,2]]}}),/invalid_funnel/);
+ const empty=formatStatistics("7d",{...base,funnel:{results:[[0,0,0]]}});
+ assert.deepEqual(empty.funnel,{viewedSessions:0,ctaSessions:0,submittedSessions:0});
 });

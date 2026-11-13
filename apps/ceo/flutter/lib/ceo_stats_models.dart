@@ -43,6 +43,25 @@ class CeoSeoOverview{
    organicCtaClicks:_n(m['organicCtaClicks']));
  }
 }
+// PH01: counted by anonymous Website session, not identifiable customers.
+class CeoFunnelOverview{
+ final int viewedSessions,ctaSessions,submittedSessions;
+ const CeoFunnelOverview({this.viewedSessions=0,this.ctaSessions=0,this.submittedSessions=0});
+ double? get viewToCtaPercent=>viewedSessions==0?null:
+  (ctaSessions/viewedSessions*100).clamp(0,100).toDouble();
+ double? get ctaToSubmitPercent=>ctaSessions==0?null:
+  (submittedSessions/ctaSessions*100).clamp(0,100).toDouble();
+ double? get overallPercent=>viewedSessions==0?null:
+  (submittedSessions/viewedSessions*100).clamp(0,100).toDouble();
+ int get notClicked=>viewedSessions-ctaSessions;
+ int get notSubmitted=>ctaSessions-submittedSessions;
+ factory CeoFunnelOverview.fromJson(Object? value){
+  final m=value is Map<String,dynamic>?value:<String,dynamic>{};
+  final views=_n(m['viewedSessions']), clicks=_n(m['ctaSessions']), leads=_n(m['submittedSessions']);
+  if(clicks>views||leads>clicks)return const CeoFunnelOverview();
+  return CeoFunnelOverview(viewedSessions:views,ctaSessions:clicks,submittedSessions:leads);
+ }
+}
 class CeoWebStatistics{
  final String period,timezone,generatedAt;
  final bool cached,labelsUnavailable;
@@ -50,9 +69,11 @@ class CeoWebStatistics{
  final List<CeoStatDay> daily;
  final List<CeoStatRank> sources,products,categories,seoPages;
  final CeoSeoOverview seo;
+ final CeoFunnelOverview funnel;
  const CeoWebStatistics({required this.period,required this.timezone,required this.generatedAt,
   required this.metrics,required this.daily,required this.sources,required this.products,required this.categories,
-  this.seo=const CeoSeoOverview(),this.seoPages=const [],this.cached=false,this.labelsUnavailable=false});
+  this.seo=const CeoSeoOverview(),this.seoPages=const [],this.funnel=const CeoFunnelOverview(),
+  this.cached=false,this.labelsUnavailable=false});
  int metric(String key)=>metrics[key]??0;
  bool get hasEvents=>metrics.values.any((n)=>n>0);
  factory CeoWebStatistics.fromJson(Map<String,dynamic> json){
@@ -66,6 +87,7 @@ class CeoWebStatistics{
    metrics:m.map((k,v)=>MapEntry(k,_n(v))),
    daily:(json['daily'] as List? ?? const []).map(CeoStatDay.fromJson).toList(growable:false),
    sources:rank('sources'),products:rank('products'),categories:rank('categories'),
-   seo:CeoSeoOverview.fromJson(json['seo']),seoPages:rank('seoPages'));
+   seo:CeoSeoOverview.fromJson(json['seo']),seoPages:rank('seoPages'),
+   funnel:CeoFunnelOverview.fromJson(json['funnel']));
  }
 }
