@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:futurebook_ceo/ceo_stats_models.dart';
+import 'package:futurebook_ceo/ceo_gsc_models.dart';
 
 void main(){
  test('SEO05 parses aggregate sessions and keeps paid traffic separate',(){
@@ -75,6 +76,41 @@ void main(){
   expect(empty.leadRatePercent,isNull);
   expect(empty.sessions,0);
   expect(empty.leadSessions,0);
+ });
+
+ test('SEO06 parses Google clicks, impressions, CTR fraction and average position',(){
+  final gsc=CeoGscReport.fromJson({
+   'status':'ready','period':'7d','site':'www.fbmn.vn',
+   'startDate':'2026-11-04','endDate':'2026-11-10',
+   'timezone':'America/Los_Angeles',
+   'metrics':{'clicks':31,'impressions':400,'ctr':0.0775,'position':12.1},
+   'daily':[{'date':'2026-11-04','clicks':12,'impressions':200,'ctr':0.06,'position':11}],
+   'queries':[{'label':'tập học sinh','clicks':8,'impressions':80,'ctr':0.1,'position':5.5}],
+   'pages':[{'label':'/san-pham/tap-hoc-sinh','clicks':12,'impressions':60,'ctr':0.2,'position':7}]
+  });
+  expect(gsc.configured,true);
+  expect(gsc.metrics!.clicks,31);
+  expect(gsc.metrics!.ctrPercent,7.75);
+  expect(gsc.metrics!.position,12.1);
+  expect(gsc.daily.length,1);
+  expect(gsc.queries.single.label,'tập học sinh');
+  expect(gsc.pages.single.metrics.clicks,12);
+ });
+ test('SEO06 unconfigured and empty Google data do not fabricate zeros',(){
+  final missing=CeoGscReport.fromJson({
+   'status':'unconfigured','period':'30d','metrics':null
+  });
+  expect(missing.configured,false);
+  expect(missing.metrics,isNull);
+  final noData=CeoGscReport.fromJson({
+   'status':'ready','period':'7d','metrics':null,
+   'daily':[],'queries':[],'pages':[]
+  });
+  expect(noData.configured,true);
+  expect(noData.metrics,isNull);
+  expect(CeoGscMetrics.parse({'clicks':-1,'impressions':2,'ctr':0,'position':3}),isNull);
+  expect(CeoGscMetrics.parse({'clicks':1,'impressions':2,'ctr':1.2,'position':3}),isNull);
+  expect(()=>CeoGscReport.fromJson({'status':'bad'}),throwsFormatException);
  });
 
 }

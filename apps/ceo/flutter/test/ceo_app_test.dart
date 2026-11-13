@@ -7,6 +7,7 @@ import 'package:futurebook_ceo/ceo_mail.dart';
 import 'package:futurebook_ceo/ceo_mail_models.dart';
 import 'package:futurebook_ceo/ceo_repository.dart';
 import 'package:futurebook_ceo/ceo_stats_models.dart';
+import 'package:futurebook_ceo/ceo_gsc_models.dart';
 
 class FakeRepo implements CeoRepository {
  final bool allowed;
@@ -28,6 +29,9 @@ class FakeRepo implements CeoRepository {
    daily:const [CeoStatDay('2026-11-13',2,4)],
    sources:const [CeoStatRank('direct',2)],products:const [CeoStatRank('sku-test',1)],
    categories:const []);
+ @override Future<CeoGscReport> searchConsole(String period,{bool fresh=false})async=>
+  CeoGscReport(status:'unconfigured',period:period,site:'www.fbmn.vn',
+   startDate:'',endDate:'',timezone:'America/Los_Angeles');
  @override Future<CeoMailPage> mailList(String box,{String? after})async=>
   const CeoMailPage([],null,false);
  @override Future<CeoMailItem> mailDetail(String box,String id)async=>
@@ -45,6 +49,19 @@ class FakeRepo implements CeoRepository {
 class FakeStatisticsRepo extends FakeRepo {
  FakeStatisticsRepo():super(true);
  int analyticsLoads=0;
+ int gscLoads=0;
+ @override Future<CeoGscReport> searchConsole(String period,{bool fresh=false}) async{
+  gscLoads++;
+  return CeoGscReport(status:'ready',period:period,site:'www.fbmn.vn',
+   startDate:'2026-11-04',endDate:'2026-11-10',timezone:'America/Los_Angeles',
+   metrics:const CeoGscMetrics(clicks:31,impressions:400,ctr:.0775,position:12.1),
+   daily:const [CeoGscDay('2026-11-04',CeoGscMetrics(
+    clicks:31,impressions:400,ctr:.0775,position:12.1))],
+   queries:const [CeoGscRank('tập học sinh',CeoGscMetrics(
+    clicks:13,impressions:100,ctr:.13,position:9))],
+   pages:const [CeoGscRank('/san-pham/tap-hoc-sinh',CeoGscMetrics(
+    clicks:12,impressions:50,ctr:.24,position:8))]);
+ }
  @override Future<CeoWebStatistics> websiteStatistics(String period,{bool fresh=false}) async{
   analyticsLoads++;
   return CeoWebStatistics(period:period,timezone:'UTC',generatedAt:'2026-11-13T00:00:00Z',
@@ -726,6 +743,51 @@ void main(){
    await tester.pumpAndSettle();
    expect(repo.analyticsLoads,firstLoads+1);
    expect(find.text('PH01 · Funnel B2B'),findsOneWidget);
+   expect(tester.takeException(),isNull);
+   await tester.pumpWidget(const SizedBox.shrink());
+  }
+  await tester.binding.setSurfaceSize(null);
+ });
+
+ testWidgets('SEO06 lazy GSC loads independently and caches by period on mobile/desktop',(tester)async{
+  for(final width in <double>[360,390,1280]){
+   await tester.binding.setSurfaceSize(Size(width,850));
+   final repo=FakeStatisticsRepo();
+   await tester.pumpWidget(CeoApp(repository:repo));
+   await tester.pumpAndSettle();
+   if(width>=850){
+    tester.widget<NavigationRail>(find.byType(NavigationRail)).onDestinationSelected!(4);
+   }else{
+    tester.widget<NavigationBar>(find.byType(NavigationBar)).onDestinationSelected!(4);
+   }
+   await tester.pumpAndSettle();
+   expect(repo.analyticsLoads,1);
+   expect(repo.gscLoads,0);
+   final seo=find.byKey(const ValueKey('ceo-stats-tab-4'));
+   await tester.ensureVisible(seo);
+   await tester.tap(seo);
+   await tester.pumpAndSettle();
+   expect(repo.gscLoads,1);
+   expect(find.text('SEO06 · Google Search Console'),findsOneWidget);
+   expect(find.byKey(const ValueKey('ceo-gsc-ready')),findsOneWidget);
+   expect(find.text('7.8%'),findsOneWidget);
+   expect(tester.takeException(),isNull,reason:'SEO06 overflow at $width');
+   final marketing=find.byKey(const ValueKey('ceo-stats-tab-2'));
+   await tester.ensureVisible(marketing);
+   await tester.tap(marketing);
+   await tester.pumpAndSettle();
+   expect(repo.gscLoads,1);
+   final seoAgain=find.byKey(const ValueKey('ceo-stats-tab-4'));
+   await tester.ensureVisible(seoAgain);
+   await tester.tap(seoAgain);
+   await tester.pumpAndSettle();
+   expect(repo.gscLoads,1,reason:'Returning to same SEO period must reuse GSC data');
+   expect(repo.analyticsLoads,1);
+   await tester.ensureVisible(find.text('30 ngày'));
+   await tester.tap(find.text('30 ngày'));
+   await tester.pumpAndSettle();
+   expect(repo.gscLoads,2);
+   expect(repo.analyticsLoads,2);
    expect(tester.takeException(),isNull);
    await tester.pumpWidget(const SizedBox.shrink());
   }
