@@ -6,6 +6,9 @@ test("product metadata uses only published catalogue and never internal NET",()=
  const product=read("app/san-pham/[slug]/page.tsx"),seo=read("lib/seo/structured-data.ts");
  assert.match(product,/productMetadata\(product\)/);
  assert.match(product,/permanentRedirect\(/);
+ assert.match(product,/\?sku=/);
+ assert.match(product,/encodeURIComponent\(selectedSku\)/);
+ assert.match(product,/initialSku=\{selectedSku\}/);
  assert.match(product,/notFound\(\)/);
  assert.match(seo,/getPublishedProductImageUrl/);
  assert.match(seo,/product\.variants\.length===1/);

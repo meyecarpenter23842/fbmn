@@ -24,7 +24,10 @@ export default async function ProductPage({ params, searchParams }: Props) {
   const [catalog, { slug }, query] = await Promise.all([getPublicCatalog(), params, searchParams]);
   const product = getProductBySlug(catalog, slug);
   if(!product)notFound();
-  if(slug!==product.slug)permanentRedirect("/san-pham/"+encodeURIComponent(product.slug));
+  const selectedSku=typeof query.sku==="string" && query.sku.length<=100 &&
+    product.variants.some(v=>v.sku===query.sku)?query.sku:undefined;
+  if(slug!==product.slug)permanentRedirect("/san-pham/"+encodeURIComponent(product.slug)+
+    (selectedSku?"?sku="+encodeURIComponent(selectedSku):""));
   const category = catalog.categories.find(item => item.id === product.categoryId);
   const images=product.media.flatMap(media=>{
     const src=getPublishedProductImageUrl(media.r2Key,process.env.NEXT_PUBLIC_MEDIA_BASE_URL);
@@ -47,7 +50,7 @@ export default async function ProductPage({ params, searchParams }: Props) {
       { label: product.name },
     ]}/>
     <CatalogueProductOptions product={product} photos={images} glass={glass}
-      initialSku={typeof query.sku==="string" && query.sku.length<=100 && product.variants.some(v=>v.sku===query.sku)?query.sku:undefined}/>
+      initialSku={selectedSku}/>
     <CatalogueRelatedProducts items={recommendations.items} glass={glass}/>
   </div>;
   return <CatalogShell><div className="fb-glass-song-page">{content}</div></CatalogShell>;
