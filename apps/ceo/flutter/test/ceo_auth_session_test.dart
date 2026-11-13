@@ -72,7 +72,7 @@ void main(){
  });
  test('A stale token on chat read is refreshed and idempotent POST retried once',()async{
   const fresh='eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJvd25lciIsImV4cCI6MTk5OTk5OTk5OX0.newsig';
-  const session='7506d77a000000000000000000000000';
+  const session='7506d77a0000000000000000000000000000';
   var posts=0,refreshes=0;
   final api=CeoApi(client:MockClient((request)async{
    if(request.url.path=='/api/auth/token'){
@@ -115,7 +115,7 @@ void main(){
    throw StateError('Unexpected request');
   }));
   await expectLater(api.markAlertRead('chat',
-   '7506d77a000000000000000000000000',turnId:'10'),
+   '7506d77a0000000000000000000000000000',turnId:'10'),
    throwsA(isA<CeoApiException>().having((e)=>e.status,'status',403)));
   expect(posts,1);
   expect(refreshes,0);
