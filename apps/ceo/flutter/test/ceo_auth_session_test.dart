@@ -70,6 +70,57 @@ void main(){
   expect(sessionRefresh,1);
   api.dispose();
  });
+ test('A stale token on chat read is refreshed and idempotent POST retried once',()async{
+  const fresh='eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJvd25lciIsImV4cCI6MTk5OTk5OTk5OX0.newsig';
+  const session='7506d77a000000000000000000000000';
+  var posts=0,refreshes=0;
+  final api=CeoApi(client:MockClient((request)async{
+   if(request.url.path=='/api/auth/token'){
+    return http.Response('{"token":"$jwt"}',200);
+   }
+   if(request.url.path=='/api/auth/get-session'){
+    refreshes++;
+    return http.Response('{"session":{"access_token":"$fresh"}}',200);
+   }
+   if(request.url.path=='/api/ceo/alerts'&&request.method=='POST'){
+    posts++;
+    final authorization=request.headers.entries.firstWhere(
+     (entry)=>entry.key.toLowerCase()=='authorization').value;
+    if(authorization=='Bearer $jwt'){
+     return http.Response('{"error":{"code":"owner_required"}}',401);
+    }
+    expect(authorization,'Bearer $fresh');
+    expect(request.body.contains('"turnId":"10"'),isTrue);
+    return http.Response('{"data":{"read":true}}',200);
+   }
+   throw StateError('Unexpected route: ${request.url.path}');
+  }));
+  await api.markAlertRead('chat',session,turnId:'10');
+  expect(posts,2);
+  expect(refreshes,1);
+  api.dispose();
+ });
+ test('Owner 403 chat read never retries or bypasses denied access',()async{
+  var posts=0,refreshes=0;
+  final api=CeoApi(client:MockClient((request)async{
+   if(request.url.path=='/api/auth/token'){
+    return http.Response('{"token":"$jwt"}',200);
+   }
+   if(request.url.path=='/api/auth/get-session'){
+    refreshes++;return http.Response('{"session":null}',200);
+   }
+   if(request.url.path=='/api/ceo/alerts'){
+    posts++;return http.Response('{"error":{"code":"forbidden"}}',403);
+   }
+   throw StateError('Unexpected request');
+  }));
+  await expectLater(api.markAlertRead('chat',
+   '7506d77a000000000000000000000000',turnId:'10'),
+   throwsA(isA<CeoApiException>().having((e)=>e.status,'status',403)));
+  expect(posts,1);
+  expect(refreshes,0);
+  api.dispose();
+ });
  test('Genuinely revoked session remains unauthenticated and never grants Owner',()async{
   var calls=0;
   final api=CeoApi(client:MockClient((request)async{
