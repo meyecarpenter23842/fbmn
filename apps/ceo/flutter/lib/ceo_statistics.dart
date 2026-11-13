@@ -175,9 +175,13 @@ class CeoStatisticsTabState extends State<CeoStatisticsTab>{
      icon:Icons.show_chart,child:timeline(value)),
     CeoPanel(title:'Nguồn truy cập',subtitle:'Nguồn ghi nhận theo phiên',
      icon:Icons.hub_outlined,child:ranking(value.sources)),
-    CeoPanel(title:'Sản phẩm được xem',subtitle:'Sản phẩm có tương tác',
+    CeoPanel(title:'Sản phẩm được xem',
+     subtitle:value.labelsUnavailable?'Không lấy được tên · đang hiển thị mã gốc':
+       'Tên sản phẩm theo danh mục đang công khai',
      icon:Icons.inventory_outlined,child:ranking(value.products)),
-    CeoPanel(title:'Danh mục được xem',subtitle:'Danh mục có tương tác',
+    CeoPanel(title:'Danh mục được xem',
+     subtitle:value.labelsUnavailable?'Không lấy được tên · đang hiển thị mã gốc':
+       'Tên danh mục theo dữ liệu đang công khai',
      icon:Icons.category_outlined,child:ranking(value.categories)),
    ],
   ]);

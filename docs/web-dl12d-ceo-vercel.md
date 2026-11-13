@@ -11,6 +11,7 @@
 - Build command: `bash scripts/vercel-build-ceo.sh`.
 - Production domain: Owner will add `ceo.fbmn.vn` under the CEO project's Domains. Do not move Website/Admin domains.
 - Server-only production/preview env: `FBMN_ADMIN_API_BASE_URL`, `NEON_AUTH_BASE_URL`, `NEON_AUTH_COOKIE_SECRET` (separate CEO cookie secret). Do not expose these as NEXT_PUBLIC or Flutter defines.
+- CEO PostHog label lookup: `FBMN_CEO_PUBLIC_API_BASE_URL` must equal the existing, verified HTTPS origin of the **Public Worker** serving `/v1/public/catalog`, **not** `FBMN_ADMIN_API_BASE_URL` (Admin Worker). Configure it separately in `fbmn-ceo` Vercel before release. When missing/unreachable, CEO retains PostHog counts and explicitly shows the original keys with a warning. No extra public route or publication of private products.
 - Deployment protection may require Vercel sign-in on temporary vercel.app URLs; Owner-only permissions are separately enforced in the gateway.
 
 ## Vercel remote Git-source deploy (reviewed commit)

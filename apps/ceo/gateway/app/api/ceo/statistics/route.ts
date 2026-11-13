@@ -1,4 +1,5 @@
 import {requireOwner} from "@/lib/owner-gate";
+import {attachCatalogNames} from "@/lib/ceo-catalog-labels.mjs";
 import {PERIOD_DAYS,queriesFor,formatStatistics} from "@/lib/ceo-analytics.mjs";
 
 export const runtime="nodejs";
@@ -52,7 +53,12 @@ export async function GET(request:Request){
    batch.forEach(([name],i)=>{responses[name]=results[i];});
   }
   const data=formatStatistics(period,responses);
-  return Response.json({data},{status:200,headers:HEADERS});
+  // Map historical PostHog keys through the same published-only catalogue as the Website.
+  // If Public Worker is unavailable, retain original events/counts and flag the labels.
+  let enriched={...data,labelsUnavailable:true};
+  try{enriched=await attachCatalogNames(data,process.env.FBMN_CEO_PUBLIC_API_BASE_URL||"");}
+  catch{/* Do not conceal genuine analytics while catalogue naming is unavailable. */}
+  return Response.json({data:enriched},{status:200,headers:HEADERS});
  }catch(error){
   const message=error instanceof Error?error.message:"";
   if(message==="posthog_key_denied")return fail(503,"statistics_permission_denied");
