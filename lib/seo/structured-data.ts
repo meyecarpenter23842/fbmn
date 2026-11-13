@@ -55,9 +55,10 @@ export function productMetadata(product:PublicProduct,category?:PublicCategory):
  return {title,description,alternates:{canonical:url},
   openGraph:{type:"website",title,description,url,siteName:BRAND,...(images.length?{images}: {})}};
 }
-export function categoryMetadata(category:PublicCatalog["categories"][number],catalog?:PublicCatalog):Metadata{
+export function categoryMetadata(category:PublicCatalog["categories"][number],catalog?:PublicCatalog,
+ modeByCategory:Readonly<Record<string,"family"|"sku">>={}):Metadata{
  const title=text(category.name+" – "+SEO_GROUP_LABELS[category.group],120)+" | "+BRAND;
- const description=catalog?text(categorySeoSummary(category,catalog),300):
+ const description=catalog?text(categorySeoSummary(category,catalog,modeByCategory),300):
   "Danh mục "+category.name+". Tra cứu sản phẩm và quy cách đã công khai tại Futurebook Miền Nam.";
  const url="/danh-muc/"+encodeURIComponent(category.slug);
  return {title,description,alternates:{canonical:url},

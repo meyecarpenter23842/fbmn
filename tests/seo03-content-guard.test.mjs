@@ -10,12 +10,14 @@ test("SEO03 uses real approved catalogue data for unique product and category me
  const category=read("app/danh-muc/[slug]/page.tsx");
  assert.match(strategy,/SEO_GROUP_LABELS/);
  assert.match(strategy,/matchingPublishedVariants\(catalog:PublicCatalog/);
+ assert.match(read("lib/catalog/query.ts"),/const cards=catalogueListingCards\(publicCatalog,modeByCategory\)/);
+ assert.match(strategy,/catalogueListingCards\(catalog,modes\)/);
  assert.match(strategy,/product\.variants/);
  assert.match(strategy,/variant\.specifications\.paperSize/);
  assert.match(schema,/productSeoDescription\(product,category\)/);
- assert.match(schema,/categorySeoSummary\(category,catalog\)/);
+ assert.match(schema,/categorySeoSummary\(category,catalog,modeByCategory\)/);
  assert.match(product,/productMetadata\(product,catalog\.categories\.find/);
- assert.match(category,/categorySeoSummary\(category,catalog\)/);
+ assert.match(category,/categorySeoSummary\(category,catalog,modes\)/);
  assert.match(product,/productLandingPageSchema\(product,category\)/);
  assert.match(product,/productApprovedSeoImages\(product\)/);
  assert.doesNotMatch(schema,/"@type":"Product"/);
@@ -31,7 +33,7 @@ test("SEO03 keeps editorial ALT approvals and real product links",()=>{
  assert.match(listing,/href=\{href\}/);
  assert.match(detail,/\/dai-ly/);
  assert.match(detail,/\/gia-cong/);
- assert.match(read("app/danh-muc/[slug]/page.tsx"),/matchingPublishedVariants\(catalog,item\)/);
+ assert.match(read("app/danh-muc/[slug]/page.tsx"),/matchingPublishedVariants\(catalog,item,modes\)/);
 });
 test("SEO03 keeps noindex on filter pages and actual B2B claims modest",()=>{
  const category=read("app/danh-muc/[slug]/page.tsx");
