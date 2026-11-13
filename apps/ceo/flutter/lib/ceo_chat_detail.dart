@@ -41,21 +41,27 @@ class _CeoChatDetailState extends State<CeoChatDetail>{
  }
  Future<void> _saveRead()async{
   if(_saving||_lastTurnId==null||!_turnId.hasMatch(_lastTurnId!))return;
+  // Capture the Owner API and parent callback before the first await: the
+  // sheet may be dismissed while the request is in flight.
+  final api=widget.api;
+  final session=widget.session;
+  final onAlerts=widget.onAlerts;
+  final turnId=_lastTurnId!;
   setState((){_saving=true;_notice=null;});
   try{
-   await widget.api.markAlertRead('chat',widget.session,turnId:_lastTurnId);
-   if(!mounted)return;
-   setState(()=>_saved=true);
-   // Re-check the authoritative Owner counts. If a new turn has arrived
-   // after the displayed one, retain the badge and explain why.
+   await api.markAlertRead('chat',session,turnId:turnId);
+   if(mounted){setState(()=>_saved=true);}
+   // Even if the detail sheet was closed, the confirmed read must refresh
+   // the parent bell/tab/app badge promptly rather than waiting 60 seconds.
    try{
-    final state=await widget.api.loadAlerts();
-    if(!mounted)return;
-    widget.onAlerts(state);
-    setState((){
-     _hasNewer=state.chatIds.contains(widget.session);
-     _notice=null;
-    });
+    final state=await api.loadAlerts();
+    onAlerts(state); // Parent callback checks its own mounted state.
+    if(mounted){
+     setState((){
+      _hasNewer=state.chatIds.contains(session);
+      _notice=null;
+     });
+    }
    }catch(_){
     if(mounted){setState(()=>_notice=
      'Đã lưu đã xem trên máy chủ, nhưng chưa tải lại được số thông báo.');}
