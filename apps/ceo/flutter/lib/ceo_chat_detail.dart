@@ -101,14 +101,14 @@ class _CeoChatDetailState extends State<CeoChatDetail>{
     if(state.connectionState!=ConnectionState.done){
      return const Center(child:CircularProgressIndicator());
     }
-    if(state.hasError)return ListView(padding:const EdgeInsets.all(16),children:[
+    if(state.hasError){return ListView(padding:const EdgeInsets.all(16),children:[
      const CeoEmptyResult(title:'Không tải được hội thoại',
       detail:'Dữ liệu hội thoại chưa được tải. Thử lại khi có kết nối.',
       icon:Icons.error_outline),
      const SizedBox(height:12),
      OutlinedButton.icon(onPressed:_reload,icon:const Icon(Icons.refresh),
       label:const Text('Tải lại hội thoại')),
-    ]);
+    ]);}
     final turns=state.data??<CeoTurn>[];
     _scheduleRead(turns);
     return ListView(padding:const EdgeInsets.all(16),children:[
