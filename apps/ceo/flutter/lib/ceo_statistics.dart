@@ -21,12 +21,12 @@ class CeoStatisticsTabState extends State<CeoStatisticsTab>{
   super.initState();
   WidgetsBinding.instance.addPostFrameCallback((_){if(mounted)unawaited(load());});
  }
- Future<void> load({String? range})async{
+ Future<void> load({String? range,bool fresh=false})async{
   if(range!=null)period=range;
   final id=++generation;
   setState((){loading=true;error='';});
   try{
-   final value=await widget.api.websiteStatistics(period);
+   final value=await widget.api.websiteStatistics(period,fresh:fresh);
    if(mounted&&id==generation)setState((){data=value;loading=false;});
   }catch(_){
    if(mounted&&id==generation){setState((){
@@ -93,13 +93,13 @@ class CeoStatisticsTabState extends State<CeoStatisticsTab>{
    CeoPanel(title:'Thống kê Website',
     subtitle:'PostHog dữ liệu thật · quyền Owner · không thông tin cá nhân',
     icon:Icons.bar_chart_outlined,
-    action:IconButton(tooltip:'Tải lại thống kê',onPressed:loading?null:()=>load(),
+    action:IconButton(tooltip:'Tải lại thống kê',onPressed:loading?null:()=>load(fresh:true),
      icon:const Icon(Icons.refresh)),
     child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
      Wrap(spacing:8,runSpacing:8,children:[
       for(final choice in const [('7d','7 ngày'),('30d','30 ngày'),('90d','90 ngày')])
        ChoiceChip(label:Text(choice.$2),selected:period==choice.$1,
-        onSelected:loading?null:(_)=>load(range:choice.$1)),
+        onSelected:loading?null:(_)=>load(range:choice.$1,fresh:true)),
      ]),
      if(loading)const Padding(padding:EdgeInsets.symmetric(vertical:28),
       child:Center(child:CircularProgressIndicator()))
@@ -108,13 +108,17 @@ class CeoStatisticsTabState extends State<CeoStatisticsTab>{
        Text(error,textAlign:TextAlign.center,
         style:const TextStyle(fontSize:13,color:Color(0xFFB45309))),
        const SizedBox(height:8),
-       OutlinedButton.icon(onPressed:()=>load(),icon:const Icon(Icons.refresh),
+       OutlinedButton.icon(onPressed:()=>load(fresh:true),icon:const Icon(Icons.refresh),
         label:const Text('Thử lại')),
       ]))
      else if(value!=null)...[
       const SizedBox(height:12),
-      Text('Cập nhật ${value.generatedAt.substring(0,math.min(10,value.generatedAt.length))} · ${value.timezone}',
+      Text(value.generatedAt.isEmpty?'Đã tải dữ liệu từ PostHog · ${value.timezone}':
+       'PostHog tính dữ liệu lúc ${value.generatedAt.substring(0,math.min(16,value.generatedAt.length))} · ${value.timezone}',
        style:const TextStyle(fontSize:11,color:ceoMuted)),
+      if(value.cached)const Padding(padding:EdgeInsets.only(top:5),
+       child:Text('Đang hiển thị kết quả đã lưu tạm từ PostHog.',
+        style:TextStyle(fontSize:11,color:ceoMuted))),
       const SizedBox(height:14),
       summary(value),
       if(!value.hasEvents)const Padding(padding:EdgeInsets.only(top:16),

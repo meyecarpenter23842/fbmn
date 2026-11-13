@@ -468,7 +468,7 @@ class _CeoHomeState extends State<CeoHome> with WidgetsBindingObserver{
   finally{viewWrites.remove(key);}
  }
  Future<void> refresh()async{
-  if(selected==4){await statsKey.currentState?.load();return;}
+  if(selected==4){await statsKey.currentState?.load(fresh:true);return;}
   if(selected==3&&contactSection!='requests'){
    await (contactSection=='inbox'?inboxKey.currentState:sentKey.currentState)?.load();
    return;

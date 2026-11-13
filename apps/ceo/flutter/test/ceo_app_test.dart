@@ -22,7 +22,7 @@ class FakeRepo implements CeoRepository {
  @override Future<CeoAlerts> loadAlerts()async=>throw const CeoApiException(503);
  @override Future<void> markAlertRead(String kind,String id,{String? turnId})async{}
 
- @override Future<CeoWebStatistics> websiteStatistics(String period)async=>
+ @override Future<CeoWebStatistics> websiteStatistics(String period,{bool fresh=false})async=>
   CeoWebStatistics(period:period,timezone:'UTC',generatedAt:'2026-11-13T00:00:00Z',
    metrics:const {'visits':2,'pageViews':4,'productViews':1},
    daily:const [CeoStatDay('2026-11-13',2,4)],

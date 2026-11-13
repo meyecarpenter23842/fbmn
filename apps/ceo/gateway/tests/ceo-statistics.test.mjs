@@ -19,7 +19,7 @@ test("Only bounded periods and fixed read-only aggregate queries are accepted",(
 });
 test("Real rows map into aggregates with no fabricated defaults",()=>{
  const result=formatStatistics("7d",{
-  summary:{results:[[2,4,3,2,1,1,1,0]]},
+  summary:{results:[[2,4,3,2,1,1,1,0]],last_refresh:"2026-11-13T02:00:00Z",is_cached:true},
   daily:{results:[["2026-11-13",2,4]]},
   sources:{results:[["direct",2]]},
   products:{results:[["sku-abc",3]]},
@@ -30,6 +30,8 @@ test("Real rows map into aggregates with no fabricated defaults",()=>{
  assert.equal(result.products[0].label,"sku-abc");
  assert.equal(result.daily[0].day,"2026-11-13");
  assert.equal(result.timezone,"UTC");
+ assert.equal(result.generatedAt,"2026-11-13T02:00:00Z");
+ assert.equal(result.cached,true);
  assert.throws(()=>formatStatistics("7d",{summary:{results:[]}}));
  assert.throws(()=>formatStatistics("7d",{
   summary:{results:[[1,-1,0,0,0,0,0,0]]},
@@ -42,5 +44,7 @@ test("Analytics endpoint is server-only, Owner-guarded and does not embed creden
  assert.match(route,/FBMN_CEO_POSTHOG_PERSONAL_API_KEY/);
  assert.match(route,/private, no-store/);
  assert.match(route,/Promise\.all/);
+ assert.match(route,/force_blocking/);
+ assert.match(route,/slice\(0,3\)/);
  assert.doesNotMatch(route,/phx_[A-Za-z0-9]{25}/);
 });

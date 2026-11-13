@@ -43,6 +43,7 @@ export function formatStatistics(period,input){
   if(!/^\d{4}-\d{2}-\d{2}$/.test(day))throw new Error("invalid_date");
   return {day,visits:count(row[1]),pageViews:count(row[2])};
  });
- return {period,timezone:"UTC",generatedAt:new Date().toISOString(),metrics,daily,
+ return {period,timezone:"UTC",generatedAt:typeof input.summary.last_refresh==="string"?input.summary.last_refresh:"",
+  cached:input.summary.is_cached===true,metrics,daily,
   sources:pairs(input.sources,10),products:pairs(input.products,10),categories:pairs(input.categories,10)};
 }

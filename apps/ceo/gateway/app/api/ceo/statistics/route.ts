@@ -7,11 +7,12 @@ const HEADERS={"Cache-Control":"private, no-store","X-Content-Type-Options":"nos
 const fail=(status:number,code:string)=>Response.json({error:{code}},{status,headers:HEADERS});
 const endpoint="https://us.posthog.com/api/projects/732495/query/";
 
-async function runQuery(key:string,sql:string):Promise<{results:unknown[][]}>{
+async function runQuery(key:string,sql:string,force:boolean,name:string):Promise<{results:unknown[][];is_cached?:boolean;last_refresh?:string}>{
  const response=await fetch(endpoint,{
   method:"POST",redirect:"manual",cache:"no-store",
   headers:{"Authorization":"Bearer "+key,"Content-Type":"application/json","Accept":"application/json"},
-  body:JSON.stringify({query:{kind:"HogQLQuery",query:sql}}),
+  body:JSON.stringify({query:{kind:"HogQLQuery",query:sql},
+   refresh:force?"force_blocking":"blocking",name:"fbmn_ceo_"+name}),
   signal:AbortSignal.timeout(12000)
  });
  if(response.status===401||response.status===403)throw new Error("posthog_key_denied");
@@ -23,14 +24,18 @@ async function runQuery(key:string,sql:string):Promise<{results:unknown[][]}>{
  const value:unknown=JSON.parse(raw);
  if(!value||typeof value!=="object"||!("results" in value)||
   !Array.isArray((value as {results:unknown}).results))throw new Error("posthog_invalid_data");
- return value as {results:unknown[][]};
+ return value as {results:unknown[][];is_cached?:boolean;last_refresh?:string};
 }
 export async function GET(request:Request){
  const url=new URL(request.url);
- if([...url.searchParams.keys()].some(k=>k!=="period")||url.searchParams.getAll("period").length>1)
+ if([...url.searchParams.keys()].some(k=>k!=="period"&&k!=="fresh")||
+  url.searchParams.getAll("period").length>1||url.searchParams.getAll("fresh").length>1)
   return fail(400,"invalid_query");
  const period=url.searchParams.get("period")||"7d";
  if(!Object.prototype.hasOwnProperty.call(PERIOD_DAYS,period))return fail(400,"invalid_period");
+ const freshValue=url.searchParams.get("fresh");
+ if(freshValue!==null&&freshValue!=="1")return fail(400,"invalid_refresh");
+ const force=freshValue==="1";
  const owner=await requireOwner(request);
  if(owner.status!==200||!owner.subject)return fail(owner.status,"owner_required");
  const key=process.env.FBMN_CEO_POSTHOG_PERSONAL_API_KEY||"";
@@ -38,9 +43,11 @@ export async function GET(request:Request){
  try{
   const requests=queriesFor(period);
   // Only five bounded aggregate queries; no event exports, PII or user-supplied SQL.
-  const [summary,daily,sources,products,categories]=await Promise.all(
-   [requests.summary,requests.daily,requests.sources,requests.products,requests.categories]
-    .map(query=>runQuery(key,query)));
+  // PostHog supports only three concurrent queries per project. Bound concurrency.
+  const named=Object.entries(requests);
+  const first=await Promise.all(named.slice(0,3).map(([name,sql])=>runQuery(key,sql,force,name)));
+  const second=await Promise.all(named.slice(3).map(([name,sql])=>runQuery(key,sql,force,name)));
+  const [summary,daily,sources,products,categories]=[...first,...second];
   const data=formatStatistics(period,{summary,daily,sources,products,categories});
   return Response.json({data},{status:200,headers:HEADERS});
  }catch(error){
