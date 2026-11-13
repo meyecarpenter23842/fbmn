@@ -1,3 +1,4 @@
+import {marketingQueries,formatMarketing} from './ceo-marketing.mjs';
 // DL12B: fixed, aggregate-only reporting contract. Never accept SQL from the browser.
 export const PERIOD_DAYS=Object.freeze({"7d":7,"30d":30,"90d":90});
 const names=["visits","pageViews","productViews","catalogueViews","pdfDownloads","chatOpens","contacts","outsourcing"];
@@ -50,7 +51,7 @@ export function queriesFor(period){
    base+" AND event IN ('web_product_view','web_lead_cta_click',"+
    "'web_contact_submit_success','web_outsourcing_submit_success')"+
    " AND startsWith(distinct_id, 'fbmn-web-session-') GROUP BY distinct_id)";
- return {summary,daily,sources,products,categories,seoSummary,seoPages,funnel};
+ return {summary,daily,sources,products,categories,seoSummary,seoPages,funnel,...marketingQueries(days)};
 }
 const count=x=>{const n=Number(x);if(!Number.isSafeInteger(n)||n<0)throw new Error("invalid_count");return n;};
 function rows(x){
@@ -94,5 +95,6 @@ export function formatStatistics(period,input){
  return {period,timezone:"UTC",generatedAt:typeof input.summary.last_refresh==="string"?input.summary.last_refresh:"",
   cached:input.summary.is_cached===true,metrics,daily,
   sources:pairs(input.sources,10),products:pairs(input.products,10),categories:pairs(input.categories,10),
-  seo,seoPages:pairs(input.seoPages,10).filter(item=>safeSeoPage(item.label)),funnel};
+  seo,seoPages:pairs(input.seoPages,10).filter(item=>safeSeoPage(item.label)),funnel,
+  marketing:formatMarketing(input.marketingSources,input.marketingCampaigns)};
 }
