@@ -9,19 +9,21 @@ import {relatedProducts} from "@/lib/catalog/recommendations";
 import WebInterestView from "@/components/web-interest-view";
 import {notFound,permanentRedirect} from "next/navigation";
 import {SeoJsonLd} from "@/lib/seo/json-ld";
-import {productMetadata,productSchema,breadcrumbSchema} from "@/lib/seo/structured-data";
+import {productMetadata,productSchema,breadcrumbSchema,productSeoImages} from "@/lib/seo/structured-data";
+import {getPublishedSeo,seoFor,isNoindex,applySeoSetting} from "@/lib/seo/public-settings";
 
 export const dynamic = "force-dynamic";
 
 type Props = { params: Promise<{ slug: string }>; searchParams: Promise<{sku?:string|string[]}> };
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
- const [catalog,{slug}]=await Promise.all([getPublicCatalog(),params]);
+ const [catalog,{slug},seo]=await Promise.all([getPublicCatalog(),params,getPublishedSeo()]);
  const product=getProductBySlug(catalog,slug);
- return product?productMetadata(product):{title:"Sản phẩm chưa công khai | Futurebook Miền Nam",robots:{index:false}};
+ return product?applySeoSetting(productMetadata(product),seoFor(seo,"product",product.slug),
+   productSeoImages(product)): {title:"Sản phẩm chưa công khai | Futurebook Miền Nam",robots:{index:false}};
 }
 
 export default async function ProductPage({ params, searchParams }: Props) {
-  const [catalog, { slug }, query] = await Promise.all([getPublicCatalog(), params, searchParams]);
+  const [catalog, { slug }, query, seo] = await Promise.all([getPublicCatalog(), params, searchParams,getPublishedSeo()]);
   const product = getProductBySlug(catalog, slug);
   if(!product)notFound();
   const selectedSku=typeof query.sku==="string" && query.sku.length<=100 &&
@@ -37,7 +39,7 @@ export default async function ProductPage({ params, searchParams }: Props) {
   // G05: reuse the verified G03 gallery/selector/CTA glass presentation on every product.
   const glass=true;
   const content=<div className="catalog-wrap">
-    <SeoJsonLd data={productSchema(product)}/>
+    {!isNoindex(seo,"product",product.slug)&&<SeoJsonLd data={productSchema(product)}/>}
     <SeoJsonLd data={breadcrumbSchema([
       {name:"Sản phẩm",path:"/san-pham"},
       ...(category&&category.id!=="p5-uncategorized"?[{name:category.name,path:"/danh-muc/"+encodeURIComponent(category.slug)}]:[]),

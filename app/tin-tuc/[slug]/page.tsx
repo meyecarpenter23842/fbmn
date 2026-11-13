@@ -4,23 +4,24 @@ import { getPublicContent } from "@/lib/content/adapter";
 import {notFound} from "next/navigation";
 import {SeoJsonLd} from "@/lib/seo/json-ld";
 import {articleMetadata,articleSchema,breadcrumbSchema} from "@/lib/seo/structured-data";
+import {getPublishedSeo,seoFor,isNoindex,applySeoSetting} from "@/lib/seo/public-settings";
 
 export const dynamic = "force-dynamic";
 type Props = { params: Promise<{ slug: string }> };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const [content, { slug }] = await Promise.all([getPublicContent(), params]);
+  const [content, { slug },seo] = await Promise.all([getPublicContent(), params,getPublishedSeo()]);
   const item = content.articles.find(article => article.slug === slug);
   return item
-    ? articleMetadata(item)
+    ? applySeoSetting(articleMetadata(item),seoFor(seo,"article",item.slug))
     : { title: "Tin chưa công khai | Futurebook Miền Nam", robots: { index: false } };
 }
 export default async function NewsDetail({ params }: Props) {
-  const [content, { slug }] = await Promise.all([getPublicContent(), params]);
+  const [content, { slug },seo] = await Promise.all([getPublicContent(), params,getPublishedSeo()]);
   const item = content.articles.find(article => article.slug === slug);
   if(!item)notFound();
   return <ContentShell>
-    <SeoJsonLd data={articleSchema(item)}/>
+    {!isNoindex(seo,"article",item.slug)&&<SeoJsonLd data={articleSchema(item)}/>}
     <SeoJsonLd data={breadcrumbSchema([{name:"Tin tức",path:"/tin-tuc"},
       {name:item.title,path:"/tin-tuc/"+encodeURIComponent(item.slug)}])}/>
     <ContentBreadcrumb items={[{ name: "Tin tức", href: "/tin-tuc" }, { name: item?.title ?? "Chưa công khai" }]}/>
