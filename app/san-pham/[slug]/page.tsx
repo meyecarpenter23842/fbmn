@@ -9,7 +9,7 @@ import {relatedProducts} from "@/lib/catalog/recommendations";
 import WebInterestView from "@/components/web-interest-view";
 import {notFound,permanentRedirect} from "next/navigation";
 import {SeoJsonLd} from "@/lib/seo/json-ld";
-import {productMetadata,productSchema,breadcrumbSchema,productApprovedSeoImages} from "@/lib/seo/structured-data";
+import {productMetadata,productLandingPageSchema,breadcrumbSchema,productApprovedSeoImages} from "@/lib/seo/structured-data";
 import {getPublishedSeo,seoFor,applySeoSetting} from "@/lib/seo/public-settings";
 
 export const dynamic = "force-dynamic";
@@ -39,7 +39,7 @@ export default async function ProductPage({ params, searchParams }: Props) {
   // G05: reuse the verified G03 gallery/selector/CTA glass presentation on every product.
   const glass=true;
   const content=<div className="catalog-wrap">
-    <SeoJsonLd data={productSchema(product)}/>
+    <SeoJsonLd data={productLandingPageSchema(product)}/>
     <SeoJsonLd data={breadcrumbSchema([
       {name:"Sản phẩm",path:"/san-pham"},
       ...(category&&category.id!=="p5-uncategorized"?[{name:category.name,path:"/danh-muc/"+encodeURIComponent(category.slug)}]:[]),

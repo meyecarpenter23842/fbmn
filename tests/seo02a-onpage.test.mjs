@@ -11,7 +11,9 @@ test("product metadata uses only published catalogue and never internal NET",()=
  assert.match(product,/initialSku=\{selectedSku\}/);
  assert.match(product,/notFound\(\)/);
  assert.match(seo,/getPublishedProductImageUrl/);
- assert.match(seo,/product\.variants\.length===1/);
+ assert.match(product,/productLandingPageSchema\(product\)/);
+ assert.match(seo,/"@type":"WebPage"/);
+ assert.doesNotMatch(seo,/"@type":"Product"/);
  assert.doesNotMatch(seo,/offers:|aggregateRating:|priceValidUntil:|\.internalNotes|\.prices/);
 });
 test("category filters retain noindex; articles are structured from published content only",()=>{

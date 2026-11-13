@@ -69,13 +69,17 @@ export function breadcrumbSchema(items:Array<{name:string;path:string}>):Record<
   itemListElement:items.map((item,i)=>({"@type":"ListItem",position:i+1,
    name:item.name,item:absolute(item.path)}))};
 }
-export function productSchema(product:PublicProduct):Record<string,unknown>{
+// No Product rich-result markup without a verified PUBLIC offer or genuine reviews.
+// Google requires offers/review/aggregateRating for Product snippets. Futurebook's
+// dealer/NET prices must not be published or represented as a made-up Offer.
+// Keep discoverable page semantics and images; BreadcrumbList is emitted separately.
+export function productLandingPageSchema(product:PublicProduct):Record<string,unknown>{
  const images=productSeoImages(product);
- return {"@context":"https://schema.org","@type":"Product",
-  name:product.name,description:productSeoDescription(product),
-  url:absolute("/san-pham/"+encodeURIComponent(product.slug)),
-  ...(images.length?{image:images}:{}),
-  ...(product.variants.length===1?{sku:product.variants[0].sku}:{})};
+ const url=absolute("/san-pham/"+encodeURIComponent(product.slug));
+ return {"@context":"https://schema.org","@type":"WebPage",
+  "@id":url,name:product.name,description:productSeoDescription(product),
+  url,isPartOf:{"@type":"WebSite",name:BRAND,url:SEO_ORIGIN},
+  ...(images.length?{primaryImageOfPage:{"@type":"ImageObject",url:images[0]}}:{})};
 }
 export function articleSchema(article:PublicArticle):Record<string,unknown>{
  return {"@context":"https://schema.org","@type":"Article",
