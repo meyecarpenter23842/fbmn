@@ -153,7 +153,7 @@ class FakeDelayedChatReadRepo extends FakeChatUnreadRepo{
  @override Future<void> markAlertRead(String kind,String id,{String? turnId})async{
   readWrites++;acknowledgedTurnId=turnId;
   await pending.future;
-  if(kind=='chat'&&id==session&&turnId=='10')acknowledged=true;
+  if(kind=='chat'&&id==FakeChatUnreadRepo.session&&turnId=='10')acknowledged=true;
  }
 }
 
