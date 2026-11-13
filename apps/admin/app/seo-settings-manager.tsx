@@ -24,17 +24,17 @@ function parsePath(input:string,kind:Kind):string|null{
   const slug=decodeURIComponent(path.slice(PATHS[kind].length));
   if(!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)||slug.length>100)return null;
   if(kind==="product"&&!/^sku-[a-f0-9]{32}$/.test(slug))return null;
-  if(kind==="category"&&!/^cat-[a-f0-9]{32}$/.test(slug))return null;
+  if(kind==="category"&&!/^cat-[a-f0-9]{32}$/.test(slug)&&slug!=="chua-phan-loai")return null;
   return slug;
  }catch{return null;}
 }
-async function seoRequest<T>(body?:object):Promise<T>{
+async function seoRequest<T>(body?:object,page=1):Promise<T>{
  const auth=await fetch("/api/auth/token",{credentials:"same-origin",cache:"no-store"});
  if(!auth.ok)throw Error("Phiên đăng nhập đã hết hạn.");
  const token=(await auth.json().catch(()=>({}))) as {token?:unknown};
  if(typeof token.token!=="string"||!/^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/.test(token.token))
   throw Error("Không xác thực được Owner.");
- const response=await fetch("/api/website/seo",{method:body?"POST":"GET",credentials:"same-origin",
+ const response=await fetch("/api/website/seo"+(body?"":"?page="+page),{method:body?"POST":"GET",credentials:"same-origin",
   cache:"no-store",headers:{Authorization:"Bearer "+token.token,Accept:"application/json",
    ...(body?{"Content-Type":"application/json"}:{})},...(body?{body:JSON.stringify(body)}:{})});
  const json=await response.json().catch(()=>({})) as {data?:T;error?:{code?:string}};
@@ -49,6 +49,8 @@ async function seoRequest<T>(body?:object):Promise<T>{
 }
 export default function SeoSettingsManager({owner}:{owner:boolean}){
  const [items,setItems]=useState<SeoItem[]>([]);
+ const [page,setPage]=useState(1);
+ const [hasMore,setHasMore]=useState(false);
  const [loading,setLoading]=useState(true);
  const [saving,setSaving]=useState(false);
  const [editing,setEditing]=useState<SeoItem|null|undefined>(undefined);
@@ -58,12 +60,13 @@ export default function SeoSettingsManager({owner}:{owner:boolean}){
  const [toast,setToast]=useState("");
  const [toastId,setToastId]=useState(0);
  const [toastVariant,setToastVariant]=useState<"success"|"error">("success");
- const refresh=useCallback(async()=>{
+ const refresh=useCallback(async(pageNumber=1)=>{
   setLoading(true);setError("");
   try{
-   const result=await seoRequest<{items:SeoItem[]}>();
-   if(!Array.isArray(result.items))throw Error("Danh sách SEO không hợp lệ.");
-   setItems(result.items);
+   const result=await seoRequest<{items:SeoItem[];page:number;hasMore:boolean}>(undefined,pageNumber);
+   if(!Array.isArray(result.items)||result.page!==pageNumber||typeof result.hasMore!=="boolean")
+    throw Error("Danh sách SEO không hợp lệ.");
+   setItems(result.items);setPage(result.page);setHasMore(result.hasMore);
   }catch(e){setError(e instanceof Error?e.message:"Không tải được dữ liệu SEO.");}
   finally{setLoading(false);}
  },[]);
@@ -133,7 +136,7 @@ export default function SeoSettingsManager({owner}:{owner:boolean}){
   {error&&<p role="alert" className="dl4-error">{error}</p>}
   {loading?<section role="status" className="surface dl4-panel">Đang tải thiết lập SEO…</section>:
    <section className="surface dl4-panel">
-    <h2>Thiết lập đã lưu ({items.length})</h2>
+    <h2>Thiết lập đã lưu · trang {page} ({items.length} mục đang xem)</h2>
     <label className="dl4-field">Tìm theo đường dẫn hoặc tiêu đề
      <input value={search} maxLength={120} onChange={e=>setSearch(e.target.value)}
       placeholder="Nhập URL hoặc tên nhóm"/></label>
@@ -148,6 +151,13 @@ export default function SeoSettingsManager({owner}:{owner:boolean}){
       <button className="fb-ui-button fb-ui-button--secondary" type="button"
        onClick={()=>open(item)}>Sửa</button>
      </li>)}</ul>}
+    <div className="action-row">
+     <button type="button" className="fb-ui-button fb-ui-button--secondary"
+      disabled={page<=1||loading} onClick={()=>void refresh(page-1)}>Trang trước</button>
+     <span>Trang {page}</span>
+     <button type="button" className="fb-ui-button fb-ui-button--secondary"
+      disabled={!hasMore||loading} onClick={()=>void refresh(page+1)}>Trang tiếp</button>
+    </div>
    </section>}
   {editing!==undefined&&<ProductModal title={editing?"Chỉnh SEO: "+editing.slug:"Thêm thiết lập SEO"}
    locked={saving} onClose={()=>setEditing(undefined)} wide

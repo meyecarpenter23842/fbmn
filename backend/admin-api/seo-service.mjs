@@ -9,7 +9,7 @@ const MODES=new Set(["auto","custom","noindex"]);
 const SLUG=/^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const validSlug=(kind,slug)=>typeof slug==="string"&&slug.length<=100&&SLUG.test(slug)&&
  (kind==="product"?/^sku-[a-f0-9]{32}$/.test(slug):
- kind==="category"?/^cat-[a-f0-9]{32}$/.test(slug):true);
+ kind==="category"?(/^cat-[a-f0-9]{32}$/.test(slug)||slug==="chua-phan-loai"):true);
 const plain=(v,max)=>typeof v==="string"&&v.length<=max&&v===v.trim()&&!/[<>\x00-\x1f\x7f]/.test(v);
 const validMedia=(path)=>path===null||(typeof path==="string"&&
  /^\/api\/catalogue-image\/[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/.test(path));
@@ -34,14 +34,20 @@ async function body(request){
 export async function handleSeoSettings({request,actor,db}){
  if(actor?.role!=="owner")return fail(403,"owner_required");
  const url=new URL(request.url);
- if(url.pathname!=="/v1/admin/website/seo"||url.search)return fail(400,"invalid_route");
+ if(url.pathname!=="/v1/admin/website/seo")return fail(400,"invalid_route");
+ if(request.method!=="GET"&&url.search)return fail(400,"invalid_query");
+ const pageRaw=url.searchParams.get("page");
+ if(request.method==="GET"&&(url.searchParams.size>1||
+   (pageRaw!==null&&(!/^[1-9]\d{0,1}$/.test(pageRaw)||Number(pageRaw)>50))))
+  return fail(400,"invalid_page");
+ const page=pageRaw===null?1:Number(pageRaw);
  if(typeof db!=="function")return fail(503,"seo_unavailable");
  if(request.method==="GET"){
   try{
    const result=await db(c=>c.query("SELECT kind,slug,mode,seo_title AS title,meta_description AS description,"+
-    "og_image_path AS \"ogImagePath\",revision,updated_at FROM "+TABLE+" ORDER BY kind,slug LIMIT 10001"));
-   if(result.rows.length>10000)throw Error("too_many_settings");
-   return ok({items:result.rows});
+    "og_image_path AS \"ogImagePath\",revision,updated_at FROM "+TABLE+
+     " ORDER BY kind,slug LIMIT 201 OFFSET $1",[200*(page-1)]));
+   return ok({items:result.rows.slice(0,200),page,hasMore:result.rows.length>200});
   }catch{return fail(503,"seo_unavailable");}
  }
  if(request.method!=="POST")return fail(405,"method_not_allowed");

@@ -5,7 +5,10 @@ const H={"Cache-Control":"private, no-store","X-Content-Type-Options":"nosniff",
 const fail=(status:number,code:string)=>Response.json({error:{code}},{status,headers:H});
 async function proxy(request:Request,method:"GET"|"POST"){
  const u=new URL(request.url);
- if(u.search)return fail(400,"invalid_query");
+ if(method==="POST"&&u.search)return fail(400,"invalid_query");
+ if(method==="GET"&&(u.searchParams.size>1||[...u.searchParams.keys()].some(k=>k!=="page")||
+  (u.searchParams.has("page")&&(!/^[1-9]\d{0,1}$/.test(u.searchParams.get("page")||"")||
+   Number(u.searchParams.get("page"))>50))))return fail(400,"invalid_query");
  if(method==="POST"&&(request.headers.get("origin")!==u.origin||request.headers.get("sec-fetch-site")==="cross-site"))
   return fail(403,"origin_forbidden");
  const bearer=request.headers.get("authorization")||"";
@@ -23,7 +26,7 @@ async function proxy(request:Request,method:"GET"|"POST"){
   body=await request.text();if(body.length>4000)return fail(413,"too_large");
  }
  try{
-  const r=await fetch(base.origin+"/v1/admin/website/seo",{
+  const r=await fetch(base.origin+"/v1/admin/website/seo"+(method==="GET"?u.search:""),{
    method,cache:"no-store",redirect:"manual",signal:AbortSignal.timeout(20000),
    headers:{Authorization:bearer,Accept:"application/json",...(body===undefined?{}:{"Content-Type":"application/json"})},
    ...(body===undefined?{}:{body})
