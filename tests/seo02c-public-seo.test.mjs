@@ -36,3 +36,15 @@ test("SEO02C schema is a narrow read-only public projection with a publication c
  assert.match(worker,/PUBLIC_SEO02_ENABLED==="true"/);
  assert.doesNotMatch(read("backend/public-api/handler.mjs"),/seo_price|net_price|pricebook/);
 });
+
+test("Canonical auto can override a legacy noindex and selected OG is not capped to four",()=>{
+ const view=read("backend/neon/migrations/20261113_seo02c_public_projection.up.sql");
+ const model=read("backend/public-api/read-model.mjs");
+ const seo=read("lib/seo/structured-data.ts");
+ const detail=read("app/san-pham/[slug]/page.tsx");
+ assert.match(view,/auto','custom','noindex/);
+ assert.match(model,/filter\(item=>item.mode!=="auto"\)/);
+ assert.match(model,/requested===slug/);
+ assert.match(seo,/approvedProductSeoImages\(product:PublicProduct\)/);
+ assert.match(detail,/approvedProductSeoImages\(product\)/);
+});

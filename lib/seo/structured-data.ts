@@ -19,6 +19,16 @@ export function productSeoDescription(product:PublicProduct):string{
  return text("Thông tin "+product.name+(specifications.length?": "+specifications.join(", "):"")+
   ". Xem mã hàng, quy cách và hình ảnh đã công khai tại Futurebook Miền Nam.",300);
 }
+// Unlike the four-image Open Graph default, this list validates every public image
+// the Owner may explicitly choose in the SEO editor.
+export function approvedProductSeoImages(product:PublicProduct):string[]{
+ const urls=new Set<string>();
+ for(const media of product.media){
+  const path=getPublishedProductImageUrl(media.r2Key,process.env.NEXT_PUBLIC_MEDIA_BASE_URL);
+  if(path)urls.add(absolute(path));
+ }
+ return [...urls];
+}
 export function productSeoImages(product:PublicProduct):string[]{
  const unique=new Set<string>();
  for(const item of product.media.slice(0,20)){

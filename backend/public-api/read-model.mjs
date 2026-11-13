@@ -353,7 +353,7 @@ export function createReadModel(query,{enableP5=false}={}) {
       for(const row of rows){
         const kind=String(row.kind),requested=String(row.slug),mode=String(row.mode);
         if(!["product","category","article","promotion"].includes(kind)||
-          !["custom","noindex"].includes(mode))continue;
+          !["auto","custom","noindex"].includes(mode))continue;
         const product=kind==="product"?products.get(requested):null;
         if((kind==="product"&&!product)||
           (kind==="category"&&!categories.has(requested))||
@@ -374,7 +374,7 @@ export function createReadModel(query,{enableP5=false}={}) {
         // Prefer canonical override when a legacy alias is also configured.
         if(!settings.has(id)||requested===slug)settings.set(id,item);
       }
-      return [...settings.values()];
+      return [...settings.values()].filter(item=>item.mode!=="auto");
     },
     async getPublicContent() {
       const [articles,promotions,companies,dealers] = await Promise.all([

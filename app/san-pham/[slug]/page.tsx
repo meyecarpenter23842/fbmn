@@ -9,7 +9,7 @@ import {relatedProducts} from "@/lib/catalog/recommendations";
 import WebInterestView from "@/components/web-interest-view";
 import {notFound,permanentRedirect} from "next/navigation";
 import {SeoJsonLd} from "@/lib/seo/json-ld";
-import {productMetadata,productSchema,breadcrumbSchema,productSeoImages} from "@/lib/seo/structured-data";
+import {productMetadata,productSchema,breadcrumbSchema,approvedProductSeoImages} from "@/lib/seo/structured-data";
 import {getPublishedSeo,seoFor,isNoindex,applySeoSetting} from "@/lib/seo/public-settings";
 
 export const dynamic = "force-dynamic";
@@ -19,7 +19,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
  const [catalog,{slug},seo]=await Promise.all([getPublicCatalog(),params,getPublishedSeo()]);
  const product=getProductBySlug(catalog,slug);
  return product?applySeoSetting(productMetadata(product),seoFor(seo,"product",product.slug),
-   productSeoImages(product)): {title:"Sản phẩm chưa công khai | Futurebook Miền Nam",robots:{index:false}};
+   approvedProductSeoImages(product)): {title:"Sản phẩm chưa công khai | Futurebook Miền Nam",robots:{index:false}};
 }
 
 export default async function ProductPage({ params, searchParams }: Props) {
