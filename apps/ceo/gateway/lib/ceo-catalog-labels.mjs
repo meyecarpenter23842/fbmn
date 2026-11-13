@@ -18,9 +18,25 @@ async function readCatalogPage(origin, page, transport, signal) {
   }
   const length = Number(response.headers.get('content-length') || 0);
   if (length > MAX_RESPONSE_BYTES) throw new Error('public_catalog_oversized');
-  const body = await response.arrayBuffer();
-  if (body.byteLength > MAX_RESPONSE_BYTES) throw new Error('public_catalog_oversized');
-  const parsed = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(body));
+  if (!response.body) throw new Error('public_catalog_missing_body');
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder('utf-8', { fatal: true });
+  const chunks = [];
+  let bytes = 0;
+  try {
+    while (true) {
+      const {done, value} = await reader.read();
+      if (done) break;
+      bytes += value.byteLength;
+      if (bytes > MAX_RESPONSE_BYTES) {
+        await reader.cancel('public_catalog_oversized');
+        throw new Error('public_catalog_oversized');
+      }
+      chunks.push(decoder.decode(value, {stream:true}));
+    }
+    chunks.push(decoder.decode());
+  } finally { reader.releaseLock(); }
+  const parsed = JSON.parse(chunks.join(''));
   if (!parsed || typeof parsed !== 'object' || !parsed.data ||
       !Array.isArray(parsed.data.categories) || !Array.isArray(parsed.data.products) ||
       parsed.data.categories.length > 2000 || parsed.data.products.length > PAGE_SIZE ||
