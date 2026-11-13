@@ -10,16 +10,17 @@ import WebInterestView from "@/components/web-interest-view";
 import {notFound} from "next/navigation";
 import {SeoJsonLd} from "@/lib/seo/json-ld";
 import {categoryMetadata,breadcrumbSchema} from "@/lib/seo/structured-data";
+import {getPublishedSeo,seoFor,applySeoSetting} from "@/lib/seo/public-settings";
 
 export const dynamic = "force-dynamic";
 
 type Props = { params: Promise<{ slug: string }>; searchParams: Promise<RawSearchParams> };
 
 export async function generateMetadata({ params,searchParams }: Props): Promise<Metadata> {
-  const [catalog, { slug }, raw] = await Promise.all([getPublicCatalog(), params,searchParams]);
+  const [catalog, { slug }, raw, seo] = await Promise.all([getPublicCatalog(), params,searchParams,getPublishedSeo()]);
   const filtered=["q","nhom","kho","gsm","trang","sap-xep"].some(key=>key in raw);
   const category = getCategoryBySlug(catalog, slug);
-  return category?{...categoryMetadata(category),
+  return category?{...applySeoSetting(categoryMetadata(category),seoFor(seo,"category",category.slug)),
     ...(filtered?{robots:{index:false,follow:true}}:{})}
     :{title:"Danh mục đang cập nhật | Futurebook Miền Nam",robots:{index:false}};
 }

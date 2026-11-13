@@ -9,15 +9,17 @@ import {relatedProducts} from "@/lib/catalog/recommendations";
 import WebInterestView from "@/components/web-interest-view";
 import {notFound,permanentRedirect} from "next/navigation";
 import {SeoJsonLd} from "@/lib/seo/json-ld";
-import {productMetadata,productSchema,breadcrumbSchema} from "@/lib/seo/structured-data";
+import {productMetadata,productSchema,breadcrumbSchema,productSeoImages} from "@/lib/seo/structured-data";
+import {getPublishedSeo,seoFor,applySeoSetting} from "@/lib/seo/public-settings";
 
 export const dynamic = "force-dynamic";
 
 type Props = { params: Promise<{ slug: string }>; searchParams: Promise<{sku?:string|string[]}> };
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
- const [catalog,{slug}]=await Promise.all([getPublicCatalog(),params]);
+ const [catalog,{slug},seo]=await Promise.all([getPublicCatalog(),params,getPublishedSeo()]);
  const product=getProductBySlug(catalog,slug);
- return product?productMetadata(product):{title:"Sản phẩm chưa công khai | Futurebook Miền Nam",robots:{index:false}};
+ return product?applySeoSetting(productMetadata(product),seoFor(seo,"product",product.slug),productSeoImages(product))
+  :{title:"Sản phẩm chưa công khai | Futurebook Miền Nam",robots:{index:false}};
 }
 
 export default async function ProductPage({ params, searchParams }: Props) {

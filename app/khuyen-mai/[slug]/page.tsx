@@ -4,16 +4,17 @@ import { getPublicContent } from "@/lib/content/adapter";
 import {notFound} from "next/navigation";
 import {SeoJsonLd} from "@/lib/seo/json-ld";
 import {breadcrumbSchema} from "@/lib/seo/structured-data";
+import {getPublishedSeo,seoFor,applySeoSetting} from "@/lib/seo/public-settings";
 
 export const dynamic = "force-dynamic";
 type Props = { params: Promise<{ slug: string }> };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const [content, { slug }] = await Promise.all([getPublicContent(), params]);
+  const [content, { slug },seo] = await Promise.all([getPublicContent(), params,getPublishedSeo()]);
   const item = content.promotions.find(promotion => promotion.slug === slug);
   return item
-    ? { title: item.title + " | Futurebook Miền Nam", description: item.summary,
-        alternates:{canonical:"/khuyen-mai/"+encodeURIComponent(item.slug)} }
+    ? applySeoSetting({ title: item.title + " | Futurebook Miền Nam", description: item.summary,
+        alternates:{canonical:"/khuyen-mai/"+encodeURIComponent(item.slug)} },seoFor(seo,"promotion",item.slug))
     : { title: "Chương trình chưa công khai | Futurebook Miền Nam", robots: { index: false } };
 }
 export default async function PromotionDetail({ params }: Props) {

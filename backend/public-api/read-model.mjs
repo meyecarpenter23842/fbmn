@@ -17,6 +17,7 @@ const SQL = Object.freeze({
   dealer: "SELECT title,paragraphs,contact_instructions FROM fbmn_public.v_dealer_information LIMIT 2",
   homeLayout: "SELECT category_ids,featured_skus,category_limit,product_limit,section_order,revision FROM fbmn_public.v_web_home_layout LIMIT 2",
   categoryDisplay: "SELECT category_id,mode FROM fbmn_public.v_web_category_display ORDER BY category_id LIMIT 2001",
+  seoSettings: "SELECT kind,slug,mode,title,description,image FROM fbmn_public.v_web_seo_settings ORDER BY kind,slug LIMIT 10001",
   cmsEntries: "SELECT e.id,kind,slug,title,summary,paragraphs,cta_url,slot,sort_order,published_at,starts_at,ends_at,popup_delay_seconds,popup_cooldown_minutes,popup_max_per_session,has_desktop,has_mobile,"+
    "(SELECT json_agg(json_build_object('slideNo',s.slide_no,'ordinal',s.ordinal,'enabled',s.enabled,'autoplay',s.autoplay,'effect',s.effect,'intervalMs',s.interval_ms,'durationMs',s.duration_ms) ORDER BY s.ordinal) FROM fbmn_public.v_cms_web_banner_slides s WHERE s.id=e.id) AS hero_slides "+
    "FROM fbmn_public.v_cms_web_entries e ORDER BY sort_order,published_at,id LIMIT 501",
@@ -330,6 +331,50 @@ export function createReadModel(query,{enableP5=false}={}) {
       const result=rows(await query(SQL.cataloguePdf,[id,download]),1);
       return result.length===1?{key:String(result[0].r2_key),
        bytes:Number(result[0].byte_size),mime:String(result[0].mime_type)}:null;
+    },
+    async getPublicSeoSettings({cmsEnabled=false}={}){
+      // Never return private table rows directly. Compare every requested slug
+      // against the current published read model, including legacy product URLs.
+      const [rows,catalog,content]=await Promise.all([
+        execute("seoSettings",10000),this.getPublicCatalog(),
+        cmsEnabled?this.getPublicCms():this.getPublicContent()
+      ]);
+      const products=new Map(),activeCategoryIds=new Set();
+      for(const product of catalog.products){
+        products.set(product.slug,product);
+        for(const alias of product.legacySlugs||[])products.set(alias,product);
+        activeCategoryIds.add(product.categoryId);
+        for(const variant of product.variants){if(variant.categoryId)activeCategoryIds.add(variant.categoryId);}
+      }
+      const categories=new Set(catalog.categories.filter(c=>activeCategoryIds.has(c.id)).map(c=>c.slug));
+      const articles=new Set((cmsEnabled?content.filter(c=>c.kind==="article"):content.articles).map(c=>c.slug));
+      const promotions=new Set((cmsEnabled?content.filter(c=>c.kind==="promotion"):content.promotions).map(c=>c.slug));
+      const settings=new Map();
+      for(const row of rows){
+        const kind=String(row.kind),requested=String(row.slug),mode=String(row.mode);
+        if(!["product","category","article","promotion"].includes(kind)||
+          !["custom","noindex"].includes(mode))continue;
+        const product=kind==="product"?products.get(requested):null;
+        if((kind==="product"&&!product)||
+          (kind==="category"&&!categories.has(requested))||
+          (kind==="article"&&!articles.has(requested))||
+          (kind==="promotion"&&!promotions.has(requested)))continue;
+        const slug=product?product.slug:requested,id=kind+":"+slug;
+        const item={kind,slug,mode,
+          title:mode==="custom"?String(row.title||""):"",
+          description:mode==="custom"?String(row.description||""):"",
+          image:null};
+        if(mode==="custom"&&kind==="product"&&typeof row.image==="string"){
+          const approved=product.media.some(media=>{
+            const match=/^products\/catalogue\/([0-9a-f-]{36})-v1\.webp$/i.exec(media.r2Key);
+            return match&&row.image==="/api/catalogue-image/"+match[1];
+          });
+          if(approved)item.image=row.image;
+        }
+        // Prefer canonical override when a legacy alias is also configured.
+        if(!settings.has(id)||requested===slug)settings.set(id,item);
+      }
+      return [...settings.values()];
     },
     async getPublicContent() {
       const [articles,promotions,companies,dealers] = await Promise.all([

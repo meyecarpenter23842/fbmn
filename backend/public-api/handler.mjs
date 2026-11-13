@@ -145,7 +145,7 @@ export function projectPublicContent(raw) {
   })();
   return { company, articles, promotions, dealerInformation };
 }
-const ROUTES = new Set(["/v1/public/categories", "/v1/public/products", "/v1/public/catalog", "/v1/public/content", "/v1/public/cms", "/v1/public/home-layout", "/v1/public/category-display"]);
+const ROUTES = new Set(["/v1/public/categories", "/v1/public/products", "/v1/public/catalog", "/v1/public/content", "/v1/public/cms", "/v1/public/home-layout", "/v1/public/category-display", "/v1/public/seo"]);
 const QUERY_KEYS = {
   "/v1/public/categories": new Set(["slug"]),
   "/v1/public/products": new Set(["slug", "categoryId", "page", "limit"]),
@@ -154,6 +154,7 @@ const QUERY_KEYS = {
   "/v1/public/cms": new Set(),
   "/v1/public/home-layout": new Set(),
   "/v1/public/category-display": new Set(),
+  "/v1/public/seo": new Set(),
 };
 function integerParam(input, defaultValue, max) {
   if (input === null) return defaultValue;
@@ -223,7 +224,7 @@ export function projectPublicCategoryDisplay(raw) {
     return {categoryId:item.categoryId,mode:"sku"};
   })};
 }
-export function createPublicApi({ getPublicCatalog, getPublicContent, getPublicCms, getPublicHomeLayout, getPublicCategoryDisplay, cmsEnabled = false, homeLayoutEnabled = false, categoryDisplayEnabled = false, allowedOrigins = [] }) {
+export function createPublicApi({ getPublicCatalog, getPublicContent, getPublicCms, getPublicHomeLayout, getPublicCategoryDisplay, getPublicSeoSettings, cmsEnabled = false, homeLayoutEnabled = false, categoryDisplayEnabled = false, seoEnabled = false, allowedOrigins = [] }) {
   guard(typeof getPublicCatalog === "function" && typeof getPublicContent === "function");
   guard(Array.isArray(allowedOrigins) && allowedOrigins.every(o => {
     try { const u = new URL(o); return u.protocol === "https:" && u.origin === o; }
@@ -253,6 +254,32 @@ export function createPublicApi({ getPublicCatalog, getPublicContent, getPublicC
       }
       if (!validQuery(url)) return failure(400, "invalid_query", corsOrigin);
       try {
+        if (url.pathname === "/v1/public/seo") {
+          if(!seoEnabled||typeof getPublicSeoSettings!=="function")
+            return failure(404,"not_found",corsOrigin);
+          const settings=await getPublicSeoSettings();
+          guard(Array.isArray(settings)&&settings.length<=10000);
+          const seen=new Set();
+          const items=settings.map(s=>{
+            guard(s&&typeof s==="object"&&!Array.isArray(s)&&
+              ["product","category","article","promotion"].includes(s.kind)&&
+              typeof s.slug==="string"&&/^[a-z0-9][a-z0-9-]{0,99}$/.test(s.slug)&&
+              ["custom","noindex"].includes(s.mode));
+            const id=s.kind+":"+s.slug;
+            guard(!seen.has(id));seen.add(id);
+            const entry={kind:s.kind,slug:s.slug,mode:s.mode};
+            if(s.mode==="custom"){
+              if(typeof s.title==="string"&&s.title.length<=180&&!/[<>]/.test(s.title))
+                entry.title=s.title;
+              if(typeof s.description==="string"&&s.description.length<=400&&!/[<>]/.test(s.description))
+                entry.description=s.description;
+              if(s.kind==="product"&&typeof s.image==="string"&&
+                /^\/api\/catalogue-image\/[0-9a-f-]{36}$/.test(s.image))entry.image=s.image;
+            }
+            return entry;
+          });
+          return response(200,{data:{items}},corsOrigin,"no-store");
+        }
         if (url.pathname === "/v1/public/category-display") {
           if(!categoryDisplayEnabled || typeof getPublicCategoryDisplay!=="function")return failure(404,"not_found",corsOrigin);
           return response(200,{data:projectPublicCategoryDisplay(await getPublicCategoryDisplay())},corsOrigin,"no-store");
