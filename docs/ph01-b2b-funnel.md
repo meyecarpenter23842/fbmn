@@ -11,7 +11,7 @@
 | 3. Gửi thành công | `web_contact_submit_success` hoặc `web_outsourcing_submit_success` | Phải xảy ra sau bước 2 trong cùng phiên; chỉ phát khi backend trả 201 và ok=true |
 
 - **Đơn vị tính:** phiên Website, **không phải khách hàng/người duy nhất**. Website `distinct_id = fbmn-web-session-<UUID>`, thay sau 30 phút không hoạt động; mỗi phiên chỉ đếm một lần dù bấm CTA nhiều lần hoặc gửi nhiều form.
-- **Cửa sổ:** 24 giờ từ bước đầu trong cùng phiên bằng `windowFunnel(86400)`. Có thể có sự kiện không liên quan nằm giữa các bước. Số lượng trong kỳ lấy từ các sự kiện xảy ra trong 7/30/90 ngày gần nhất, múi giờ query PostHog/UTC; phiên ở mép kỳ có thể bị cắt.
+- **Cửa sổ:** 24 giờ từ bước đầu trong cùng phiên bằng `windowFunnel(86400000)` với Unix milliseconds kiểu unsigned (`accurateCast(toUnixTimestamp64Milli(timestamp), 'UInt64')`). Có thể có sự kiện không liên quan nằm giữa các bước. Số lượng trong kỳ lấy từ các sự kiện xảy ra trong 7/30/90 ngày gần nhất, múi giờ query PostHog/UTC; phiên ở mép kỳ có thể bị cắt.
 - **Tỷ lệ:** (bước 2 / bước 1), (bước 3 / bước 2), (bước 3 / bước 1). Nếu mẫu số không có phiên, hiển thị **—**, không bịa 0%. `countIf` tính phiên trong mỗi bước, không cộng số lần click.
 - **Rời bước:** `bước 1 - bước 2`, `bước 2 - bước 3`: chưa chuyển bước trong cửa sổ/kỳ quan sát, **không** mặc định là khách từ chối/mất cơ hội bán hàng.
 - **Không ghi PII:** API chỉ trả 3 số nguyên, không trả session ID, referrer, IP, email, SĐT, nội dung biểu mẫu, SKU riêng hay giá NET; Gateway vẫn yêu cầu Owner và API key chỉ ở server.
@@ -25,7 +25,7 @@
 ## Nghiệm thu kỹ thuật
 
 1. `queriesFor` chỉ nhận 7d/30d/90d; PostHog 8 truy vấn fixed read-only, tối đa 3 đồng thời, không truy vấn raw session IDs về Flutter.
-2. `windowFunnel(86400)(toDateTime(timestamp),...)` có thứ tự 3 bước; `startsWith(distinct_id, 'fbmn-web-session-')` tránh PDF proxy và nguồn ngoài.
+2. `windowFunnel(86400000)(accurateCast(toUnixTimestamp64Milli(timestamp), 'UInt64'),...)` có thứ tự 3 bước và không đánh mất mili-giây; PostHog chạy thử: CTA trước product trong cùng giây → stage 1, thứ tự đúng → stage 3; `startsWith(distinct_id, 'fbmn-web-session-')` tránh PDF proxy và nguồn ngoài.
 3. `formatStatistics` kiểm tra đúng một hàng / ba số, không âm, `step1 >= step2 >= step3`. Lỗi dữ liệu trả trạng thái lỗi, không tự tính/giả số.
 4. Flutter mobile phải không tràn ngang tại 360px; cả 0 phiên, 0 CTA, có lead và lỗi PostHog được biểu diễn rõ.
 5. Giữ nguyên số liệu SEO05, trang/sản phẩm/danh mục, session analytics, quyền Owner, PII contract.
