@@ -1,6 +1,6 @@
 "use client";
 import {useCallback,useEffect,useState} from "react";
-import ProductModal from "./product-modal";
+import ProductModal,{useProductModalClose} from "./product-modal";
 import AdminToast from "./admin-toast";
 
 type Kind="product"|"category"|"article"|"promotion";
@@ -46,6 +46,18 @@ async function seoRequest<T>(body?:object,page=1):Promise<T>{
  }
  if(!json.data)throw Error("Dữ liệu SEO không hợp lệ.");
  return json.data;
+}
+function SeoModalFooter({saving,canSave,onSave}:{saving:boolean;canSave:boolean;onSave:()=>Promise<boolean|undefined>}){
+ const close=useProductModalClose();
+ const [closeAfterSave,setCloseAfterSave]=useState(false);
+ useEffect(()=>{if(closeAfterSave&&!saving){close();setCloseAfterSave(false);}},[closeAfterSave,saving,close]);
+ return <>
+  <button className="fb-ui-button fb-ui-button--secondary" type="button"
+   disabled={saving} onClick={close}>Đóng</button>
+  <button className="fb-ui-button fb-ui-button--primary" type="button"
+   disabled={saving||!canSave} onClick={()=>void onSave().then(ok=>{if(ok)setCloseAfterSave(true);})}>
+   {saving?"Đang lưu…":"Lưu SEO"}</button>
+ </>;
 }
 export default function SeoSettingsManager({owner}:{owner:boolean}){
  const [items,setItems]=useState<SeoItem[]>([]);
@@ -110,9 +122,9 @@ export default function SeoSettingsManager({owner}:{owner:boolean}){
     mode:draft.mode,title,description,ogImagePath:imagePath,revision:editing?.revision??0});
    setItems(prev=>[...prev.filter(x=>!(x.kind===result.item.kind&&x.slug===result.item.slug)),result.item]
     .sort((a,b)=>(a.kind+":"+a.slug).localeCompare(b.kind+":"+b.slug)));
-   setEditing(undefined);
    showToast("Đã lưu thiết lập trong Admin. Chưa áp dụng công khai cho đến khi SEO02C được triển khai.","success");
-  }catch(e){showToast(e instanceof Error?e.message:"Không thể lưu.","error");}
+   return true;
+  }catch(e){showToast(e instanceof Error?e.message:"Không thể lưu.","error");return false;}
   finally{setSaving(false);}
  };
  if(!owner)return <section className="surface dl4-panel"><h1>SEO sản phẩm & nội dung</h1>
@@ -161,12 +173,7 @@ export default function SeoSettingsManager({owner}:{owner:boolean}){
    </section>}
   {editing!==undefined&&<ProductModal title={editing?"Chỉnh SEO: "+editing.slug:"Thêm thiết lập SEO"}
    locked={saving} onClose={()=>setEditing(undefined)} wide
-   footer={<>
-    <button className="fb-ui-button fb-ui-button--secondary" type="button" disabled={saving}
-     onClick={()=>setEditing(undefined)}>Đóng</button>
-    <button className="fb-ui-button fb-ui-button--primary" type="button"
-     disabled={saving||!slug||duplicate} onClick={()=>void save()}>{saving?"Đang lưu…":"Lưu SEO"}</button>
-   </>}>
+   footer={<SeoModalFooter saving={saving} canSave={Boolean(slug)&&!duplicate} onSave={save}/>}>
    <div className="cms-form-grid">
     <label>Loại trang
      <select value={draft.kind} disabled={Boolean(editing)||saving}
