@@ -3,7 +3,7 @@
 **Phạm vi:** Website Futurebook Miền Nam. Không thay Premium Purple Glass, SKU, dữ liệu khách, giá NET, ảnh R2, schema Neon, Worker hoặc phân quyền. Chỉ phát hành production khi Owner yêu cầu riêng.
 
 ## Audit nguồn và sửa lỗi
-- Hero CMS (`components/cms-hero-carousel.tsx`): những slide ảnh full-size chồng absolute có thể vẫn được tải dù opacity 0. SEO04 chỉ render ảnh slide đầu ở SSR, giữ slot/animation, chuẩn bị slide liền kề sau khi trang hiển thị và tiếp tục tải ảnh khi người dùng chọn. Không bỏ autoplay, pause hoặc prefers-reduced-motion.
+- Hero CMS (`components/cms-hero-carousel.tsx`): những slide ảnh full-size chồng absolute có thể vẫn được tải dù opacity 0. SEO04 chỉ render ảnh slide đầu ở SSR, giữ slot/animation, chuẩn bị slide liền kề sau khi trang hiển thị; chỉ chuyển khi ảnh đã tải và decode thành công, còn nếu ảnh lỗi thì giữ slide cũ và vô hiệu nút ảnh lỗi. Không bỏ autoplay, pause hoặc prefers-reduced-motion.
 - Gallery/SKU (`CatalogProductImage`): thẻ đầu danh mục và ảnh gallery đang chọn được ưu tiên; ảnh dưới fold tiếp tục lazy. Thumbnail khai báo width/height nhằm giữ ổn định khung. Dùng `sizes` nhưng **không khẳng định đã resize hay giảm số byte** khi Next Image còn `unoptimized`.
 - Sitemap: thay cách gom các category có variant bằng `catalogueListingCards(catalog,modes)` đồng nhất với listing thực theo DL5 Family/SKU; các category không có thẻ thực tế không vào sitemap. Không thêm URL cho filtered query, bảo lưu noindex trên danh sách lọc, canonical, Article/Organization/Breadcrumb.
 - SEO03 metadata: tên nhóm kỹ thuật “Chưa phân loại” không được ghép vào Title/Description sản phẩm như Song Natural.

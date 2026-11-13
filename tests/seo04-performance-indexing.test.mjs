@@ -5,11 +5,14 @@ const read=path=>readFileSync(new URL("../"+path,import.meta.url),"utf8");
 
 test("SEO04 Hero does not request every overlapping slide on initial render",()=>{
  const hero=read("components/cms-hero-carousel.tsx");
- assert.match(hero,/new Set\(\[0\]\)/);
- assert.match(hero,/prepared\.has\(i\)/);
+ assert.match(hero,/useReducer\(heroSlideReducer,initialHeroSlideState\)/);
+ assert.match(read("lib/media/hero-slide-state.ts"),/prepared:\[0\]/);
+ assert.match(hero,/state\.prepared\.includes\(i\)/);
+ assert.match(hero,/img\.decode\(\)\.then/);
+ assert.match(hero,/onError=\{\(\)=>dispatch\(\{type:"failed",index:i\}\)\}/);
  assert.match(hero,/Math\.max\(2500,current\.motion\.intervalMs-2500\)/);
  assert.match(hero,/prefers-reduced-motion: reduce/);
- assert.match(hero,/onClick=\{\(\)=>reveal\(i\)\}/);
+ assert.match(hero,/onClick=\{\(\)=>dispatch\(\{type:"request",index:i\}\)\}/);
  assert.match(hero,/priority=\{i===0\}/);
 });
 test("SEO04 prioritizes only main catalogue product image; other images remain lazy",()=>{

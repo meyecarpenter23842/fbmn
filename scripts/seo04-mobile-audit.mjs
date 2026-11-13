@@ -21,13 +21,23 @@ try{
    const requests=[];
    page.on("request",r=>requests.push(r.resourceType()));
    await page.addInitScript(()=>{
-    window.__seo04={lcp:null,cls:0};
+    window.__seo04={lcp:null,cls:0,shifts:[]};
     try{
      new PerformanceObserver(list=>{
       for(const e of list.getEntries())window.__seo04.lcp=Math.round(e.startTime);
      }).observe({type:"largest-contentful-paint",buffered:true});
      new PerformanceObserver(list=>{
-      for(const e of list.getEntries())if(!e.hadRecentInput)window.__seo04.cls+=e.value;
+      for(const e of list.getEntries())if(!e.hadRecentInput){
+       window.__seo04.cls+=e.value;
+       const sources=(e.sources||[]).slice(0,3).map(source=>{
+        const node=source.node,classes=node?.className;
+        return {tag:node?.tagName||null,
+         className:typeof classes==="string"?classes.slice(0,110):"",
+         fromTop:Math.round(source.previousRect?.top??0),
+         toTop:Math.round(source.currentRect?.top??0)};
+       });
+       window.__seo04.shifts.push({value:Number(e.value.toFixed(4)),sources});
+      }
      }).observe({type:"layout-shift",buffered:true});
     }catch{}
    });
@@ -44,6 +54,7 @@ try{
       domContentLoadedMs:nav?Math.round(nav.domContentLoadedEventEnd):null,
       lcpMs:window.__seo04.lcp,
       cls:Number(window.__seo04.cls.toFixed(3)),
+      shiftSources:window.__seo04.shifts.slice(0,12),
       horizontalOverflow:document.documentElement.scrollWidth>innerWidth+3,
       loadedImages:[...document.images].filter(i=>i.complete&&i.naturalWidth>0).length,
       brokenImages:[...document.images].filter(i=>i.complete&&!i.naturalWidth).length
@@ -75,6 +86,11 @@ const lines=["# SEO04 mobile/desktop lab baseline","",origin,"",
  ...rows.map(r=>"| "+r.name+" | "+r.width+" | "+(r.status??"error")+" | "+
   (r.ttfbMs??"—")+" | "+(r.lcpMs??"—")+" | "+(r.cls??"—")+" | "+
   (r.imageRequests??"—")+" | "+(r.horizontalOverflow===undefined?"—":r.horizontalOverflow?"YES":"no")+" |"),
+ "","## Home mobile CLS attribution",
+ ...rows.filter(r=>r.name==="home"&&r.width===390).flatMap(r=>
+  (r.shiftSources||[]).slice(0,7).map(s=>
+   "- CLS "+s.value+": "+s.sources.map(x=>x.tag+"."+
+    x.className+" ("+x.fromTop+"→"+x.toTop+")").join(", "))),
  "","## Limitations",...notes.map(v=>"- "+v)];
 const summary=lines.join("\n")+"\n";
 await writeFile(output+"/report.md",summary);
