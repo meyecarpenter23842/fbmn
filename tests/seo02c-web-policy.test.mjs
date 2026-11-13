@@ -11,7 +11,7 @@ test("SEO02C metadata from live public policy, canonicals remain real",()=>{
  const product=read("app/san-pham/[slug]/page.tsx");
  assert.match(product,/permanentRedirect/);
  assert.match(product,/\?sku=/);
- assert.match(product,/productSeoImages\(product\)/);
+ assert.match(product,/approvedProductSeoImages\(product\)/);
  const site=read("app/sitemap.ts");
  for(const kind of ["product","category","article","promotion"]){
   assert.match(site,new RegExp('isNoindex\\(seo,"'+kind+'"'));
