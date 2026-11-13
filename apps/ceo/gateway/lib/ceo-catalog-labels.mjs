@@ -8,10 +8,10 @@ const MAX_PAGES = 10;
 const validName = value => typeof value === 'string' && value.trim().length > 0 && value.length <= 160;
 const validKey = value => typeof value === 'string' && value.length > 0 && value.length <= 120;
 
-async function readCatalogPage(origin, page, transport) {
+async function readCatalogPage(origin, page, transport, signal) {
   const response = await transport(origin + '/v1/public/catalog?page=' + page + '&limit=' + PAGE_SIZE, {
     method: 'GET', redirect: 'manual', cache: 'no-store',
-    headers: { Accept: 'application/json' }, signal: AbortSignal.timeout(8000),
+    headers: { Accept: 'application/json' }, signal,
   });
   if (response.status !== 200 || !response.headers.get('content-type')?.includes('application/json')) {
     throw new Error('public_catalog_unavailable');
@@ -39,10 +39,11 @@ export async function attachCatalogNames(statistics, origin, transport = fetch) 
       uri.username || uri.password || uri.port) throw new Error('public_catalog_origin_invalid');
   const products = new Map(), categories = new Map();
   const wantedProducts = new Set(statistics.products.map(x => x.label));
-  const wantedCategories = new Set(statistics.categories.map(x => x.label));
+  const wantedCategories = new Set(statistics.categories.map(x => x.label).filter(key => key !== 'chua-phan-loai'));
+  const signal = AbortSignal.timeout(8000); // One total deadline for all catalogue pages.
   let totalPages = 1;
   for (let page = 1; page <= totalPages; page++) {
-    const snapshot = await readCatalogPage(uri.origin, page, transport);
+    const snapshot = await readCatalogPage(uri.origin, page, transport, signal);
     totalPages = snapshot.pagination.totalPages;
     for (const category of snapshot.data.categories) {
       if (!validName(category?.name)) continue;
