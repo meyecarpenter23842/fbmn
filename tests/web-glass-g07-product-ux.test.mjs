@@ -91,7 +91,7 @@ test("G07: sticky quote appears only offscreen, retains company SKU and real con
   assert.match(detail, /ref=\{primaryQuoteRef\} href="\/#contact"/);
   assert.match(detail, /glass&&showMobileQuote&&<div className="fb-song-mobile-cta"/);
   assert.match(detail, /Mã <strong>\{selected\.sku\}<\/strong>/);
-  assert.match(detail, /<GlassButtonLink href="\/#contact" pill>Liên hệ báo giá<\/GlassButtonLink>/);
+  assert.match(detail, /<GlassButtonLink href="\/#contact" pill onClick=\{\(\)=>trackQuote\("product_mobile"\)\}>[\s\S]*?Liên hệ báo giá<\/GlassButtonLink>/);
   assert.match(css, /\.fb-song-mobile-cta\s*\{\s*display:\s*none/);
   assert.match(css, /@media \(max-width: 700px\)[\s\S]*?\.fb-song-mobile-cta\s*\{[^}]*position:\s*fixed/);
   assert.match(css, /env\(safe-area-inset-bottom\)/);

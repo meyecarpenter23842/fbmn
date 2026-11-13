@@ -43,18 +43,21 @@ export async function GET(request:Request){
  if(!/^phx_[A-Za-z0-9_-]{20,200}$/.test(key))return fail(503,"statistics_not_configured");
  try{
   const requests=queriesFor(period);
-  // Only five bounded aggregate queries; no event exports, PII or user-supplied SQL.
-  // PostHog supports only three concurrent queries per project. Bound concurrency.
+  // Seven bounded read-only aggregate queries, batches max three per PostHog project.
+  // No raw events, visitor IDs, PII or browser-supplied SQL leave the gateway.
   const named=Object.entries(requests);
-  const first=await Promise.all(named.slice(0,3).map(([name,sql])=>runQuery(key,sql,force,name)));
-  const second=await Promise.all(named.slice(3).map(([name,sql])=>runQuery(key,sql,force,name)));
-  const [summary,daily,sources,products,categories]=[...first,...second];
-  const data=formatStatistics(period,{summary,daily,sources,products,categories});
-  // Resolve historical product/category keys against the same approved public catalogue
-  // the Website renders. Catalogue failures must never hide real PostHog counts.
+  const responses:Record<string,{results:unknown[][];is_cached?:boolean;last_refresh?:string}>={};
+  for(let index=0;index<named.length;index+=3){
+   const batch=named.slice(index,index+3);
+   const results=await Promise.all(batch.map(([name,sql])=>runQuery(key,sql,force,name)));
+   batch.forEach(([name],i)=>{responses[name]=results[i];});
+  }
+  const data=formatStatistics(period,responses);
+  // Map historical PostHog keys through the same published-only catalogue as the Website.
+  // If Public Worker is unavailable, retain original events/counts and flag the labels.
   let enriched={...data,labelsUnavailable:true};
   try{enriched=await attachCatalogNames(data,process.env.FBMN_CEO_PUBLIC_API_BASE_URL||"");}
-  catch{/* Keep the original identifiers and warn the Owner in Flutter. */}
+  catch{/* Do not conceal genuine analytics while catalogue naming is unavailable. */}
   return Response.json({data:enriched},{status:200,headers:HEADERS});
  }catch(error){
   const message=error instanceof Error?error.message:"";

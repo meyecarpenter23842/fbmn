@@ -11,15 +11,34 @@ export function queriesFor(period){
    "web_pdf_download_served","web_chat_open","web_contact_submit_success","web_outsourcing_submit_success"]
    .map((event,i)=>"countIf(event = '"+event+"') AS "+names[i]).join(", ")+base;
  const daily="SELECT toDate(timestamp) AS day, countIf(event = 'web_session_start') AS visits, "+
-  "countIf(event = 'web_page_view') AS pageViews"+base+
-  " AND event IN ('web_session_start','web_page_view') GROUP BY day ORDER BY day ASC LIMIT 95";
+  "countIf(event = 'web_page_view') AS pageViews, "+
+  "uniqIf(distinct_id, event = 'web_session_start' AND properties.traffic_channel = 'google_organic') AS organicSessions, "+
+  "uniqIf(distinct_id, event IN ('web_contact_submit_success','web_outsourcing_submit_success') AND properties.traffic_channel = 'google_organic') AS organicLeadSessions"+base+
+  " AND event IN ('web_session_start','web_page_view','web_contact_submit_success','web_outsourcing_submit_success') "+
+  " GROUP BY day ORDER BY day ASC LIMIT 95";
  const sources="SELECT toString(properties.traffic_source) AS label, count() AS total"+base+
   " AND event = 'web_session_start' GROUP BY label ORDER BY total DESC LIMIT 10";
  const products="SELECT toString(properties.product_key) AS label, count() AS total"+base+
   " AND event = 'web_product_view' GROUP BY label ORDER BY total DESC LIMIT 10";
  const categories="SELECT toString(properties.category_key) AS label, count() AS total"+base+
   " AND event = 'web_category_view' GROUP BY label ORDER BY total DESC LIMIT 10";
- return {summary,daily,sources,products,categories};
+ // Distinct session counts, never users: no PII, personal IDs or raw search queries.
+ // New SEO attribution begins with SEO05 web traffic_channel; old events are unclassified.
+ const organic="properties.traffic_channel = 'google_organic'";
+ const seoSummary="SELECT "+
+  "uniqIf(distinct_id,event = 'web_session_start' AND "+organic+") AS organicSessions, "+
+  "uniqIf(distinct_id,event = 'web_product_view' AND "+organic+") AS organicProductSessions, "+
+  "uniqIf(distinct_id,event = 'web_contact_submit_success' AND "+organic+") AS organicContactSessions, "+
+  "uniqIf(distinct_id,event = 'web_outsourcing_submit_success' AND "+organic+") AS organicOutsourcingSessions, "+
+  "uniqIf(distinct_id,event IN ('web_contact_submit_success','web_outsourcing_submit_success') AND "+organic+") AS organicLeadSessions, "+
+  "uniqIf(distinct_id,event = 'web_session_start' AND properties.traffic_channel = 'google_paid') AS googlePaidSessions, "+
+  "uniqIf(distinct_id,event = 'web_session_start' AND properties.traffic_channel = 'google_unclassified') AS googleUnclassifiedSessions, "+
+  "countIf(event = 'web_lead_cta_click' AND "+organic+") AS organicCtaClicks"+base+
+  " AND event IN ('web_session_start','web_product_view','web_contact_submit_success','web_outsourcing_submit_success','web_lead_cta_click')";
+ const seoPages="SELECT toString(properties.page_key) AS label, count() AS total"+base+
+  " AND event = 'web_page_view' AND "+organic+
+  " AND notEmpty(toString(properties.page_key)) GROUP BY label ORDER BY total DESC LIMIT 10";
+ return {summary,daily,sources,products,categories,seoSummary,seoPages};
 }
 const count=x=>{const n=Number(x);if(!Number.isSafeInteger(n)||n<0)throw new Error("invalid_count");return n;};
 function rows(x){
@@ -33,17 +52,29 @@ function pairs(input,limit){
   return {label:label||"khác",count:count(row[1])};
  }).filter(item=>item.label!=="null"&&item.label!=="undefined");
 }
+// Defense-in-depth for labels returned from the analytics provider.
+function safeSeoPage(value){
+ return ["/","/san-pham","/catalogue","/lien-he","/gia-cong","/dai-ly"].includes(value);
+}
 export function formatStatistics(period,input){
  if(!PERIOD_DAYS[period])throw new Error("invalid_period");
  const totals=rows(input.summary);
  if(totals.length!==1||totals[0].length<names.length)throw new Error("invalid_summary");
  const metrics=Object.fromEntries(names.map((name,i)=>[name,count(totals[0][i])]));
+ const seoRows=rows(input.seoSummary);
+ if(seoRows.length!==1||seoRows[0].length!==8)throw new Error("invalid_seo_summary");
+ const keys=["organicSessions","organicProductSessions","organicContactSessions",
+  "organicOutsourcingSessions","organicLeadSessions","googlePaidSessions",
+  "googleUnclassifiedSessions","organicCtaClicks"];
+ const seo=Object.fromEntries(keys.map((key,i)=>[key,count(seoRows[0][i])]));
  const daily=rows(input.daily).map(row=>{
   const day=String(row[0]??"");
-  if(!/^\d{4}-\d{2}-\d{2}$/.test(day))throw new Error("invalid_date");
-  return {day,visits:count(row[1]),pageViews:count(row[2])};
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(day)||row.length!==5)throw new Error("invalid_date");
+  return {day,visits:count(row[1]),pageViews:count(row[2]),
+   organicSessions:count(row[3]),organicLeadSessions:count(row[4])};
  });
  return {period,timezone:"UTC",generatedAt:typeof input.summary.last_refresh==="string"?input.summary.last_refresh:"",
   cached:input.summary.is_cached===true,metrics,daily,
-  sources:pairs(input.sources,10),products:pairs(input.products,10),categories:pairs(input.categories,10)};
+  sources:pairs(input.sources,10),products:pairs(input.products,10),categories:pairs(input.categories,10),
+  seo,seoPages:pairs(input.seoPages,10).filter(item=>safeSeoPage(item.label))};
 }
