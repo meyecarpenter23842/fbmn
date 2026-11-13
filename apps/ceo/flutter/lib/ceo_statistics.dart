@@ -115,6 +115,47 @@ class CeoStatisticsTabState extends State<CeoStatisticsTab>{
     style:TextStyle(fontSize:12,color:ceoMuted)),
   ]);
  }
+ Widget funnelPanel(CeoWebStatistics value){
+  final f=value.funnel;
+  final steps=<({String label,int count})>[
+   (label:'1. Xem sản phẩm',count:f.viewedSessions),
+   (label:'2. Bấm nút liên hệ',count:f.ctaSessions),
+   (label:'3. Gửi yêu cầu thành công',count:f.submittedSessions),
+  ];
+  String pct(double? value)=>value==null?'—':'${value.toStringAsFixed(1)}%';
+  if(f.viewedSessions==0){
+   return const CeoEmptyResult(title:'Chưa có phiên xem sản phẩm',
+    detail:'Chưa thể tính chuyển đổi trong khoảng thời gian đã chọn.',
+    icon:Icons.filter_alt_outlined);
+  }
+  return Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+   const Text('Mỗi phiên chỉ tính một lần ở từng bước; hành động phải đúng thứ tự trong cùng phiên, tối đa 24 giờ.',
+    style:TextStyle(fontSize:12,color:ceoMuted)),
+   const SizedBox(height:12),
+   for(final step in steps)Padding(padding:const EdgeInsets.only(bottom:14),
+    child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+     Row(children:[
+      Expanded(child:Text(step.label,style:const TextStyle(fontSize:13,fontWeight:FontWeight.w600,color:ceoInk))),
+      const SizedBox(width:8),
+      Text('${step.count} phiên',style:const TextStyle(fontSize:13,fontWeight:FontWeight.w700,color:ceoPurple)),
+     ]),
+     const SizedBox(height:6),
+     LinearProgressIndicator(value:step.count/f.viewedSessions,
+      minHeight:9,color:ceoPurple,backgroundColor:ceoLavender),
+    ])),
+   Text('Xem → Bấm: ${pct(f.viewToCtaPercent)}    ·    Bấm → Gửi: ${pct(f.ctaToSubmitPercent)}',
+    style:const TextStyle(fontSize:12,color:ceoInk)),
+   const SizedBox(height:6),
+   Text('Chuyển đổi tổng: ${pct(f.overallPercent)}',
+    style:const TextStyle(fontSize:14,fontWeight:FontWeight.w700,color:ceoPurple)),
+   const SizedBox(height:8),
+   Text('Chưa bấm CTA: ${f.notClicked} phiên · Đã bấm nhưng chưa gửi: ${f.notSubmitted} phiên',
+    style:const TextStyle(fontSize:12,color:ceoMuted)),
+   const SizedBox(height:8),
+   const Text('CTA chỉ là ý định liên hệ; chỉ xác nhận HTTP 201 mới tính yêu cầu thành công. Dữ liệu trước khi Website bật sự kiện CTA không được hồi tố.',
+    style:TextStyle(fontSize:12,color:ceoMuted)),
+  ]);
+ }
  Widget ranking(List<CeoStatRank> items){
   if(items.isEmpty){return const CeoEmptyResult(title:'Chưa có dữ liệu',
    detail:'Chỉ hiển thị khi có tương tác thực tế.',icon:Icons.insights_outlined);}
@@ -169,6 +210,8 @@ class CeoStatisticsTabState extends State<CeoStatisticsTab>{
      ]
     ])),
    if(value!=null&&!loading&&error.isEmpty)...[
+    CeoPanel(title:'PH01 · Funnel B2B',subtitle:'Xem sản phẩm → Liên hệ → Yêu cầu thành công',
+     icon:Icons.filter_alt_outlined,child:funnelPanel(value)),
     CeoPanel(title:'SEO · Google tự nhiên',subtitle:'Nguồn truy cập và chuyển đổi đo bằng PostHog',
      icon:Icons.travel_explore_outlined,child:seoPanel(value)),
     CeoPanel(title:'Xu hướng truy cập',subtitle:'Số phiên theo ngày',
