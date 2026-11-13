@@ -784,6 +784,7 @@ void main(){
    expect(repo.gscLoads,1,reason:'Returning to same SEO period must reuse GSC data');
    expect(repo.analyticsLoads,1);
    await tester.ensureVisible(find.text('30 ngày'));
+   await tester.pumpAndSettle();
    await tester.tap(find.text('30 ngày'));
    await tester.pumpAndSettle();
    expect(repo.gscLoads,2);
