@@ -1,3 +1,5 @@
+import {withPushDb} from "@/lib/ceo-push-db";
+import {indexReceived,inboxUnread} from "@/lib/ceo-mail-index";
 import {requireOwner} from "@/lib/owner-gate";
 import {allowedOrigin} from "@/lib/ceo-push-policy.mjs";
 import {parseMailboxQuery,parseMailSend,mailSignatureHtml,mailSignatureText,MAIL_FROM,MAIL_MAX_REQUEST_BYTES,MAIL_MAX_ATTACHMENT_REQUEST_BYTES,readBoundedMailBody} from "@/lib/ceo-mail-policy.mjs";
@@ -24,7 +26,23 @@ export async function GET(request:Request){
    created_at:value.created_at,status:value.last_event||value.status||"",
    message_id:value.message_id||"",attachment_count:Array.isArray(value.attachments)?value.attachments.length:0};
  });
- return Response.json({data:{items,hasMore:upstream.payload.has_more===true,
+ let marked=items;
+ let readStateAvailable=true;
+ if(params.box==="inbox"){
+  try{
+   marked=await withPushDb(async db=>{
+    const indexed=await indexReceived(db,list);
+    const unread=await inboxUnread(db,gate.subject!,indexed.map(row=>row.ref));
+    return items.map(item=>({...item,unread:unread.has(String(item.id||"").toLowerCase())}));
+   });
+  }catch{
+   // Do not block email access when private read-receipt storage is unavailable.
+   // Tell the UI explicitly that unread markers cannot be trusted yet.
+   readStateAvailable=false;
+  }
+ }
+ return Response.json({data:{items:marked,readStateAvailable,
+  hasMore:upstream.payload.has_more===true,
   nextCursor:list.length?String((list.at(-1) as {id?:unknown}).id||""):null}},{headers});
 }
 export async function POST(request:Request){
