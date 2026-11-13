@@ -114,6 +114,40 @@ class FakeChatRepo extends FakeRepo {
 }
 
 
+class FakeChatUnreadRepo extends FakeChatRepo{
+ static const session='7506d77a000000000000000000000000';
+ bool rejectWrite=false,arrivedAfterView=false,acknowledged=false;
+ int detailLoads=0,readWrites=0;
+ String? acknowledgedTurnId;
+ @override Future<CeoPage<CeoConversation>> conversations([int page=1])async=>CeoPage([
+  const CeoConversation(session:session,createdAt:'2026-11-12T02:27:00Z',
+   updatedAt:'2026-11-12T02:28:14Z',latest:'Trợ lý trả lời khách',
+   messageCount:6),
+ ],page,false);
+ @override Future<List<CeoTurn>> turns(String chatSession)async{
+  detailLoads++;
+  return const [
+   CeoTurn(id:'8',question:'Khách hỏi sản phẩm',answer:'Tư vấn 1',
+    createdAt:'2026-11-12T02:27:10Z'),
+   CeoTurn(id:'9',question:'Khách hỏi tiếp',answer:'Tư vấn 2',
+    createdAt:'2026-11-12T02:27:50Z'),
+   CeoTurn(id:'10',question:'Khách hỏi gia công',answer:'Tư vấn 3',
+    createdAt:'2026-11-12T02:28:14Z'),
+  ];
+ }
+ @override Future<void> markAlertRead(String kind,String id,{String? turnId})async{
+  readWrites++;acknowledgedTurnId=turnId;
+  if(rejectWrite)throw const CeoApiException(503);
+  if(kind=='chat'&&id==session&&turnId=='10')acknowledged=true;
+ }
+ @override Future<CeoAlerts> loadAlerts()async{
+  final unread=!acknowledged||arrivedAfterView;
+  return CeoAlerts(chatCount:unread?1:0,mailCount:0,contactCount:0,
+   outsourcingCount:0,total:unread?1:0,
+   chatIds:unread?const [session]:const [],mailIds:const []);
+ }
+}
+
 class FakeMailRepo extends FakePendingRepo {
  int fetches=0;
  @override Future<CeoMailPage> mailList(String box,{String? after})async{
@@ -419,6 +453,59 @@ void main(){
   await tester.pumpAndSettle();
   expect(find.text('Khách thử'),findsOneWidget);
   expect(find.text('Chưa xử lý'),findsWidgets);
+ });
+
+ testWidgets('CEO-CHAT08 visiting 6-message chat confirms last turn and clears badge',(tester)async{
+  final repo=FakeChatUnreadRepo();
+  await tester.pumpWidget(CeoApp(repository:repo));
+  await tester.pumpAndSettle();
+  await tester.tap(find.text('Hội thoại').last);
+  await tester.pumpAndSettle();
+  expect(find.text('Tin mới'),findsOneWidget);
+  await tester.tap(find.textContaining('Phiên 7506d77a'));
+  await tester.pumpAndSettle();
+  expect(repo.acknowledgedTurnId,'10');
+  expect(repo.readWrites,1);
+  expect(repo.detailLoads,1);
+  expect(find.text('Đã xem đến lượt chat cuối'),findsOneWidget);
+  expect(find.text('Tin mới'),findsNothing);
+ });
+
+ testWidgets('CEO-CHAT08 failed read keeps badge and provides confirmed retry',(tester)async{
+  final repo=FakeChatUnreadRepo()..rejectWrite=true;
+  await tester.pumpWidget(CeoApp(repository:repo));
+  await tester.pumpAndSettle();
+  await tester.tap(find.text('Hội thoại').last);
+  await tester.pumpAndSettle();
+  await tester.tap(find.textContaining('Phiên 7506d77a'));
+  await tester.pumpAndSettle();
+  expect(repo.acknowledged,isFalse);
+  expect(find.textContaining('Chưa lưu được trạng thái đã xem'),findsOneWidget);
+  expect(find.text('Thử lưu đã xem lại'),findsOneWidget);
+  repo.rejectWrite=false;
+  await tester.tap(find.text('Thử lưu đã xem lại'));
+  await tester.pumpAndSettle();
+  expect(repo.acknowledged,isTrue);
+  expect(repo.readWrites,2);
+  expect(find.text('Đã xem đến lượt chat cuối'),findsOneWidget);
+  expect(repo.detailLoads,1);
+ });
+
+ testWidgets('CEO-CHAT08 newest message after viewing retains badge with refresh',(tester)async{
+  final repo=FakeChatUnreadRepo()..arrivedAfterView=true;
+  await tester.pumpWidget(CeoApp(repository:repo));
+  await tester.pumpAndSettle();
+  await tester.tap(find.text('Hội thoại').last);
+  await tester.pumpAndSettle();
+  await tester.tap(find.textContaining('Phiên 7506d77a'));
+  await tester.pumpAndSettle();
+  expect(repo.acknowledged,isTrue);
+  expect(find.textContaining('Có tin mới đến sau lượt vừa xem'),findsOneWidget);
+  expect(find.text('Tải tin mới'),findsOneWidget);
+  expect(find.text('Tin mới'),findsOneWidget);
+  await tester.tap(find.text('Tải tin mới'));
+  await tester.pumpAndSettle();
+  expect(repo.detailLoads,2);
  });
 
  testWidgets('CEO-UI01 chat detail shows customer and assistant bubbles', (tester)async{
