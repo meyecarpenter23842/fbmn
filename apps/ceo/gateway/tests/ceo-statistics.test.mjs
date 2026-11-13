@@ -42,6 +42,8 @@ test("Analytics endpoint is server-only, Owner-guarded and does not embed creden
  const route=readFileSync(new URL("../app/api/ceo/statistics/route.ts",import.meta.url),"utf8");
  assert.match(route,/requireOwner\(request\)/);
  assert.match(route,/FBMN_CEO_POSTHOG_PERSONAL_API_KEY/);
+ assert.match(route,/FBMN_CEO_PUBLIC_API_BASE_URL/);
+ assert.doesNotMatch(route,/attachCatalogNames\(data,workerOrigin\(/);
  assert.match(route,/private, no-store/);
  assert.match(route,/Promise\.all/);
  assert.match(route,/force_blocking/);
