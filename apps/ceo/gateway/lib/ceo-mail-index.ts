@@ -45,7 +45,8 @@ export async function refreshMailIndexIfDue():Promise<void>{
  const up=await resendRequest("/emails/receiving?limit=100"+
   (cursor?"&after="+encodeURIComponent(cursor):""));
  if(up.status!==200||!Array.isArray(up.payload?.data)){
-  await resetScan().catch(()=>{});
+  // Leave the 2-minute lease in place on provider failure to avoid hammering
+  // Resend on every device refresh. The saved cursor is retried later.
   return;
  }
  try{
@@ -71,11 +72,7 @@ export async function refreshMailIndexIfDue():Promise<void>{
     WHERE id=1`,[finished?null:lastId]);
   });
  }catch{
-  await resetScan().catch(()=>{});
+  // Keep the previously claimed scan cursor; retry after the lease expires.
+  // All already indexed messages remain intact.
  }
-}
-async function resetScan(){
- // Preserve scan_cursor, so an interrupted multi-page run retries its page.
- await withPushDb(db=>db.query(`
-  UPDATE fbmn_catalog_private.ceo_mail_scan SET scanned_at=NULL WHERE id=1`));
 }
