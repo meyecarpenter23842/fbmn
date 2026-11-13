@@ -10,7 +10,10 @@ test("CEO-NOTIFY04 alert API is Owner-only, global, and read cursor is server de
  assert.match(route,/count\(\*\) OVER\(\)/);
  assert.match(route,/GREATEST\(/);
  assert.match(route,/t\.created_at/);
- assert.match(route,/e\.occurred_at/);
+ const mail=readFileSync(new URL("../lib/ceo-mail-unread.mjs",import.meta.url),"utf8");
+ assert.match(mail,/occurred_at/);
+ assert.match(route,/MAIL_UNREAD_SQL/);
+ assert.match(route,/MAIL_READABLE_SQL/);
  assert.match(route,/ON CONFLICT\(owner_subject,kind,ref\)/);
  assert.match(route,/turnId/);
  assert.doesNotMatch(route,/new Date\(/);
