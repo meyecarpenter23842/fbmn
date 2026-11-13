@@ -693,8 +693,11 @@ void main(){
    final repo=FakeStatisticsRepo();
    await tester.pumpWidget(CeoApp(repository:repo));
    await tester.pumpAndSettle();
-   final nav=tester.widget<NavigationBar>(find.byType(NavigationBar));
-   nav.onDestinationSelected!(4);
+   if(width>=850){
+    tester.widget<NavigationRail>(find.byType(NavigationRail)).onDestinationSelected!(4);
+   }else{
+    tester.widget<NavigationBar>(find.byType(NavigationBar)).onDestinationSelected!(4);
+   }
    await tester.pumpAndSettle();
    expect(find.byKey(const ValueKey('ceo-stats-subtabs')),findsOneWidget);
    expect(find.text('Phiên truy cập'),findsOneWidget);
