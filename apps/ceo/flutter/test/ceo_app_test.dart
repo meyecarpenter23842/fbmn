@@ -129,7 +129,76 @@ class FakeMailRepo extends FakePendingRepo {
   )],null,false);
  }
 }
+class FakeConsistentMailRepo extends FakeMailRepo{
+ static const old='11111111-1111-4111-8111-111111111111';
+ static const unreadId='22222222-2222-4222-8222-222222222222';
+ static const newer='33333333-3333-4333-8333-333333333333';
+ bool acknowledged=false;
+ bool rejectRead=false;
+ int writes=0;
+ @override Future<CeoMailPage> mailList(String box,{String? after})async=>
+  CeoMailPage([for(final id in const [newer,unreadId,old])
+   CeoMailItem(id:id,from:'agent@example.test',subject:'Thư $id',
+    createdAt:'2026-11-12T10:00:00Z',status:'',messageId:'',
+    text:'',to:const ['info@fbmn.vn'],attachments:const [],
+    unread:box=='inbox'&&id==unreadId&&!acknowledged)],null,false);
+ @override Future<void> markAlertRead(String kind,String id,{String? turnId})async{
+  writes++;
+  if(rejectRead)throw const CeoApiException(503);
+  if(kind=='mail'&&id==unreadId)acknowledged=true;
+ }
+ @override Future<CeoAlerts> loadAlerts()async=>CeoAlerts(
+  chatCount:0,mailCount:acknowledged?0:1,contactCount:0,outsourcingCount:0,
+  total:acknowledged?0:1,chatIds:const [],mailIds:acknowledged?const []:const [unreadId]);
+}
+
 void main(){
+ testWidgets('MAIL07 one unread email is marked in its row and older mail taps do not decrement badge',(tester)async{
+  final repo=FakeConsistentMailRepo();
+  await tester.pumpWidget(CeoApp(repository:repo));
+  await tester.pumpAndSettle();
+  await tester.tap(find.text('Liên hệ').last);
+  await tester.pumpAndSettle();
+  await tester.tap(find.byKey(const ValueKey('ceo-contact-inbox')));
+  await tester.pumpAndSettle();
+  expect(find.text('Chưa xem'),findsOneWidget);
+  final bell=find.byTooltip('Xem thông báo và yêu cầu mới');
+  expect(find.descendant(of:bell,matching:find.text('1')),findsOneWidget);
+  // A historical row is not the unread item and should not clear it.
+  await tester.tap(find.byKey(const ValueKey('ceo-mail-item-${FakeConsistentMailRepo.old}')));
+  await tester.pumpAndSettle();
+  expect(find.descendant(of:bell,matching:find.text('1')),findsOneWidget);
+  await tester.tap(find.byTooltip('Đóng chi tiết'));
+  await tester.pumpAndSettle();
+  await tester.tap(find.byKey(const ValueKey('ceo-mail-item-${FakeConsistentMailRepo.unreadId}')));
+  await tester.pumpAndSettle();
+  expect(find.descendant(of:bell,matching:find.byType(Badge)),findsNothing);
+  expect(repo.acknowledged,isTrue);
+  await tester.tap(find.byTooltip('Đóng chi tiết'));
+  await tester.pumpAndSettle();
+  expect(find.text('Chưa xem'),findsNothing);
+ });
+ testWidgets('MAIL07 failure to save read receipt is explicit and retryable',(tester)async{
+  final repo=FakeConsistentMailRepo()..rejectRead=true;
+  await tester.pumpWidget(CeoApp(repository:repo));
+  await tester.pumpAndSettle();
+  await tester.tap(find.text('Liên hệ').last);
+  await tester.pumpAndSettle();
+  await tester.tap(find.byKey(const ValueKey('ceo-contact-inbox')));
+  await tester.pumpAndSettle();
+  await tester.tap(find.byKey(const ValueKey('ceo-mail-item-${FakeConsistentMailRepo.unreadId}')));
+  await tester.pumpAndSettle();
+  expect(find.textContaining('chưa lưu được trạng thái đã xem'),findsOneWidget);
+  expect(find.text('Thử lưu đã xem lại'),findsOneWidget);
+  expect(find.descendant(of:find.byTooltip('Xem thông báo và yêu cầu mới'),
+   matching:find.text('1')),findsOneWidget);
+  repo.rejectRead=false;
+  await tester.tap(find.text('Thử lưu đã xem lại'));
+  await tester.pumpAndSettle();
+  expect(repo.acknowledged,isTrue);
+  expect(find.text('Thử lưu đã xem lại'),findsNothing);
+ });
+
  testWidgets('CEO-MAIL03 compose includes removable attachments control on narrow screens',(tester)async{
   await tester.binding.setSurfaceSize(const Size(360,740));
   await tester.pumpWidget(MaterialApp(home:Scaffold(body:
