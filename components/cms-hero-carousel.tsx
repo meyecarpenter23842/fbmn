@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import {useEffect,useRef,useState} from "react";
+import {useCallback,useEffect,useRef,useState} from "react";
 import type {CSSProperties} from "react";
 import type {PublicCmsItem} from "@/lib/content/cms";
 
@@ -22,10 +22,10 @@ export default function CmsHeroCarousel({items}:{items:PublicCmsItem[]}){
  // Avoid requesting every overlapping full-size Hero image on first paint.
  // Keep visited slides mounted to preserve the Owner-approved fade/slide transitions.
  const [prepared,setPrepared]=useState<ReadonlySet<number>>(()=>new Set([0]));
- const reveal=(next:number)=>{
+ const reveal=useCallback((next:number)=>{
   setPrepared(previous=>previous.has(next)?previous:new Set([...previous,next]));
   setActive(next);
- };
+ },[]);
  const hovered=useRef(false),focused=useRef(false);
  const index=active%Math.max(slides.length,1);
  const current=slides[index];
@@ -37,7 +37,7 @@ export default function CmsHeroCarousel({items}:{items:PublicCmsItem[]}){
    reveal((index+1)%slides.length);
   },current.motion.intervalMs);
   return ()=>window.clearInterval(timer);
- },[slides.length,index,current?.motion.enabled,current?.motion.autoplay,current?.motion.intervalMs]);
+ },[slides.length,index,current?.motion.enabled,current?.motion.autoplay,current?.motion.intervalMs,reveal]);
  useEffect(()=>{
   if(slides.length<2||!current?.motion.enabled||!current.motion.autoplay)return;
   // Warm only the NEXT approved slide after initial render, ahead of autoplay.

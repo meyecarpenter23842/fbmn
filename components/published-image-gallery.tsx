@@ -50,7 +50,7 @@ export default function PublishedImageGallery({items,glass=false,zoomDialogRef,a
         className={glass?"fb-song-gallery-thumb":"catalogue-gallery-thumb"}>
         {/* Verified published gallery thumbnail, never decorative media. */}
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={img.src} alt="" loading="lazy"
+        <img src={img.src} alt="" width={80} height={100} loading="lazy" decoding="async"
           className={glass?"fb-song-gallery-thumb-image":"catalogue-gallery-thumb__image"}/>
       </button>)}
     </div>}

@@ -95,7 +95,7 @@ export default function CatalogueProductOptions({product,photos,glass=false,init
         aria-label="Phóng to ảnh sản phẩm đang chọn">
         <CatalogProductImage src={gallery[photoIndex]?.src??gallery[0]?.src??null}
           alt={gallery[photoIndex]?.alt??gallery[0]?.alt??product.name}
-          priority={photoIndex===0} sizes="(max-width: 700px) 130px, 270px"
+          sizes="(max-width: 700px) 130px, 270px"
           className="catalog-image-compact"/>
       </button>}
       <div className={glass?"fb-song-overview-copy":undefined}>
