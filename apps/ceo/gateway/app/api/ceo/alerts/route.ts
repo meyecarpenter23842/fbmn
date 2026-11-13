@@ -1,3 +1,5 @@
+import {MAIL_UNREAD_SQL,MAIL_READABLE_SQL} from "@/lib/ceo-mail-unread.mjs";
+import {refreshMailIndexIfDue} from "@/lib/ceo-mail-index";
 import {requireOwner} from "@/lib/owner-gate";
 import {withPushDb} from "@/lib/ceo-push-db";
 import {validRef,allowedOrigin} from "@/lib/ceo-push-policy.mjs";
@@ -8,6 +10,9 @@ export async function GET(request:Request){
  const owner=await requireOwner(request);
  if(owner.status!==200||!owner.subject)return fail("owner_required",owner.status);
  try{
+  // Provider reconciliation is throttled globally. A temporary provider error
+  // must not erase verified webhook events or stop the Owner's badges.
+  await refreshMailIndexIfDue().catch(()=>{});
   return await withPushDb(async db=>{
    // Counts cover the entire Owner inbox, not only the first loaded UI page.
    const chat=await db.query<{session_id:string;total:string}>(`
@@ -18,12 +23,9 @@ export async function GET(request:Request){
     WHERE c.updated_at>coalesce(r.read_through,'epoch'::timestamptz)
     ORDER BY c.updated_at DESC LIMIT 200`,[owner.subject]);
    const mail=await db.query<{ref:string;total:string}>(`
-    SELECT e.ref,count(*) OVER()::text AS total
-    FROM fbmn_catalog_private.ceo_push_events e
-    LEFT JOIN fbmn_catalog_private.ceo_inbox_reads r
-      ON r.owner_subject=$1 AND r.kind='mail' AND r.ref=e.ref
-    WHERE e.kind='mail' AND e.occurred_at>coalesce(r.read_through,'epoch'::timestamptz)
-    ORDER BY e.occurred_at DESC LIMIT 200`,[owner.subject]);
+    SELECT ref,count(*) OVER()::text AS total
+    FROM (${MAIL_UNREAD_SQL}) unread
+    ORDER BY stamp DESC LIMIT 200`,[owner.subject]);
    const requests=await db.query<{kind:string;total:string}>(`
     SELECT 'contact' AS kind,count(*)::text AS total
      FROM fbmn_catalog_private.contact_requests c
@@ -88,10 +90,8 @@ export async function POST(request:Request){
       fbmn_catalog_private.ceo_inbox_reads.read_through,excluded.read_through)`:`
     INSERT INTO fbmn_catalog_private.ceo_inbox_reads
       (owner_subject,kind,ref,read_through)
-    SELECT $1,'mail',$2,e.occurred_at
-    FROM fbmn_catalog_private.ceo_push_events e
-    WHERE e.kind='mail' AND e.ref=$2
-    ORDER BY e.occurred_at DESC LIMIT 1
+    SELECT $1,'mail',$2,m.stamp
+    FROM (${MAIL_READABLE_SQL}) m WHERE m.ref=$2
     ON CONFLICT(owner_subject,kind,ref)
     DO UPDATE SET read_through=GREATEST(
       fbmn_catalog_private.ceo_inbox_reads.read_through,excluded.read_through)`;
