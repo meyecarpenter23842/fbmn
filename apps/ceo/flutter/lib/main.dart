@@ -7,6 +7,7 @@ import 'ceo_detail_sheet.dart';
 import 'ceo_feedback.dart';
 import 'ceo_workspace.dart';
 import 'ceo_mail.dart';
+import 'ceo_chat_detail.dart';
 import 'push_stub.dart' if (dart.library.js_interop) 'push_web.dart' as push;
 
 void main() => runApp(const CeoApp());
@@ -151,14 +152,15 @@ class _CeoHomeState extends State<CeoHome> with WidgetsBindingObserver{
    Future.microtask(loadAlerts);Future.microtask(loadPushState);
   }
  }
+ void applyAlerts(CeoAlerts incoming){
+  if(!mounted)return;
+  setState(()=>alerts=incoming);
+  alertsVersion.value++;
+  unawaited(push.badge(incoming.total));
+ }
  Future<void> loadAlerts()async{
-  try{
-   final incoming=await widget.api.loadAlerts();
-   if(!mounted)return;
-   setState(()=>alerts=incoming);
-   alertsVersion.value++;
-   await push.badge(incoming.total);
-  }catch(_){/* Keep previous unread badge on transient failures. */}
+  try{applyAlerts(await widget.api.loadAlerts());}
+  catch(_){/* Preserve the last confirmed unread count if offline. */}
  }
  Future<void> markAlertRead(String kind,String id,{String? turnId})async{
   try{await widget.api.markAlertRead(kind,id,turnId:turnId);await loadAlerts();}
@@ -913,45 +915,9 @@ class _CeoHomeState extends State<CeoHome> with WidgetsBindingObserver{
   if(item.unread)Future.microtask(()=>markViewed(item,outsource));
  }
 
- Future<List<CeoTurn>> fetchChatForRead(String session)async{
-  final turns=await widget.api.turns(session);
-  if(turns.isNotEmpty&&turns.last.id.isNotEmpty){
-   await markAlertRead('chat',session,turnId:turns.last.id);
-  }
-  return turns;
- }
  void showChat(CeoConversation item){
-  openDetail((ctx)=>Column(children:[
-   const CeoSheetHeader(title:'Nội dung hội thoại'),
-   Expanded(child:FutureBuilder<List<CeoTurn>>(
-    future:fetchChatForRead(item.session),
-    builder:(context,s){
-     if(s.connectionState!=ConnectionState.done){
-      return const Center(child:CircularProgressIndicator());
-     }
-     if(s.hasError){
-      return CeoEmptyResult(title:'Không tải được hội thoại',detail:userError(s.error!),
-       icon:Icons.error_outline);
-     }
-     final turns=s.data??<CeoTurn>[];
-     return ListView(padding:const EdgeInsets.all(16),children:[
-      Container(padding:const EdgeInsets.all(12),
-       decoration:BoxDecoration(color:ceoLavender,
-        borderRadius:BorderRadius.circular(12)),
-       child:const Text('25 lượt hội thoại gần nhất. Xem đầy đủ lịch sử trong Admin.',
-        style:TextStyle(fontSize:12.5,color:ceoInk,height:1.4))),
-      const SizedBox(height:18),
-      if(turns.isEmpty)const CeoEmptyResult(title:'Chưa có tin nhắn',
-       detail:'Phiên này chưa có lượt hội thoại trong dữ liệu trả về.',
-       icon:Icons.chat_outlined),
-      for(final turn in turns)...[
-       CeoChatBubble(text:turn.question,time:dateString(turn.createdAt),assistant:false),
-       const SizedBox(height:12),
-       CeoChatBubble(text:turn.answer,time:'',assistant:true),
-       const SizedBox(height:18),
-      ],
-     ]);
-    })),
-  ]));
+  openDetail((ctx)=>CeoChatDetail(api:widget.api,session:item.session,
+   onAlerts:applyAlerts,formatDate:dateString));
  }
+
 }

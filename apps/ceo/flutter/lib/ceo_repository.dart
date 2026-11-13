@@ -190,8 +190,21 @@ class CeoApi implements CeoRepository {
    throw const CeoApiException(400);
   }
   final jwt=await _ownerJwt();
-  await _request('POST','/api/ceo/alerts',bearer:jwt,
-   json:{'kind':kind,'id':id,if(kind=='chat')'turnId':turnId});
+  final payload=<String,dynamic>{'kind':kind,'id':id,
+   if(kind=='chat')'turnId':turnId};
+  try{
+   await _request('POST','/api/ceo/alerts',bearer:jwt,json:payload);
+  }on CeoApiException catch(error){
+   if(error.status!=401){rethrow;}
+   // A cached JWT may be rejected while the secure Better Auth session cookie
+   // is still valid. The read-through write is idempotent, so refresh the
+   // cookie-backed JWT and retry exactly once, never bypassing Owner checks.
+   final session=await _request('GET','/api/auth/get-session');
+   final renewed=_sessionTokenFrom(session) ??
+    _authTokenFrom(await _request('GET','/api/auth/token'));
+   if(renewed==null){throw const CeoApiException(401);}
+   await _request('POST','/api/ceo/alerts',bearer:renewed,json:payload);
+  }
  }
  @override Future<String> markViewed(String kind,String id)async{
   if(!["contact","outsourcing"].contains(kind)||
