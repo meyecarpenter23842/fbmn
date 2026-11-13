@@ -12,7 +12,8 @@ test("Only bounded periods and fixed read-only aggregate queries are accepted",(
   assert.match(queries.seoSummary,/uniqIf\(distinct_id/);
   assert.match(queries.seoSummary,/web_contact_submit_success/);
   assert.match(queries.seoPages,/page_key/);
-  assert.match(queries.funnel,/windowFunnel\(86400\)\(toDateTime\(timestamp\)/);
+  assert.match(queries.funnel,/windowFunnel\(86400000\)\(accurateCast\(toUnixTimestamp64Milli\(timestamp\), 'UInt64'\)/);
+  assert.doesNotMatch(queries.funnel,/toDateTime\(timestamp\)/);
   assert.match(queries.funnel,/GROUP BY distinct_id/);
   assert.match(queries.funnel,/startsWith\(distinct_id, 'fbmn-web-session-'\)/);
   assert.match(queries.funnel,/event = 'web_product_view', event = 'web_lead_cta_click'/);
@@ -84,4 +85,23 @@ test("PH01 refuses missing or inconsistent funnel counts; true zero stays zero",
  assert.throws(()=>formatStatistics("7d",{...base,funnel:{results:[[3,2]]}}),/invalid_funnel/);
  const empty=formatStatistics("7d",{...base,funnel:{results:[[0,0,0]]}});
  assert.deepEqual(empty.funnel,{viewedSessions:0,ctaSessions:0,submittedSessions:0});
+});
+
+test("PH01 preserves subsecond order: reverse CTA is not a conversion",()=>{
+ // Same precision as the deployed HogQL expression. Verified with PostHog
+ // windowFunnel live: reversed is stage 1, correct order is stage 3.
+ const stage=(items)=>{
+  let reached=0,started=0;
+  for(const item of [...items].sort((a,b)=>a.millisecond-b.millisecond)){
+   if(reached===0&&item.event==='product'){reached=1;started=item.millisecond;}
+   else if(item.millisecond-started<=86400000&&reached===1&&item.event==='cta')reached=2;
+   else if(item.millisecond-started<=86400000&&reached===2&&item.event==='success')reached=3;
+  }
+  return reached;
+ };
+ const start=Date.parse("2026-11-13T12:00:00.000Z");
+ assert.equal(stage([{event:'cta',millisecond:start+100},{event:'product',millisecond:start+900},
+  {event:'success',millisecond:start+999}]),1);
+ assert.equal(stage([{event:'product',millisecond:start+100},{event:'cta',millisecond:start+900},
+  {event:'success',millisecond:start+999}]),3);
 });
