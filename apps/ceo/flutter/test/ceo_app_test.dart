@@ -502,7 +502,7 @@ void main(){
   expect(repo.acknowledged,isTrue);
   expect(find.textContaining('Có tin mới đến sau lượt vừa xem'),findsOneWidget);
   expect(find.text('Tải tin mới'),findsOneWidget);
-  expect(find.text('Tin mới'),findsOneWidget);
+  expect((await repo.loadAlerts()).chatCount,1);
   await tester.tap(find.text('Tải tin mới'));
   await tester.pumpAndSettle();
   expect(repo.detailLoads,2);
