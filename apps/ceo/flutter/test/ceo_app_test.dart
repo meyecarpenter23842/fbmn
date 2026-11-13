@@ -164,6 +164,9 @@ void main(){
   expect(find.text('Chưa xem'),findsOneWidget);
   final bell=find.byTooltip('Xem thông báo và yêu cầu mới');
   expect(find.descendant(of:bell,matching:find.text('1')),findsOneWidget);
+  // Move the mailbox list above the fixed mobile navigation before tapping.
+  await tester.drag(find.byType(ListView).last,const Offset(0,-230));
+  await tester.pumpAndSettle();
   // A historical row is not the unread item and should not clear it.
   await tester.tap(find.byKey(const ValueKey('ceo-mail-item-${FakeConsistentMailRepo.old}')));
   await tester.pumpAndSettle();
