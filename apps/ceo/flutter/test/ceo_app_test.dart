@@ -148,6 +148,15 @@ class FakeChatUnreadRepo extends FakeChatRepo{
  }
 }
 
+class FakeDelayedChatReadRepo extends FakeChatUnreadRepo{
+ final Completer<void> pending=Completer<void>();
+ @override Future<void> markAlertRead(String kind,String id,{String? turnId})async{
+  readWrites++;acknowledgedTurnId=turnId;
+  await pending.future;
+  if(kind=='chat'&&id==session&&turnId=='10')acknowledged=true;
+ }
+}
+
 class FakeMailRepo extends FakePendingRepo {
  int fetches=0;
  @override Future<CeoMailPage> mailList(String box,{String? after})async{
@@ -480,7 +489,7 @@ void main(){
   await tester.tap(find.textContaining('Phiên 7506d77a'));
   await tester.pumpAndSettle();
   expect(repo.acknowledged,isFalse);
-  expect(find.textContaining('Chưa lưu được trạng thái đã xem'),findsOneWidget);
+  expect(find.textContaining('lưu được trạng thái đã xem (503)'),findsOneWidget);
   expect(find.text('Thử lưu đã xem lại'),findsOneWidget);
   repo.rejectWrite=false;
   await tester.tap(find.text('Thử lưu đã xem lại'));
@@ -489,6 +498,25 @@ void main(){
   expect(repo.readWrites,2);
   expect(find.text('Đã xem đến lượt chat cuối'),findsOneWidget);
   expect(repo.detailLoads,1);
+ });
+
+ testWidgets('CEO-CHAT08 closing detail mid-write still clears server-verified parent badge',(tester)async{
+  final repo=FakeDelayedChatReadRepo();
+  await tester.pumpWidget(CeoApp(repository:repo));
+  await tester.pumpAndSettle();
+  await tester.tap(find.text('Hội thoại').last);
+  await tester.pumpAndSettle();
+  await tester.tap(find.textContaining('Phiên 7506d77a'));
+  await tester.pumpAndSettle();
+  expect(repo.readWrites,1);
+  await tester.tap(find.byTooltip('Đóng chi tiết'));
+  await tester.pumpAndSettle();
+  repo.pending.complete();
+  await tester.pumpAndSettle();
+  expect(repo.acknowledged,isTrue);
+  expect(find.text('Tin mới'),findsNothing);
+  expect(find.descendant(of:find.byTooltip('Xem thông báo và yêu cầu mới'),
+   matching:find.text('1')),findsNothing);
  });
 
  testWidgets('CEO-CHAT08 newest message after viewing retains badge with refresh',(tester)async{
