@@ -372,11 +372,11 @@ export default function AdminPage() {
       </aside>
       <div className="work-area">
         <header className="topbar"><button type="button" className="mobile-menu" onClick={()=>setMenuOpen(v=>!v)} aria-label="Mở menu"><Glyph name="menu"/></button>
-          <div className="breadcrumbs"><Glyph name="home" size={21}/><span className="crumb-sep">›</span><span>{["products","structure","media","import-products"].includes(section)?"Sản phẩm":section==="catalogue-books"?"Website Futurebook":["category-display","outsourcing-requests","contact-requests","chatbot-config","chat-history"].includes(section)?"Website Futurebook":["banners","content","home-layout"].includes(section)?"Website Futurebook":"Quản trị"}</span><span className="crumb-sep">›</span><b>{sectionName[section]}</b></div>
+          <div className="breadcrumbs"><Glyph name="home" size={21}/><span className="crumb-sep">›</span><span>{["products","structure","media","import-products"].includes(section)?"Sản phẩm":section==="catalogue-books"?"Website Futurebook":["category-display","seo-settings","outsourcing-requests","contact-requests","chatbot-config","chat-history"].includes(section)?"Website Futurebook":["banners","content","home-layout"].includes(section)?"Website Futurebook":"Quản trị"}</span><span className="crumb-sep">›</span><b>{sectionName[section]}</b></div>
           <div className="top-actions"><div className="profile-avatar">{name.slice(0,1).toUpperCase()||"F"}</div><div className="profile-text"><b>{name || "Futurebook Admin"}</b><small>{session?roleLabel:"Yêu cầu đăng nhập"}</small></div><button type="button" className="top-icon" onClick={()=>void signOut()} disabled={authState!=="authorised"} title="Đăng xuất"><Glyph name="logout" size={18}/></button></div>
         </header>
         <main className="workspace-main">
-          {authState==="authorised" && <>{section!=="contact-requests"&&section!=="chatbot-config"&&section!=="chat-history"&&<AdminTelemetry section={section}/>}
+          {authState==="authorised" && <>{section!=="contact-requests"&&section!=="chatbot-config"&&section!=="chat-history"&&section!=="seo-settings"&&<AdminTelemetry section={section}/>}
             {section==="products" && <CatalogueManager
               onImport={()=>navigate("import-products")}
               onStructure={pane=>{setStructureTab(pane);navigate("structure");}}/>}
