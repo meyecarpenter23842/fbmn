@@ -57,11 +57,11 @@ class _CeoChatDetailState extends State<CeoChatDetail>{
      _notice=null;
     });
    }catch(_){
-    if(mounted)setState(()=>_notice=
-     'Đã lưu đã xem trên máy chủ, nhưng chưa tải lại được số thông báo.');
+    if(mounted){setState(()=>_notice=
+     'Đã lưu đã xem trên máy chủ, nhưng chưa tải lại được số thông báo.');}
    }
   }on CeoApiException catch(error){
-   if(mounted)setState((){
+   if(mounted){setState((){
     _saved=false;
     _mustReload=error.status==404;
     _notice=switch(error.status){
@@ -70,14 +70,14 @@ class _CeoChatDetailState extends State<CeoChatDetail>{
      404=>'Không tìm thấy lượt chat vừa xem (404). Anh tải lại hội thoại.',
      _=>'Máy chủ chưa lưu được trạng thái đã xem (${error.status}). Anh thử lại.'
     };
-   });
+   });}
   }catch(_){
-   if(mounted)setState((){
+   if(mounted){setState((){
     _saved=false;
     _notice='Chưa kết nối được để lưu đã xem. Anh bấm thử lại.';
-   });
+   });}
   }finally{
-   if(mounted)setState(()=>_saving=false);
+   if(mounted){setState(()=>_saving=false);}
   }
  }
  void _reload(){
