@@ -33,7 +33,7 @@ async function readCatalogPage(origin, page, transport) {
 }
 
 export async function attachCatalogNames(statistics, origin, transport = fetch) {
-  if (!statistics.products.length && !statistics.categories.length) return statistics;
+  if (!statistics.products.length && !statistics.categories.length) return {...statistics, labelsUnavailable: false};
   const uri = new URL(origin);
   if (uri.protocol !== 'https:' || uri.pathname !== '/' || uri.search || uri.hash ||
       uri.username || uri.password || uri.port) throw new Error('public_catalog_origin_invalid');
