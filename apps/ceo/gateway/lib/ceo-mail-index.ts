@@ -61,7 +61,7 @@ export async function refreshMailIndexIfDue():Promise<void>{
    const hasMore=up.payload!.has_more===true;
    const finished=!hasMore||crossesBaseline;
    if(!finished&&(typeof lastId!=="string"||
-      !/^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(lastId))){
+      !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(lastId))){
     throw new Error("mail_scan_bad_cursor");
    }
    await db.query(`
