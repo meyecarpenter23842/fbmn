@@ -52,6 +52,11 @@ function pairs(input,limit){
   return {label:label||"khác",count:count(row[1])};
  }).filter(item=>item.label!=="null"&&item.label!=="undefined");
 }
+// Defense-in-depth for labels returned from the analytics provider.
+function safeSeoPage(value){
+ if(["/","/san-pham","/catalogue","/lien-he","/gia-cong","/dai-ly"].includes(value))return true;
+ return /^\/(?:san-pham|danh-muc)\/[a-z0-9][a-z0-9_-]{0,119}$/i.test(value);
+}
 export function formatStatistics(period,input){
  if(!PERIOD_DAYS[period])throw new Error("invalid_period");
  const totals=rows(input.summary);
@@ -72,6 +77,5 @@ export function formatStatistics(period,input){
  return {period,timezone:"UTC",generatedAt:typeof input.summary.last_refresh==="string"?input.summary.last_refresh:"",
   cached:input.summary.is_cached===true,metrics,daily,
   sources:pairs(input.sources,10),products:pairs(input.products,10),categories:pairs(input.categories,10),
-  seo,seoPages:pairs(input.seoPages,10).filter(item=>
-   /^(?:\\/|\\/(?:san-pham|catalogue|lien-he|gia-cong|dai-ly)|\\/(?:san-pham|danh-muc)\\/[a-z0-9][a-z0-9_-]{0,119})$/i.test(item.label))};
+  seo,seoPages:pairs(input.seoPages,10).filter(item=>safeSeoPage(item.label))};
 }
