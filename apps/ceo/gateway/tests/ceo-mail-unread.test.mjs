@@ -41,4 +41,12 @@ test("MAIL07 never treats every historical provider message as unread",()=>{
  assert.match(index,/occurred_at >= \$3::timestamptz/);
  assert.match(migration,/cutover_at timestamptz NOT NULL DEFAULT now\(\)/);
  assert.match(migration,/GRANT SELECT,INSERT,UPDATE ON fbmn_catalog_private.ceo_mail_catalog/);
+ assert.match(index,/scan_cursor/);
+ assert.match(index,/&after=/);
+ assert.match(index,/cutover_at/);
+ const dispatch=r("../app/api/ceo/push/dispatch/route.ts");
+ assert.match(dispatch,/MAIL_UNREAD_SQL/);
+ const ui=readFileSync(new URL("../../flutter/lib/ceo_mail.dart",import.meta.url),"utf8");
+ assert.match(ui,/if\(!ctx\.mounted\)return;/);
+ 
 });
