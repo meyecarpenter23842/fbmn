@@ -29,3 +29,19 @@ test('zero rankings do not request a remote catalogue',async()=>{
  const s={...base,products:[],categories:[]};
  assert.deepEqual(await attachCatalogNames(s,'',()=>{throw Error('must not run')}),{...s,labelsUnavailable:false});
 });
+
+test('chunked oversized catalogue is rejected during streaming, before buffering it all',async()=>{
+ let produced=0;let cancelled=false;
+ const stream=new ReadableStream({
+  pull(controller){
+   controller.enqueue(new Uint8Array(1024*1024));
+   produced++;
+   if(produced>40)controller.close();
+  },
+  cancel(){cancelled=true;}
+ });
+ const transport=async()=>new Response(stream,{status:200,headers:{'content-type':'application/json'}});
+ await assert.rejects(attachCatalogNames(base,'https://example.com',transport),/public_catalog_oversized/);
+ assert.ok(produced<=10, 'reader must stop near the 8MiB boundary');
+ assert.equal(cancelled,true);
+});
