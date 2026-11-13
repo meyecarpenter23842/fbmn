@@ -6,6 +6,7 @@ import 'package:futurebook_ceo/ceo_models.dart';
 import 'package:futurebook_ceo/ceo_mail.dart';
 import 'package:futurebook_ceo/ceo_mail_models.dart';
 import 'package:futurebook_ceo/ceo_repository.dart';
+import 'package:futurebook_ceo/ceo_stats_models.dart';
 
 class FakeRepo implements CeoRepository {
  final bool allowed;
@@ -21,6 +22,12 @@ class FakeRepo implements CeoRepository {
  @override Future<CeoAlerts> loadAlerts()async=>throw const CeoApiException(503);
  @override Future<void> markAlertRead(String kind,String id,{String? turnId})async{}
 
+ @override Future<CeoWebStatistics> websiteStatistics(String period)async=>
+  CeoWebStatistics(period:period,timezone:'UTC',generatedAt:'2026-11-13T00:00:00Z',
+   metrics:const {'visits':2,'pageViews':4,'productViews':1},
+   daily:const [CeoStatDay('2026-11-13',2,4)],
+   sources:const [CeoStatRank('direct',2)],products:const [CeoStatRank('sku-test',1)],
+   categories:const []);
  @override Future<CeoMailPage> mailList(String box,{String? after})async=>
   const CeoMailPage([],null,false);
  @override Future<CeoMailItem> mailDetail(String box,String id)async=>
@@ -658,6 +665,7 @@ void main(){
   expect(find.text('Liên hệ'),findsWidgets);
   await tester.tap(find.text('Thống kê').last);
   await tester.pumpAndSettle();
-  expect(find.textContaining('Chỉ hiển thị số liệu sau khi kết nối'),findsOneWidget);
+  expect(find.text('Phiên truy cập'),findsOneWidget);
+  expect(find.text('Nguồn truy cập'),findsOneWidget);
  });
 }

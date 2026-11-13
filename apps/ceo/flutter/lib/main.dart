@@ -8,6 +8,7 @@ import 'ceo_feedback.dart';
 import 'ceo_workspace.dart';
 import 'ceo_mail.dart';
 import 'ceo_chat_detail.dart';
+import 'ceo_statistics.dart';
 import 'push_stub.dart' if (dart.library.js_interop) 'push_web.dart' as push;
 
 void main() => runApp(const CeoApp());
@@ -133,6 +134,7 @@ class _CeoHomeState extends State<CeoHome> with WidgetsBindingObserver{
  final TextEditingController searchController=TextEditingController();
  String requestFilter='all';
  String contactSection='requests';
+ final statsKey=GlobalKey<CeoStatisticsTabState>();
  final inboxKey=GlobalKey<CeoMailPanelState>();
  final sentKey=GlobalKey<CeoMailPanelState>();
  final Map<String,String> confirmedViews={};
@@ -466,6 +468,7 @@ class _CeoHomeState extends State<CeoHome> with WidgetsBindingObserver{
   finally{viewWrites.remove(key);}
  }
  Future<void> refresh()async{
+  if(selected==4){await statsKey.currentState?.load();return;}
   if(selected==3&&contactSection!='requests'){
    await (contactSection=='inbox'?inboxKey.currentState:sentKey.currentState)?.load();
    return;
@@ -561,7 +564,7 @@ class _CeoHomeState extends State<CeoHome> with WidgetsBindingObserver{
       tooltip:'Xem thông báo và yêu cầu mới',
       onPressed:openNotifications,
       icon:bellIcon()),
-     IconButton(tooltip:'Tải lại dữ liệu',onPressed:loading||selected==4?null:refresh,
+     IconButton(tooltip:'Tải lại dữ liệu',onPressed:loading?null:refresh,
       icon:const Icon(Icons.refresh)),
      IconButton(tooltip:'Đăng xuất',onPressed:loading?null:logout,icon:const Icon(Icons.logout))]),
    bottomNavigationBar:wide?null:NavigationBar(selectedIndex:selected,onDestinationSelected:choose,
@@ -588,15 +591,7 @@ class _CeoHomeState extends State<CeoHome> with WidgetsBindingObserver{
 
  // All CEO screens share the same panel, search and row primitives.
  Widget content(){
-  if(selected==4){
-   return ListView(physics:const AlwaysScrollableScrollPhysics(),children:[
-    const CeoPanel(title:'Thống kê Website',subtitle:'DL12B · Chưa kết nối',
-     icon:Icons.bar_chart_outlined,
-     child:CeoEmptyResult(title:'Chưa có dữ liệu thống kê',
-      detail:'Chỉ hiển thị số liệu sau khi kết nối và xác minh dữ liệu thực.',
-      icon:Icons.insights_outlined)),
-   ]);
-  }
+  if(selected==4)return CeoStatisticsTab(key:statsKey,api:widget.api);
   if(loading&&((selected==0&&(conversations==null||outsourcing==null||contacts==null))||
    (selected==1&&conversations==null)||(selected==2&&outsourcing==null)||
    (selected==3&&contactSection=='requests'&&contacts==null))){
