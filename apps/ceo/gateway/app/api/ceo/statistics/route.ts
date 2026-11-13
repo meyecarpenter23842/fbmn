@@ -1,4 +1,4 @@
-import {requireOwner,workerOrigin} from "@/lib/owner-gate";
+import {requireOwner} from "@/lib/owner-gate";
 import {attachCatalogNames} from "@/lib/ceo-catalog-labels.mjs";
 import {PERIOD_DAYS,queriesFor,formatStatistics} from "@/lib/ceo-analytics.mjs";
 
@@ -53,7 +53,7 @@ export async function GET(request:Request){
   // Resolve historical product/category keys against the same approved public catalogue
   // the Website renders. Catalogue failures must never hide real PostHog counts.
   let enriched={...data,labelsUnavailable:true};
-  try{enriched=await attachCatalogNames(data,workerOrigin()||"");}
+  try{enriched=await attachCatalogNames(data,process.env.FBMN_CEO_PUBLIC_API_BASE_URL||"");}
   catch{/* Keep the original identifiers and warn the Owner in Flutter. */}
   return Response.json({data:enriched},{status:200,headers:HEADERS});
  }catch(error){
