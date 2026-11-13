@@ -39,7 +39,8 @@ class CeoMailPanelState extends State<CeoMailPanel>{
    final incoming=await widget.api.mailList(widget.box,after:more?page?.nextCursor:null);
    if(!mounted)return;
    setState(()=>page=more&&page!=null?
-    CeoMailPage([...page!.items,...incoming.items],incoming.nextCursor,incoming.hasMore):
+    CeoMailPage([...page!.items,...incoming.items],incoming.nextCursor,incoming.hasMore,
+     readStateAvailable:page!.readStateAvailable&&incoming.readStateAvailable):
     incoming);
   }catch(e){if(mounted)setState(()=>error=e.toString());}
   finally{if(mounted)setState(()=>loading=false);}
@@ -57,19 +58,38 @@ class CeoMailPanelState extends State<CeoMailPanel>{
  Future<void> showLetter(CeoMailItem item)=>openMailById(item.id);
  // Public to the Owner workspace for a validated notification deep link.
  Future<void> openMailById(String id)async{
+  final box=widget.box;
+  String? readWarning;
+  Future<bool> saveRead()async{
+   try{
+    await widget.api.markAlertRead('mail',id);
+    if(mounted){
+     setState((){
+      if(page!=null){
+       page=CeoMailPage(page!.items.map((item)=>
+        item.id==id?item.withUnread(false):item).toList(growable:false),
+        page!.nextCursor,page!.hasMore,readStateAvailable:page!.readStateAvailable);
+      }
+     });
+     widget.onMarkedRead?.call();
+    }
+    return true;
+   }catch(_){return false;}
+  }
+  // The Future must be stable across notification counter UI rebuilds.
+  final detailFuture=widget.api.mailDetail(box,id).then((letter)async{
+   if(box=='inbox'&&!await saveRead()){
+    readWarning='Đã mở thư nhưng chưa lưu được trạng thái đã xem.';
+   }
+   return letter;
+  });
   await showModalBottomSheet<void>(context:context,isScrollControlled:true,
    useSafeArea:true,sheetAnimationStyle:ceoDetailSheetMotion(context),
-   builder:(ctx)=>FractionallySizedBox(heightFactor:.94,
+   builder:(ctx)=>StatefulBuilder(builder:(ctx,setModal)=>FractionallySizedBox(heightFactor:.94,
     child:Column(children:[
-     CeoSheetHeader(title:widget.box=='inbox'?'Chi tiết thư đến':'Thư đã gửi'),
+     CeoSheetHeader(title:box=='inbox'?'Chi tiết thư đến':'Thư đã gửi'),
      Expanded(child:FutureBuilder<CeoMailItem>(
-      future:widget.api.mailDetail(widget.box,id).then((letter)async{
-       if(widget.box=='inbox'){
-        try{await widget.api.markAlertRead('mail',id);widget.onMarkedRead?.call();}
-        catch(_){/* Letter remains readable if receipt update fails. */}
-       }
-       return letter;
-      }),
+      future:detailFuture,
       builder:(ctx,s){
        if(s.connectionState!=ConnectionState.done){
         return const Center(child:CircularProgressIndicator());
@@ -78,6 +98,18 @@ class CeoMailPanelState extends State<CeoMailPanel>{
         padding:const EdgeInsets.all(20),child:Text('Không tải được thư: ${s.error}')));}
        final letter=s.data!;
        return ListView(padding:const EdgeInsets.all(16),children:[
+        if(readWarning!=null)Card(
+         color:const Color(0xFFFFF3E7),
+         child:Padding(padding:const EdgeInsets.all(10),child:Column(
+          crossAxisAlignment:CrossAxisAlignment.start,children:[
+           Text(readWarning!,style:const TextStyle(fontSize:12.5,color:Color(0xFF92400E))),
+           Align(alignment:Alignment.centerRight,child:TextButton(
+            onPressed:()async{
+             if(await saveRead()){setModal(()=>readWarning=null);}
+             else{setModal(()=>readWarning='Chưa lưu được đã xem. Anh thử lại.');}
+            },child:const Text('Thử lưu đã xem lại')))
+          ]))),
+
         Text(letter.subject.isNotEmpty?letter.subject:'(Không có tiêu đề)',
          style:const TextStyle(fontSize:18,fontWeight:FontWeight.w800,color:ceoInk)),
         const SizedBox(height:12),
@@ -99,7 +131,7 @@ class CeoMailPanelState extends State<CeoMailPanel>{
           child:Text('Xem và tải file trong Resend Dashboard.',
            style:TextStyle(fontSize:12,color:ceoMuted))),
         ],
-        if(widget.box=='inbox')...[
+        if(box=='inbox')...[
          const SizedBox(height:14),
          Text(letter.replyTo.isEmpty?'Không xác định được địa chỉ trả lời':
           'Trả lời tới: ${letter.replyTo}',
@@ -115,7 +147,7 @@ class CeoMailPanelState extends State<CeoMailPanel>{
         ],
        ]);
       })),
-    ])));
+    ]))));
  }
  @override Widget build(BuildContext context){
   final items=page?.items??const <CeoMailItem>[];
@@ -135,6 +167,14 @@ class CeoMailPanelState extends State<CeoMailPanel>{
       detail:widget.box=='inbox'?'Chưa có email nhận được qua Resend.':
        'Chưa có email gửi đi được ghi nhận trên Resend.',
       icon:Icons.mail_outline),
+     if(widget.box=='inbox'&&page?.readStateAvailable==false)
+      const Padding(padding:EdgeInsets.symmetric(vertical:8),child:Text(
+       'Dữ liệu đã xem chưa đồng bộ; có thể đọc thư nhưng badge có thể chưa cập nhật.',
+       style:TextStyle(fontSize:12,color:Color(0xFF92400E)))),
+     if(widget.box=='inbox'&&page?.readStateAvailable==true&&items.any((item)=>item.unread))
+      const Padding(padding:EdgeInsets.only(top:8,bottom:6),child:Text(
+       'Thư chưa xem có nhãn đỏ. Mở đúng thư đó để giảm số thông báo.',
+       style:TextStyle(fontSize:12,color:ceoMuted))),
      for(final item in items)Material(color:Colors.transparent,child:InkWell(
       key:ValueKey('ceo-mail-item-${item.id}'),onTap:()=>showLetter(item),
       child:Padding(padding:const EdgeInsets.symmetric(vertical:12),child:Row(children:[
@@ -145,7 +185,16 @@ class CeoMailPanelState extends State<CeoMailPanel>{
        Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
         Text(widget.box=='inbox'?item.from:item.to.join(', '),
          maxLines:1,overflow:TextOverflow.ellipsis,
-         style:const TextStyle(fontWeight:FontWeight.w700,fontSize:13.5,color:ceoInk)),
+         style:TextStyle(fontWeight:item.unread?FontWeight.w800:FontWeight.w600,
+          fontSize:13.5,color:ceoInk)),
+        if(widget.box=='inbox'&&item.unread)Padding(
+         padding:const EdgeInsets.only(bottom:4),child:Align(
+          alignment:Alignment.centerLeft,
+          child:Container(padding:const EdgeInsets.symmetric(horizontal:7,vertical:3),
+           decoration:BoxDecoration(color:const Color(0xFFDC2626),
+            borderRadius:BorderRadius.circular(8)),
+           child:const Text('Chưa xem',style:TextStyle(
+            fontSize:11,fontWeight:FontWeight.w700,color:Colors.white))))),
         const SizedBox(height:4),
         Text(item.subject.isEmpty?'(Không có tiêu đề)':item.subject,
          maxLines:2,overflow:TextOverflow.ellipsis,
