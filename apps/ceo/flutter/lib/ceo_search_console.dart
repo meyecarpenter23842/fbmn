@@ -12,7 +12,7 @@ class CeoGscPanel extends StatelessWidget{
  final VoidCallback retry;
  const CeoGscPanel({super.key,required this.report,required this.loading,
   required this.error,required this.retry});
- String percent(double n)=> (n*100).toStringAsFixed(1)+'%';
+ String percent(double n)=> '${(n*100).toStringAsFixed(1)}%';
  Widget kpi(String name,String value,IconData icon,double width)=>SizedBox(
   width:width,child:Container(
    padding:const EdgeInsets.all(12),
@@ -41,40 +41,40 @@ class CeoGscPanel extends StatelessWidget{
       style:const TextStyle(fontSize:12.5,color:ceoInk))),
      const SizedBox(width:8),
      Column(crossAxisAlignment:CrossAxisAlignment.end,children:[
-      Text(item.metrics.clicks.toString()+' nhấp',
+      Text('${item.metrics.clicks} nhấp',
        style:const TextStyle(fontSize:12.5,color:ceoPurple,fontWeight:FontWeight.w700)),
-      Text(percent(item.metrics.ctr)+' · VT '+item.metrics.position.toStringAsFixed(1),
+      Text('${percent(item.metrics.ctr)} · VT ${item.metrics.position.toStringAsFixed(1)}',
        style:const TextStyle(fontSize:11,color:ceoMuted)),
      ]),
     ])),
   ]);
  @override Widget build(BuildContext context){
-  if(loading)return const SizedBox(key:ValueKey('ceo-gsc-loading'),height:110,
-   child:Center(child:CircularProgressIndicator()));
-  if(error.isNotEmpty)return Column(key:const ValueKey('ceo-gsc-error'),children:[
+  if(loading){return const SizedBox(key:ValueKey('ceo-gsc-loading'),height:110,
+   child:Center(child:CircularProgressIndicator()));}
+  if(error.isNotEmpty){return Column(key:const ValueKey('ceo-gsc-error'),children:[
    Text(error,textAlign:TextAlign.center,style:const TextStyle(
     fontSize:13,color:Color(0xFFB45309))),
    const SizedBox(height:12),
    OutlinedButton.icon(onPressed:retry,icon:const Icon(Icons.refresh),
     label:const Text('Thử tải lại Search Console')),
-  ]);
+  ]);}
   final value=report;
-  if(value==null||!value.configured)return const CeoEmptyResult(
+  if(value==null||!value.configured){return const CeoEmptyResult(
    key:ValueKey('ceo-gsc-unconfigured'),
    title:'Chưa kết nối Google Search Console',
    detail:'Cần cấp quyền đọc cho property fbmn.vn và cấu hình kết nối trên CEO Gateway. Chưa có số liệu GSC để hiển thị.',
-   icon:Icons.link_off_outlined);
+   icon:Icons.link_off_outlined);}
   final m=value.metrics;
-  if(m==null)return CeoEmptyResult(
+  if(m==null){return CeoEmptyResult(
    key:const ValueKey('ceo-gsc-empty'),
    title:'Chưa có dữ liệu tìm kiếm Google',
-   detail:'Google chưa trả về số liệu hoàn tất trong kỳ '+value.startDate+' đến '+value.endDate+'.',
-   icon:Icons.search_off_outlined);
+   detail:'Google chưa trả về số liệu hoàn tất trong kỳ ${value.startDate} đến ${value.endDate}.',
+   icon:Icons.search_off_outlined);}
   final dates=value.daily.length>7?value.daily.sublist(value.daily.length-7):value.daily;
   final maxClicks=dates.fold<int>(1,(n,d)=>math.max(n,d.metrics.clicks));
   return Column(key:const ValueKey('ceo-gsc-ready'),
    crossAxisAlignment:CrossAxisAlignment.stretch,children:[
-   Text('Google Search Console · www.fbmn.vn · '+value.startDate+' — '+value.endDate,
+   Text('Google Search Console · www.fbmn.vn · ${value.startDate} — ${value.endDate}',
     style:const TextStyle(fontSize:12,color:ceoMuted)),
    const SizedBox(height:5),
    const Text('Ngày theo giờ Thái Bình Dương (PT), kết thúc trước 3 ngày để tránh số liệu chưa hoàn tất.',
@@ -102,13 +102,13 @@ class CeoGscPanel extends StatelessWidget{
       Expanded(child:LinearProgressIndicator(value:day.metrics.clicks/maxClicks,
        minHeight:8,color:ceoPurple,backgroundColor:ceoLavender)),
       const SizedBox(width:8),
-      SizedBox(width:53,child:Text(day.metrics.clicks.toString()+' nhấp',
+      SizedBox(width:53,child:Text('${day.metrics.clicks} nhấp',
        textAlign:TextAlign.end,style:const TextStyle(fontSize:10.5,color:ceoInk))),
      ])),
    ],
    const SizedBox(height:8),
-   topRows('Top từ khóa tìm kiếm ('+value.queries.length.toString()+')',value.queries),
-   topRows('Top trang xuất hiện trên Google ('+value.pages.length.toString()+')',value.pages),
+   topRows('Top từ khóa tìm kiếm (${value.queries.length})',value.queries),
+   topRows('Top trang xuất hiện trên Google (${value.pages.length})',value.pages),
    const SizedBox(height:10),
    const Text('GSC đo lượt nhấp/hiển thị từ Google tự nhiên; PostHog đo phiên và yêu cầu B2B. Hai nguồn không được cộng chung. Vị trí trung bình càng thấp càng tốt.',
     style:TextStyle(fontSize:11.5,color:ceoMuted)),

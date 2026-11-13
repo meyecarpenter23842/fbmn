@@ -9,7 +9,7 @@ class CeoGscMetrics {
   final c=value['clicks'],i=value['impressions'],r=value['ctr'],p=value['position'];
   if(c is! num||i is! num||r is! num||p is! num||
    !c.isFinite||!i.isFinite||!r.isFinite||!p.isFinite||
-   c<0||i<0||r<0||r>1||p<0)return null;
+   c<0||i<0||r<0||r>1||p<0){return null;}
   return CeoGscMetrics(clicks:c.toInt(),impressions:i.toInt(),
    ctr:r.toDouble(),position:p.toDouble());
  }
@@ -33,8 +33,7 @@ class CeoGscDay {
  static CeoGscDay? parse(Object? value){
   if(value is! Map<String,dynamic>)return null;
   final day=value['date'],m=CeoGscMetrics.parse(value);
-  if(day is! String||!RegExp(r'^\d{4}-\d{2}-\d{2}$').hasMatch(day)||m==null)
-   return null;
+  if(day is! String||!RegExp(r'^\d{4}-\d{2}-\d{2}$').hasMatch(day)||m==null){return null;}
   return CeoGscDay(day,m);
  }
 }

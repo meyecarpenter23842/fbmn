@@ -56,16 +56,19 @@ function rowMetrics(row){
   position:assertMetric(row.position,"position",0,10000)
  };
 }
-function rowsOf(response,max){
+function rowsOf(response,max,requireKeys=false){
  if(!response||typeof response!=="object"||
    (response.rows!==undefined&&!Array.isArray(response.rows)))throw new Error("gsc_invalid_data");
  const rows=response.rows||[];
- if(rows.length>max||rows.some(row=>!row||!Array.isArray(row.keys)))
+ if(rows.length>max||rows.some(row=>!row||typeof row!=="object"||
+   (requireKeys&&!Array.isArray(row.keys))||
+   (row.keys!==undefined&&!Array.isArray(row.keys))))
   throw new Error("gsc_invalid_data");
  return rows;
 }
 function safeQuery(value){
- if(typeof value!=="string"||!TERM.test(value)||/\d{7,}/.test(value)||
+ if(typeof value!=="string"||!TERM.test(value)||
+   /\d{7,}/.test(value)||/\d{9,}/.test(value.replace(/[\s.()\-]/g,""))||
    /(?:https?|www|password|token):/i.test(value)||value.trim()!==value)return null;
  return value;
 }
@@ -75,16 +78,17 @@ function safePage(value){
   const url=new URL(value);
   if(url.origin!==CANONICAL_ORIGIN||url.username||url.password||
      url.search||url.hash||!PUBLIC_PATH.test(url.pathname)||
-     /\d{7,}/.test(url.pathname))return null;
+     /\d{7,}/.test(url.pathname)||
+     /\d{9,}/.test(url.pathname.replace(/[-_.]/g,"")))return null;
   return url.pathname;
  }catch{return null;}
 }
 export function formatGscReport(period,dates,results){
  if(!GSC_PERIODS[period])throw new Error("gsc_invalid_period");
  const totals=rowsOf(results.overview,1);
- const daily=rowsOf(results.daily,95);
- const queries=rowsOf(results.queries,60);
- const pages=rowsOf(results.pages,50);
+ const daily=rowsOf(results.daily,95,true);
+ const queries=rowsOf(results.queries,60,true);
+ const pages=rowsOf(results.pages,50,true);
  const datePattern=/^\d{4}-\d{2}-\d{2}$/;
  const dailyItems=daily.map(row=>{
   const day=row.keys[0];

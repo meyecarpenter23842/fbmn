@@ -42,13 +42,17 @@ test("SEO06 formats real GSC metrics, sanitizes queries and pages, never sums to
   queries:{rows:[
    {keys:["tập học sinh 200 trang"],clicks:10,impressions:50,ctr:0.2,position:8},
    {keys:["nguyennam@example.com"],clicks:5,impressions:20,ctr:0.25,position:2},
-   {keys:["093123456789"],clicks:5,impressions:20,ctr:0.25,position:2}
+   {keys:["093123456789"],clicks:5,impressions:20,ctr:0.25,position:2},
+   {keys:["liên hệ 090 123 4567"],clicks:3,impressions:20,ctr:0.15,position:2},
+   {keys:["liên hệ 090.123.4567"],clicks:3,impressions:20,ctr:0.15,position:2},
+   {keys:["liên hệ 090-123-4567"],clicks:3,impressions:20,ctr:0.15,position:2}
   ]},
   pages:{rows:[
    {keys:["https://www.fbmn.vn/san-pham/tap-hoc-sinh"],clicks:12,impressions:30,ctr:0.4,position:4},
    {keys:["https://www.fbmn.vn/lien-he?email=x@y.com"],clicks:2,impressions:10,ctr:0.2,position:3},
    {keys:["https://ceo.fbmn.vn/ceo/"],clicks:2,impressions:10,ctr:0.2,position:3},
-   {keys:["https://www.fbmn.vn/admin/"],clicks:2,impressions:10,ctr:0.2,position:3}
+   {keys:["https://www.fbmn.vn/admin/"],clicks:2,impressions:10,ctr:0.2,position:3},
+   {keys:["https://www.fbmn.vn/san-pham/090-123-4567"],clicks:2,impressions:10,ctr:0.2,position:3}
   ]}
  });
  assert.equal(result.status,"ready");
@@ -60,6 +64,9 @@ test("SEO06 formats real GSC metrics, sanitizes queries and pages, never sums to
  assert.deepEqual(result.queries.map(x=>x.label),["tập học sinh 200 trang"]);
  assert.deepEqual(result.pages.map(x=>x.label),["/san-pham/tap-hoc-sinh"]);
  assert.equal(JSON.stringify(result).includes("nguyennam"),false);
+ assert.equal(JSON.stringify(result).includes("090 123"),false);
+ assert.equal(JSON.stringify(result).includes("090.123"),false);
+ assert.equal(JSON.stringify(result).includes("090-123"),false);
  assert.equal(JSON.stringify(result).includes("ceo.fbmn.vn"),false);
  assert.equal(JSON.stringify(result).includes("email="),false);
 });
