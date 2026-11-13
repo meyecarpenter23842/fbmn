@@ -204,7 +204,13 @@ export function createStagingWorker({createDbClient}) {
           getPublicCms:()=>readModel(env,m=>m.getPublicCms()),
           getPublicHomeLayout:()=>readModel(env,m=>m.getPublicHomeLayout()),
           getPublicCategoryDisplay:()=>readModel(env,m=>m.getPublicCategoryDisplay()),
+          getPublicSeoSettings:({contentSource})=>{
+            if(contentSource==="cms"&&env.PUBLIC_CMS_ENABLED!=="true")
+              throw Error("CMS source unavailable for SEO");
+            return readModel(env,m=>m.getPublicSeoSettings({contentSource}));
+          },
           categoryDisplayEnabled:env.PUBLIC_P5_ENABLED==="true",
+          seoEnabled:env.PUBLIC_SEO02_ENABLED==="true",
           homeLayoutEnabled:env.PUBLIC_DL4_ENABLED==="true",
           cmsEnabled:env.PUBLIC_CMS_ENABLED==="true",
           allowedOrigins:origins,
