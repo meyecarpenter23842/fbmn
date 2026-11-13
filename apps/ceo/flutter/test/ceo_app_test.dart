@@ -42,6 +42,25 @@ class FakeRepo implements CeoRepository {
  @override void dispose(){}
 }
 
+class FakeStatisticsRepo extends FakeRepo {
+ FakeStatisticsRepo():super(true);
+ int analyticsLoads=0;
+ @override Future<CeoWebStatistics> websiteStatistics(String period,{bool fresh=false}) async{
+  analyticsLoads++;
+  return CeoWebStatistics(period:period,timezone:'UTC',generatedAt:'2026-11-13T00:00:00Z',
+   metrics:const {'visits':10,'pageViews':20,'productViews':4},
+   daily:const [CeoStatDay('2026-11-13',10,20)],
+   sources:const [CeoStatRank('direct',10)],
+   products:const [CeoStatRank('tap-hoc-sinh',4)],categories:const [CeoStatRank('tap',3)],
+   funnel:const CeoFunnelOverview(viewedSessions:4,ctaSessions:2,submittedSessions:1),
+   marketing:const CeoMarketingOverview(
+    channels:[CeoMarketingRow(channel:'direct',sessions:10,productSessions:4,
+      ctaSessions:2,leadSessions:1,contactSessions:1)],
+    campaigns:[CeoMarketingRow(channel:'facebook',campaign:'fbmn-thang-11',
+      sessions:3,productSessions:2,ctaSessions:1,leadSessions:1)]));
+ }
+}
+
 class FakePendingRepo extends FakeRepo {
  FakePendingRepo():super(true);
  CeoRequest item(String id,String status)=>CeoRequest(
@@ -668,4 +687,44 @@ void main(){
   expect(find.text('Phiên truy cập'),findsOneWidget);
   expect(find.text('Lượt xem trang'),findsOneWidget);
  });
+ testWidgets('PH02 stats use five sub-tabs and preserve filters without extra requests at mobile sizes',(tester)async{
+  for(final width in <double>[360,390,1280]){
+   await tester.binding.setSurfaceSize(Size(width,800));
+   final repo=FakeStatisticsRepo();
+   await tester.pumpWidget(CeoApp(repository:repo));
+   await tester.pumpAndSettle();
+   final nav=tester.widget<NavigationBar>(find.byType(NavigationBar));
+   nav.onDestinationSelected!(4);
+   await tester.pumpAndSettle();
+   expect(find.byKey(const ValueKey('ceo-stats-subtabs')),findsOneWidget);
+   expect(find.text('Phiên truy cập'),findsOneWidget);
+   final firstLoads=repo.analyticsLoads;
+   expect(firstLoads,1);
+   final marketing=find.byKey(const ValueKey('ceo-stats-tab-2'));
+   await tester.ensureVisible(marketing);
+   await tester.tap(marketing);
+   await tester.pumpAndSettle();
+   expect(find.text('PH02 · Hiệu quả nguồn khách'),findsOneWidget);
+   expect(find.text('PH01 · Funnel B2B'),findsNothing);
+   expect(find.text('fbmn-thang-11'),findsOneWidget);
+   expect(repo.analyticsLoads,firstLoads);
+   expect(tester.takeException(),isNull,reason:'Marketing overflow at $width');
+   final funnel=find.byKey(const ValueKey('ceo-stats-tab-1'));
+   await tester.ensureVisible(funnel);
+   await tester.tap(funnel);
+   await tester.pumpAndSettle();
+   expect(find.text('PH01 · Funnel B2B'),findsOneWidget);
+   expect(find.text('PH02 · Hiệu quả nguồn khách'),findsNothing);
+   expect(repo.analyticsLoads,firstLoads);
+   expect(tester.takeException(),isNull,reason:'Funnel overflow at $width');
+   await tester.tap(find.text('30 ngày'));
+   await tester.pumpAndSettle();
+   expect(repo.analyticsLoads,firstLoads+1);
+   expect(find.text('PH01 · Funnel B2B'),findsOneWidget);
+   expect(tester.takeException(),isNull);
+   await tester.pumpWidget(const SizedBox.shrink());
+  }
+  await tester.binding.setSurfaceSize(null);
+ });
+
 }

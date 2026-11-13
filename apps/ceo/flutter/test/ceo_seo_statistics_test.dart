@@ -50,4 +50,31 @@ void main(){
   expect(CeoFunnelOverview.fromJson({
    'viewedSessions':2,'ctaSessions':3,'submittedSessions':1}).viewedSessions,0);
  });
+ test('PH02 maps channel and campaign sessions without inventing rates',(){
+  final value=CeoWebStatistics.fromJson({
+   'marketing':{
+    'channels':[
+     {'channel':'google_paid','sessions':12,'productSessions':7,
+      'ctaSessions':3,'leadSessions':2,'contactSessions':2,'outsourcingSessions':0},
+     {'channel':'facebook','sessions':8,'productSessions':4,
+      'ctaSessions':1,'leadSessions':1,'contactSessions':0,'outsourcingSessions':1}],
+    'campaigns':[
+     {'campaign':'fbmn-november','channel':'google_paid','sessions':5,
+      'productSessions':2,'ctaSessions':1,'leadSessions':1}]
+   }
+  });
+  expect(value.marketing.sessions,20);
+  expect(value.marketing.leadSessions,3);
+  expect(value.marketing.leadRatePercent,15.0);
+  expect(value.marketing.channels.first.leadRatePercent,closeTo(16.67,0.01));
+  expect(value.marketing.campaigns.single.campaign,'fbmn-november');
+  expect(value.marketing.campaigns.single.leadRatePercent,20.0);
+ });
+ test('PH02 zero sessions do not imply a 0% conversion rate',(){
+  const empty=CeoMarketingOverview();
+  expect(empty.leadRatePercent,isNull);
+  expect(empty.sessions,0);
+  expect(empty.leadSessions,0);
+ });
+
 }
