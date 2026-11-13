@@ -151,7 +151,7 @@ try{for(const width of [1440,1280,1024,801,768,390,360]){
  assert.equal(await policy.locator(".ref-header,.site-footer,.app-download,.fb-chat__launcher,.cms-web-popup-dialog").count(),0);
  assert.equal(await policy.locator("html").evaluate(el=>el.scrollWidth>innerWidth+2),false);
  assert.ok(await policy.locator("#data-deletion").isVisible());
- assert.equal(await policy.locator("link[rel=canonical]").getAttribute("href"),"https://fbmn.vn/policy");
+ assert.equal(await policy.locator("link[rel=canonical]").getAttribute("href"),"https://www.fbmn.vn/policy");
  await policy.screenshot({path:"artifacts/dl11a/policy-"+width+".png"});await policy.close();
  console.log("DL11B_BROWSER_OK "+width);
 }}finally{await browser.close();}
