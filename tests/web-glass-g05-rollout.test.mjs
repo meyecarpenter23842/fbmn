@@ -56,7 +56,7 @@ test("G05 home, catalogue, editorial and footer share glass styling but retain t
   }
   assert.match(read("components/home-product-card.tsx"), /<GlassCard hover linkCard className="fb-glass-home-product"/);
   assert.doesNotMatch(home, /<Card className="ref-product-card"/);
-  assert.match(listing, /<ProductCard key=\{product\.id\} product=\{product\} glass\/>/);
+  assert.match(listing, /<ProductCard key=\{product\.id\} product=\{product\} glass priority=\{index===0\}\/>/);
   assert.match(detail, /const glass=true/);
   assert.match(detail, /<CatalogueProductOptions product=\{product\} photos=\{images\} glass=\{glass\}[\s\S]*?initialSku=\{selectedSku\}/);
   assert.match(detail, /<CatalogueRelatedProducts items=\{recommendations\.items\} glass=\{glass\}\/>/);

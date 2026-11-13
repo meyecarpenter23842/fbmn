@@ -15,6 +15,7 @@ test("robots and sitemap expose only published public pages",()=>{
  assert.match(site,/getPublicCatalog\(\)/);
  assert.match(site,/getPublicContent\(\)/);
  assert.match(site,/activeCategoryIds\.has\(category\.id\)/);
+ assert.match(site,/catalogueListingCards\(catalog,modes\)/);
  assert.doesNotMatch(site,/\.prices|\.internalNotes/);
 });
 test("alternate .com.vn hosts permanently redirect to the www.fbmn.vn canonical host",()=>{

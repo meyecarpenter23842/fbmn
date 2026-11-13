@@ -94,7 +94,9 @@ export default function CatalogueProductOptions({product,photos,glass=false,init
         disabled={gallery.length===0}
         aria-label="Phóng to ảnh sản phẩm đang chọn">
         <CatalogProductImage src={gallery[photoIndex]?.src??gallery[0]?.src??null}
-          alt={gallery[photoIndex]?.alt??gallery[0]?.alt??product.name} className="catalog-image-compact"/>
+          alt={gallery[photoIndex]?.alt??gallery[0]?.alt??product.name}
+          sizes="(max-width: 700px) 130px, 270px"
+          className="catalog-image-compact"/>
       </button>}
       <div className={glass?"fb-song-overview-copy":undefined}>
         <p className={glass?"fb-song-overline":"catalog-overline"}>SẢN PHẨM FUTUREBOOK</p>
@@ -174,7 +176,7 @@ export default function CatalogueProductOptions({product,photos,glass=false,init
 
   return <>
     <div className={glass?"fb-song-detail":"catalog-detail"}>
-      <PublishedImageGallery key={selected.sku} items={gallery} glass={glass}
+      <PublishedImageGallery key={selected.sku} items={gallery} glass={glass} priority
         zoomDialogRef={zoomDialogRef} activeIndex={photoIndex}
         onActiveIndexChange={setPhotoIndex}/>
       {glass

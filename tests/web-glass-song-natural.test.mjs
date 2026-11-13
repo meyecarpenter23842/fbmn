@@ -58,7 +58,8 @@ test("Glass SKU controls display only the company code with accessible full spec
 test("Gallery uses real images, preserved thumbnail actions, and separate glass classes",()=>{
   assert.match(options, /<PublishedImageGallery key=\{selected\.sku\} items=\{gallery\} glass=\{glass\}[\s\S]*?zoomDialogRef=\{zoomDialogRef\}[\s\S]*?onActiveIndexChange=\{setPhotoIndex\}\/>/);
   assert.match(gallery,/const \[selected,setSelected\]=useState\(0\)/);
-  assert.match(gallery,/<CatalogProductImage src=\{current\?\.src\?\?null\} alt=\{current\?\.alt\?\?"Sản phẩm Futurebook"\}\/>/);
+  assert.match(gallery,/<CatalogProductImage src=\{current\?\.src\?\?null\} alt=\{current\?\.alt\?\?"Sản phẩm Futurebook"\}/);
+  assert.match(gallery,/priority=\{priority&&active===0\}/);
   assert.match(gallery,/<GlassMediaFrame className="fb-song-main-photo">/);
   assert.match(gallery, /<GlassCard className="fb-song-gallery" data-has-media=/);
   assert.match(gallery,/aria-pressed=\{active===i\}/);
@@ -70,7 +71,7 @@ test("Gallery uses real images, preserved thumbnail actions, and separate glass 
 test("Related products keep source-backed links and exclusively styled glass cards",()=>{
   assert.match(related,/if\(items\.length===0\)return null/);
   assert.match(related,/items\.map\(product=><ProductCard key=\{product\.id\} product=\{product\} glass=\{glass\}\/>\)/);
-  assert.match(card,/export function ProductCard\(\{ product, glass = false \}/);
+  assert.match(card,/export function ProductCard\(\{ product, glass = false, priority = false \}/);
   assert.match(card,/<GlassCard hover linkCard className="fb-song-related-card">/);
   assert.match(card,/: <article className="catalog-product">/);
   assert.match(card,/getPublishedProductImageUrl\(media\.r2Key, process\.env\.NEXT_PUBLIC_MEDIA_BASE_URL\)/);

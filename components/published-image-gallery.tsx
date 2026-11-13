@@ -7,11 +7,12 @@ import {GlassButton,GlassCard,GlassMediaFrame} from "./glass-ui";
 /** Native dialog provides focus containment, Escape dismissal and browser zoom.
  * The mobile overview shares the same ref, not a second gallery state.
  */
-export default function PublishedImageGallery({items,glass=false,zoomDialogRef,activeIndex,onActiveIndexChange}:{
+export default function PublishedImageGallery({items,glass=false,zoomDialogRef,activeIndex,onActiveIndexChange,priority=false}:{
   items:Array<{src:string;alt:string}>;glass?:boolean;
   zoomDialogRef?:RefObject<HTMLDialogElement|null>;
   activeIndex?:number;
   onActiveIndexChange?:(index:number)=>void;
+  priority?:boolean;
 }){
   const [selected,setSelected]=useState(0);
   const active=activeIndex??selected;
@@ -22,7 +23,9 @@ export default function PublishedImageGallery({items,glass=false,zoomDialogRef,a
   const openZoom=()=>{if(current?.src&&!zoomRef.current?.open)zoomRef.current?.showModal();};
   const photo=<div className={glass?"fb-song-gallery-photo":"catalogue-gallery-photo"}
     key={current?.src??"empty"}>
-    <CatalogProductImage src={current?.src??null} alt={current?.alt??"Sản phẩm Futurebook"}/>
+    <CatalogProductImage src={current?.src??null} alt={current?.alt??"Sản phẩm Futurebook"}
+      priority={priority&&active===0}
+      sizes="(max-width: 700px) 94vw, (max-width: 1200px) 48vw, 560px"/>
   </div>;
   const mainImage=glass
     ? <GlassMediaFrame className="fb-song-main-photo">
@@ -47,7 +50,7 @@ export default function PublishedImageGallery({items,glass=false,zoomDialogRef,a
         className={glass?"fb-song-gallery-thumb":"catalogue-gallery-thumb"}>
         {/* Verified published gallery thumbnail, never decorative media. */}
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={img.src} alt="" loading="lazy"
+        <img src={img.src} alt="" width={80} height={100} loading="lazy" decoding="async"
           className={glass?"fb-song-gallery-thumb-image":"catalogue-gallery-thumb__image"}/>
       </button>)}
     </div>}
