@@ -21,6 +21,7 @@ class CeoChatDetail extends StatefulWidget {
 class _CeoChatDetailState extends State<CeoChatDetail>{
  late Future<List<CeoTurn>> _future;
  bool _attempted=false,_saving=false,_saved=false,_hasNewer=false;
+ bool _mustReload=false;
  String? _lastTurnId,_notice;
  static final _turnId=RegExp(r'^[1-9][0-9]{0,18}$');
  @override void initState(){
@@ -59,10 +60,21 @@ class _CeoChatDetailState extends State<CeoChatDetail>{
     if(mounted)setState(()=>_notice=
      'Đã lưu đã xem trên máy chủ, nhưng chưa tải lại được số thông báo.');
    }
+  }on CeoApiException catch(error){
+   if(mounted)setState((){
+    _saved=false;
+    _mustReload=error.status==404;
+    _notice=switch(error.status){
+     401=>'Phiên Owner cần xác minh lại (401). Chưa lưu đã xem.',
+     403=>'Tài khoản không có quyền đánh dấu đã xem (403).',
+     404=>'Không tìm thấy lượt chat vừa xem (404). Anh tải lại hội thoại.',
+     _=>'Máy chủ chưa lưu được trạng thái đã xem (${error.status}). Anh thử lại.'
+    };
+   });
   }catch(_){
    if(mounted)setState((){
     _saved=false;
-    _notice='Chưa lưu được trạng thái đã xem. Anh bấm thử lại.';
+    _notice='Chưa kết nối được để lưu đã xem. Anh bấm thử lại.';
    });
   }finally{
    if(mounted)setState(()=>_saving=false);
@@ -72,7 +84,7 @@ class _CeoChatDetailState extends State<CeoChatDetail>{
   setState((){
    _future=widget.api.turns(widget.session);
    _attempted=false;_lastTurnId=null;_notice=null;
-   _saved=false;_saving=false;_hasNewer=false;
+   _saved=false;_saving=false;_hasNewer=false;_mustReload=false;
   });
  }
  @override Widget build(BuildContext context)=>Column(children:[
@@ -106,8 +118,9 @@ class _CeoChatDetailState extends State<CeoChatDetail>{
         Text(_notice!,style:const TextStyle(fontSize:13,color:Color(0xFF92400E))),
         const SizedBox(height:6),
         Align(alignment:Alignment.centerRight,child:TextButton(
-         onPressed:_saving?null:(_saved?_reload:_lastTurnId==null?_reload:_saveRead),
-         child:Text(_saved||_lastTurnId==null?'Tải lại hội thoại':'Thử lưu đã xem lại')))
+         onPressed:_saving?null:(_saved||_mustReload||_lastTurnId==null?_reload:_saveRead),
+         child:Text(_saved||_mustReload||_lastTurnId==null?
+          'Tải lại hội thoại':'Thử lưu đã xem lại')))
        ]))),
      if(_hasNewer)Card(
       color:ceoLavender,child:Padding(padding:const EdgeInsets.all(12),
