@@ -115,7 +115,7 @@ class FakeChatRepo extends FakeRepo {
 
 
 class FakeChatUnreadRepo extends FakeChatRepo{
- static const session='7506d77a000000000000000000000000';
+ static const session='7506d77a0000000000000000000000000000';
  bool rejectWrite=false,arrivedAfterView=false,acknowledged=false;
  int detailLoads=0,readWrites=0;
  String? acknowledgedTurnId;
