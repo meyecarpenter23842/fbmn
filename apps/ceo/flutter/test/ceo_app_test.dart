@@ -717,6 +717,8 @@ void main(){
    expect(find.text('PH02 · Hiệu quả nguồn khách'),findsNothing);
    expect(repo.analyticsLoads,firstLoads);
    expect(tester.takeException(),isNull,reason:'Funnel overflow at $width');
+   await tester.ensureVisible(find.text('30 ngày'));
+   await tester.pumpAndSettle();
    await tester.tap(find.text('30 ngày'));
    await tester.pumpAndSettle();
    expect(repo.analyticsLoads,firstLoads+1);

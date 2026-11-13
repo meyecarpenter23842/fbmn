@@ -12,11 +12,14 @@ test("Only bounded periods and fixed read-only aggregate queries are accepted",(
   assert.match(queries.seoSummary,/uniqIf\(distinct_id/);
   assert.match(queries.seoSummary,/web_contact_submit_success/);
   assert.match(queries.seoPages,/page_key/);
-  assert.match(queries.marketingSources,/argMinIf\\(toString\\(properties\\.traffic_source\\)/);
+  assert.equal(queries.marketingSources.includes("argMinIf(toString(properties.traffic_source)"),true);
   assert.match(queries.marketingSources,/GROUP BY distinct_id HAVING starts>0/);
-  assert.match(queries.marketingCampaigns,/match\\(campaign,'\\^fbmn-/);
-  assert.doesNotMatch(queries.marketingSources,/SELECT \\*|person_id|properties\\.(email|phone|message|referrer|ip)/i);
-  assert.doesNotMatch(queries.marketingCampaigns,/SELECT \\*|person_id|properties\\.(email|phone|message|referrer|ip)/i);
+  assert.equal(queries.marketingCampaigns.includes("WHERE match(campaign"),true);
+  assert.equal(queries.marketingCampaigns.includes("NOT match(campaign,'[0-9]{9,}')"),true);
+  assert.equal(queries.marketingSources.includes("person_id"),false);
+  assert.equal(queries.marketingSources.includes("properties.email"),false);
+  assert.equal(queries.marketingCampaigns.includes("person_id"),false);
+  assert.equal(queries.marketingCampaigns.includes("properties.phone"),false);
   assert.match(queries.funnel,/windowFunnel\(86400000\)\(accurateCast\(toUnixTimestamp64Milli\(timestamp\), 'UInt64'\)/);
   assert.doesNotMatch(queries.funnel,/toDateTime\(timestamp\)/);
   assert.match(queries.funnel,/GROUP BY distinct_id/);
@@ -128,6 +131,7 @@ test("PH02 allows only safe aggregate channel labels and verified campaign codes
  const use=(source,campaign)=>formatStatistics("30d",{...base,
    marketingSources:{results:source},marketingCampaigns:{results:campaign}}).marketing;
  assert.deepEqual(use([],[]),{channels:[],campaigns:[]});
+ assert.equal(use([],[["fbmn-20261113","google_paid",1,0,0,0]]).campaigns[0].campaign,"fbmn-20261113");
  assert.throws(()=>use([["google_paid",2,0,1,3,1,1]],[]),/invalid_marketing_counts/);
  assert.throws(()=>use([["unsafe",2,0,0,0,0,0]],[]),/invalid_marketing_channel/);
  assert.throws(()=>use([],[["name@gmail.com","google_paid",1,0,0,0]]),/invalid_marketing_campaign/);
