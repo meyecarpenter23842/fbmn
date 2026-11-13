@@ -16,6 +16,7 @@ import {getOptionalPublicCms} from "@/lib/content/cms";
 import {CmsBannerSlot,CmsFeaturedSlot} from "@/components/cms-web-content";
 
 export const dynamic="force-dynamic";
+export const metadata={alternates:{canonical:"/"}};
 export default async function HomePage() {
   const cms=await getOptionalPublicCms();
   const hasCmsHero=cms.some(item=>item.kind==="banner"&&item.slot==="home.hero");

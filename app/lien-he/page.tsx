@@ -7,6 +7,7 @@ import { officialContact as contact } from "@/lib/content/official-contact";
 export const metadata: Metadata = {
   title: "Liên hệ | Futurebook Miền Nam",
   description: "Liên hệ Futurebook Miền Nam để được tư vấn sản phẩm, báo giá sỉ và hợp tác đại lý.",
+  alternates: { canonical: "/lien-he" },
 };
 
 export default async function ContactPage() {

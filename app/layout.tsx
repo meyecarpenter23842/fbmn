@@ -24,7 +24,8 @@ import WebAnalytics from "@/components/web-analytics";
 export const metadata: Metadata = {
   title: "Futurebook Miền Nam",
   description: "Tập vở, sổ, giấy và văn phòng phẩm Futurebook Miền Nam. Khám phá sản phẩm, catalogue và liên hệ hợp tác.",
-  robots: { index: false, follow: false },
+  metadataBase: new URL("https://www.fbmn.vn"),
+  robots: { index: true, follow: true },
   icons: { icon: [{ url: "/brand/fbmn-mark.svg?v=20261104", type: "image/svg+xml" }], shortcut: "/favicon.ico", apple: "/brand/fbmn-mark.svg?v=20261104" },
 };
 

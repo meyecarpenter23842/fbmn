@@ -9,7 +9,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const [content, { slug }] = await Promise.all([getPublicContent(), params]);
   const item = content.promotions.find(promotion => promotion.slug === slug);
   return item
-    ? { title: item.title + " | Futurebook Miền Nam", description: item.summary }
+    ? { title: item.title + " | Futurebook Miền Nam", description: item.summary,
+        alternates:{canonical:"/khuyen-mai/"+encodeURIComponent(item.slug)} }
     : { title: "Chương trình chưa công khai | Futurebook Miền Nam", robots: { index: false } };
 }
 export default async function PromotionDetail({ params }: Props) {

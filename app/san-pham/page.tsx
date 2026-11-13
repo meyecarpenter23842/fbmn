@@ -6,10 +6,16 @@ import { parseCatalogFilters } from "@/lib/catalog/query";
 import { toAllowedParams, type RawSearchParams } from "@/lib/catalog/route";
 
 export const dynamic = "force-dynamic";
-export const metadata: Metadata = {
-  title: "Danh mục sản phẩm | Futurebook Miền Nam",
-  description: "Tìm kiếm danh mục, tập vở, sổ ghi chép và văn phòng phẩm Futurebook đã được xác minh.",
-};
+export async function generateMetadata({searchParams}:{searchParams:Promise<RawSearchParams>}):Promise<Metadata>{
+  const params=await searchParams;
+  const filtered=["q","nhom","kho","gsm","trang","sap-xep"].some(key=>key in params);
+  return {
+    title: "Danh mục sản phẩm | Futurebook Miền Nam",
+    description: "Tìm kiếm danh mục, tập vở, sổ ghi chép và văn phòng phẩm Futurebook đã được xác minh.",
+    alternates:{canonical:"/san-pham"},
+    ...(filtered?{robots:{index:false,follow:true}}:{}),
+  };
+}
 
 export default async function ProductsPage({
   searchParams,

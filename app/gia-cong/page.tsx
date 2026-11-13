@@ -7,6 +7,7 @@ export const dynamic="force-dynamic";
 export const metadata: Metadata = {
  title:"Gia công theo yêu cầu | Futurebook Miền Nam",
  description:"Gửi yêu cầu tư vấn gia công tập vở, sổ và sản phẩm giấy theo quy cách dự kiến. Khả năng đáp ứng và báo giá được trao đổi riêng.",
+  alternates: { canonical: "/gia-cong" },
 };
 export default function OutsourcingPage(){
  const ready=process.env.FBMN_DL6_ENABLED==="true";

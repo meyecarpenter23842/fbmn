@@ -12,11 +12,14 @@ export const dynamic = "force-dynamic";
 
 type Props = { params: Promise<{ slug: string }>; searchParams: Promise<RawSearchParams> };
 
-export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const [catalog, { slug }] = await Promise.all([getPublicCatalog(), params]);
+export async function generateMetadata({ params,searchParams }: Props): Promise<Metadata> {
+  const [catalog, { slug }, raw] = await Promise.all([getPublicCatalog(), params,searchParams]);
+  const filtered=["q","nhom","kho","gsm","trang","sap-xep"].some(key=>key in raw);
   const category = getCategoryBySlug(catalog, slug);
   return category
-    ? { title: category.name + " | Futurebook Miền Nam", description: "Danh mục " + category.name + " đã được xác minh." }
+    ? { title: category.name + " | Futurebook Miền Nam", description: "Danh mục " + category.name + " đã được xác minh.",
+        alternates:{canonical:"/danh-muc/"+encodeURIComponent(category.slug)},
+        ...(filtered?{robots:{index:false,follow:true}}:{}) }
     : { title: "Danh mục đang cập nhật | Futurebook Miền Nam", robots: { index: false } };
 }
 

@@ -7,6 +7,7 @@ export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
   title: "Khuyến mãi | Futurebook Miền Nam",
   description: "Các chương trình khuyến mãi Futurebook Miền Nam.",
+  alternates: { canonical: "/khuyen-mai" },
 };
 
 export default async function PromotionsPage() {

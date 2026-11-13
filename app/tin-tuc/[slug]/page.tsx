@@ -9,7 +9,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const [content, { slug }] = await Promise.all([getPublicContent(), params]);
   const item = content.articles.find(article => article.slug === slug);
   return item
-    ? { title: item.title + " | Futurebook Miền Nam", description: item.summary }
+    ? { title: item.title + " | Futurebook Miền Nam", description: item.summary,
+        alternates:{canonical:"/tin-tuc/"+encodeURIComponent(item.slug)} }
     : { title: "Tin chưa công khai | Futurebook Miền Nam", robots: { index: false } };
 }
 export default async function NewsDetail({ params }: Props) {

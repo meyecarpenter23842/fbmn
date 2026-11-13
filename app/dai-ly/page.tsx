@@ -6,6 +6,7 @@ import { getPublicContent } from "@/lib/content/adapter";
 export const metadata: Metadata = {
   title: "Dành cho đại lý | Futurebook Miền Nam",
   description: "Liên hệ hợp tác phân phối Futurebook Miền Nam.",
+  alternates: { canonical: "/dai-ly" },
 };
 
 export default async function DealerPage() {
