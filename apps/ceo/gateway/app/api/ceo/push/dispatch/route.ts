@@ -1,6 +1,7 @@
 import {createHash,timingSafeEqual} from "node:crypto";
 import {withPushDb} from "@/lib/ceo-push-db";
 import {pushPayload,validRef} from "@/lib/ceo-push-policy.mjs";
+import {MAIL_UNREAD_SQL} from "@/lib/ceo-mail-unread.mjs";
 import webpush from "web-push";
 export const runtime="nodejs";export const dynamic="force-dynamic";export const maxDuration=60;
 const headers={"Cache-Control":"private, no-store"};
@@ -70,10 +71,7 @@ export async function GET(request:Request){
         LEFT JOIN fbmn_catalog_private.ceo_inbox_reads r
         ON r.owner_subject=$1 AND r.kind='chat' AND r.ref=c.session_id
         WHERE c.updated_at>coalesce(r.read_through,'epoch'::timestamptz))
-       +(SELECT count(*) FROM fbmn_catalog_private.ceo_push_events e
-        LEFT JOIN fbmn_catalog_private.ceo_inbox_reads r
-        ON r.owner_subject=$1 AND r.kind='mail' AND r.ref=e.ref
-        WHERE e.kind='mail' AND e.occurred_at>coalesce(r.read_through,'epoch'::timestamptz))
+       +(SELECT count(*) FROM (${MAIL_UNREAD_SQL}) mail_unread)
        +(SELECT count(*) FROM fbmn_catalog_private.contact_requests c
         WHERE c.status='new' AND NOT EXISTS(
          SELECT 1 FROM fbmn_catalog_private.ceo_request_reads r
