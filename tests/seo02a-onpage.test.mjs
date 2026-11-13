@@ -4,14 +4,14 @@ import {readFileSync} from "node:fs";
 const read=p=>readFileSync(new URL("../"+p,import.meta.url),"utf8");
 test("product metadata uses only published catalogue and never internal NET",()=>{
  const product=read("app/san-pham/[slug]/page.tsx"),seo=read("lib/seo/structured-data.ts");
- assert.match(product,/productMetadata\(product\)/);
+ assert.match(product,/productMetadata\(product,catalog\.categories\.find/);
  assert.match(product,/permanentRedirect\(/);
  assert.match(product,/\?sku=/);
  assert.match(product,/encodeURIComponent\(selectedSku\)/);
  assert.match(product,/initialSku=\{selectedSku\}/);
  assert.match(product,/notFound\(\)/);
  assert.match(seo,/getPublishedProductImageUrl/);
- assert.match(product,/productLandingPageSchema\(product\)/);
+ assert.match(product,/productLandingPageSchema\(product,category\)/);
  assert.match(seo,/"@type":"WebPage"/);
  assert.doesNotMatch(seo,/"@type":"Product"/);
  assert.doesNotMatch(seo,/offers:|aggregateRating:|priceValidUntil:|\.internalNotes|\.prices/);
@@ -21,6 +21,7 @@ test("category filters retain noindex; articles are structured from published co
  const news=read("app/tin-tuc/[slug]/page.tsx");
  assert.match(category,/robots:\{index:false,follow:true\}/);
  assert.match(category,/breadcrumbSchema/);
+ assert.match(category,/categorySeoSummary\(category,catalog,modes\)/);
  assert.match(news,/articleMetadata\(item\)/);
  assert.match(news,/articleSchema\(item\)/);
  assert.match(news,/notFound\(\)/);

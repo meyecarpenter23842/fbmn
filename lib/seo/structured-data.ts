@@ -4,19 +4,26 @@ import type {Metadata} from "next";
 import type {PublicProduct,PublicCatalog} from "@/lib/catalog/schema";
 import type {PublicArticle} from "@/lib/content/schema";
 import {getPublishedProductImageUrl} from "@/lib/catalog/product-image";
+import {SEO_GROUP_LABELS,categorySeoSummary,type PublicCategory} from "./content-strategy";
 
 export const SEO_ORIGIN="https://www.fbmn.vn";
 const BRAND="Futurebook Miền Nam";
 const absolute=(path:string)=>new URL(path,SEO_ORIGIN).href;
 const text=(value:string,max:number)=>value.trim().replace(/\s+/g," ").slice(0,max);
 
-export function productSeoDescription(product:PublicProduct):string{
- const supplied=text(product.description??"",300);
- if(supplied)return supplied;
+export function productSeoDescription(product:PublicProduct,category?:PublicCategory):string{
+ const productName=text(product.name,150);
+ const categoryName=category&&!productName.toLocaleLowerCase("vi").includes(category.name.toLocaleLowerCase("vi"))
+  ?category.name:"";
+ const prefix=productName+(categoryName?" – "+categoryName:"");
+ const supplied=text(product.description??"",260);
+ if(supplied)return text(prefix+". "+supplied,300);
  const specifications=[...new Set(product.variants.flatMap(v=>
-  [v.specifications.paperSize,v.specifications.pageCount?String(v.specifications.pageCount)+" trang":undefined]
-   .filter((s):s is string=>typeof s==="string"&&s.trim().length>0)))].slice(0,4);
- return text("Thông tin "+product.name+(specifications.length?": "+specifications.join(", "):"")+
+  [v.specifications.paperSize,
+   v.specifications.pageCount?String(v.specifications.pageCount)+" trang":undefined,
+   v.specifications.paperWeightGsm?String(v.specifications.paperWeightGsm)+" gsm":undefined]
+   .filter((s):s is string=>typeof s==="string"&&s.trim().length>0)))].slice(0,5);
+ return text(prefix+(specifications.length?": "+specifications.join(", "):"")+
   ". Xem mã hàng, quy cách và hình ảnh đã công khai tại Futurebook Miền Nam.",300);
 }
 export function productSeoImages(product:PublicProduct):string[]{
@@ -38,17 +45,21 @@ export function productApprovedSeoImages(product:PublicProduct):string[]{
  }
  return [...unique];
 }
-export function productMetadata(product:PublicProduct):Metadata{
- const title=text(product.name,160)+" | "+BRAND;
- const description=productSeoDescription(product);
+export function productMetadata(product:PublicProduct,category?:PublicCategory):Metadata{
+ const categoryName=category&&!product.name.toLocaleLowerCase("vi").includes(category.name.toLocaleLowerCase("vi"))
+  ?" – "+category.name:"";
+ const title=text(product.name+categoryName,120)+" | "+BRAND;
+ const description=productSeoDescription(product,category);
  const url="/san-pham/"+encodeURIComponent(product.slug);
  const images=productSeoImages(product);
  return {title,description,alternates:{canonical:url},
   openGraph:{type:"website",title,description,url,siteName:BRAND,...(images.length?{images}: {})}};
 }
-export function categoryMetadata(category:PublicCatalog["categories"][number]):Metadata{
- const title=category.name+" | "+BRAND;
- const description="Danh mục "+category.name+". Tra cứu sản phẩm và quy cách đã công khai tại Futurebook Miền Nam.";
+export function categoryMetadata(category:PublicCatalog["categories"][number],catalog?:PublicCatalog,
+ modeByCategory:Readonly<Record<string,"family"|"sku">>={}):Metadata{
+ const title=text(category.name+" – "+SEO_GROUP_LABELS[category.group],120)+" | "+BRAND;
+ const description=catalog?text(categorySeoSummary(category,catalog,modeByCategory),300):
+  "Danh mục "+category.name+". Tra cứu sản phẩm và quy cách đã công khai tại Futurebook Miền Nam.";
  const url="/danh-muc/"+encodeURIComponent(category.slug);
  return {title,description,alternates:{canonical:url},
   openGraph:{type:"website",title,description,url,siteName:BRAND}};
@@ -73,11 +84,11 @@ export function breadcrumbSchema(items:Array<{name:string;path:string}>):Record<
 // Google requires offers/review/aggregateRating for Product snippets. Futurebook's
 // dealer/NET prices must not be published or represented as a made-up Offer.
 // Keep discoverable page semantics and images; BreadcrumbList is emitted separately.
-export function productLandingPageSchema(product:PublicProduct):Record<string,unknown>{
+export function productLandingPageSchema(product:PublicProduct,category?:PublicCategory):Record<string,unknown>{
  const images=productSeoImages(product);
  const url=absolute("/san-pham/"+encodeURIComponent(product.slug));
  return {"@context":"https://schema.org","@type":"WebPage",
-  "@id":url,name:product.name,description:productSeoDescription(product),
+  "@id":url,name:product.name,description:productSeoDescription(product,category),
   url,isPartOf:{"@type":"WebSite",name:BRAND,url:SEO_ORIGIN},
   ...(images.length?{primaryImageOfPage:{"@type":"ImageObject",url:images[0]}}:{})};
 }

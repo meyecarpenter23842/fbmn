@@ -78,11 +78,9 @@ export function filtersToParams(filters: CatalogFilters, page: number = filters.
   return qs;
 }
 
-/** Pure read-model search; only receives toPublicCatalog() DTO, never raw prices. */
-export function searchCatalog(publicCatalog: PublicCatalog, filters: CatalogFilters,
-  modeByCategory: Readonly<Record<string,"family"|"sku">> = {}): SearchResult {
-  const categoryById = new Map(publicCatalog.categories.map(category => [category.id, category]));
-  const tokens = foldVietnamese(filters.q).split(" ").filter(Boolean);
+/** Shared listing projection: SEO and catalogue must count the same family/SKU cards. */
+export function catalogueListingCards(publicCatalog:PublicCatalog,
+  modeByCategory:Readonly<Record<string,"family"|"sku">>={}):ListingProduct[]{
   // Presentation-only cards. Company SKU records and canonical family URLs never change.
   const cards: ListingProduct[] = [];
   for (const product of publicCatalog.products) {
@@ -106,6 +104,15 @@ export function searchCatalog(publicCatalog: PublicCatalog, filters: CatalogFilt
         media:product.media.filter(media => media.sku === undefined || media.sku === variant.sku)});
     }
   }
+  return cards;
+}
+
+/** Pure read-model search; only receives toPublicCatalog() DTO, never raw prices. */
+export function searchCatalog(publicCatalog: PublicCatalog, filters: CatalogFilters,
+  modeByCategory: Readonly<Record<string,"family"|"sku">> = {}): SearchResult {
+  const categoryById = new Map(publicCatalog.categories.map(category => [category.id, category]));
+  const tokens = foldVietnamese(filters.q).split(" ").filter(Boolean);
+  const cards=catalogueListingCards(publicCatalog,modeByCategory);
   const visible = cards.filter(product => {
     const category = categoryById.get(product.categoryId);
     if (!category) return false;

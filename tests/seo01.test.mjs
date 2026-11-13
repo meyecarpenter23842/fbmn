@@ -30,7 +30,7 @@ test("filtered catalogue routes excluded from index without hiding links",()=>{
   if(f==="app/san-pham/page.tsx"){
    assert.match(source,/alternates:\{canonical:/);
   }else{
-   assert.match(source,/categoryMetadata\(category\)/);
+   assert.match(source,/categoryMetadata\(category,catalog,modes\)/);
    assert.match(read("lib/seo/structured-data.ts"),/alternates:\{canonical:url\}/);
   }
  }

@@ -4,6 +4,7 @@ import type { ProductGroup, PublicCatalog, PublicProduct } from "@/lib/catalog/s
 import type { CatalogFilters, ListingProduct } from "@/lib/catalog/query";
 import { GROUP_LABELS, SORT_OPTIONS, filtersToParams, searchCatalog } from "@/lib/catalog/query";
 import { getPublishedProductImageUrl } from "@/lib/catalog/product-image";
+import {productSeoImageAlt} from "@/lib/seo/content-strategy";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { CatalogProductImage } from "@/components/catalog-product-image";
@@ -45,7 +46,7 @@ export function ProductCard({ product, glass = false }: { product: ListingProduc
     aria-label={"Xem sản phẩm " + product.name}
     className={glass ? "fb-song-related-hit" : "catalog-product__hit"}>
     <div className={glass ? "fb-song-related-image" : "catalog-product__image"}>
-      <CatalogProductImage src={image} alt={media?.alt ?? product.name} className="catalog-image-compact"/>
+      <CatalogProductImage src={image} alt={productSeoImageAlt(product,media?.alt??"",product.listingSku??media?.sku)} className="catalog-image-compact"/>
     </div>
     <div className={glass ? "fb-song-related-body" : "catalog-product__body"}>
       <h3>{product.listingSku ? product.variants[0]?.name || product.name : product.name}</h3>
@@ -83,6 +84,7 @@ export function CatalogListing({ data, heading, description, filters, actionPath
     {/* Keep the semantic H1 for SEO/accessibility; filters and results
          are the visible catalogue entry point, not duplicated hero copy. */}
     <h1 className="sr-only">{heading}</h1>
+    <p className="catalog-seo-intro">{description}</p>
     <div className="catalog-layout">
       <aside className="catalog-sidebar">
         <form action={actionPath} method="get" className="catalog-filters" role="search" aria-label="Tìm kiếm và lọc sản phẩm">
