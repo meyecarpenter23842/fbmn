@@ -104,7 +104,8 @@ test("DL5 migration, Website and Admin follow single-source and privacy constrai
  assert.match(up,/GRANT SELECT ON fbmn_public.v_web_category_display TO fbmn_public_reader/);
  assert.doesNotMatch(up,/net_price|pricebook|GRANT .*net/i);
  assert.match(web,/modeByCategory=\{modes\}/);
- assert.match(detail,/alternates:\{canonical/);
+ assert.match(detail,/productMetadata\(product\)/);
+ assert.match(source("lib/seo/structured-data.ts"),/alternates:\{canonical:url\}/);
  assert.match(detail,/initialSku=/);
  assert.match(admin,/category-display/);
  const manager=source("apps/admin/app/category-display-manager.tsx");
