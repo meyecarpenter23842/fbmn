@@ -11,7 +11,7 @@ export async function generateMetadata({searchParams}:{searchParams:Promise<RawS
   const filtered=["q","nhom","kho","gsm","trang","sap-xep"].some(key=>key in params);
   return {
     title: "Danh mục sản phẩm | Futurebook Miền Nam",
-    description: "Tìm kiếm danh mục, tập vở, sổ ghi chép và văn phòng phẩm Futurebook đã được xác minh.",
+    description: "Tra cứu tập học sinh, tập sinh viên, sổ ghi chép và văn phòng phẩm Futurebook theo mã SKU, khổ giấy và quy cách đã công khai.",
     alternates:{canonical:"/san-pham"},
     ...(filtered?{robots:{index:false,follow:true}}:{}),
   };
@@ -26,7 +26,7 @@ export default async function ProductsPage({
     <div className="catalog-wrap">
       <CatalogBreadcrumb trail={[{ label: "Sản phẩm" }]}/>
       <CatalogListing data={catalog} filters={filters} heading="Sản phẩm Futurebook"
-        description="Tra cứu theo nhóm hàng, mã SKU, khổ giấy và định lượng. Chỉ hiển thị dữ liệu chính thức đã được xác nhận." modeByCategory={modes}/>
+        description="Danh mục tập học sinh, tập sinh viên, sổ ghi chép và văn phòng phẩm Futurebook. Tìm theo mã sản phẩm, khổ giấy, số trang và định lượng có trong dữ liệu đã công khai. Liên hệ để được tư vấn lựa chọn quy cách." modeByCategory={modes}/>
     </div>
   </CatalogShell>;
 }

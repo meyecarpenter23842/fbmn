@@ -42,8 +42,8 @@ function VariantChoice({glass,variant,active,onClick}:{
   </button>;
 }
 
-export default function CatalogueProductOptions({product,photos,glass=false,initialSku}:{
-  product:PublicProduct;photos:ProductPhoto[];glass?:boolean;initialSku?:string;
+export default function CatalogueProductOptions({product,photos,glass=false,initialSku,seoIntro}:{
+  product:PublicProduct;photos:ProductPhoto[];glass?:boolean;initialSku?:string;seoIntro?:string;
 }){
   const [sku,setSku]=useState(initialSku && product.variants.some(v=>v.sku===initialSku)?initialSku:product.variants[0].sku);
   const [photoIndex,setPhotoIndex]=useState(0);
@@ -99,7 +99,7 @@ export default function CatalogueProductOptions({product,photos,glass=false,init
       <div className={glass?"fb-song-overview-copy":undefined}>
         <p className={glass?"fb-song-overline":"catalog-overline"}>SẢN PHẨM FUTUREBOOK</p>
         <h1 className={glass?"fb-song-title":undefined}>{product.name}</h1>
-        {product.description&&<p className={glass?"fb-song-description":"catalog-detail__description"}>{product.description}</p>}
+        {(product.description||seoIntro)&&<p className={glass?"fb-song-description":"catalog-detail__description"}>{product.description||seoIntro}</p>}
         <p className={glass?"fb-song-count":"catalog-detail__count"}>{product.variants.length} mã sản phẩm</p>
       </div>
     </div>

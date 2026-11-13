@@ -125,7 +125,7 @@ export default function SeoSettingsManager({owner}:{owner:boolean}){
     mode:draft.mode,title,description,ogImagePath:imagePath,revision:editing?.revision??0});
    setItems(prev=>[...prev.filter(x=>!(x.kind===result.item.kind&&x.slug===result.item.slug)),result.item]
     .sort((a,b)=>(a.kind+":"+a.slug).localeCompare(b.kind+":"+b.slug)));
-   showToast("Đã lưu thiết lập trong Admin. Chưa áp dụng công khai cho đến khi SEO02C được triển khai.","success");
+   showToast("Đã lưu SEO. Website áp dụng với trang đã công khai; Google cập nhật sau khi thu thập lại.","success");
    return true;
   }catch(e){showToast(e instanceof Error?e.message:"Không thể lưu.","error");return false;}
   finally{setSaving(false);}
@@ -143,10 +143,10 @@ export default function SeoSettingsManager({owner}:{owner:boolean}){
    </div>
   </div>
   <section className="surface dl4-panel" role="note">
-   <strong>Giai đoạn SEO02B</strong>
-   <p>Thông tin dưới đây được lưu trong Admin. Chế độ noindex, sitemap và metadata chỉ có hiệu lực
-    khi migration, Public Worker và Website của SEO02C được nghiệm thu và triển khai. Không thay
-    thế quyền công khai sản phẩm hiện có.</p>
+   <strong>SEO tự động và tùy chỉnh đang sử dụng</strong>
+   <p>Website tự tạo tiêu đề, mô tả và hình ảnh từ sản phẩm hoặc nội dung đã xuất bản.
+    Anh có thể dán URL từng sản phẩm để tùy chỉnh hoặc chọn Không lập chỉ mục.
+    Thay đổi chỉ áp dụng cho trang còn công khai và được Google ghi nhận sau khi thu thập lại.</p>
   </section>
   {error&&<p role="alert" className="dl4-error">{error}</p>}
   {loading?<section role="status" className="surface dl4-panel">Đang tải thiết lập SEO…</section>:
@@ -189,16 +189,20 @@ export default function SeoSettingsManager({owner}:{owner:boolean}){
       placeholder={ORIGIN+PATHS[draft.kind]+"..."}/></label>
     <p className="cms-wide">{target?"Canonical tự động: "+target:
      "Chọn đúng trang đã xuất bản. Canonical không thể trỏ đến tên miền khác."}</p>
+    {draft.kind==="product"&&!editing&&<p className="cms-wide">
+     <a href={ORIGIN+"/san-pham"} target="_blank" rel="noopener noreferrer">Mở danh mục công khai để sao chép URL sản phẩm thật</a>.
+     Mỗi nhóm sản phẩm có một URL chuẩn, chọn biến thể SKU trong trang không tạo URL SEO mới.</p>}
     {duplicate&&<p className="cms-wide" role="alert">Trang này đã được cấu hình, vui lòng sửa bản ghi hiện tại.</p>}
     <label className="cms-wide">Chế độ SEO
      <select value={draft.mode} disabled={saving}
       onChange={e=>setDraft(prev=>({...prev,mode:e.target.value as Mode,
-       ...(e.target.value==="auto"?{title:"",description:"",ogImagePath:""}:{})}))}>
+       ...(e.target.value!=="custom"?{title:"",description:"",ogImagePath:""}:{})}))}>
       <option value="auto">Tự động — lấy tên và nội dung đã xuất bản</option>
       <option value="custom">Tùy chỉnh — chỉnh thông tin tìm kiếm</option>
       <option value="noindex">Không lập chỉ mục — vẫn hiển thị trên Website</option>
      </select></label>
-    {draft.mode!=="auto"&&<>
+    {draft.mode==="custom"&&<>
+     <p className="cms-wide">Viết tiêu đề riêng cho trang, ưu tiên tên hàng và quy cách đã xác minh; không nhồi từ khóa, giá bán, đánh giá hoặc cam kết chưa có chứng cứ.</p>
      <label className="cms-wide">SEO Title ({draft.title.length}/180)
       <input value={draft.title} maxLength={180} disabled={saving}
        onChange={e=>set("title",e.target.value)}/></label>
@@ -213,7 +217,7 @@ export default function SeoSettingsManager({owner}:{owner:boolean}){
    </div>
    <div className="surface dl4-panel">
     <h3>Xem trước thông tin tìm kiếm</h3>
-    {draft.mode==="noindex"?<p>Trang sẽ yêu cầu Google không lập chỉ mục sau khi SEO02C được kích hoạt.</p>:
+    {draft.mode==="noindex"?<p>Website sẽ gắn noindex và loại URL khỏi sitemap. Trang vẫn hiển thị với khách truy cập trực tiếp.</p>:
      <><strong>{draft.mode==="custom"&&draft.title?draft.title:"Tự lấy tên từ dữ liệu đã duyệt"}</strong>
       <p>{target||"Đường dẫn canonical sau khi chọn trang"}</p>
       <p>{draft.mode==="custom"&&draft.description?draft.description:

@@ -1,0 +1,58 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import {readFileSync} from "node:fs";
+const read=path=>readFileSync(new URL("../"+path,import.meta.url),"utf8");
+
+test("SEO03 uses real approved catalogue data for unique product and category metadata",()=>{
+ const strategy=read("lib/seo/content-strategy.ts");
+ const schema=read("lib/seo/structured-data.ts");
+ const product=read("app/san-pham/[slug]/page.tsx");
+ const category=read("app/danh-muc/[slug]/page.tsx");
+ assert.match(strategy,/SEO_GROUP_LABELS/);
+ assert.match(strategy,/matchingPublishedVariants\(catalog:PublicCatalog/);
+ assert.match(strategy,/product\.variants/);
+ assert.match(strategy,/variant\.specifications\.paperSize/);
+ assert.match(schema,/productSeoDescription\(product,category\)/);
+ assert.match(schema,/categorySeoSummary\(category,catalog\)/);
+ assert.match(product,/productMetadata\(product,catalog\.categories\.find/);
+ assert.match(category,/categorySeoSummary\(category,catalog\)/);
+ assert.match(product,/productLandingPageSchema\(product,category\)/);
+ assert.match(product,/productApprovedSeoImages\(product\)/);
+ assert.doesNotMatch(schema,/"@type":"Product"/);
+ assert.doesNotMatch(schema,/aggregateRating:|offers:|priceValidUntil:|\.prices|\.internalNotes/);
+});
+test("SEO03 keeps editorial ALT approvals and real product links",()=>{
+ const strategy=read("lib/seo/content-strategy.ts");
+ const detail=read("app/san-pham/[slug]/page.tsx");
+ const listing=read("components/catalog-ui.tsx");
+ assert.match(strategy,/if\(actual&&!/);
+ assert.match(detail,/productSeoImageAlt\(product,media\.alt,media\.sku\)/);
+ assert.match(listing,/productSeoImageAlt\(product,media\?\.alt/);
+ assert.match(listing,/href=\{href\}/);
+ assert.match(detail,/\/dai-ly/);
+ assert.match(detail,/\/gia-cong/);
+ assert.match(read("app/danh-muc/[slug]/page.tsx"),/matchingPublishedVariants\(catalog,item\)/);
+});
+test("SEO03 keeps noindex on filter pages and actual B2B claims modest",()=>{
+ const category=read("app/danh-muc/[slug]/page.tsx");
+ assert.match(category,/robots:\{index:false,follow:true\}/);
+ const dealer=read("app/dai-ly/page.tsx"),outsourcing=read("app/gia-cong/page.tsx");
+ assert.match(dealer,/TP\.HCM/);
+ assert.match(dealer,/miền Tây/);
+ assert.match(outsourcing,/TP\.HCM/);
+ assert.match(outsourcing,/miền Tây/);
+ assert.match(outsourcing,/khả năng đáp ứng/i);
+});
+test("Owner SEO mode is still editable; no false SEO02B not-live warning",()=>{
+ const ui=read("apps/admin/app/seo-settings-manager.tsx");
+ const backend=read("backend/admin-api/seo-service.mjs");
+ assert.match(ui,/mode:"auto"/);
+ assert.match(ui,/value="custom"/);
+ assert.match(ui,/value="noindex"/);
+ assert.match(ui,/Mở danh mục công khai/);
+ assert.match(ui,/Website áp dụng/);
+ assert.doesNotMatch(ui,/Chưa áp dụng công khai cho đến khi SEO02C/);
+ assert.match(backend,/actor\?\.role!=="owner"/);
+ assert.match(backend,/revision_conflict/);
+ assert.match(backend,/web_seo_settings_audit/);
+});
