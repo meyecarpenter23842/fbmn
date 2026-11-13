@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'ceo_repository.dart';
 import 'ceo_stats_models.dart';
 import 'ceo_marketing.dart';
+import 'ceo_gsc_models.dart';
+import 'ceo_search_console.dart';
 import 'ceo_ui_tokens.dart';
 import 'ceo_workspace.dart';
 
@@ -15,6 +17,11 @@ class CeoStatisticsTab extends StatefulWidget{
 class CeoStatisticsTabState extends State<CeoStatisticsTab>{
  String period='7d';
  int section=0;
+ CeoGscReport? gsc;
+ bool gscLoading=false;
+ String gscError='';
+ String gscPeriod='';
+ int gscGeneration=0;
  CeoWebStatistics? data;
  bool loading=true;
  String error='';
@@ -27,6 +34,7 @@ class CeoStatisticsTabState extends State<CeoStatisticsTab>{
   if(range!=null)period=range;
   final id=++generation;
   setState((){loading=true;error='';});
+  if(section==4&&(range!=null||fresh))unawaited(loadGsc(fresh:true));
   try{
    final value=await widget.api.websiteStatistics(period,fresh:fresh);
    if(mounted&&id==generation)setState((){data=value;loading=false;});
@@ -36,7 +44,22 @@ class CeoStatisticsTabState extends State<CeoStatisticsTab>{
    });}
   }
  }
- @override void dispose(){generation++;super.dispose();}
+ Future<void> loadGsc({bool fresh=false})async{
+  final requested=period;
+  if(!fresh&&gscPeriod==requested&&(gscLoading||gsc!=null))return;
+  final id=++gscGeneration;
+  setState((){gscLoading=true;gscError='';gsc=null;gscPeriod=requested;});
+  try{
+   final value=await widget.api.searchConsole(requested,fresh:fresh);
+   if(mounted&&id==gscGeneration){setState((){gsc=value;gscLoading=false;});}
+  }catch(_){
+   if(mounted&&id==gscGeneration){
+    setState((){gsc=null;gscLoading=false;
+     gscError='Không tải được dữ liệu Google Search Console. Kiểm tra kết nối hoặc quyền property rồi thử lại.';});
+   }
+  }
+ }
+ @override void dispose(){generation++;gscGeneration++;super.dispose();}
  Widget summary(CeoWebStatistics value)=>LayoutBuilder(builder:(context,box){
   final columns=box.maxWidth>=720?4:2;
   final cardWidth=math.max(130.0,(box.maxWidth-(columns-1)*10)/columns);
@@ -113,7 +136,7 @@ class CeoStatisticsTabState extends State<CeoStatisticsTab>{
    const SizedBox(height:6),
    ranking(value.seoPages),
    const SizedBox(height:10),
-   const Text('Đối chiếu Google Search Console riêng: Hiệu suất → Truy vấn/Trang (lượt nhấp, hiển thị, CTR, vị trí trung bình). Dữ liệu Google chưa kết nối vào báo cáo này.',
+   const Text('Bảng này sử dụng PostHog, khác dữ liệu Google Search Console ở thẻ SEO06 phía trên.',
     style:TextStyle(fontSize:12,color:ceoMuted)),
   ]);
  }
@@ -181,7 +204,11 @@ class CeoStatisticsTabState extends State<CeoStatisticsTab>{
       child:ChoiceChip(key:ValueKey('ceo-stats-tab-$i'),
        label:Text(tabs[i]),labelStyle:const TextStyle(fontSize:13),
        selected:section==i,
-       onSelected:(_){if(section!=i)setState(()=>section=i);}))),
+       onSelected:(_){
+        if(section==i)return;
+        setState(()=>section=i);
+        if(i==4)unawaited(loadGsc());
+       }))),
    ]));
  }
  List<Widget> selectedPanels(CeoWebStatistics value)=>switch(section){
@@ -258,6 +285,12 @@ class CeoStatisticsTabState extends State<CeoStatisticsTab>{
         style:TextStyle(fontSize:11,color:ceoMuted))),
      ],
     ])),
+   if(section==4)CeoPanel(
+    title:'SEO06 · Google Search Console',
+    subtitle:'Google tự nhiên · lượt nhấp, hiển thị, CTR và vị trí trung bình',
+    icon:Icons.travel_explore_outlined,
+    child:CeoGscPanel(report:gsc,loading:gscLoading,error:gscError,
+     retry:()=>unawaited(loadGsc(fresh:true)))),
    if(value!=null&&!loading&&error.isEmpty)...selectedPanels(value),
   ]);
  }

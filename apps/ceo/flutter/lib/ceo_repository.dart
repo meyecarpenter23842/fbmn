@@ -3,6 +3,7 @@ import 'package:http/http.dart' as http;
 import 'ceo_models.dart';
 import 'ceo_mail_models.dart';
 import 'ceo_stats_models.dart';
+import 'ceo_gsc_models.dart';
 import 'http_client_stub.dart' if (dart.library.js_interop) 'http_client_web.dart' as platform;
 
 /// Same-origin only. No token storage, credential logging or direct private Worker requests.
@@ -18,6 +19,7 @@ abstract class CeoRepository{
  Future<CeoAlerts> loadAlerts();
  Future<void> markAlertRead(String kind,String id,{String? turnId});
  Future<CeoWebStatistics> websiteStatistics(String period,{bool fresh=false});
+ Future<CeoGscReport> searchConsole(String period,{bool fresh=false});
  Future<CeoMailPage> mailList(String box,{String? after});
  Future<CeoMailItem> mailDetail(String box,String id);
  Future<String> mailSend({required String to,required String subject,required String text,String? replyId,String? requestId,List<CeoMailAttachment> attachments=const []});
@@ -226,6 +228,12 @@ class CeoApi implements CeoRepository {
   if(!['7d','30d','90d'].contains(period))throw const CeoApiException(400);
   return CeoWebStatistics.fromJson(await _data('/api/ceo/statistics?period=$period${fresh?'&fresh=1':''}',
    timeout:const Duration(seconds:35)));
+ }
+ @override Future<CeoGscReport> searchConsole(String period,{bool fresh=false})async{
+  if(!['7d','30d','90d'].contains(period))throw const CeoApiException(400);
+  final raw=await _data('/api/ceo/search-console?period=$period${fresh?'&fresh=1':''}',
+   timeout:const Duration(seconds:25));
+  return CeoGscReport.fromJson(raw);
  }
  @override Future<CeoMailPage> mailList(String box,{String? after})async{
   if(box!='inbox'&&box!='sent'){throw const CeoApiException(400);}
