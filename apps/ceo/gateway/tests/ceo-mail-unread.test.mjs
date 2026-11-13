@@ -44,7 +44,7 @@ test("MAIL07 never treats every historical provider message as unread",()=>{
  assert.equal((migration.match(/BEGIN;/g)||[]).length,1);
  assert.equal((migration.match(/COMMIT;/g)||[]).length,1);
  assert.equal((migration.match(/CREATE TABLE IF NOT EXISTS/g)||[]).length,2);
- assert.match(migration,/scan_cursor ~\\* '[^']+'\\s*\\)\\s*\\);/);
+ assert.match(migration,/scan_cursor ~\* '[^']+'\s*\)\s*\);/);
  
  assert.match(index,/scan_cursor/);
  assert.match(index,/&after=/);
