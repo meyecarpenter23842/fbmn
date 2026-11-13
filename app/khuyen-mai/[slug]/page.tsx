@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
 import { ContentShell, ContentBreadcrumb, WaitingForApproval, EditorialCover } from "@/components/content-ui";
 import { getPublicContent } from "@/lib/content/adapter";
+import {notFound} from "next/navigation";
+import {SeoJsonLd} from "@/lib/seo/json-ld";
+import {breadcrumbSchema} from "@/lib/seo/structured-data";
 
 export const dynamic = "force-dynamic";
 type Props = { params: Promise<{ slug: string }> };
@@ -16,7 +19,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function PromotionDetail({ params }: Props) {
   const [content, { slug }] = await Promise.all([getPublicContent(), params]);
   const item = content.promotions.find(promotion => promotion.slug === slug);
+  if(!item)notFound();
   return <ContentShell>
+    <SeoJsonLd data={breadcrumbSchema([{name:"Khuyến mãi",path:"/khuyen-mai"},
+      {name:item.title,path:"/khuyen-mai/"+encodeURIComponent(item.slug)}])}/>
     <ContentBreadcrumb items={[{ name: "Khuyến mãi", href: "/khuyen-mai" }, { name: item?.title ?? "Chưa công khai" }]}/>
     {item ? <article className="content-story">
       <EditorialCover item={item}/>

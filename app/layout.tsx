@@ -20,6 +20,8 @@ import { AppDownloadProvider } from "@/components/app-download";
 import { ChatbotWidget } from "@/components/chatbot-widget";
 import CmsPopupRuntime from "@/components/cms-popup-runtime";
 import WebAnalytics from "@/components/web-analytics";
+import {SeoJsonLd} from "@/lib/seo/json-ld";
+import {organizationSchema} from "@/lib/seo/structured-data";
 
 export const metadata: Metadata = {
   title: "Futurebook Miền Nam",
@@ -33,6 +35,7 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
   return (
     <html lang="vi">
       <body>
+        <SeoJsonLd data={organizationSchema()}/>
         <AppDownloadProvider>
           <GlassPageBackdrop className="fb-glass-site"
             decorativeReadPath={publicDecorativeBackground.website ?? undefined}>

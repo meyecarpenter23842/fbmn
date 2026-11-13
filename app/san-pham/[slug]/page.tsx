@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { CatalogShell, CatalogBreadcrumb, EmptyState } from "@/components/catalog-ui-detail";
+import { CatalogShell, CatalogBreadcrumb } from "@/components/catalog-ui-detail";
 import { getPublicCatalog } from "@/lib/catalog/adapter";
 import { getProductBySlug } from "@/lib/catalog/query";
 import { getPublishedProductImageUrl } from "@/lib/catalog/product-image";
@@ -7,28 +7,24 @@ import CatalogueProductOptions from "@/components/catalogue-product-options";
 import CatalogueRelatedProducts from "@/components/catalogue-related-products";
 import {relatedProducts} from "@/lib/catalog/recommendations";
 import WebInterestView from "@/components/web-interest-view";
+import {notFound,permanentRedirect} from "next/navigation";
+import {SeoJsonLd} from "@/lib/seo/json-ld";
+import {productMetadata,productSchema,breadcrumbSchema} from "@/lib/seo/structured-data";
 
 export const dynamic = "force-dynamic";
 
 type Props = { params: Promise<{ slug: string }>; searchParams: Promise<{sku?:string|string[]}> };
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const [catalog, { slug }] = await Promise.all([getPublicCatalog(), params]);
-  const product = getProductBySlug(catalog, slug);
-  return product
-    ? { title: product.name + " | Futurebook Miền Nam",
-      description: product.description ?? "Thông tin sản phẩm Futurebook đã được xác minh.",
-      alternates:{canonical:"/san-pham/"+encodeURIComponent(product.slug)} }
-    : { title: "Sản phẩm chưa công khai | Futurebook Miền Nam", robots: { index: false } };
+ const [catalog,{slug}]=await Promise.all([getPublicCatalog(),params]);
+ const product=getProductBySlug(catalog,slug);
+ return product?productMetadata(product):{title:"Sản phẩm chưa công khai | Futurebook Miền Nam",robots:{index:false}};
 }
 
 export default async function ProductPage({ params, searchParams }: Props) {
   const [catalog, { slug }, query] = await Promise.all([getPublicCatalog(), params, searchParams]);
   const product = getProductBySlug(catalog, slug);
-  if (!product) return <CatalogShell><div className="catalog-wrap">
-    <CatalogBreadcrumb trail={[{ label: "Sản phẩm", href: "/san-pham" }, { label: "Chi tiết" }]}/>
-    <EmptyState heading="Sản phẩm chưa được công khai"
-      message="Sản phẩm hiện không có trong danh mục. Vui lòng xem các sản phẩm khác."/>
-  </div></CatalogShell>;
+  if(!product)notFound();
+  if(slug!==product.slug)permanentRedirect("/san-pham/"+encodeURIComponent(product.slug));
   const category = catalog.categories.find(item => item.id === product.categoryId);
   const images=product.media.flatMap(media=>{
     const src=getPublishedProductImageUrl(media.r2Key,process.env.NEXT_PUBLIC_MEDIA_BASE_URL);
@@ -38,6 +34,12 @@ export default async function ProductPage({ params, searchParams }: Props) {
   // G05: reuse the verified G03 gallery/selector/CTA glass presentation on every product.
   const glass=true;
   const content=<div className="catalog-wrap">
+    <SeoJsonLd data={productSchema(product)}/>
+    <SeoJsonLd data={breadcrumbSchema([
+      {name:"Sản phẩm",path:"/san-pham"},
+      ...(category&&category.id!=="p5-uncategorized"?[{name:category.name,path:"/danh-muc/"+encodeURIComponent(category.slug)}]:[]),
+      {name:product.name,path:"/san-pham/"+encodeURIComponent(product.slug)}
+    ])}/>
     <WebInterestView kind="product" slug={product.slug}/>
     <CatalogBreadcrumb trail={[
       { label: "Sản phẩm", href: "/san-pham" },
