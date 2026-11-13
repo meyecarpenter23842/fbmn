@@ -31,7 +31,7 @@ test("Real rows map into aggregates with no fabricated defaults",()=>{
   products:{results:[["sku-abc",3]]},
   categories:{results:[["notebooks",2]]},
   seoSummary:{results:[[1,1,1,0,1,0,0,2]]},
-  seoPages:{results:[["/san-pham/sku-3ac08ff247847c1e77bfccb0e806ed29",2],["/admin",99]]}
+  seoPages:{results:[["/san-pham",2],["/san-pham/0912345678",10],["/admin",99]]}
  });
  assert.equal(result.metrics.visits,2);
  assert.equal(result.metrics.pageViews,4);
