@@ -512,8 +512,11 @@ void main(){
   await tester.pump(const Duration(milliseconds:400));
   await tester.pump();
   expect(repo.readWrites,1);
-  await tester.tap(find.byTooltip('Đóng chi tiết'));
-  await tester.pumpAndSettle();
+  // Pop through the Navigator to simulate dismissal while the POST remains
+  // pending; the 800x600 test viewport can place a 94%-height sheet's
+  // off-screen close button beyond the root hit-test boundary.
+  Navigator.of(tester.element(find.text('Nội dung hội thoại'))).pop();
+  await tester.pump(const Duration(milliseconds:300));
   repo.pending.complete();
   await tester.pumpAndSettle();
   expect(repo.acknowledged,isTrue);
