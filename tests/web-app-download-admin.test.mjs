@@ -13,6 +13,7 @@ const validIos="https://apps.apple.com/vn/app/futurebook/id1234567890";
 
 test("Owner App config accepts only verified store hosts and bounded content",()=>{
  assert.equal(validateAppDownload(raw()),true);
+ assert.equal(validateAppDownload({...raw(),message:"Tải ứng dụng iOS\\nhoặc Android".replace("\\\\n","\\n")}),true);
  assert.equal(validateStoreUrl(validIos,"ios"),true);
  assert.equal(validateStoreUrl(validAndroid,"android"),true);
  assert.equal(getAppStoreLink("ios",{...raw(),iosUrl:validIos}),validIos);
