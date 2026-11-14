@@ -156,7 +156,8 @@ export default function CmsSlideEditor({recordId,revision,disabled,pending,onSta
    onClose={()=>setError("")}/>
   <div className="cms-section-heading">
    <strong>Bộ ảnh Banner · tối đa 5 Slide</strong>
-   <p>Slide 1 là ảnh Desktop/Mobile bên trên. Mỗi Slide mới có hai ảnh riêng.
+   <p>Mỗi Slide là một ảnh Hero hoàn chỉnh, có cặp Desktop/Mobile riêng.
+    Nút Xem sản phẩm là nút HTML đặt trên ảnh (dùng CTA của Banner, mặc định /san-pham).
     Ảnh sẽ tải vào R2 khi bấm <b>Lưu bản nháp & ảnh</b>.</p>
   </div>
   <div className="cms-slide-items">
