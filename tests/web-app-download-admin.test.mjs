@@ -13,7 +13,7 @@ const validIos="https://apps.apple.com/vn/app/futurebook/id1234567890";
 
 test("Owner App config accepts only verified store hosts and bounded content",()=>{
  assert.equal(validateAppDownload(raw()),true);
- assert.equal(validateAppDownload({...raw(),message:"Tải ứng dụng iOS\\nhoặc Android".replace("\\\\n","\\n")}),true);
+ assert.equal(validateAppDownload({...raw(),message:"Tải ứng dụng iOS\nhoặc Android"}),true);
  assert.equal(validateStoreUrl(validIos,"ios"),true);
  assert.equal(validateStoreUrl(validAndroid,"android"),true);
  assert.equal(getAppStoreLink("ios",{...raw(),iosUrl:validIos}),validIos);
@@ -100,6 +100,7 @@ test("Admin, Worker, Website and Neon migrations form a complete real settings p
  assert.match(source[4],/getPublicAppDownload/);
  assert.match(source[5],/cache:"no-store"/);
  assert.match(source[6],/parseAppDownloadConfig/);
+ assert.match(source[6],/configRefreshing\.current/);
  assert.match(source[6],/settings\.cooldownMinutes\*60_000/);
  assert.match(source[6],/settings\?\.buttonEnabled/);
  const migration=read("backend/neon/migrations/20261114_web_app_download_config.up.sql");
