@@ -10,7 +10,7 @@ test("rebaselined desktop sections follow the new approved screenshot", () => {
   assert.ok(offsets.every(n => n >= 0), "Missing required desktop section");
   assert.deepEqual([...offsets].sort((a,b) => a-b), offsets);
   assert.match(page, /<h1 id="hero-heading" className="sr-only">/);
-  assert.match(page, /FUTUREBOOK/);
+  assert.match(page, /Futurebook Miền Nam/);
   assert.match(page, /getPublicCatalog\(\)/);
   assert.match(page, /HomeProductCard/);
   assert.ok(page.indexOf('id="categories" className="ref-categories"') < page.indexOf('id="collections" className="ref-featured"'));
