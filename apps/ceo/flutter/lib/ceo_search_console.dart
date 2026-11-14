@@ -30,9 +30,9 @@ class CeoGscPanel extends StatelessWidget{
     Text(name,style:const TextStyle(fontSize:12.5,color:ceoMuted)),
    ])));
  Widget topRows(String title,List<CeoGscRank> items)=>ExpansionTile(
-  initiallyExpanded:false,
+  initiallyExpanded:true,
   title:Text(title,style:const TextStyle(fontSize:13,fontWeight:FontWeight.w700)),
-  subtitle:const Text('Bấm để xem tối đa 10 mục · số liệu Google tự nhiên',
+  subtitle:const Text('Tối đa 10 mục · dữ liệu Google tự nhiên',
    style:TextStyle(fontSize:11,color:ceoMuted)),
   children:items.isEmpty?[
    const CeoEmptyResult(title:'Chưa có dữ liệu',
@@ -97,7 +97,7 @@ class CeoGscPanel extends StatelessWidget{
    CeoEmptyResult(
     key:const ValueKey('ceo-gsc-empty'),
     title:'Chưa có dữ liệu tìm kiếm Google',
-    detail:'Google chưa trả về số liệu hoàn tất trong kỳ ${value.startDate} đến ${value.endDate}.',
+    detail:'Google chưa trả về lượt hiển thị hoặc nhấp cho property ${value.site} trong kỳ ${value.startDate} đến ${value.endDate}. Anh có thể thử 30 hoặc 90 ngày.',
     icon:Icons.search_off_outlined),
    OutlinedButton.icon(key:const ValueKey('gsc-disconnect-google'),
     onPressed:connectionBusy?null:onDisconnect,
@@ -109,10 +109,10 @@ class CeoGscPanel extends StatelessWidget{
   final maxClicks=dates.fold<int>(1,(n,d)=>math.max(n,d.metrics.clicks));
   return Column(key:const ValueKey('ceo-gsc-ready'),
    crossAxisAlignment:CrossAxisAlignment.stretch,children:[
-   Text('Google Search Console · www.fbmn.vn · ${value.startDate} — ${value.endDate}',
+   Text('Search Console · property ${value.site} · ${value.startDate} — ${value.endDate}',
     style:const TextStyle(fontSize:12,color:ceoMuted)),
    const SizedBox(height:5),
-   const Text('Ngày theo giờ Thái Bình Dương (PT), kết thúc trước 3 ngày để tránh số liệu chưa hoàn tất.',
+   const Text('Toàn property · ngày PT · loại 3 ngày gần nhất chưa hoàn tất.',
     style:TextStyle(fontSize:11.5,color:ceoMuted)),
    const SizedBox(height:12),
    LayoutBuilder(builder:(context,box){

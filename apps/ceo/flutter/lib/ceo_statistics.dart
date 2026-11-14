@@ -8,6 +8,7 @@ import 'ceo_gsc_models.dart';
 import 'ceo_search_console.dart';
 import 'gsc_oauth_navigation_stub.dart' if (dart.library.js_interop) 'gsc_oauth_navigation_web.dart' as oauth_nav;
 import 'ceo_ui_tokens.dart';
+import 'ceo_stat_controls.dart';
 import 'ceo_workspace.dart';
 
 class CeoStatisticsTab extends StatefulWidget{
@@ -259,23 +260,13 @@ class CeoStatisticsTabState extends State<CeoStatisticsTab>{
     ])),
   ]);
  }
- Widget sectionPicker(){
-  const tabs=['Tổng quan','Chuyển đổi','Marketing','Sản phẩm','SEO'];
-  final mobile=MediaQuery.sizeOf(context).width<=780;
-  return SingleChildScrollView(key:const ValueKey('ceo-stats-subtabs'),
-   scrollDirection:Axis.horizontal,child:Row(children:[
-    for(var i=0;i<tabs.length;i++)Padding(padding:EdgeInsets.only(right:i==tabs.length-1?0:8),
-     child:ConstrainedBox(constraints:BoxConstraints(minHeight:mobile?44:36),
-      child:ChoiceChip(key:ValueKey('ceo-stats-tab-$i'),
-       label:Text(tabs[i]),labelStyle:const TextStyle(fontSize:13),
-       selected:section==i,
-       onSelected:(_){
-        if(section==i)return;
-        setState(()=>section=i);
-        if(i==4)unawaited(loadGsc());
-       }))),
-   ]));
- }
+ Widget sectionPicker({required bool mobile})=>CeoStatsSubTabs(
+  mobile:mobile,tabs:const ['Tổng quan','Chuyển đổi','Marketing','Sản phẩm','SEO'],
+  selected:section,onChanged:(next){
+   if(section==next)return;
+   setState(()=>section=next);
+   if(next==4)unawaited(loadGsc());
+  });
  List<Widget> selectedPanels(CeoWebStatistics value)=>switch(section){
   1=>[
    CeoPanel(title:'PH01 · Funnel B2B',
@@ -317,39 +308,46 @@ class CeoStatisticsTabState extends State<CeoStatisticsTab>{
   final value=data;
   return ListView(physics:const AlwaysScrollableScrollPhysics(),
    padding:const EdgeInsets.only(bottom:24),children:[
-   CeoPanel(title:'Thống kê Website',
-    subtitle:'PostHog dữ liệu thật · quyền Owner · không thông tin cá nhân',
-    icon:Icons.bar_chart_outlined,
-    action:IconButton(tooltip:'Tải lại thống kê',onPressed:loading?null:()=>load(fresh:true),
-     icon:const Icon(Icons.refresh)),
+   LayoutBuilder(builder:(context,box){
+    final mobile=box.maxWidth<=780;
+    return Container(
+    key:const ValueKey('ceo-stats-toolbar'),
+    margin:const EdgeInsets.only(bottom:12),
+    decoration:BoxDecoration(color:Colors.white,
+     borderRadius:BorderRadius.circular(16),
+     border:Border.all(color:ceoBorder)),
     child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
-     Wrap(spacing:8,runSpacing:8,children:[
-      for(final choice in const [('7d','7 ngày'),('30d','30 ngày'),('90d','90 ngày')])
-       ChoiceChip(label:Text(choice.$2),selected:period==choice.$1,
-        onSelected:loading?null:(_)=>load(range:choice.$1,fresh:true)),
-     ]),
-     const SizedBox(height:12),
-     sectionPicker(),
-     if(loading)const Padding(padding:EdgeInsets.symmetric(vertical:28),
-      child:Center(child:CircularProgressIndicator()))
-     else if(error.isNotEmpty)Padding(padding:const EdgeInsets.symmetric(vertical:20),
-      child:Column(children:[
-       Text(error,textAlign:TextAlign.center,
-        style:const TextStyle(fontSize:13,color:Color(0xFFB45309))),
-       const SizedBox(height:8),
-       OutlinedButton.icon(onPressed:()=>load(fresh:true),icon:const Icon(Icons.refresh),
-        label:const Text('Thử lại')),
-      ]))
-     else if(value!=null)...[
-      const SizedBox(height:12),
-      Text(value.generatedAt.isEmpty?'Đã tải dữ liệu từ PostHog · ${value.timezone}':
-       'PostHog tính dữ liệu lúc ${value.generatedAt.substring(0,math.min(16,value.generatedAt.length))} · ${value.timezone}',
-       style:const TextStyle(fontSize:11,color:ceoMuted)),
-      if(value.cached)const Padding(padding:EdgeInsets.only(top:5),
-       child:Text('Đang hiển thị kết quả đã lưu tạm từ PostHog.',
-        style:TextStyle(fontSize:11,color:ceoMuted))),
-     ],
-    ])),
+     Padding(padding:const EdgeInsets.fromLTRB(10,8,10,8),
+      child:Row(children:[
+       CeoStatsPeriodFilter(period:period,mobile:mobile,enabled:!loading,
+        onChanged:(range)=>unawaited(load(range:range,fresh:true))),
+       const Spacer(),
+       IconButton(
+        key:const ValueKey('ceo-stats-refresh'),
+        tooltip:'Tải lại thống kê',
+        constraints:BoxConstraints.tightFor(
+         width:mobile?ceoMobileButtonHeight:ceoDesktopButtonHeight,
+         height:mobile?ceoMobileButtonHeight:ceoDesktopButtonHeight),
+        onPressed:loading?null:()=>unawaited(load(fresh:true)),
+        icon:const Icon(Icons.refresh,color:ceoPurple)),
+      ])),
+     sectionPicker(mobile:mobile),
+     if(loading)const LinearProgressIndicator(
+      key:ValueKey('ceo-stats-loading'),minHeight:2,
+      color:ceoPurple,backgroundColor:ceoLavender),
+     if(error.isNotEmpty)Padding(
+      padding:const EdgeInsets.all(12),
+      child:Row(children:[
+       Expanded(child:Text(error,style:const TextStyle(
+        fontSize:13,color:Color(0xFFB45309)))),
+       TextButton.icon(onPressed:()=>unawaited(load(fresh:true)),
+        icon:const Icon(Icons.refresh,size:16),label:const Text('Thử lại'))
+      ])),
+     if(!loading&&error.isEmpty&&value?.cached==true)
+      const Padding(padding:EdgeInsets.fromLTRB(12,6,12,9),
+       child:Text('Đang xem số liệu PostHog được lưu tạm.',
+        style:TextStyle(fontSize:12,color:ceoMuted))),
+    ]));}),
    if(section==4)CeoPanel(
     title:'SEO06 · Google Search Console',
     subtitle:'Google tự nhiên · lượt nhấp, hiển thị, CTR và vị trí trung bình',

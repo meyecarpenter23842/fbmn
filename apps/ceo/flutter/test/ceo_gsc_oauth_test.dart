@@ -55,6 +55,37 @@ void main(){
   expect(find.byKey(const ValueKey('gsc-disconnect-google')),findsOneWidget);
  });
 
+
+ testWidgets('SEO06B shows real property-wide KPI, keywords/pages, and honest empty state',(tester)async{
+  final report=CeoGscReport(
+   status:'ready',period:'7d',site:'fbmn.vn',oauthStatus:'connected',
+   startDate:'2026-11-04',endDate:'2026-11-10',timezone:'America/Los_Angeles',
+   metrics:const CeoGscMetrics(clicks:31,impressions:400,ctr:.0775,position:12.1),
+   queries:const [CeoGscRank('tập vở học sinh',
+    CeoGscMetrics(clicks:10,impressions:50,ctr:.2,position:8))],
+   pages:const [CeoGscRank('fbmn.vn/',
+    CeoGscMetrics(clicks:5,impressions:80,ctr:.0625,position:11))],
+  );
+  await tester.pumpWidget(MaterialApp(home:Scaffold(
+   body:SingleChildScrollView(child:CeoGscPanel(
+    report:report,loading:false,error:'',retry:(){},onConnect:(){},onDisconnect:(){})))));
+  await tester.pumpAndSettle();
+  expect(find.textContaining('property fbmn.vn'),findsOneWidget);
+  expect(find.text('Lượt nhấp'),findsOneWidget);
+  expect(find.text('Hiển thị'),findsOneWidget);
+  expect(find.text('tập vở học sinh'),findsOneWidget);
+  expect(find.text('fbmn.vn/'),findsOneWidget);
+  await tester.pumpWidget(MaterialApp(home:Scaffold(
+   body:SingleChildScrollView(child:CeoGscPanel(
+    report:CeoGscReport(status:'ready',period:'7d',site:'fbmn.vn',
+     startDate:'2026-11-04',endDate:'2026-11-10',
+     timezone:'America/Los_Angeles',oauthStatus:'connected'),
+    loading:false,error:'',retry:(){},onConnect:(){},onDisconnect:(){})))));
+  await tester.pumpAndSettle();
+  expect(find.textContaining('30 hoặc 90 ngày'),findsOneWidget);
+  expect(tester.takeException(),isNull);
+ });
+
  for(final width in <double>[360,390,1280]){
   testWidgets('SEO06 OAuth connect and disconnect controls at $width',(tester)async{
    await tester.binding.setSurfaceSize(Size(width,820));

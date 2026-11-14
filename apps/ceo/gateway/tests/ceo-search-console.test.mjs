@@ -111,7 +111,8 @@ test("SEO06 uses real signed OAuth readonly assertion and exactly four bounded G
   const payload=JSON.parse(options.body);
   assert.equal(payload.type,"web");
   assert.equal(payload.dataState,"final");
-  assert.equal(payload.dimensionFilterGroups[0].filters[0].expression,"https://www.fbmn.vn/");
+  assert.equal(Object.hasOwn(payload,"dimensionFilterGroups"),false,
+   "Unfiltered Search Console property metrics must include all FBMN host variants");
   assert.equal(payload.startDate,"2026-11-04");
   assert.equal(payload.endDate,"2026-11-10");
   const one={clicks:13,impressions:100,ctr:0.13,position:8.2};
@@ -127,6 +128,42 @@ test("SEO06 uses real signed OAuth readonly assertion and exactly four bounded G
  assert.equal(result.queries[0].label,"văn phòng phẩm");
  assert.equal(result.pages[0].label,"/");
 });
+test("SEO06B returns property-wide Google metrics and safely ranks both FBMN hosts",async()=>{
+ const property="sc-domain:fbmn.vn",seen=[];
+ const fakeFetch=async(url,options)=>{
+  assert.equal(url,"https://www.googleapis.com/webmasters/v3/sites/"+encodeURIComponent(property)+"/searchAnalytics/query");
+  const request=JSON.parse(options.body);
+  assert.equal(Object.hasOwn(request,"dimensionFilterGroups"),false);
+  seen.push(request.dimensions.join(","));
+  const totals={clicks:21,impressions:330,ctr:21/330,position:14};
+  const rows=request.dimensions.length===0?[totals]:
+   request.dimensions[0]==="date"?[{keys:["2026-11-04"],...totals}]:
+   request.dimensions[0]==="query"?[{keys:["tập vở học sinh"],...totals}]:
+   [
+    {keys:["https://fbmn.vn/"],...totals},
+    {keys:["https://www.fbmn.vn/san-pham/tap-hoc-sinh"],...totals},
+    {keys:["http://fbmn.vn/dai-ly"],...totals},
+    {keys:["https://fbmn.vn/lien-he?email=private@example.com"],...totals},
+    {keys:["https://ceo.fbmn.vn/ceo"],...totals}
+   ];
+  return new Response(JSON.stringify({rows}),{status:200,
+   headers:{"content-type":"application/json"}});
+ };
+ const value=await fetchGscReport("7d",{
+  accessToken:"a".repeat(45),site:property,now:NOW,fetchImpl:fakeFetch
+ });
+ assert.deepEqual(seen,["","date","query","page"]);
+ assert.equal(value.site,"fbmn.vn");
+ assert.equal(value.metrics.clicks,21);
+ assert.equal(value.metrics.impressions,330);
+ assert.deepEqual(value.queries.map(x=>x.label),["tập vở học sinh"]);
+ assert.deepEqual(value.pages.map(x=>x.label),[
+  "fbmn.vn/","/san-pham/tap-hoc-sinh","http://fbmn.vn/dai-ly"
+ ]);
+ assert.equal(JSON.stringify(value).includes("private@example.com"),false);
+ assert.equal(JSON.stringify(value).includes("ceo.fbmn.vn"),false);
+});
+
 test("SEO06 treats Google 403 as a permission error and does not expose raw response",async()=>{
  const fakeFetch=async(url)=>new Response(String(url).includes("/token")?
   JSON.stringify({access_token:"b".repeat(70)}):"Private error details",{
