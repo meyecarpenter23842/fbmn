@@ -132,6 +132,11 @@ void main(){
    expect(find.byKey(const ValueKey('ceo-stats-period-filter')),findsOneWidget);
    expect(find.byKey(const ValueKey('ceo-stats-subtabs')),findsOneWidget);
    expect(find.byType(ChoiceChip),findsNothing);
+   final minTouch=width<=780?44.0:36.0;
+   expect(tester.getSize(find.byKey(const ValueKey('ceo-stats-period-30d'))).height,
+    greaterThanOrEqualTo(minTouch));
+   expect(tester.getSize(find.byKey(const ValueKey('ceo-stats-tab-2'))).height,
+    greaterThanOrEqualTo(minTouch));
    await tester.tap(find.byKey(const ValueKey('ceo-stats-period-30d')));
    expect(selectedPeriod,'30d');
    await tester.tap(find.byKey(const ValueKey('ceo-stats-tab-2')));
