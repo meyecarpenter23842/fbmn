@@ -23,8 +23,9 @@ export function SiteFooter() {
         <section className="site-footer__contact" aria-label="Thông tin liên hệ Futurebook">
           <h2>Thông tin liên hệ</h2>
           <address>
-            <div><span className="site-footer__field">Email</span><a href={contact.emailHref}>{contact.email}</a></div>
-            <div><span className="site-footer__field">Địa chỉ</span><span>{contact.address}</span></div>
+            <div><span className="site-footer__field">Email:</span> <a href={contact.emailHref}>{contact.email}</a></div>
+            <div><span className="site-footer__field">Điện thoại:</span> <a href={contact.phoneHref}>{contact.phone}</a></div>
+            <div><span className="site-footer__field">Địa chỉ:</span> <span>{contact.address}</span></div>
           </address>
           <Link href="/lien-he#thong-tin-lien-he" className="site-footer__contact-link">Liên hệ · Báo giá sỉ</Link>
         </section>

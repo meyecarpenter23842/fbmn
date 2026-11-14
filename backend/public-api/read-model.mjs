@@ -16,6 +16,7 @@ const SQL = Object.freeze({
   p5ImageKey: "SELECT r2_key FROM fbmn_public.v_p5_image_assets WHERE asset_id=$1 LIMIT 1",
   dealer: "SELECT title,paragraphs,contact_instructions FROM fbmn_public.v_dealer_information LIMIT 2",
   homeLayout: "SELECT category_ids,featured_skus,category_limit,product_limit,section_order,revision FROM fbmn_public.v_web_home_layout LIMIT 2",
+  appDownload: "SELECT popup_enabled,button_enabled,first_delay_ms,cooldown_minutes,title,message,ios_url,android_url,revision FROM fbmn_public.v_web_app_download_settings LIMIT 2",
   categoryDisplay: "SELECT category_id,mode FROM fbmn_public.v_web_category_display ORDER BY category_id LIMIT 2001",
   seoSettings: "SELECT kind,slug,mode,title,description,image FROM fbmn_public.v_web_seo_settings ORDER BY kind,slug LIMIT 10001",
   cmsEntries: "SELECT e.id,kind,slug,title,summary,paragraphs,cta_url,slot,sort_order,published_at,starts_at,ends_at,popup_delay_seconds,popup_cooldown_minutes,popup_max_per_session,has_desktop,has_mobile,"+
@@ -239,6 +240,15 @@ export function createReadModel(query,{enableP5=false}={}) {
     async getPublicCategoryDisplay() {
       const items=await execute("categoryDisplay",2000);
       return {modes:items.map(row=>({categoryId:String(row.category_id),mode:String(row.mode)}))};
+    },
+    async getPublicAppDownload(){
+      const records=await execute("appDownload",2);
+      if(records.length!==1)throw Error("Invalid public app-download config");
+      const r=records[0];
+      return {popupEnabled:r.popup_enabled,buttonEnabled:r.button_enabled,
+        firstDelayMs:Number(r.first_delay_ms),cooldownMinutes:Number(r.cooldown_minutes),
+        title:r.title,message:r.message,iosUrl:r.ios_url,androidUrl:r.android_url,
+        revision:Number(r.revision)};
     },
     async getPublicHomeLayout() {
       const record=await execute("homeLayout",2);

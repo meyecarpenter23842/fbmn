@@ -1,0 +1,22 @@
+/* App download Admin page: layout only. Controls are styled by admin-controls.css. */
+.appdl-layout{display:grid;gap:16px;min-width:0}
+.appdl-columns{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;align-items:start}
+.appdl-panel{display:grid;gap:13px;padding:18px;min-width:0}
+.appdl-panel h2{font-size:16px;color:var(--fb-ui-ink,#20223b);margin:0}
+.appdl-panel h2:not(:first-child){margin-top:10px}
+.appdl-panel label{font-size:13px;font-weight:650;color:var(--fb-ui-ink,#20223b)}
+.appdl-panel .fb-ui-field{width:100%;min-width:0;margin-top:6px;font-size:13px}
+.appdl-check{display:flex;align-items:flex-start;gap:11px;cursor:pointer}
+.appdl-check input{margin-top:5px;accent-color:var(--fb-ui-primary,#6d249e)}
+.appdl-check span{display:grid;gap:3px}
+.appdl-check small,.appdl-note{font-size:12px;font-weight:400;color:var(--fb-ui-muted,#667085);line-height:1.55;margin:0}
+.appdl-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.appdl-field{display:grid;gap:1px}
+.appdl-preview{display:grid;gap:8px;padding:15px;border:1px solid var(--fb-ui-border,#e4e7ef);border-radius:12px;background:#f7f4fb}
+.appdl-preview>small{font-size:12px;color:var(--fb-ui-muted,#667085)}
+.appdl-preview>strong{font-size:16px;color:var(--fb-ui-primary,#6d249e)}
+.appdl-preview>div{display:flex;gap:10px;flex-wrap:wrap;font-size:12px;color:var(--fb-ui-ink,#20223b)}
+.appdl-preview>p{margin:0;font-size:13px;line-height:1.5;overflow-wrap:break-word;white-space:pre-line}
+.appdl-error{padding:14px;color:var(--fb-ui-danger,#b42318)}
+@media(max-width:900px){.appdl-columns{grid-template-columns:minmax(0,1fr)}}
+@media(max-width:480px){.appdl-panel{padding:14px}.appdl-grid{grid-template-columns:minmax(0,1fr)}}

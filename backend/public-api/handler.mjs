@@ -145,7 +145,7 @@ export function projectPublicContent(raw) {
   })();
   return { company, articles, promotions, dealerInformation };
 }
-const ROUTES = new Set(["/v1/public/categories", "/v1/public/products", "/v1/public/catalog", "/v1/public/content", "/v1/public/cms", "/v1/public/home-layout", "/v1/public/category-display", "/v1/public/seo"]);
+const ROUTES = new Set(["/v1/public/categories", "/v1/public/products", "/v1/public/catalog", "/v1/public/content", "/v1/public/cms", "/v1/public/home-layout", "/v1/public/app-download", "/v1/public/category-display", "/v1/public/seo"]);
 const QUERY_KEYS = {
   "/v1/public/categories": new Set(["slug"]),
   "/v1/public/products": new Set(["slug", "categoryId", "page", "limit"]),
@@ -153,6 +153,7 @@ const QUERY_KEYS = {
   "/v1/public/content": new Set(),
   "/v1/public/cms": new Set(),
   "/v1/public/home-layout": new Set(),
+  "/v1/public/app-download": new Set(),
   "/v1/public/category-display": new Set(),
   "/v1/public/seo": new Set(["contentSource"]),
 };
@@ -213,6 +214,32 @@ export function projectPublicHomeLayout(raw) {
     categoryLimit:raw.categoryLimit,productLimit:raw.productLimit,
     sectionOrder:[...raw.sectionOrder],revision:raw.revision};
 }
+export function projectPublicAppDownload(raw){
+  guard(object(raw)&&typeof raw.popupEnabled==="boolean"&&
+   typeof raw.buttonEnabled==="boolean"&&Number.isSafeInteger(raw.firstDelayMs)&&
+   raw.firstDelayMs>=500&&raw.firstDelayMs<=15000&&
+   Number.isSafeInteger(raw.cooldownMinutes)&&raw.cooldownMinutes>=30&&raw.cooldownMinutes<=1440&&
+   typeof raw.title==="string"&&raw.title.length>0&&raw.title.length<=80&&
+   typeof raw.message==="string"&&raw.message.length>0&&raw.message.length<=240&&
+   !/[<>]/.test(raw.title+raw.message)&&
+   !/[\x00-\x1f\x7f]/.test(raw.title)&&
+   !/[\x00-\x09\x0b-\x1f\x7f]/.test(raw.message)&&
+   Number.isSafeInteger(raw.revision)&&raw.revision>0);
+  const url=(value,platform)=>{
+    if(value==null)return null;
+    guard(typeof value==="string"&&value.length<=500);
+    const uri=new URL(value);
+    guard(uri.protocol==="https:"&&!uri.username&&!uri.password&&!uri.port&&!uri.hash);
+    if(platform==="ios")guard(uri.hostname==="apps.apple.com"&&uri.pathname.length>2);
+    else guard(uri.hostname==="play.google.com"&&uri.pathname==="/store/apps/details"&&
+      /^[a-zA-Z0-9_.]+$/.test(uri.searchParams.get("id")||"")&&!uri.searchParams.has("redirect"));
+    return uri.toString();
+  };
+  return {popupEnabled:raw.popupEnabled,buttonEnabled:raw.buttonEnabled,
+    firstDelayMs:raw.firstDelayMs,cooldownMinutes:raw.cooldownMinutes,
+    title:raw.title,message:raw.message,iosUrl:url(raw.iosUrl,"ios"),
+    androidUrl:url(raw.androidUrl,"android"),revision:raw.revision};
+}
 export function projectPublicCategoryDisplay(raw) {
   guard(object(raw) && Array.isArray(raw.modes) && raw.modes.length<=2000);
   const seen=new Set();
@@ -224,7 +251,7 @@ export function projectPublicCategoryDisplay(raw) {
     return {categoryId:item.categoryId,mode:"sku"};
   })};
 }
-export function createPublicApi({ getPublicCatalog, getPublicContent, getPublicCms, getPublicHomeLayout, getPublicCategoryDisplay, getPublicSeoSettings, cmsEnabled = false, homeLayoutEnabled = false, categoryDisplayEnabled = false, seoEnabled = false, allowedOrigins = [] }) {
+export function createPublicApi({ getPublicCatalog, getPublicContent, getPublicCms, getPublicHomeLayout, getPublicAppDownload, getPublicCategoryDisplay, getPublicSeoSettings, cmsEnabled = false, homeLayoutEnabled = false, categoryDisplayEnabled = false, seoEnabled = false, allowedOrigins = [] }) {
   guard(typeof getPublicCatalog === "function" && typeof getPublicContent === "function");
   guard(Array.isArray(allowedOrigins) && allowedOrigins.every(o => {
     try { const u = new URL(o); return u.protocol === "https:" && u.origin === o; }
@@ -285,6 +312,11 @@ export function createPublicApi({ getPublicCatalog, getPublicContent, getPublicC
         if (url.pathname === "/v1/public/category-display") {
           if(!categoryDisplayEnabled || typeof getPublicCategoryDisplay!=="function")return failure(404,"not_found",corsOrigin);
           return response(200,{data:projectPublicCategoryDisplay(await getPublicCategoryDisplay())},corsOrigin,"no-store");
+        }
+        if (url.pathname === "/v1/public/app-download") {
+          if(typeof getPublicAppDownload!=="function")return failure(404,"not_found",corsOrigin);
+          const config=await getPublicAppDownload();
+          return response(200,{data:projectPublicAppDownload(config)},corsOrigin,"no-store");
         }
         if (url.pathname === "/v1/public/home-layout") {
           if(!homeLayoutEnabled || typeof getPublicHomeLayout!=="function")return failure(404,"not_found",corsOrigin);

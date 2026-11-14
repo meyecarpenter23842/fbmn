@@ -22,7 +22,7 @@ export default async function ContactPage() {
           {company?.legalName && <p><strong>Đơn vị:</strong> {company.legalName}</p>}
           <p><strong>Địa chỉ:</strong> {contact.address}</p>
           <p><strong>Email:</strong> <a href={contact.emailHref}>{contact.email}</a></p>
-          {company?.phone && <p><strong>Điện thoại:</strong> <a href={"tel:" + company.phone.replace(/[^+0-9]/g, "")}>{company.phone}</a></p>}
+          <p><strong>Điện thoại:</strong> <a href={contact.phoneHref}>{contact.phone}</a></p>
           {company?.hours && <p><strong>Thời gian làm việc:</strong> {company.hours}</p>}
         </address>
         <div className="content-location-map" aria-label="Bản đồ vị trí Futurebook Miền Nam">

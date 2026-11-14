@@ -59,9 +59,17 @@ test("menu action and popup are global, dismissible and have recognized brand ma
  test("automatic app prompt does not obscure catalogue or policy; manual menu retained",()=>{
  const ui=read("components/app-download.tsx");
  assert.match(ui,/isCatalogue=pathname==="\/catalogue"/);
- assert.match(ui,/if \(open\|\|isCatalogue\|\|isPolicy\) return/);
- assert.match(ui,/\(isCatalogue\|\|isPolicy\)&&open&&source==="automatic"\)dismiss\(\)/);
+ assert.match(ui,/if \(open\|\|isCatalogue\|\|isPolicy\|\|!settings\?\.popupEnabled\) return/);
+ assert.match(ui,/\(isCatalogue\|\|isPolicy\|\|!settings\?\.popupEnabled\)&&open&&source==="automatic"\)dismiss\(\)/);
  assert.match(ui,/showPopup\("menu"\)/);
  assert.match(ui,/isPolicy=pathname==="\/policy"/);
  assert.match(ui,/open && !isPolicy/);
  });
+
+test("App popup public settings are refreshed on route/visibility without a new Website release",()=>{
+ const ui=read("components/app-download.tsx");
+ assert.match(ui,/fetch\("\/api\/app-download"/);
+ assert.match(ui,/parseAppDownloadConfig/);
+ assert.match(ui,/settings\.cooldownMinutes\*60_000/);
+ assert.match(ui,/settings\?\.buttonEnabled/);
+});

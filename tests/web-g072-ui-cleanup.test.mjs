@@ -84,7 +84,7 @@ test("G07.2 glass app popover uses true multicolor CH Play icon and never fabric
   assert.match(app,/aria-label="Google Play"/);
   for(const color of ["#32B6E9","#45CF80","#FFCE40","#F35B66"])
     assert.ok(app.includes(color),color);
-  assert.match(app,/getAppStoreLink\(platform\)/);
+  assert.match(app,/getAppStoreLink\(platform,settings\)/);
   assert.match(app,/platform="ios"/);
   assert.match(app,/platform="android"/);
   assert.match(app,/aria-disabled="true"/);

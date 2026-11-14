@@ -8,6 +8,7 @@ import CatalogueManager from "./catalogue-manager";
 import CatalogueSideWorkspace from "./catalogue-side-workspace";
 import CmsManager from "./cms-manager";
 import HomeLayoutManager from "./home-layout-manager";
+import AppDownloadSettingsManager from "./app-download-settings-manager";
 import CategoryDisplayManager from "./category-display-manager";
 import SeoSettingsManager from "./seo-settings-manager";
 import ChatbotConfigManager from "./chatbot-config-manager";
@@ -18,7 +19,7 @@ import CatalogueBookManager from "./catalogue-book-manager";
 import AdminTelemetry from "./admin-telemetry";
 
 type AuthState = "checking" | "anonymous" | "authorised" | "forbidden" | "unavailable";
-type Section = "dashboard" | "products" | "structure" | "pricing" | "import-products" | "new-product" | "media" | "categories" | "banners" | "content" | "home-layout" | "category-display" | "seo-settings" | "outsourcing-requests" | "contact-requests" | "chatbot-config" | "chat-history" | "catalogue-books" | "customers" | "accounts" | "settings";
+type Section = "dashboard" | "products" | "structure" | "pricing" | "import-products" | "new-product" | "media" | "categories" | "banners" | "content" | "home-layout" | "app-download" | "category-display" | "seo-settings" | "outsourcing-requests" | "contact-requests" | "chatbot-config" | "chat-history" | "catalogue-books" | "customers" | "accounts" | "settings";
 type GlyphName = "home" | "box" | "folder" | "image" | "layers" | "file" | "users" | "user" | "settings" | "search" | "bell" | "chevron" | "plus" | "upload" | "save" | "eye" | "edit" | "copy" | "trash" | "check" | "alert" | "logout" | "grid" | "arrow-left" | "link" | "book" | "sparkle" | "menu" | "globe" | "close" | "shield" | "filter" | "refresh";
 type SessionData = { role: string; channels: string[] };
 type Channel = { code: string; label: string };
@@ -78,6 +79,7 @@ const productSections: Array<{key:Section;label:string;icon:GlyphName}> = [
 ];
 const websiteSections: Array<{key:Section;label:string;icon:GlyphName}> = [
   {key:"home-layout",label:"Trang chủ & bố cục",icon:"grid"},
+  {key:"app-download",label:"Popup tải ứng dụng",icon:"link"},
   {key:"category-display",label:"Danh mục & hiển thị sản phẩm",icon:"folder"},
   {key:"seo-settings",label:"SEO sản phẩm & nội dung",icon:"search"},
   {key:"banners",label:"Banner & Popup",icon:"image"},
@@ -280,7 +282,7 @@ export default function AdminPage() {
       setProductMenuExpanded(true);
     if(["banners","content"].includes(to))
       setWebsiteMenuExpanded(true);
-    if(["category-display","seo-settings","outsourcing-requests","contact-requests","chatbot-config","chat-history"].includes(to))setWebsiteMenuExpanded(true);
+    if(["category-display","seo-settings","outsourcing-requests","contact-requests","chatbot-config","chat-history","app-download"].includes(to))setWebsiteMenuExpanded(true);
     if(to==="catalogue-books")setWebsiteMenuExpanded(true);
     setMenuOpen(false);setNotice("");
   }
@@ -300,7 +302,7 @@ export default function AdminPage() {
   function removePhoto(id:number){setPhotos(prev=>{const found=prev.find(p=>p.id===id);if(found){URL.revokeObjectURL(found.url);photoUrls.current=photoUrls.current.filter(u=>u!==found.url);}return prev.filter(p=>p.id!==id);});if(selectedPhoto===id)setSelectedPhoto(null);if(coverId===id)setCoverId(null);}
   const activePhoto=photos.find(p=>p.id===selectedPhoto)||photos[0];
   const roleLabel=session?.role?.toUpperCase() || "";
-  const sectionName:Record<Section,string>={dashboard:"Tổng quan",products:"Danh sách sản phẩm",structure:"Danh mục & nhóm mẫu",pricing:"Giá & bảng giá","import-products":"Nhập / cập nhật Excel","new-product":"Thêm sản phẩm",media:"Thư viện hình ảnh",categories:"Danh mục",banners:"Banner & Popup",content:"Tin tức & Khuyến mãi","home-layout":"Trang chủ & bố cục","category-display":"Danh mục & hiển thị sản phẩm","seo-settings":"SEO sản phẩm & nội dung","outsourcing-requests":"Yêu cầu gia công","contact-requests":"Liên hệ & đăng ký đại lý","chatbot-config":"Cấu hình Chatbot","chat-history":"Quản lý hội thoại","catalogue-books":"Kho Catalogue",customers:"Khách hàng",accounts:"Tài khoản",settings:"Cài đặt"};
+  const sectionName:Record<Section,string>={dashboard:"Tổng quan",products:"Danh sách sản phẩm",structure:"Danh mục & nhóm mẫu",pricing:"Giá & bảng giá","import-products":"Nhập / cập nhật Excel","new-product":"Thêm sản phẩm",media:"Thư viện hình ảnh",categories:"Danh mục",banners:"Banner & Popup",content:"Tin tức & Khuyến mãi","home-layout":"Trang chủ & bố cục","app-download":"Popup tải ứng dụng","category-display":"Danh mục & hiển thị sản phẩm","seo-settings":"SEO sản phẩm & nội dung","outsourcing-requests":"Yêu cầu gia công","contact-requests":"Liên hệ & đăng ký đại lý","chatbot-config":"Cấu hình Chatbot","chat-history":"Quản lý hội thoại","catalogue-books":"Kho Catalogue",customers:"Khách hàng",accounts:"Tài khoản",settings:"Cài đặt"};
   return <div className="admin-app">
     <div className={"workspace "+(authState!=="authorised"?"workspace-locked":"")}>
       <aside className={"sidebar "+(menuOpen?"sidebar-open":"")}>
@@ -347,7 +349,7 @@ export default function AdminPage() {
           <div className="side-menu-divider" aria-hidden="true"/>
           <div className="side-group">
             <button type="button" className={"side-group-heading"+(
-              ["banners","content","home-layout","category-display","catalogue-books","outsourcing-requests","contact-requests","chatbot-config","chat-history"].includes(section)?" active":"")}
+              ["banners","content","home-layout","app-download","category-display","catalogue-books","outsourcing-requests","contact-requests","chatbot-config","chat-history","app-download"].includes(section)?" active":"")}
               aria-controls="website-navigation" aria-expanded={websiteMenuExpanded}
               onClick={()=>setWebsiteMenuExpanded(value=>!value)}
               disabled={authState!=="authorised"}>
@@ -372,11 +374,11 @@ export default function AdminPage() {
       </aside>
       <div className="work-area">
         <header className="topbar"><button type="button" className="mobile-menu" onClick={()=>setMenuOpen(v=>!v)} aria-label="Mở menu"><Glyph name="menu"/></button>
-          <div className="breadcrumbs"><Glyph name="home" size={21}/><span className="crumb-sep">›</span><span>{["products","structure","media","import-products"].includes(section)?"Sản phẩm":section==="catalogue-books"?"Website Futurebook":["category-display","seo-settings","outsourcing-requests","contact-requests","chatbot-config","chat-history"].includes(section)?"Website Futurebook":["banners","content","home-layout"].includes(section)?"Website Futurebook":"Quản trị"}</span><span className="crumb-sep">›</span><b>{sectionName[section]}</b></div>
+          <div className="breadcrumbs"><Glyph name="home" size={21}/><span className="crumb-sep">›</span><span>{["products","structure","media","import-products"].includes(section)?"Sản phẩm":section==="catalogue-books"?"Website Futurebook":["category-display","seo-settings","outsourcing-requests","contact-requests","chatbot-config","chat-history"].includes(section)?"Website Futurebook":["banners","content","home-layout","app-download"].includes(section)?"Website Futurebook":"Quản trị"}</span><span className="crumb-sep">›</span><b>{sectionName[section]}</b></div>
           <div className="top-actions"><div className="profile-avatar">{name.slice(0,1).toUpperCase()||"F"}</div><div className="profile-text"><b>{name || "Futurebook Admin"}</b><small>{session?roleLabel:"Yêu cầu đăng nhập"}</small></div><button type="button" className="top-icon" onClick={()=>void signOut()} disabled={authState!=="authorised"} title="Đăng xuất"><Glyph name="logout" size={18}/></button></div>
         </header>
         <main className="workspace-main">
-          {authState==="authorised" && <>{section!=="contact-requests"&&section!=="chatbot-config"&&section!=="chat-history"&&section!=="seo-settings"&&<AdminTelemetry section={section}/>}
+          {authState==="authorised" && <>{section!=="contact-requests"&&section!=="chatbot-config"&&section!=="chat-history"&&section!=="seo-settings"&&section!=="app-download"&&<AdminTelemetry section={section}/>}
             {section==="products" && <CatalogueManager
               onImport={()=>navigate("import-products")}
               onStructure={pane=>{setStructureTab(pane);navigate("structure");}}/>}
@@ -387,6 +389,7 @@ export default function AdminPage() {
             {section==="pricing"&&<CatalogueSideWorkspace mode="pricing" onBusyChange={setWorkspaceOperationBusy}/>}
             {section==="import-products" && <CatalogueImportPreview/>}
             {section==="home-layout"&&<HomeLayoutManager owner={session?.role==="owner"}/>}
+             {section==="app-download"&&<AppDownloadSettingsManager owner={session?.role==="owner"}/>}
             {section==="category-display"&&<CategoryDisplayManager owner={session?.role==="owner"}/>}
             {section==="seo-settings"&&<SeoSettingsManager owner={session?.role==="owner"}/>}
             {section==="outsourcing-requests"&&<OutsourcingRequestsManager owner={session?.role==="owner"}/>}
@@ -402,7 +405,7 @@ export default function AdminPage() {
             </>}
             {section==="media"&&<CatalogueSideWorkspace mode="media" onBusyChange={setWorkspaceOperationBusy}/>}
             {section==="dashboard"&&<><div className="page-title"><div><h1>Tổng quan quản trị</h1><p>Thông tin tài khoản và quyền quản trị hiện tại.</p></div><span className="tag">Thông tin tài khoản</span></div><div className="metric-grid"><div className="metric"><span className="metric-icon green"><Glyph name="shield"/></span><div><small>Trạng thái</small><strong className="metric-word">Đã xác thực</strong><em>Phiên đăng nhập hợp lệ</em></div></div><div className="metric"><span className="metric-icon purple"><Glyph name="user"/></span><div><small>Vai trò</small><strong className="metric-word">{roleLabel}</strong><em>Quyền theo tài khoản</em></div></div><div className="metric"><span className="metric-icon blue"><Glyph name="layers"/></span><div><small>Kênh được xem</small><strong>{session?.channels.length||0}</strong><em>Phạm vi theo tài khoản</em></div></div></div><Panel><SectionHeading icon="layers">Kênh kinh doanh được cấp quyền</SectionHeading>{channels.map(c=><div className="channel-row" key={c.code}><span>{c.label}</span><b>{session?.role==="admin"||session?.channels.includes(c.code)?"Có quyền":"Không có quyền"}</b></div>)}</Panel></>}
-            {!["dashboard","products","structure","pricing","import-products","new-product","media","banners","content","home-layout","seo-settings","catalogue-books"].includes(section)&&<><div className="page-title"><div><h1>{sectionName[section]}</h1></div></div><Placeholder title={sectionName[section]+" chưa kích hoạt"} text="Chức năng này đang được hoàn thiện."/></>}
+            {!["dashboard","products","structure","pricing","import-products","new-product","media","banners","content","home-layout","app-download","seo-settings","catalogue-books"].includes(section)&&<><div className="page-title"><div><h1>{sectionName[section]}</h1></div></div><Placeholder title={sectionName[section]+" chưa kích hoạt"} text="Chức năng này đang được hoàn thiện."/></>}
           </>}
         </main>
       </div>
