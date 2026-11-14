@@ -18,12 +18,11 @@ function cookieValue(header:string|null){
  const value=header?.split(";").map(s=>s.trim()).find(s=>s.startsWith("fbmn_gsc_oauth="));
  return value?.slice("fbmn_gsc_oauth=".length)||"";
 }
-// Owner is verified at /start using a short-lived bearer JWT, then sealed into
-// the 10-minute HttpOnly state cookie with PKCE. A cross-site Google redirect
-// does NOT supply that bearer JWT. Requiring auth.token() again here can fail
-// if Better Auth's session cookie is not available at the callback URL.
-// Trust only the AES-GCM authenticated and state-matching Owner identity sealed
-// by /start; never accept an Owner subject from a query parameter.
+// OAuth /start authenticates Owner before issuing the short-lived AES-GCM
+// sealed state. Google returns that opaque state + its one-use authorization
+// code. Verify Owner subject, nonce/PKCE and 10-minute TTL without browser
+// cookies or a fresh JWT. Old cookie-bound state is accepted briefly only
+// for pending flows started before this release.
 export async function GET(request:Request){
  const url=new URL(request.url);
  if(url.origin!=="https://ceo.fbmn.vn")return finish("invalid");
