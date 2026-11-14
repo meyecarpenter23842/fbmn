@@ -4,7 +4,6 @@ import {createSign} from "node:crypto";
 // Never include Google credentials, visitor identities, or raw API errors in responses.
 export const GSC_PERIODS=Object.freeze({"7d":7,"30d":30,"90d":90});
 const CANONICAL_ORIGIN="https://www.fbmn.vn";
-const CANONICAL_PREFIX=CANONICAL_ORIGIN+"/";
 const PROPERTIES=new Set(["https://www.fbmn.vn/","sc-domain:fbmn.vn"]);
 const SCOPE="https://www.googleapis.com/auth/webmasters.readonly";
 const TOKEN_ENDPOINT="https://oauth2.googleapis.com/token";
@@ -76,14 +75,19 @@ function safePage(value){
  if(typeof value!=="string"||value.length>280)return null;
  try{
   const url=new URL(value);
-  if(url.origin!==CANONICAL_ORIGIN||url.username||url.password||
-     url.search||url.hash||!PUBLIC_PATH.test(url.pathname)||
-     /\d{7,}/.test(url.pathname)||
+  const knownHost=url.hostname==="www.fbmn.vn"||url.hostname==="fbmn.vn";
+  if(!knownHost||!["http:","https:"].includes(url.protocol)||
+     url.port||url.username||url.password||url.search||url.hash||
+     !PUBLIC_PATH.test(url.pathname)||/\d{7,}/.test(url.pathname)||
      /\d{9,}/.test(url.pathname.replace(/[-_.]/g,"")))return null;
-  return url.pathname;
+  // Domain-property includes apex, www and older HTTP pages.
+  // Safely distinguish noncanonical public URLs without exposing query strings.
+  if(url.origin===CANONICAL_ORIGIN)return url.pathname;
+  return (url.protocol==="http:"?"http://":"")+url.hostname+url.pathname;
  }catch{return null;}
 }
-export function formatGscReport(period,dates,results){
+export function formatGscReport(period,dates,results,property="sc-domain:fbmn.vn"){
+ if(!PROPERTIES.has(property))throw new Error("gsc_property_invalid");
  if(!GSC_PERIODS[period])throw new Error("gsc_invalid_period");
  const totals=rowsOf(results.overview,1);
  const daily=rowsOf(results.daily,95,true);
@@ -109,7 +113,8 @@ export function formatGscReport(period,dates,results){
   }).filter(Boolean).slice(0,10);
  };
  return {
-  status:"ready",source:"google_search_console",period,site:"www.fbmn.vn",
+  status:"ready",source:"google_search_console",period,
+  site:property==="sc-domain:fbmn.vn"?"fbmn.vn":"www.fbmn.vn",
   timezone:"America/Los_Angeles",startDate:dates.startDate,endDate:dates.endDate,
   metrics:totals.length?rowMetrics(totals[0]):null,
   daily:dailyItems,queries:pick(queries,safeQuery),pages:pick(pages,safePage)
@@ -153,12 +158,10 @@ async function getToken(config,fetchImpl,now){
 }
 async function gscQuery(fetchImpl,accessToken,site,dates,dimensions,rowLimit){
  const url="https://www.googleapis.com/webmasters/v3/sites/"+encodeURIComponent(site)+"/searchAnalytics/query";
- const query={
-  ...dates,dimensions,rowLimit,type:"web",dataState:"final",
-  dimensionFilterGroups:[{filters:[{
-   dimension:"page",operator:"contains",expression:CANONICAL_PREFIX
-  }]}]
- };
+ // Query every page in this allowlisted Search Console property.
+ // A canonical-www filter here hides valid apex/historic traffic from KPIs.
+ // The output page labels are separately sanitized against FBMN public paths.
+ const query={...dates,dimensions,rowLimit,type:"web",dataState:"final"};
  let response;
  try{
   response=await fetchImpl(url,{
@@ -202,5 +205,5 @@ export async function fetchGscReport(period,{
   gscQuery(fetchImpl,token,property,dates,["query"],60),
   gscQuery(fetchImpl,token,property,dates,["page"],50)
  ]);
- return formatGscReport(period,dates,{overview,daily,queries,pages});
+ return formatGscReport(period,dates,{overview,daily,queries,pages},property);
 }
