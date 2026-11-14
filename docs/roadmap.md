@@ -373,3 +373,10 @@ Thứ tự mới trước DL8: DL11A (Header một hàng, logo giữa 3+3 tab, t
 - Tách rõ CMS Banner & Popup quảng bá khỏi popup tải ứng dụng: Owner quản lý trong Website Futurebook → Popup tải ứng dụng, có revision/audit, bật/tắt auto, bật/tắt nút, độ trễ, cooldown, tiêu đề, mô tả và URL cửa hàng được xác minh.
 - Kết nối Admin Worker → Neon singleton → Public Worker view allowlist → Website no-store. Không gắn link store demo, không đổi SKU/NET; thiếu cấu hình thì fail closed.
 - Migration Neon, deploy hai Worker và Website/Admin production **chỉ khi Owner duyệt từng phạm vi**. Chi tiết và UAT tại docs/web-app-download.md.
+
+### HERO-01 — One-artwork Hero, Owner chốt 14/11/2026
+
+- Trang chủ: thay Hero hai cột **43% chữ / 57% ảnh** bằng một artwork full-width, 1 CTA thật **Xem sản phẩm** đặt trên từng slide, H1 giữ `sr-only` để SEO/a11y. Dùng nguyên dữ liệu CMS đã duyệt, không chèn sản phẩm/mã/giá minh họa.
+- Desktop ratio **16:7**, Mobile ratio **4:5**; `object-fit:contain`, chọn ảnh riêng qua Admin và giữ toàn bộ motion/dot/slide hiện có. CTA dùng `ctaUrl` của Banner, rỗng → `/san-pham`; không cần đổi DB/API/Worker.
+- Admin preview Website phải cùng bố cục này; cho chỉnh đường dẫn nút trong Banner và mô tả vùng an toàn. Các Banner khác, catalogue, SKU, NET không đổi.
+- Phát triển qua repo phụ PR → CI/Codex → squash merge → đồng bộ repo chính; chỉ deploy Website/Admin production khi Owner duyệt.
