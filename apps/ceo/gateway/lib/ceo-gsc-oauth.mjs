@@ -9,7 +9,7 @@ const CLIENT_ID=/^[0-9]{8,30}-[a-z0-9_-]{8,90}\.apps\.googleusercontent\.com$/;
 const TOKEN=/^[A-Za-z0-9._~+/\-=]{20,5000}$/;
 const STATE=/^[A-Za-z0-9_-]{32,80}$/;
 const SEALED_STATE=/^v1\.[A-Za-z0-9_-]{40,5000}$/;
-const CODE=/^[A-Za-z0-9/_\-.]{8,2048}$/;
+const CODE=/^[A-Za-z0-9._~+\/=\-]{8,2048}$/;
 
 /** @returns {{status:"unconfigured"} | {status:"ready",property:string,clientId:string,clientSecret:string,key:import("node:buffer").Buffer}} */
 export function oauthConfig(env=process.env){
