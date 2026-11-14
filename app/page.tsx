@@ -118,8 +118,10 @@ async function HomePublicCatalogue() {
 
   const categorySection=<section key="categories" id="categories" className="ref-categories" aria-label="Danh mục Futurebook đã công khai">
       <h2 className="sr-only">Danh mục sản phẩm</h2>
-      <CategoryNavigation categories={categories} />
-      <div className="ref-categories__all"><Link href="/san-pham">Xem tất cả danh mục</Link></div>
+      {categories.length>0&&<CategoryNavigation categories={categories} />}
+      <div className="ref-categories__all"><Link href="/san-pham">
+        {categories.length>0?"Xem tất cả danh mục":"Xem toàn bộ sản phẩm"}
+      </Link></div>
     </section>;
 
   const productSection=<section key="products" id="collections" className="ref-featured" aria-labelledby="featured-heading">
