@@ -31,6 +31,12 @@ test("footer logo always smaller than menu/header logo", () => {
 test("Owner-approved contact is shared across public pages", () => {
   assert.equal(officialContact.email, "info@fbmn.vn");
   assert.equal(officialContact.emailHref, "mailto:info@fbmn.vn");
+  assert.equal(officialContact.phone, "84 90 154 77 45");
+  assert.equal(officialContact.phoneHref, "tel:+84901547745");
+  assert.match(read("components/site-footer.tsx"), /contact\.phoneHref/);
+  assert.match(read("app/lien-he/page.tsx"), /contact\.phoneHref/);
+  assert.match(read("app/gioi-thieu/page.tsx"), /contact\.phoneHref/);
+  assert.match(read("app/site-footer.css"), /display: flex; align-items: baseline;/);
   assert.equal(officialContact.address, "1092A Lê Đức Anh (QL01A), P. Tân Tạo, Ho Chi Minh City, Vietnam, 700000");
   for (const path of ["components/site-footer.tsx", "app/lien-he/page.tsx", "app/gioi-thieu/page.tsx"]) {
     const source = read(path);
