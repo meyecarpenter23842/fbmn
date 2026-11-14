@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import {useEffect,useReducer,useRef} from "react";
 import type {CSSProperties} from "react";
 import type {PublicCmsItem} from "@/lib/content/cms";
@@ -112,11 +113,11 @@ export default function CmsHeroCarousel({items}:{items:PublicCmsItem[]}){
        }}
        onError={()=>dispatch({type:"failed",index:i})}/>
      </picture>}
-    <a className="cms-hero-cta" href={item.ctaUrl||"/san-pham"}
+    <Link className="cms-hero-cta" href={item.ctaUrl||"/san-pham"}
      tabIndex={i===index?0:-1}
      aria-label={"Xem sản phẩm Futurebook · Slide "+(i+1)}>
       Xem sản phẩm <span aria-hidden="true">↗</span>
-    </a>
+    </Link>
    </div>)}
   </div>
   {slides.length>1&&<div className="cms-hero-controls" role="group" aria-label="Chọn ảnh Hero">
