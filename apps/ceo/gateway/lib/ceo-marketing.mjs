@@ -95,7 +95,7 @@ function validateDaily(response){
   return {day,channel,sessions,leadSessions};
  });
 }
-export function formatMarketing(sources,campaigns,previous,daily){
+export function formatMarketing(sources,campaigns,previous={results:[]},daily={results:[]}){
  return {channels:validate(sources),campaigns:validate(campaigns,true),
   previousChannels:validate(previous),daily:validateDaily(daily)};
 }
