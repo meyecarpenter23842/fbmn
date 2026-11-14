@@ -167,7 +167,7 @@ export function formatGscComparison(period,current,previous){
  const totals=c&&p?{
   clicksDelta:c.clicks-p.clicks,
   impressionsDelta:c.impressions-p.impressions,
-  ctrPointsDelta:(c.ctr-p.ctr)*100,
+  ctrPointsDelta:Math.round((c.ctr-p.ctr)*1000000)/10000,
   positionImprovement:p.position-c.position,
   clicksPercentChange:p.clicks>0?(c.clicks-p.clicks)/p.clicks*100:null,
   impressionsPercentChange:p.impressions>0?
