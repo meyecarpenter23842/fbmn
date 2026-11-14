@@ -150,4 +150,84 @@ void main(){
   });
  }
 
+ test('SEO07 parses adjacent GSC date windows and distinct true/new/left movement',(){
+  final v=CeoGscReport.fromJson({
+   'status':'ready','period':'7d','site':'fbmn.vn',
+   'startDate':'2026-11-04','endDate':'2026-11-10',
+   'metrics':{'clicks':12,'impressions':200,'ctr':.06,'position':8},
+   'comparison':{
+    'startDate':'2026-10-28','endDate':'2026-11-03',
+    'metrics':{'clicks':10,'impressions':100,'ctr':.1,'position':12},
+    'totals':{'clicksDelta':2,'impressionsDelta':100,
+     'ctrPointsDelta':-4.0,'positionImprovement':4.0,
+     'clicksPercentChange':20.0,'impressionsPercentChange':100.0},
+    'keywords':{
+     'gainers':[{'label':'tập vở','status':'up','clickDelta':3,
+      'impressionsDelta':20,'positionImprovement':2.0,
+      'current':{'label':'tập vở','clicks':6,'impressions':70,'ctr':.085,'position':6},
+      'previous':{'label':'tập vở','clicks':3,'impressions':50,'ctr':.06,'position':8}}],
+     'newInTop':[{'label':'sổ tay','status':'new','clickDelta':null,
+      'impressionsDelta':null,'positionImprovement':null,
+      'current':{'label':'sổ tay','clicks':2,'impressions':20,'ctr':.1,'position':11},
+      'previous':null}],
+    },
+    'pages':{'decliners':[{'label':'/','status':'down','clickDelta':-3,
+     'impressionsDelta':-15,'positionImprovement':4.0,
+     'current':{'label':'/','clicks':5,'impressions':75,'ctr':.066,'position':6},
+     'previous':{'label':'/','clicks':8,'impressions':90,'ctr':.088,'position':10}}]}
+   }
+  });
+  expect(v.comparison!.startDate,'2026-10-28');
+  expect(v.comparison!.totals!.clicksDelta,2);
+  expect(v.comparison!.totals!.positionImprovement,4.0);
+  expect(v.comparison!.keywords.gainers.single.clickDelta,3);
+  expect(v.comparison!.keywords.newInTop.single.clickDelta,isNull);
+  expect(v.comparison!.pages.decliners.single.clickDelta,-3);
+  expect(CeoGscMovement.parse({'status':'up','label':'x'}),isNull);
+  final noPrior=CeoGscReport.fromJson({
+   'status':'ready','comparison':{'startDate':'2026-10-01',
+    'endDate':'2026-10-07','metrics':null,'totals':null}
+  });
+  expect(noPrior.comparison!.totals,isNull);
+ });
+
+ for(final width in <double>[360,390,1280]){
+  testWidgets('SEO07 only secondary tabs pin during vertical scroll at $width',(tester)async{
+   await tester.binding.setSurfaceSize(Size(width,500));
+   final mobile=width<=780;
+   var selected=0;
+   await tester.pumpWidget(MaterialApp(home:Scaffold(body:
+    CustomScrollView(key:const ValueKey('seo07-scroll'),slivers:[
+     SliverToBoxAdapter(child:SizedBox(height:65,child:
+      CeoStatsPeriodFilter(period:'7d',mobile:mobile,onChanged:(_){})
+     )),
+     SliverPersistentHeader(pinned:true,delegate:CeoStatsStickyHeader(
+      height:mobile?45:37,
+      child:CeoStatsSubTabs(mobile:mobile,
+       tabs:const ['Tổng quan','Chuyển đổi','Marketing','Sản phẩm','SEO'],
+       selected:selected,onChanged:(n)=>selected=n)
+     )),
+     const SliverToBoxAdapter(child:SizedBox(height:1800))
+    ]))));
+   await tester.pumpAndSettle();
+   final scroll=find.byKey(const ValueKey('seo07-scroll'));
+   await tester.drag(scroll,const Offset(0,-300));
+   await tester.pumpAndSettle();
+   final tabs=find.byKey(const ValueKey('ceo-stats-subtabs'));
+   final top=tester.getTopLeft(tabs).dy; 
+   expect(top,closeTo(0,1.0));
+   expect(tester.getTopLeft(tabs).dy,greaterThanOrEqualTo(0));
+   await tester.drag(scroll,const Offset(0,-350));
+   await tester.pumpAndSettle();
+   expect(tester.getTopLeft(tabs).dy,closeTo(top,1.0));
+   final seo=find.byKey(const ValueKey('ceo-stats-tab-4'));
+   await tester.ensureVisible(seo);
+   await tester.tap(seo);
+   expect(selected,4);
+   expect(tester.takeException(),isNull);
+   await tester.pumpWidget(const SizedBox.shrink());
+   await tester.binding.setSurfaceSize(null);
+  });
+ }
+
 }

@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'ceo_gsc_models.dart';
+import 'ceo_gsc_comparison.dart';
 import 'ceo_ui_tokens.dart';
 import 'ceo_workspace.dart';
 
@@ -142,6 +143,8 @@ class CeoGscPanel extends StatelessWidget{
      ])),
    ],
    const SizedBox(height:8),
+   if(value.comparison!=null)CeoGscComparisonPanel(
+    comparison:value.comparison!,period:value.period),
    topRows('Top từ khóa tìm kiếm (${value.queries.length})',value.queries),
    topRows('Top trang xuất hiện trên Google (${value.pages.length})',value.pages),
    const SizedBox(height:12),

@@ -306,48 +306,44 @@ class CeoStatisticsTabState extends State<CeoStatisticsTab>{
  };
  @override Widget build(BuildContext context){
   final value=data;
-  return ListView(physics:const AlwaysScrollableScrollPhysics(),
-   padding:const EdgeInsets.only(bottom:24),children:[
-   LayoutBuilder(builder:(context,box){
-    final mobile=box.maxWidth<=780;
-    return Container(
-    key:const ValueKey('ceo-stats-toolbar'),
-    margin:const EdgeInsets.only(bottom:12),
-    decoration:BoxDecoration(color:Colors.white,
-     borderRadius:BorderRadius.circular(16),
-     border:Border.all(color:ceoBorder)),
-    child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
-     Padding(padding:const EdgeInsets.fromLTRB(10,8,10,8),
+  return LayoutBuilder(builder:(context,box){
+   final mobile=box.maxWidth<=780;
+   final buttonHeight=mobile?ceoMobileButtonHeight:ceoDesktopButtonHeight;
+   return CustomScrollView(key:const ValueKey('ceo-stats-scroll'),
+    physics:const AlwaysScrollableScrollPhysics(),
+    slivers:[
+     SliverToBoxAdapter(child:Padding(
+      key:const ValueKey('ceo-stats-toolbar'),
+      padding:const EdgeInsets.fromLTRB(8,2,8,4),
       child:Row(children:[
        CeoStatsPeriodFilter(period:period,mobile:mobile,enabled:!loading,
         onChanged:(range)=>unawaited(load(range:range,fresh:true))),
        const Spacer(),
-       IconButton(
-        key:const ValueKey('ceo-stats-refresh'),
+       IconButton(key:const ValueKey('ceo-stats-refresh'),
         tooltip:'Tải lại thống kê',
-        constraints:BoxConstraints.tightFor(
-         width:mobile?ceoMobileButtonHeight:ceoDesktopButtonHeight,
-         height:mobile?ceoMobileButtonHeight:ceoDesktopButtonHeight),
+        constraints:BoxConstraints.tightFor(width:buttonHeight,height:buttonHeight),
         onPressed:loading?null:()=>unawaited(load(fresh:true)),
-        icon:const Icon(Icons.refresh,color:ceoPurple)),
-      ])),
-     sectionPicker(mobile:mobile),
-     if(loading)const LinearProgressIndicator(
-      key:ValueKey('ceo-stats-loading'),minHeight:2,
-      color:ceoPurple,backgroundColor:ceoLavender),
-     if(error.isNotEmpty)Padding(
-      padding:const EdgeInsets.all(12),
-      child:Row(children:[
-       Expanded(child:Text(error,style:const TextStyle(
-        fontSize:13,color:Color(0xFFB45309)))),
-       TextButton.icon(onPressed:()=>unawaited(load(fresh:true)),
-        icon:const Icon(Icons.refresh,size:16),label:const Text('Thử lại'))
-      ])),
-     if(!loading&&error.isEmpty&&value?.cached==true)
-      const Padding(padding:EdgeInsets.fromLTRB(12,6,12,9),
-       child:Text('Đang xem số liệu PostHog được lưu tạm.',
-        style:TextStyle(fontSize:12,color:ceoMuted))),
-    ]));}),
+        icon:const Icon(Icons.refresh,color:ceoPurple))
+      ]))),
+     SliverPersistentHeader(key:const ValueKey('ceo-stats-sticky-tabs'),
+      pinned:true,delegate:CeoStatsStickyHeader(height:buttonHeight+1,
+       child:sectionPicker(mobile:mobile))),
+     SliverList(delegate:SliverChildListDelegate([
+      if(loading)const LinearProgressIndicator(
+       key:ValueKey('ceo-stats-loading'),minHeight:2,
+       color:ceoPurple,backgroundColor:ceoLavender),
+      if(error.isNotEmpty)Padding(
+       padding:const EdgeInsets.all(12),
+       child:Row(children:[
+        Expanded(child:Text(error,style:const TextStyle(
+         fontSize:13,color:Color(0xFFB45309)))),
+        TextButton.icon(onPressed:()=>unawaited(load(fresh:true)),
+         icon:const Icon(Icons.refresh,size:16),label:const Text('Thử lại'))
+       ])),
+      if(!loading&&error.isEmpty&&value?.cached==true)
+       const Padding(padding:EdgeInsets.fromLTRB(12,6,12,9),
+        child:Text('Đang xem số liệu PostHog được lưu tạm.',
+         style:TextStyle(fontSize:12,color:ceoMuted))),
    if(section==4)CeoPanel(
     title:'SEO06 · Google Search Console',
     subtitle:'Google tự nhiên · lượt nhấp, hiển thị, CTR và vị trí trung bình',
@@ -367,6 +363,9 @@ class CeoStatisticsTabState extends State<CeoStatisticsTab>{
       retry:()=>unawaited(loadGsc(fresh:true))),
     ])),
    if(value!=null&&!loading&&error.isEmpty)...selectedPanels(value),
-  ]);
+   const SizedBox(height:24),
+   ])),
+   ]);
+  });
  }
 }

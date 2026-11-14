@@ -39,7 +39,7 @@ export async function GET(request:Request){
   }
   const {accessToken,rotated}=await refreshGoogleToken(config,refresh);
   if(rotated)await saveGscGrant(owner.subject,rotated,config.key);
-  const data=await fetchGscReport(period,{accessToken,site:config.property});
+  const data=await fetchGscReport(period,{accessToken,site:config.property,compare:true});
   return Response.json({data:{...data,oauthStatus:"connected"}},{status:200,headers:HEADERS});
  }catch(error){
   const message=error instanceof Error?error.message:"";

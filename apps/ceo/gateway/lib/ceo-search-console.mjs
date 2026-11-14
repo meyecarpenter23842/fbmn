@@ -23,6 +23,16 @@ export function gscDates(period,now=new Date()){
  return {startDate:start.toISOString().slice(0,10),endDate:end.toISOString().slice(0,10)};
 }
 
+export function gscPreviousDates(period,now=new Date()){
+ const days=GSC_PERIODS[period];
+ if(!days)throw new Error("gsc_invalid_period");
+ const current=gscDates(period,now);
+ const currentStart=Date.parse(current.startDate+"T00:00:00Z");
+ const end=new Date(currentStart-ONE_DAY);
+ const start=new Date(currentStart-days*ONE_DAY);
+ return {startDate:start.toISOString().slice(0,10),endDate:end.toISOString().slice(0,10)};
+}
+
 export function readGscConfig(env=process.env){
  const site=String(env.FBMN_CEO_GSC_SITE_URL||"").trim();
  const encoded=String(env.FBMN_CEO_GSC_SERVICE_ACCOUNT_JSON||"").trim();
@@ -120,6 +130,55 @@ export function formatGscReport(period,dates,results,property="sc-domain:fbmn.vn
   daily:dailyItems,queries:pick(queries,safeQuery),pages:pick(pages,safePage)
  };
 }
+// SEO07: a GSC top-row report is not exhaustive. Only compare matched
+// top-list items. "new"/"left" means appearing/disappearing from the list,
+// never assume missing means zero traffic or that Google indexed a new page.
+export function formatGscComparison(period,current,previous){
+ if(!GSC_PERIODS[period]||current?.status!=="ready"||
+    previous?.status!=="ready"||current.site!==previous.site)
+  throw new Error("gsc_invalid_comparison");
+ const summarize=(list,oldList)=>{
+  const prior=new Map(oldList.map(x=>[x.label,x]));
+  const now=new Map(list.map(x=>[x.label,x]));
+  const matched=list.filter(x=>prior.has(x.label)).map(x=>{
+   const p=prior.get(x.label);
+   const change=x.clicks-p.clicks;
+   return {label:x.label,status:change>0?"up":change<0?"down":"flat",
+    current:x,previous:p,clickDelta:change,
+    impressionsDelta:x.impressions-p.impressions,
+    positionImprovement:p.position-x.position};
+  });
+  const byChange=(a,b)=>Math.abs(b.clickDelta)-Math.abs(a.clickDelta)||
+    a.label.localeCompare(b.label);
+  const newInTop=list.filter(x=>!prior.has(x.label)).map(x=>({
+   label:x.label,status:"new",current:x,previous:null,
+   clickDelta:null,impressionsDelta:null,positionImprovement:null
+  }));
+  const leftTop=oldList.filter(x=>!now.has(x.label)).map(x=>({
+   label:x.label,status:"left",current:null,previous:x,
+   clickDelta:null,impressionsDelta:null,positionImprovement:null
+  }));
+  return {gainers:matched.filter(x=>x.clickDelta>0).sort(byChange).slice(0,10),
+   decliners:matched.filter(x=>x.clickDelta<0).sort(byChange).slice(0,10),
+   steady:matched.filter(x=>x.clickDelta===0).slice(0,10),
+   newInTop:newInTop.slice(0,10),leftTop:leftTop.slice(0,10)};
+ };
+ const c=current.metrics,p=previous.metrics;
+ const totals=c&&p?{
+  clicksDelta:c.clicks-p.clicks,
+  impressionsDelta:c.impressions-p.impressions,
+  ctrPointsDelta:Math.round((c.ctr-p.ctr)*1000000)/10000,
+  positionImprovement:p.position-c.position,
+  clicksPercentChange:p.clicks>0?(c.clicks-p.clicks)/p.clicks*100:null,
+  impressionsPercentChange:p.impressions>0?
+   (c.impressions-p.impressions)/p.impressions*100:null
+ }:null;
+ return {startDate:previous.startDate,endDate:previous.endDate,
+  metrics:previous.metrics,totals,
+  keywords:summarize(current.queries,previous.queries),
+  pages:summarize(current.pages,previous.pages)};
+}
+
 const base64=(value)=>Buffer.from(JSON.stringify(value)).toString("base64url");
 function serviceAccountAssertion(config,now=new Date()){
  const epoch=Math.floor(now.getTime()/1000);
@@ -178,7 +237,8 @@ async function gscQuery(fetchImpl,accessToken,site,dates,dimensions,rowLimit){
 }
 export async function fetchGscReport(period,{
  env=process.env,fetchImpl=fetch,now=new Date(),
- accessToken=/** @type {string|null} */ (null),site=/** @type {string|null} */ (null)
+ accessToken=/** @type {string|null} */ (null),site=/** @type {string|null} */ (null),
+ compare=false
 }={}){
  const dates=gscDates(period,now);
  // OAuth authorization-code flow supplies a short-lived access token server-side.
@@ -205,5 +265,17 @@ export async function fetchGscReport(period,{
   gscQuery(fetchImpl,token,property,dates,["query"],60),
   gscQuery(fetchImpl,token,property,dates,["page"],50)
  ]);
- return formatGscReport(period,dates,{overview,daily,queries,pages},property);
+ const report=formatGscReport(period,dates,{overview,daily,queries,pages},property);
+ if(!compare)return report;
+ const previousDates=gscPreviousDates(period,now);
+ const [priorOverview,priorQueries,priorPages]=await Promise.all([
+  gscQuery(fetchImpl,token,property,previousDates,[],1),
+  gscQuery(fetchImpl,token,property,previousDates,["query"],60),
+  gscQuery(fetchImpl,token,property,previousDates,["page"],50)
+ ]);
+ const prior=formatGscReport(period,previousDates,{
+  overview:priorOverview,daily:{rows:[]},
+  queries:priorQueries,pages:priorPages
+ },property);
+ return {...report,comparison:formatGscComparison(period,report,prior)};
 }

@@ -37,15 +37,105 @@ class CeoGscDay {
   return CeoGscDay(day,m);
  }
 }
+
+class CeoGscMovement {
+ final String label,status;
+ final CeoGscRank? current,previous;
+ final int? clickDelta,impressionsDelta;
+ final double? positionImprovement;
+ const CeoGscMovement({required this.label,required this.status,
+  this.current,this.previous,this.clickDelta,this.impressionsDelta,this.positionImprovement});
+ static CeoGscMovement? parse(Object? value){
+  if(value is! Map<String,dynamic>)return null;
+  final label=value['label'],status=value['status'];
+  if(label is! String||label.isEmpty||label.length>120||
+    !const ['up','down','flat','new','left'].contains(status)){return null;}
+  final current=CeoGscRank.parse(value['current']);
+  final previous=CeoGscRank.parse(value['previous']);
+  if(status=='new'&&(current==null||previous!=null))return null;
+  if(status=='left'&&(current!=null||previous==null))return null;
+  if(status!='new'&&status!='left'&&(current==null||previous==null))return null;
+  final c=value['clickDelta'],i=value['impressionsDelta'],p=value['positionImprovement'];
+  if(status=='new'||status=='left'){
+   if(c!=null||i!=null||p!=null)return null;
+  }else if(c is! int||i is! int||p is! num||!p.isFinite){return null;}
+  return CeoGscMovement(label:label,status:status,current:current,previous:previous,
+   clickDelta:c is int?c:null,impressionsDelta:i is int?i:null,
+   positionImprovement:p is num?p.toDouble():null);
+ }
+}
+class CeoGscMovementGroup {
+ final List<CeoGscMovement> gainers,decliners,steady,newInTop,leftTop;
+ const CeoGscMovementGroup({this.gainers=const [],this.decliners=const [],
+  this.steady=const [],this.newInTop=const [],this.leftTop=const []});
+ static CeoGscMovementGroup? parse(Object? value){
+  if(value is! Map<String,dynamic>)return null;
+  List<CeoGscMovement> read(String name){
+   final raw=value[name];
+   if(raw is! List)return const [];
+   return raw.map(CeoGscMovement.parse).whereType<CeoGscMovement>()
+    .take(10).toList(growable:false);
+  }
+  return CeoGscMovementGroup(
+   gainers:read('gainers'),decliners:read('decliners'),steady:read('steady'),
+   newInTop:read('newInTop'),leftTop:read('leftTop'));
+ }
+}
+class CeoGscChangeTotals {
+ final int clicksDelta,impressionsDelta;
+ final double ctrPointsDelta,positionImprovement;
+ final double? clicksPercentChange,impressionsPercentChange;
+ const CeoGscChangeTotals({required this.clicksDelta,required this.impressionsDelta,
+  required this.ctrPointsDelta,required this.positionImprovement,
+  this.clicksPercentChange,this.impressionsPercentChange});
+ static CeoGscChangeTotals? parse(Object? value){
+  if(value is! Map<String,dynamic>)return null;
+  final c=value['clicksDelta'],i=value['impressionsDelta'],
+   ctr=value['ctrPointsDelta'],position=value['positionImprovement'];
+  if(c is! int||i is! int||ctr is! num||position is! num||
+   !ctr.isFinite||!position.isFinite){return null;}
+  double? percentage(String key){
+   final raw=value[key];
+   return raw is num&&raw.isFinite?raw.toDouble():null;
+  }
+  return CeoGscChangeTotals(clicksDelta:c,impressionsDelta:i,
+   ctrPointsDelta:ctr.toDouble(),positionImprovement:position.toDouble(),
+   clicksPercentChange:percentage('clicksPercentChange'),
+   impressionsPercentChange:percentage('impressionsPercentChange'));
+ }
+}
+class CeoGscComparison {
+ final String startDate,endDate;
+ final CeoGscMetrics? metrics;
+ final CeoGscChangeTotals? totals;
+ final CeoGscMovementGroup keywords,pages;
+ const CeoGscComparison({required this.startDate,required this.endDate,
+  this.metrics,this.totals,this.keywords=const CeoGscMovementGroup(),
+  this.pages=const CeoGscMovementGroup()});
+ static CeoGscComparison? parse(Object? value){
+  if(value is! Map<String,dynamic>)return null;
+  final start=value['startDate'],end=value['endDate'];
+  final re=RegExp(r'^\d{4}-\d{2}-\d{2}$');
+  if(start is! String||end is! String||
+   !re.hasMatch(start)||!re.hasMatch(end)||start.compareTo(end)>0){return null;}
+  return CeoGscComparison(startDate:start,endDate:end,
+   metrics:CeoGscMetrics.parse(value['metrics']),
+   totals:CeoGscChangeTotals.parse(value['totals']),
+   keywords:CeoGscMovementGroup.parse(value['keywords'])??const CeoGscMovementGroup(),
+   pages:CeoGscMovementGroup.parse(value['pages'])??const CeoGscMovementGroup());
+ }
+}
+
 class CeoGscReport {
  final String status,period,site,startDate,endDate,timezone,oauthStatus;
  final CeoGscMetrics? metrics;
+ final CeoGscComparison? comparison;
  final List<CeoGscDay> daily;
  final List<CeoGscRank> queries,pages;
  const CeoGscReport({required this.status,required this.period,
   required this.site,required this.startDate,required this.endDate,
   required this.timezone,this.oauthStatus='unconfigured',this.metrics,this.daily=const [],
-  this.queries=const [],this.pages=const []});
+  this.queries=const [],this.pages=const [],this.comparison});
  bool get configured=>status=='ready';
  factory CeoGscReport.fromJson(Map<String,dynamic> json){
   final status=json['status'];
@@ -64,6 +154,7 @@ class CeoGscReport {
    endDate:json['endDate'] is String?json['endDate'] as String:'',
    timezone:json['timezone'] is String?json['timezone'] as String:'America/Los_Angeles',
    metrics:CeoGscMetrics.parse(json['metrics']),
+   comparison:CeoGscComparison.parse(json['comparison']),
    daily:parse('daily',CeoGscDay.parse),
    queries:parse('queries',CeoGscRank.parse).take(10).toList(growable:false),
    pages:parse('pages',CeoGscRank.parse).take(10).toList(growable:false),
