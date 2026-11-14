@@ -41,8 +41,13 @@ export function selectHomeCatalog(catalog: PublicCatalog, layout: HomeLayout = D
   for (const product of catalog.products) {
     if (product.variants.length) byCategory.get(product.categoryId)?.push(product);
   }
+  // "Chưa phân loại" is an internal holding category, never a public
+  // navigation tile or an SEO landing page.
+  const isNamedCategory = (category:PublicCatalog["categories"][number]) =>
+    category.id !== "p5-uncategorized" && category.slug !== "chua-phan-loai" &&
+    category.name.trim().toLocaleLowerCase("vi") !== "chưa phân loại";
   const ordered = catalog.categories
-    .filter(category => (byCategory.get(category.id)?.length ?? 0) > 0)
+    .filter(category => isNamedCategory(category) && (byCategory.get(category.id)?.length ?? 0) > 0)
     .sort((a, b) => a.sortOrder - b.sortOrder
       || a.name.localeCompare(b.name, "vi")
       || a.id.localeCompare(b.id));
@@ -53,9 +58,11 @@ export function selectHomeCatalog(catalog: PublicCatalog, layout: HomeLayout = D
   }
 
   const allowed=new Set(ordered.map(category=>category.id));
-  const curated=layout.categoryIds.length
-    ? layout.categoryIds.filter(id=>allowed.has(id)).map(id=>ordered.find(c=>c.id===id)!)
-    : ordered;
+  const requested=layout.categoryIds.filter(id=>allowed.has(id))
+    .map(id=>ordered.find(c=>c.id===id)!);
+  // Stale Owner curation can still reference only the internal holding
+  // category. Do not let that hide every published product/category.
+  const curated=requested.length?requested:ordered;
   const visible = curated.slice(0, layout.categoryLimit);
   const categories = visible.map(category => {
     const list = byCategory.get(category.id)!;
@@ -68,7 +75,13 @@ export function selectHomeCatalog(catalog: PublicCatalog, layout: HomeLayout = D
 
   // Take one product from each available category first (variety, NOT a
   // fabricated "best-seller" rank), then fill remaining slots deterministically.
-  const all=visible.flatMap(category=>byCategory.get(category.id)!);
+  // When only the internal holding category exists, keep REAL published
+  // products visible without inventing or advertising a category. Respect
+  // explicit Owner curation whenever named categories are available.
+  const all=ordered.length===0
+    ? catalog.products.filter(product=>product.variants.length>0 && byCategory.has(product.categoryId))
+      .sort((a,b)=>a.name.localeCompare(b.name,"vi") || a.id.localeCompare(b.id))
+    : visible.flatMap(category=>byCategory.get(category.id)!);
   const selected:PublicProduct[]=[];
   const seen=new Set<string>();
   const add=(item:PublicProduct|undefined)=>{

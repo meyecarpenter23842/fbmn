@@ -20,8 +20,10 @@ type Props = { params: Promise<{ slug: string }>; searchParams: Promise<{sku?:st
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
  const [catalog,{slug},seo]=await Promise.all([getPublicCatalog(),params,getPublishedSeo()]);
  const product=getProductBySlug(catalog,slug);
- return product?applySeoSetting(productMetadata(product,catalog.categories.find(c=>c.id===product.categoryId)),seoFor(seo,"product",product.slug),productApprovedSeoImages(product))
-  :{title:"Sản phẩm chưa công khai | Futurebook Miền Nam",robots:{index:false}};
+ // Resolve missing public products before metadata streams a 200 response.
+ if(!product)notFound();
+ return applySeoSetting(productMetadata(product,catalog.categories.find(c=>c.id===product.categoryId)),
+  seoFor(seo,"product",product.slug),productApprovedSeoImages(product));
 }
 
 export default async function ProductPage({ params, searchParams }: Props) {
