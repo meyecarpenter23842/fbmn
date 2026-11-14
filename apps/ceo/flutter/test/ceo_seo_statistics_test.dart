@@ -1,4 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter/material.dart';
+import 'package:futurebook_ceo/ceo_stat_controls.dart';
 import 'package:futurebook_ceo/ceo_stats_models.dart';
 import 'package:futurebook_ceo/ceo_gsc_models.dart';
 
@@ -112,5 +114,32 @@ void main(){
   expect(CeoGscMetrics.parse({'clicks':1,'impressions':2,'ctr':1.2,'position':3}),isNull);
   expect(()=>CeoGscReport.fromJson({'status':'bad'}),throwsFormatException);
  });
+
+ for(final width in <double>[360,390,1280,1440]){
+  testWidgets('SEO06B compact filter and secondary tabs at $width',(tester)async{
+   await tester.binding.setSurfaceSize(Size(width,820));
+   var selectedPeriod='',selectedTab=-1;
+   await tester.pumpWidget(MaterialApp(home:Scaffold(body:Column(children:[
+    Row(children:[
+     CeoStatsPeriodFilter(period:'7d',onChanged:(v)=>selectedPeriod=v),
+     const Spacer(),
+     const Icon(Icons.refresh),
+    ]),
+    CeoStatsSubTabs(tabs:const ['Tổng quan','Chuyển đổi','Marketing','Sản phẩm','SEO'],
+     selected:0,onChanged:(v)=>selectedTab=v),
+   ]))));
+   await tester.pumpAndSettle();
+   expect(find.byKey(const ValueKey('ceo-stats-period-filter')),findsOneWidget);
+   expect(find.byKey(const ValueKey('ceo-stats-subtabs')),findsOneWidget);
+   expect(find.byType(ChoiceChip),findsNothing);
+   await tester.tap(find.byKey(const ValueKey('ceo-stats-period-30d')));
+   expect(selectedPeriod,'30d');
+   await tester.tap(find.byKey(const ValueKey('ceo-stats-tab-2')));
+   expect(selectedTab,2);
+   expect(tester.takeException(),isNull);
+   await tester.pumpWidget(const SizedBox.shrink());
+   await tester.binding.setSurfaceSize(null);
+  });
+ }
 
 }
