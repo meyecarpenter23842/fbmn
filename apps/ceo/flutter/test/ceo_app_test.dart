@@ -740,9 +740,9 @@ void main(){
    expect(find.text('PH02 · Hiệu quả nguồn khách'),findsNothing);
    expect(repo.analyticsLoads,firstLoads);
    expect(tester.takeException(),isNull,reason:'Funnel overflow at $width');
-   await tester.ensureVisible(find.text('30 ngày'));
+   await tester.ensureVisible(find.byKey(const ValueKey('ceo-stats-period-30d')));
    await tester.pumpAndSettle();
-   await tester.tap(find.text('30 ngày'));
+   await tester.tap(find.byKey(const ValueKey('ceo-stats-period-30d')));
    await tester.pumpAndSettle();
    expect(repo.analyticsLoads,firstLoads+1);
    expect(find.text('PH01 · Funnel B2B'),findsOneWidget);
@@ -786,9 +786,9 @@ void main(){
    await tester.pumpAndSettle();
    expect(repo.gscLoads,1,reason:'Returning to same SEO period must reuse GSC data');
    expect(repo.analyticsLoads,1);
-   await tester.ensureVisible(find.text('30 ngày'));
+   await tester.ensureVisible(find.byKey(const ValueKey('ceo-stats-period-30d')));
    await tester.pumpAndSettle();
-   await tester.tap(find.text('30 ngày'));
+   await tester.tap(find.byKey(const ValueKey('ceo-stats-period-30d')));
    await tester.pumpAndSettle();
    expect(repo.gscLoads,2);
    expect(repo.analyticsLoads,2);
