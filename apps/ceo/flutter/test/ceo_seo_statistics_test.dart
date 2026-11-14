@@ -122,12 +122,13 @@ void main(){
    await tester.pumpWidget(MaterialApp(home:MediaQuery(
     data:MediaQueryData(size:Size(width,820)),child:Scaffold(body:Column(children:[
     Row(children:[
-     CeoStatsPeriodFilter(period:'7d',onChanged:(v)=>selectedPeriod=v),
+     CeoStatsPeriodFilter(period:'7d',mobile:width<=780,
+      onChanged:(v)=>selectedPeriod=v),
      const Spacer(),
      const Icon(Icons.refresh),
     ]),
     CeoStatsSubTabs(tabs:const ['Tổng quan','Chuyển đổi','Marketing','Sản phẩm','SEO'],
-     selected:0,onChanged:(v)=>selectedTab=v),
+     selected:0,mobile:width<=780,onChanged:(v)=>selectedTab=v),
    ])))));
    await tester.pumpAndSettle();
    expect(find.byKey(const ValueKey('ceo-stats-period-filter')),findsOneWidget);
@@ -140,6 +141,7 @@ void main(){
     greaterThanOrEqualTo(minTouch));
    await tester.tap(find.byKey(const ValueKey('ceo-stats-period-30d')));
    expect(selectedPeriod,'30d');
+   await tester.ensureVisible(find.byKey(const ValueKey('ceo-stats-tab-2')));
    await tester.tap(find.byKey(const ValueKey('ceo-stats-tab-2')));
    expect(selectedTab,2);
    expect(tester.takeException(),isNull);
