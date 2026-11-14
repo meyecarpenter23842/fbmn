@@ -17,6 +17,13 @@ test("DL8: holding category never becomes an indexed homepage tile or semantic c
  const mixed=selectHomeCatalog({categories:[hold,named],products:[...data.products,p("c",named.id)]});
  assert.deepEqual(mixed.categories.map(x=>x.id),["cat-real"]);
  assert.deepEqual(mixed.products.map(x=>x.id),["c"]);
+ const stale=selectHomeCatalog({categories:[hold,named],products:[...data.products,p("c",named.id)]},
+  {categoryIds:["p5-uncategorized"],featuredSkus:[],categoryLimit:6,
+   productLimit:4,sectionOrder:["categories","products"],revision:2});
+ assert.deepEqual(stale.categories.map(x=>x.id),["cat-real"],
+  "stale Owner category selection must fall back to published named category");
+ assert.deepEqual(stale.products.map(x=>x.id),["c"],
+  "stale holding-only curation cannot remove published products");
  for(const hidden of [
   cat("custom","chua-phan-loai","VPP"),
   cat("custom2","other","Chưa phân loại")]){
