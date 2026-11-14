@@ -10,11 +10,12 @@ class CeoGscPanel extends StatelessWidget{
  final bool loading;
  final String error;
  final VoidCallback retry,onConnect,onDisconnect;
- final bool connectionBusy;
+ final bool connectionBusy,reconnectRequired;
  final String connectionError;
  const CeoGscPanel({super.key,required this.report,required this.loading,
   required this.error,required this.retry,required this.onConnect,
-  required this.onDisconnect,this.connectionBusy=false,this.connectionError=''});
+  required this.onDisconnect,this.connectionBusy=false,
+  this.reconnectRequired=false,this.connectionError=''});
  String percent(double n)=> '${(n*100).toStringAsFixed(1)}%';
  Widget kpi(String name,String value,IconData icon,double width)=>SizedBox(
   width:width,child:Container(
@@ -58,8 +59,18 @@ class CeoGscPanel extends StatelessWidget{
    Text(error,textAlign:TextAlign.center,style:const TextStyle(
     fontSize:13,color:Color(0xFFB45309))),
    const SizedBox(height:12),
-   OutlinedButton.icon(onPressed:retry,icon:const Icon(Icons.refresh),
+   if(reconnectRequired)...[
+    FilledButton.icon(key:const ValueKey('gsc-reconnect-google'),
+     onPressed:connectionBusy?null:onConnect,
+     icon:const Icon(Icons.link),label:const Text('Kết nối lại Google')),
+    const SizedBox(height:8),
+    OutlinedButton.icon(key:const ValueKey('gsc-disconnect-google'),
+     onPressed:connectionBusy?null:onDisconnect,
+     icon:const Icon(Icons.link_off),label:const Text('Ngắt kết nối')),
+   ]else OutlinedButton.icon(onPressed:retry,icon:const Icon(Icons.refresh),
     label:const Text('Thử tải lại Search Console')),
+   if(connectionError.isNotEmpty)Text(connectionError,
+    style:const TextStyle(fontSize:12,color:Color(0xFFB45309))),
   ]);}
   final value=report;
   if(value==null||!value.configured){return Column(
@@ -91,6 +102,8 @@ class CeoGscPanel extends StatelessWidget{
    OutlinedButton.icon(key:const ValueKey('gsc-disconnect-google'),
     onPressed:connectionBusy?null:onDisconnect,
     icon:const Icon(Icons.link_off),label:const Text('Ngắt kết nối Google')),
+   if(connectionError.isNotEmpty)Text(connectionError,
+    style:const TextStyle(fontSize:12,color:Color(0xFFB45309))),
   ]);}
   final dates=value.daily.length>7?value.daily.sublist(value.daily.length-7):value.daily;
   final maxClicks=dates.fold<int>(1,(n,d)=>math.max(n,d.metrics.clicks));
@@ -136,6 +149,8 @@ class CeoGscPanel extends StatelessWidget{
     key:const ValueKey('gsc-disconnect-google'),
     onPressed:connectionBusy?null:onDisconnect,
     icon:const Icon(Icons.link_off),label:const Text('Ngắt kết nối Google'))),
+   if(connectionError.isNotEmpty)Text(connectionError,
+    style:const TextStyle(fontSize:12,color:Color(0xFFB45309))),
    const SizedBox(height:10),
    const Text('GSC đo lượt nhấp/hiển thị từ Google tự nhiên; PostHog đo phiên và yêu cầu B2B. Hai nguồn không được cộng chung. Vị trí trung bình càng thấp càng tốt.',
     style:TextStyle(fontSize:11.5,color:ceoMuted)),

@@ -20,6 +20,7 @@ class CeoStatisticsTabState extends State<CeoStatisticsTab>{
  int section=0;
  bool oauthBusy=false;
  String oauthError='';
+ bool oauthReconnectRequired=false;
  CeoGscReport? gsc;
  bool gscLoading=false;
  String gscError='';
@@ -56,14 +57,25 @@ class CeoStatisticsTabState extends State<CeoStatisticsTab>{
   final requested=period;
   if(!fresh&&gscPeriod==requested&&(gscLoading||gsc!=null))return;
   final id=++gscGeneration;
-  setState((){gscLoading=true;gscError='';gsc=null;gscPeriod=requested;});
+  setState((){gscLoading=true;gscError='';gsc=null;gscPeriod=requested;oauthReconnectRequired=false;});
   try{
    final value=await widget.api.searchConsole(requested,fresh:fresh);
    if(mounted&&id==gscGeneration){setState((){gsc=value;gscLoading=false;});}
+  }on CeoApiException catch(e){
+   if(mounted&&id==gscGeneration){
+    setState((){
+     gsc=null;gscLoading=false;oauthReconnectRequired=e.status==409;
+     gscError=e.status==409?
+      'Quyền Google đã hết hạn hoặc bị thu hồi. Vui lòng kết nối lại Google.':
+      'Không tải được dữ liệu Google Search Console. Kiểm tra kết nối hoặc quyền property rồi thử lại.';
+    });
+   }
   }catch(_){
    if(mounted&&id==gscGeneration){
-    setState((){gsc=null;gscLoading=false;
-     gscError='Không tải được dữ liệu Google Search Console. Kiểm tra kết nối hoặc quyền property rồi thử lại.';});
+    setState((){
+     gsc=null;gscLoading=false;
+     gscError='Không tải được dữ liệu Google Search Console. Kiểm tra kết nối rồi thử lại.';
+    });
    }
   }
  }
@@ -75,14 +87,14 @@ class CeoStatisticsTabState extends State<CeoStatisticsTab>{
    if(!mounted){return;}
    oauth_nav.navigateGoogleConsent(url);
   }catch(_){
-   if(mounted)setState((){
+   if(mounted){setState((){
     oauthBusy=false;
     oauthError='Không thể mở kết nối Google. Kiểm tra cấu hình OAuth rồi thử lại.';
-   });
+   });}
   }
  }
  Future<void> disconnectGoogle()async{
-  if(oauthBusy)return;
+  if(oauthBusy){return;}
   final ok=await showDialog<bool>(context:context,builder:(context)=>AlertDialog(
    title:const Text('Ngắt kết nối Google?'),
    content:const Text('CEO sẽ ngừng đọc dữ liệu Search Console cho tài khoản này. Các thống kê PostHog không bị ảnh hưởng.'),
@@ -99,10 +111,10 @@ class CeoStatisticsTabState extends State<CeoStatisticsTab>{
     unawaited(loadGsc(fresh:true));
    }
   }catch(_){
-   if(mounted)setState((){
+   if(mounted){setState((){
     oauthBusy=false;
     oauthError='Không thể ngắt kết nối. Vui lòng thử lại.';
-   });
+   });}
   }
  }
  @override void dispose(){generation++;gscGeneration++;super.dispose();}
@@ -336,6 +348,7 @@ class CeoStatisticsTabState extends State<CeoStatisticsTab>{
     subtitle:'Google tự nhiên · lượt nhấp, hiển thị, CTR và vị trí trung bình',
     icon:Icons.travel_explore_outlined,
     child:CeoGscPanel(report:gsc,loading:gscLoading,error:gscError,
+     reconnectRequired:oauthReconnectRequired,
      connectionBusy:oauthBusy,connectionError:oauthError,
      onConnect:()=>unawaited(connectGoogle()),
      onDisconnect:()=>unawaited(disconnectGoogle()),

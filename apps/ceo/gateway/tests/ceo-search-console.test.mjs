@@ -138,7 +138,7 @@ test("SEO06 treats Google 403 as a permission error and does not expose raw resp
  const route=readFileSync(new URL("../app/api/ceo/search-console/route.ts",import.meta.url),"utf8");
  assert.match(route,/requireOwner\(request\)/);
  assert.match(route,/private, no-store/);
- assert.match(route,/fetchGscReport\(period\)/);
+ assert.match(route,/fetchGscReport\(period,\{accessToken,site:config\.property\}\)/);
  assert.match(route,/gsc_permission_denied/);
  assert.doesNotMatch(route,/FBMN_CEO_GSC_SERVICE_ACCOUNT_JSON/);
 });

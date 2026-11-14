@@ -16,6 +16,28 @@ const active=CeoGscReport(
  metrics:CeoGscMetrics(clicks:10,impressions:100,ctr:.1,position:9));
 
 void main(){
+
+ testWidgets('Expired Google grant offers reconnect and disconnect instead of endless retry',(tester)async{
+  await tester.pumpWidget(MaterialApp(home:Scaffold(body:CeoGscPanel(
+   report:null,loading:false,reconnectRequired:true,
+   error:'Quyền Google đã hết hạn',
+   retry:(){},onConnect:(){},onDisconnect:(){},
+  ))));
+  expect(find.byKey(const ValueKey('gsc-reconnect-google')),findsOneWidget);
+  expect(find.byKey(const ValueKey('gsc-disconnect-google')),findsOneWidget);
+  expect(find.text('Thử tải lại Search Console'),findsNothing);
+ });
+ testWidgets('Connected Google shows error if disconnect operation fails',(tester)async{
+  await tester.pumpWidget(MaterialApp(home:Scaffold(body:SingleChildScrollView(child:CeoGscPanel(
+   report:active,loading:false,error:'',
+   connectionError:'Không thể ngắt kết nối. Vui lòng thử lại.',
+   retry:(){},onConnect:(){},onDisconnect:(){},
+  )))));
+  await tester.pumpAndSettle();
+  expect(find.text('Không thể ngắt kết nối. Vui lòng thử lại.'),findsOneWidget);
+  expect(find.byKey(const ValueKey('gsc-disconnect-google')),findsOneWidget);
+ });
+
  for(final width in <double>[360,390,1280]){
   testWidgets('SEO06 OAuth connect and disconnect controls at $width',(tester)async{
    await tester.binding.setSurfaceSize(Size(width,820));

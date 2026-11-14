@@ -48,7 +48,7 @@ export async function GET(request:Request){
   if(message==="gsc_permission_denied"||message==="gsc_auth_denied")
    return fail(503,"gsc_permission_denied");
   if(message==="gsc_oauth_config_invalid")return fail(503,"gsc_oauth_config_invalid");
-  if(message==="gsc_oauth_grant_invalid")return fail(503,"gsc_oauth_reconnect_required");
+  if(message==="gsc_oauth_grant_invalid")return fail(409,"gsc_oauth_reconnect_required");
   if(message==="gsc_rate_limited")return fail(503,"gsc_rate_limited");
   return fail(503,"gsc_unavailable");
  }
