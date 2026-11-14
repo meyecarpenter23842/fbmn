@@ -35,3 +35,5 @@ Chỉ dùng dữ liệu thật Google. Chưa có quyền => **Chưa kết nối*
 - Flutter test: parse dữ liệu thật, CTR/position, responsive 360/390/1280, chỉ gọi khi tab SEO đang mở, chuyển tab giữ cache, đổi kỳ và refresh.
 - CI tổng / Flutter / Gateway / Codex review sạch → squash merge repo phụ → so tree và đồng bộ repo chính bằng fast-forward. Deploy CEO chỉ khi Owner cho phép; không chạy migration.
 - **Trạng thái nguồn:** Tại 14/11/2026 chưa có Search Console property nào được kết nối trong Windsor.ai. Không thể nghiệm thu số liệu Google thật cho tới khi Owner cấp quyền và môi trường production nhận credentials.
+
+> **Cập nhật 14/11/2026:** Google Cloud chặn JSON, luồng kết nối hiện hành dùng OAuth 2.0 (OAuth Web Client ID/Secret) theo `docs/seo06-oauth.md`. Các bước Service Account JSON ở trên chỉ giữ làm lịch sử, không áp dụng nữa.

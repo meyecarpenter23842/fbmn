@@ -174,21 +174,33 @@ async function gscQuery(fetchImpl,accessToken,site,dates,dimensions,rowLimit){
  return readJson(response,140000);
 }
 export async function fetchGscReport(period,{
- env=process.env,fetchImpl=fetch,now=new Date()
+ env=process.env,fetchImpl=fetch,now=new Date(),
+ accessToken=/** @type {string|null} */ (null),site=/** @type {string|null} */ (null)
 }={}){
  const dates=gscDates(period,now);
- const config=readGscConfig(env);
- if(config.status==="unconfigured")return {
-  status:"unconfigured",source:"google_search_console",period,
-  site:"www.fbmn.vn",timezone:TIME_ZONE,...dates,
-  metrics:null,daily:[],queries:[],pages:[]
- };
- const token=await getToken(config,fetchImpl,now);
+ // OAuth authorization-code flow supplies a short-lived access token server-side.
+ // The legacy service-account flow remains only for existing regression tests.
+ // Never accept OAuth accessToken/site from a browser-supplied parameter.
+ let token,property;
+ if(accessToken!==null){
+  if(typeof accessToken!=="string"||accessToken.length<20||accessToken.length>5000||
+    !/^[-._~+/=a-zA-Z0-9]+$/.test(accessToken)||!PROPERTIES.has(site))
+    throw new Error("gsc_oauth_invalid_access");
+  token=accessToken;property=site;
+ }else{
+  const config=readGscConfig(env);
+  if(config.status==="unconfigured")return {
+   status:"unconfigured",source:"google_search_console",period,
+   site:"www.fbmn.vn",timezone:TIME_ZONE,...dates,
+   metrics:null,daily:[],queries:[],pages:[]
+  };
+  token=await getToken(config,fetchImpl,now);property=config.site;
+ }
  const [overview,daily,queries,pages]=await Promise.all([
-  gscQuery(fetchImpl,token,config.site,dates,[],1),
-  gscQuery(fetchImpl,token,config.site,dates,["date"],95),
-  gscQuery(fetchImpl,token,config.site,dates,["query"],60),
-  gscQuery(fetchImpl,token,config.site,dates,["page"],50)
+  gscQuery(fetchImpl,token,property,dates,[],1),
+  gscQuery(fetchImpl,token,property,dates,["date"],95),
+  gscQuery(fetchImpl,token,property,dates,["query"],60),
+  gscQuery(fetchImpl,token,property,dates,["page"],50)
  ]);
  return formatGscReport(period,dates,{overview,daily,queries,pages});
 }

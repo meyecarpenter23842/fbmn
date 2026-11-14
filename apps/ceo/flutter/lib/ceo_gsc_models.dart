@@ -38,13 +38,13 @@ class CeoGscDay {
  }
 }
 class CeoGscReport {
- final String status,period,site,startDate,endDate,timezone;
+ final String status,period,site,startDate,endDate,timezone,oauthStatus;
  final CeoGscMetrics? metrics;
  final List<CeoGscDay> daily;
  final List<CeoGscRank> queries,pages;
  const CeoGscReport({required this.status,required this.period,
   required this.site,required this.startDate,required this.endDate,
-  required this.timezone,this.metrics,this.daily=const [],
+  required this.timezone,this.oauthStatus='unconfigured',this.metrics,this.daily=const [],
   this.queries=const [],this.pages=const []});
  bool get configured=>status=='ready';
  factory CeoGscReport.fromJson(Map<String,dynamic> json){
@@ -57,6 +57,7 @@ class CeoGscReport {
   }
   return CeoGscReport(
    status:status as String,
+   oauthStatus:json['oauthStatus'] is String?json['oauthStatus'] as String:'unconfigured',
    period:json['period'] is String?json['period'] as String:'7d',
    site:json['site'] is String?json['site'] as String:'www.fbmn.vn',
    startDate:json['startDate'] is String?json['startDate'] as String:'',

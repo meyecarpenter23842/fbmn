@@ -174,6 +174,7 @@ class _CeoHomeState extends State<CeoHome> with WidgetsBindingObserver{
  @override void initState(){
   super.initState();
   final tab=Uri.base.queryParameters['tab'],id=Uri.base.queryParameters['id'];
+  if(tab=='4'&&Uri.base.queryParameters['gsc']!=null){selected=4;}
   final tabNumber=switch(tab){'chat'=>1,'outsourcing'=>2,'contact'=>3,_=>null};
   if(tab=='mail'&&id!=null&&
     RegExp(r'^[0-9a-fA-F-]{36}$').hasMatch(id)){

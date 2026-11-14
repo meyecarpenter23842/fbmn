@@ -6,6 +6,7 @@ import 'ceo_stats_models.dart';
 import 'ceo_marketing.dart';
 import 'ceo_gsc_models.dart';
 import 'ceo_search_console.dart';
+import 'gsc_oauth_navigation_stub.dart' if (dart.library.js_interop) 'gsc_oauth_navigation_web.dart' as oauth_nav;
 import 'ceo_ui_tokens.dart';
 import 'ceo_workspace.dart';
 
@@ -17,6 +18,9 @@ class CeoStatisticsTab extends StatefulWidget{
 class CeoStatisticsTabState extends State<CeoStatisticsTab>{
  String period='7d';
  int section=0;
+ bool oauthBusy=false;
+ String oauthError='';
+ bool oauthReconnectRequired=false;
  CeoGscReport? gsc;
  bool gscLoading=false;
  String gscError='';
@@ -28,7 +32,12 @@ class CeoStatisticsTabState extends State<CeoStatisticsTab>{
  int generation=0;
  @override void initState(){
   super.initState();
-  WidgetsBinding.instance.addPostFrameCallback((_){if(mounted)unawaited(load());});
+  if(Uri.base.queryParameters['gsc']!=null)section=4;
+  WidgetsBinding.instance.addPostFrameCallback((_){
+   if(!mounted)return;
+   unawaited(load());
+   if(section==4)unawaited(loadGsc(fresh:true));
+  });
  }
  Future<void> load({String? range,bool fresh=false})async{
   if(range!=null)period=range;
@@ -48,15 +57,64 @@ class CeoStatisticsTabState extends State<CeoStatisticsTab>{
   final requested=period;
   if(!fresh&&gscPeriod==requested&&(gscLoading||gsc!=null))return;
   final id=++gscGeneration;
-  setState((){gscLoading=true;gscError='';gsc=null;gscPeriod=requested;});
+  setState((){gscLoading=true;gscError='';gsc=null;gscPeriod=requested;oauthReconnectRequired=false;});
   try{
    final value=await widget.api.searchConsole(requested,fresh:fresh);
    if(mounted&&id==gscGeneration){setState((){gsc=value;gscLoading=false;});}
+  }on CeoApiException catch(e){
+   if(mounted&&id==gscGeneration){
+    setState((){
+     gsc=null;gscLoading=false;oauthReconnectRequired=e.status==409;
+     gscError=e.status==409?
+      'Quyền Google đã hết hạn hoặc bị thu hồi. Vui lòng kết nối lại Google.':
+      'Không tải được dữ liệu Google Search Console. Kiểm tra kết nối hoặc quyền property rồi thử lại.';
+    });
+   }
   }catch(_){
    if(mounted&&id==gscGeneration){
-    setState((){gsc=null;gscLoading=false;
-     gscError='Không tải được dữ liệu Google Search Console. Kiểm tra kết nối hoặc quyền property rồi thử lại.';});
+    setState((){
+     gsc=null;gscLoading=false;
+     gscError='Không tải được dữ liệu Google Search Console. Kiểm tra kết nối rồi thử lại.';
+    });
    }
+  }
+ }
+ Future<void> connectGoogle()async{
+  if(oauthBusy){return;}
+  setState((){oauthBusy=true;oauthError='';});
+  try{
+   final url=await widget.api.startGscOAuth();
+   if(!mounted){return;}
+   oauth_nav.navigateGoogleConsent(url);
+  }catch(_){
+   if(mounted){setState((){
+    oauthBusy=false;
+    oauthError='Không thể mở kết nối Google. Kiểm tra cấu hình OAuth rồi thử lại.';
+   });}
+  }
+ }
+ Future<void> disconnectGoogle()async{
+  if(oauthBusy){return;}
+  final ok=await showDialog<bool>(context:context,builder:(context)=>AlertDialog(
+   title:const Text('Ngắt kết nối Google?'),
+   content:const Text('CEO sẽ ngừng đọc dữ liệu Search Console cho tài khoản này. Các thống kê PostHog không bị ảnh hưởng.'),
+   actions:[
+    TextButton(onPressed:()=>Navigator.of(context).pop(false),child:const Text('Hủy')),
+    FilledButton(onPressed:()=>Navigator.of(context).pop(true),child:const Text('Ngắt kết nối')),
+   ]));
+  if(ok!=true||!mounted){return;}
+  setState((){oauthBusy=true;oauthError='';});
+  try{
+   await widget.api.disconnectGscOAuth();
+   if(mounted){
+    setState(()=>oauthBusy=false);
+    unawaited(loadGsc(fresh:true));
+   }
+  }catch(_){
+   if(mounted){setState((){
+    oauthBusy=false;
+    oauthError='Không thể ngắt kết nối. Vui lòng thử lại.';
+   });}
   }
  }
  @override void dispose(){generation++;gscGeneration++;super.dispose();}
@@ -290,6 +348,10 @@ class CeoStatisticsTabState extends State<CeoStatisticsTab>{
     subtitle:'Google tự nhiên · lượt nhấp, hiển thị, CTR và vị trí trung bình',
     icon:Icons.travel_explore_outlined,
     child:CeoGscPanel(report:gsc,loading:gscLoading,error:gscError,
+     reconnectRequired:oauthReconnectRequired,
+     connectionBusy:oauthBusy,connectionError:oauthError,
+     onConnect:()=>unawaited(connectGoogle()),
+     onDisconnect:()=>unawaited(disconnectGoogle()),
      retry:()=>unawaited(loadGsc(fresh:true)))),
    if(value!=null&&!loading&&error.isEmpty)...selectedPanels(value),
   ]);
