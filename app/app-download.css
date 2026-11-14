@@ -139,6 +139,7 @@ a.app-download__store:focus-visible { outline: 3px solid var(--color-primary); o
   font-weight: 700;
 }
 .app-download__note {
+  white-space: pre-line;
   margin: 0;
   padding: 4px 16px 15px;
   color: var(--fb-glass-muted);
