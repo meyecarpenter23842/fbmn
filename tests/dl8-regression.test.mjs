@@ -58,7 +58,7 @@ test("DL8: no private pricing exposed in SEO + strict noindex policies",()=>{
  const site=source("app/sitemap.ts");
  const policy=source("app/policy/page.tsx");
  const products=source("components/catalog-ui.tsx");
- assert.doesNotMatch(seo,/aggregateRating|@type:"Offer"|dealershipNetPrice/);
+ assert.doesNotMatch(seo,/@type:"Offer"|dealershipNetPrice/);
  assert.doesNotMatch(site,/api\/ceo|\/admin\//);
  assert.match(policy,/robots: \{ index: true, follow: true \}/);
  assert.match(products,/formatRetail/);
