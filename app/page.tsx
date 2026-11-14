@@ -4,7 +4,6 @@ import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { CategoryNavigation } from "@/components/category-navigation";
 import { MobileCarousel } from "@/components/mobile-carousel";
-import { NotebookArt } from "@/components/notebook-art";
 import { Container, Icon } from "@/components/ui";
 import { getPublicCatalog } from "@/lib/catalog/adapter";
 import { selectHomeCatalog } from "@/lib/catalog/home";
@@ -25,38 +24,22 @@ export default async function HomePage() {
       <SiteHeader />
       <main className="ref-site" id="home">
         <section className="ref-hero" aria-labelledby="hero-heading">
+          <h1 id="hero-heading" className="sr-only">Tập vở và văn phòng phẩm Futurebook Miền Nam</h1>
           <Container className="ref-hero__inner">
-            <div className="ref-hero__copy">
-              <p className="ref-hero__eyebrow">FUTUREBOOK MIỀN NAM</p>
-              <h1 id="hero-heading">VỞ VIẾT<br/>FUTUREBOOK<br/>MIỀN NAM</h1>
-              <p className="ref-hero__brush">Đồng hành cùng tri thức<br/><span>Kiến tạo tương lai</span></p>
-              <div className="ref-hero__benefits">
-                <span><Icon name="shield" size={27}/> Thông tin<br/>rõ ràng</span>
-                <span><Icon name="book" size={27}/> Mẫu mã<br/>đa dạng</span>
-                <span><Icon name="package" size={27}/> Dành cho<br/>đại lý</span>
-              </div>
-              <a className="ref-cta" href="#categories">Xem sản phẩm <Icon name="arrow" size={19}/></a>
-            </div>
-            <div className={"ref-hero__visual"+(hasCmsHero?" ref-hero__visual--cms":"")} aria-label={hasCmsHero?"Banner Futurebook":"Hình giới thiệu tập vở Futurebook"}>
-              <div className="ref-hero__rays" aria-hidden="true" />
-              {hasCmsHero?<CmsBannerSlot items={cms} slot="home.hero"/>:<>
-              <VerifiedMediaImage asset={approvedSiteMedia.heroBanner} priority
-                className="ref-hero__official-image"
-                sizes="(max-width: 800px) 100vw, 55vw"
-                fallback={(
-                  <div className="ref-hero__books" aria-hidden="true">
-                    <NotebookArt cover="kraft" className="ref-hero__book ref-hero__book--one" title="SO COOL"/>
-                    <NotebookArt cover="dark" className="ref-hero__book ref-hero__book--two" title="FUTURE"/>
-                    <NotebookArt cover="sky" className="ref-hero__book ref-hero__book--three" title="NOTEBOOK"/>
-                    <NotebookArt cover="rose" className="ref-hero__book ref-hero__book--four" title="HAPPINESS"/>
-                    <NotebookArt cover="violet" className="ref-hero__book ref-hero__book--five" title="FUTUREBOOK"/>
-                  </div>
-                )}
-              />
-              <p className="ref-hero__handwriting" aria-hidden="true">Vở đẹp<br/>cho hành trình<br/>tri thức!</p>
-              <div className="ref-hero__dots" aria-hidden="true"><i/><i/><i/><i/></div>
-              </>}
-            </div>
+            {hasCmsHero
+              ? <CmsBannerSlot items={cms} slot="home.hero"/>
+              : <div className="ref-hero__fallback" aria-label="Hình giới thiệu Futurebook Miền Nam">
+                  <VerifiedMediaImage asset={approvedSiteMedia.heroBanner} priority
+                    className="ref-hero__official-image"
+                    sizes="(max-width: 800px) 100vw, 100vw"
+                    fallback={<div className="ref-hero__fallback-unavailable" role="status">
+                      Ảnh giới thiệu Futurebook đang được cập nhật
+                    </div>}
+                  />
+                  <a className="cms-hero-cta" href="/san-pham">
+                    Xem sản phẩm <span aria-hidden="true">↗</span>
+                  </a>
+                </div>}
           </Container>
         </section>
 
