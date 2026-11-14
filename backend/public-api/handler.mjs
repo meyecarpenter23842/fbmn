@@ -222,6 +222,8 @@ export function projectPublicAppDownload(raw){
    typeof raw.title==="string"&&raw.title.length>0&&raw.title.length<=80&&
    typeof raw.message==="string"&&raw.message.length>0&&raw.message.length<=240&&
    !/[<>]/.test(raw.title+raw.message)&&
+   !/[\x00-\x1f\x7f]/.test(raw.title)&&
+   !/[\x00-\x09\x0b-\x1f\x7f]/.test(raw.message)&&
    Number.isSafeInteger(raw.revision)&&raw.revision>0);
   const url=(value,platform)=>{
     if(value==null)return null;
