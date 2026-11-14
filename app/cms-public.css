@@ -21,13 +21,11 @@
  transition:filter var(--fb-motion-button,190ms) var(--fb-easing-open,ease)}
 .cms-web-banner-cta:hover,.cms-web-popup-cta:hover{filter:brightness(1.08)}
 .cms-web-banner-cta:focus-visible,.cms-web-popup-cta:focus-visible{outline:2px solid #9c60c8;outline-offset:3px}
-/* CMS Hero replaces the fallback, never sits below the fixed-height notebook art.
- * Higher specificity overrides rebaseline.css at 800/390 without altering baseline. */
-.ref-hero__visual.ref-hero__visual--cms{min-width:0;min-height:400px;height:auto;display:flex;align-items:center}
-.ref-hero__visual--cms .ref-hero__rays{z-index:0}
-/* Home Hero: one integrated visual. Text and CTA remain in ref-hero__copy. */
-.cms-hero-carousel{position:relative;z-index:2;width:100%;min-width:0;min-height:400px;isolation:isolate}
-.cms-hero-stage{position:relative;width:100%;height:clamp(400px,34vw,460px);overflow:hidden}
+/* Home Hero: a single full-width artwork + accessible HTML CTA per slide.
+ * Artwork owns its own promotional typography; preserve entire approved image. */
+.cms-hero-carousel{position:relative;width:100%;min-width:0;isolation:isolate}
+.cms-hero-stage{position:relative;width:100%;aspect-ratio:16/7;overflow:hidden;
+ background:linear-gradient(120deg,rgba(245,233,253,.72),rgba(238,214,251,.45))}
 .cms-hero-slide{position:absolute;inset:0;z-index:0;display:grid;place-items:center;
  opacity:0;transform:translate3d(16px,0,0);pointer-events:none;
  transition:opacity var(--cms-hero-duration,480ms) var(--fb-easing-open,cubic-bezier(.22,1,.36,1)),
@@ -38,13 +36,21 @@
 .cms-hero-carousel[data-effect="slide"] .cms-hero-slide.is-active{transform:translate3d(0,0,0)}
 .cms-hero-carousel[data-motion="off"] .cms-hero-slide{transition:none}
 .cms-hero-slide.is-active{opacity:1;transform:translate3d(0,0,0);z-index:1;pointer-events:auto}
-.cms-hero-picture{display:flex;align-items:center;justify-content:center;width:100%;height:100%;
- padding:22px 5% 44px;box-sizing:border-box;overflow:hidden}
-.cms-hero-image{display:block;width:100%;height:100%;max-height:430px;
- object-fit:contain;object-position:center;mix-blend-mode:multiply}
-/* SEO04 fallback stays in the approved Hero frame if public media is unavailable. */
-.cms-hero-image-fallback{color:var(--fb-glass-muted);font-size:14px;
+.cms-hero-picture{display:block;position:absolute;inset:0;width:100%;height:100%;overflow:hidden}
+.cms-hero-image{display:block;width:100%;height:100%;object-fit:contain;object-position:center}
+.cms-hero-image-fallback{display:grid;place-items:center;color:var(--fb-glass-muted);font-size:14px;
  text-align:center;font-weight:650;line-height:1.5}
+.cms-hero-cta{position:absolute;z-index:4;left:clamp(18px,4vw,42px);bottom:clamp(16px,3vw,30px);
+ display:inline-flex;align-items:center;justify-content:center;gap:12px;
+ min-height:var(--fb-control-height-compact,36px);padding:0 19px;
+ border:1px solid rgba(255,255,255,.7);border-radius:999px;
+ color:#fff;background:rgba(94,30,147,.96);box-shadow:0 8px 22px rgba(31,7,57,.25);
+ font-size:var(--fb-control-font-size,13px);font-weight:800;text-decoration:none;
+ transition:background-color var(--fb-motion-button,190ms) var(--fb-easing-open,ease),
+ transform var(--fb-motion-button,190ms) var(--fb-easing-open,ease),
+ box-shadow var(--fb-motion-button,190ms) var(--fb-easing-open,ease)}
+.cms-hero-cta:hover{background:var(--color-primary-strong,#431078);box-shadow:0 11px 25px rgba(31,7,57,.32)}
+.cms-hero-cta:focus-visible{outline:3px solid #fff;outline-offset:3px}
 /* Discreet controls: accessible hit areas, never a floating counter/card. */
 .cms-hero-controls{position:absolute;z-index:3;left:50%;bottom:8px;
  transform:translateX(-50%);display:flex;align-items:center;justify-content:center;
@@ -126,12 +132,11 @@
 .cms-web-popup-body p{margin:0;font-size:14px;line-height:1.6;overflow-wrap:anywhere}
 .cms-web-popup-cta{align-self:flex-start}
 @media(max-width:800px){
- .ref-hero__visual.ref-hero__visual--cms{min-height:0;height:auto;width:min(100%,460px);margin:0 auto;display:block}
- .cms-hero-carousel{min-height:0}
- .cms-hero-stage{height:clamp(225px,55vw,350px)}
- .cms-hero-picture{padding:8px 5% 44px}
- .cms-hero-image{max-height:325px}
- .cms-hero-controls{left:50%;bottom:3px}
+ .cms-hero-stage{aspect-ratio:4/5}
+ .cms-hero-cta{left:50%;bottom:60px;transform:translateX(-50%);
+  min-height:var(--fb-control-height-touch,44px);white-space:nowrap}
+ .cms-hero-cta:hover{transform:translateX(-50%)}
+ .cms-hero-controls{left:50%;bottom:4px}
  .cms-hero-controls .cms-hero-dot{flex-basis:var(--fb-control-height-touch,44px);width:var(--fb-control-height-touch,44px);height:var(--fb-control-height-touch,44px)}
  .cms-web-banner{grid-template-columns:1fr}
  .cms-web-banner-copy{padding:15px}
@@ -149,7 +154,7 @@
 @media(prefers-reduced-motion:reduce){
  .cms-hero-slide{transition:none!important;transform:none!important}
  .cms-hero-dot span{transition:none!important}
- .cms-web-banner-cta,.cms-web-popup-cta,.cms-web-popup-heading button{transition:none}
+ .cms-web-banner-cta,.cms-web-popup-cta,.cms-web-popup-heading button,.cms-hero-cta{transition:none}
  .cms-web-popup-dialog,.cms-web-popup-dialog::backdrop{animation:none!important;transition:none!important}
  .cms-web-popup-dialog::backdrop{backdrop-filter:none}
 }
