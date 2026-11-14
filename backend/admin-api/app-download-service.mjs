@@ -37,7 +37,8 @@ export function validateAppDownload(input){
   typeof input.title==="string"&&input.title.length>0&&input.title.length<=80&&
   typeof input.message==="string"&&input.message.length>0&&input.message.length<=240&&
   !/[<>]/.test(input.title+input.message)&&
-  !/[\x00-\x1f\x7f]/.test(input.title+input.message)&&
+  !/[\x00-\x1f\x7f]/.test(input.title)&&
+  !/[\x00-\x09\x0b-\x1f\x7f]/.test(input.message)&&
   validateStoreUrl(input.iosUrl,"ios")&&validateStoreUrl(input.androidUrl,"android")&&
   Number.isSafeInteger(input.revision)&&input.revision>=1;
 }
