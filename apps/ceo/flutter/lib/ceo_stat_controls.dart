@@ -72,3 +72,20 @@ class CeoStatsSubTabs extends StatelessWidget {
     ])));
  }
 }
+
+ 
+/// Pins the secondary tab rail only when it reaches the top of Statistics.
+/// The preceding 7/30/90 filter is deliberately not pinned.
+class CeoStatsStickyHeader extends SliverPersistentHeaderDelegate {
+ final Widget child;
+ final double height;
+ const CeoStatsStickyHeader({required this.child,required this.height});
+ @override double get minExtent=>height;
+ @override double get maxExtent=>height;
+ @override Widget build(BuildContext context,double shrinkOffset,bool overlapsContent)=>
+  Material(color:Colors.white,elevation:overlapsContent?2:0,
+   shadowColor:ceoPurple.withValues(alpha:.14),
+   child:SizedBox(height:height,child:child));
+ @override bool shouldRebuild(covariant CeoStatsStickyHeader oldDelegate)=>
+  oldDelegate.height!=height||oldDelegate.child!=child;
+}
