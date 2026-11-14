@@ -7,7 +7,7 @@ import {handleOutsourcingRequest} from "./outsourcing-service.mjs";
 import {verifyIntakeProof} from "../../lib/outsourcing/proxy-proof.ts";
 
 const ALLOWED_SQL = new Set(Object.values(PUBLIC_READ_QUERIES));
-const ROUTES = new Set(["/v1/public/categories", "/v1/public/products", "/v1/public/catalog", "/v1/public/content", "/v1/public/cms", "/v1/public/home-layout", "/v1/public/category-display", "/v1/public/catalogue-books", "/v1/public/outsourcing-requests", "/v1/public/contact-requests", "/v1/public/chat"]);
+const ROUTES = new Set(["/v1/public/categories", "/v1/public/products", "/v1/public/catalog", "/v1/public/content", "/v1/public/cms", "/v1/public/home-layout", "/v1/public/app-download", "/v1/public/category-display", "/v1/public/catalogue-books", "/v1/public/outsourcing-requests", "/v1/public/contact-requests", "/v1/public/chat"]);
 // Owner-approved single decorative image. This Worker binding is in the same
 // Cloudflare account as the private fbmn R2 bucket. Never accept caller keys.
 const DECORATIVE_ROUTE = "/v1/public/decorative-background";
@@ -203,6 +203,7 @@ export function createStagingWorker({createDbClient}) {
           getPublicContent:()=>readModel(env,m=>m.getPublicContent()),
           getPublicCms:()=>readModel(env,m=>m.getPublicCms()),
           getPublicHomeLayout:()=>readModel(env,m=>m.getPublicHomeLayout()),
+          getPublicAppDownload:()=>readModel(env,m=>m.getPublicAppDownload()),
           getPublicCategoryDisplay:()=>readModel(env,m=>m.getPublicCategoryDisplay()),
           getPublicSeoSettings:({contentSource})=>{
             if(contentSource==="cms"&&env.PUBLIC_CMS_ENABLED!=="true")
