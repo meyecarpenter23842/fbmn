@@ -89,6 +89,33 @@ export function verifyCallback(config,query,cookie="",subject=null,now=Date.now(
  }
  return {code:query.code,verifier:payload.verifier,subject:payload.subject};
 }
+// Finalize only after the initiating Owner explicitly confirms in the CEO
+// origin with a fresh JWT. This prevents stolen Google authorization URLs from
+// silently overwriting an Owner's saved Google grant in another browser.
+export function makeCompletionTicket(config,verified,now=Date.now()){
+ if(config?.status!=="ready"||!verified||
+  typeof verified.subject!=="string"||verified.subject.length<1||
+  verified.subject.length>200||typeof verified.code!=="string"||
+  !CODE.test(verified.code)||typeof verified.verifier!=="string"||
+  !STATE.test(verified.verifier))throw new Error("gsc_oauth_invalid_completion");
+ return encryptSecret(JSON.stringify({
+  kind:"gsc_completion_v1",subject:verified.subject,code:verified.code,
+  verifier:verified.verifier,createdAt:now
+ }),config.key);
+}
+export function verifyCompletionTicket(config,ticket,ownerSubject,now=Date.now()){
+ if(config?.status!=="ready"||typeof ticket!=="string"||
+  !SEALED_STATE.test(ticket)||typeof ownerSubject!=="string"||
+  ownerSubject.length<1||ownerSubject.length>200)return null;
+ let payload;
+ try{payload=JSON.parse(decryptSecret(ticket,config.key));}catch{return null;}
+ if(!payload||payload.kind!=="gsc_completion_v1"||
+  payload.subject!==ownerSubject||!CODE.test(payload.code)||
+  !STATE.test(payload.verifier)||!Number.isFinite(payload.createdAt)||
+  now<payload.createdAt||now-payload.createdAt>120000)return null;
+ return {code:payload.code,verifier:payload.verifier,subject:payload.subject};
+}
+
 async function googleJson(fetchImpl,url,params,timeout=8000){
  let response;
  try{response=await fetchImpl(url,{method:"POST",redirect:"error",cache:"no-store",
