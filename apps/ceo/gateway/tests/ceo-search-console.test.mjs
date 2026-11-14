@@ -3,7 +3,8 @@ import assert from "node:assert/strict";
 import {generateKeyPairSync,createVerify} from "node:crypto";
 import {readFileSync} from "node:fs";
 import {
- GSC_PERIODS,gscDates,readGscConfig,formatGscReport,fetchGscReport
+ GSC_PERIODS,gscDates,gscPreviousDates,readGscConfig,
+ formatGscReport,formatGscComparison,fetchGscReport
 } from "../lib/ceo-search-console.mjs";
 
 const {privateKey,publicKey}=generateKeyPairSync("rsa",{modulusLength:2048});
@@ -178,4 +179,89 @@ test("SEO06 treats Google 403 as a permission error and does not expose raw resp
  assert.match(route,/fetchGscReport\(period,\{accessToken,site:config\.property\}\)/);
  assert.match(route,/gsc_permission_denied/);
  assert.doesNotMatch(route,/FBMN_CEO_GSC_SERVICE_ACCOUNT_JSON/);
+});
+
+test("SEO07 compares exact adjacent finalized PT windows for 7/30/90 days",()=>{
+ assert.deepEqual(gscPreviousDates("7d",NOW),{
+  startDate:"2026-10-28",endDate:"2026-11-03"
+ });
+ assert.deepEqual(gscPreviousDates("30d",NOW),{
+  startDate:"2026-09-12",endDate:"2026-10-11"
+ });
+ assert.deepEqual(gscPreviousDates("90d",NOW),{
+  startDate:"2026-05-15",endDate:"2026-08-12"
+ }); // test concrete dates separately if period arithmetic changes
+ assert.throws(()=>gscPreviousDates("random",NOW),/gsc_invalid_period/);
+});
+
+test("SEO07 compares only matching sanitized top rows, without false zero or PII",async()=>{
+ const property="sc-domain:fbmn.vn";
+ const calls=[];
+ const token="x".repeat(45);
+ const fakeFetch=async(url,options)=>{
+  const p=JSON.parse(options.body);
+  assert.equal(Object.hasOwn(p,"dimensionFilterGroups"),false);
+  assert.equal(url,"https://www.googleapis.com/webmasters/v3/sites/"+encodeURIComponent(property)+"/searchAnalytics/query");
+  calls.push({start:p.startDate,end:p.endDate,dimension:p.dimensions[0]||"overview"});
+  const current=p.startDate==="2026-11-04";
+  const total=current?
+   {clicks:12,impressions:200,ctr:.06,position:8}:
+   {clicks:10,impressions:100,ctr:.1,position:12};
+  const keys=p.dimensions[0];
+  const rows=!keys?[total]:keys==="date"?
+   [{keys:["2026-11-04"],...total}]:
+   keys==="query"?
+    (current?[
+     {keys:["tập vở học sinh"],clicks:6,impressions:70,ctr:6/70,position:6},
+     {keys:["sổ tay"],clicks:2,impressions:20,ctr:.1,position:11},
+     {keys:["private@example.com"],clicks:1,impressions:10,ctr:.1,position:2}
+    ]:[
+     {keys:["tập vở học sinh"],clicks:3,impressions:50,ctr:.06,position:8},
+     {keys:["giấy photocopy"],clicks:4,impressions:40,ctr:.1,position:6}
+    ]):
+    (current?[
+     {keys:["https://fbmn.vn/"],clicks:5,impressions:75,ctr:5/75,position:6},
+     {keys:["https://www.fbmn.vn/admin"],clicks:2,impressions:30,ctr:.07,position:8}
+    ]:[
+     {keys:["https://fbmn.vn/"],clicks:8,impressions:90,ctr:8/90,position:10}
+    ]);
+  return new Response(JSON.stringify({rows}),{status:200,
+   headers:{"content-type":"application/json"}});
+ };
+ const r=await fetchGscReport("7d",{
+  accessToken:token,site:property,now:NOW,fetchImpl:fakeFetch,compare:true
+ });
+ assert.equal(calls.length,7);
+ assert.deepEqual(calls.map(x=>x.dimension),
+  ["overview","date","query","page","overview","query","page"]);
+ assert.deepEqual(calls.slice(4).map(x=>[x.start,x.end]),[
+  ["2026-10-28","2026-11-03"],["2026-10-28","2026-11-03"],["2026-10-28","2026-11-03"]
+ ]);
+ assert.equal(r.metrics.clicks,12);
+ assert.equal(r.comparison.metrics.clicks,10);
+ assert.equal(r.comparison.totals.clicksDelta,2);
+ assert.equal(r.comparison.totals.impressionsDelta,100);
+ assert.equal(r.comparison.totals.ctrPointsDelta,-4);
+ assert.equal(r.comparison.totals.positionImprovement,4);
+ assert.equal(r.comparison.keywords.gainers[0].clickDelta,3);
+ assert.equal(r.comparison.keywords.gainers[0].positionImprovement,2);
+ assert.equal(r.comparison.keywords.newInTop[0].label,"sổ tay");
+ assert.equal(r.comparison.keywords.newInTop[0].clickDelta,null);
+ assert.equal(r.comparison.keywords.leftTop[0].label,"giấy photocopy");
+ assert.equal(r.comparison.keywords.leftTop[0].clickDelta,null);
+ assert.equal(r.comparison.pages.decliners[0].clickDelta,-3);
+ assert.equal(JSON.stringify(r).includes("private@example.com"),false);
+ assert.equal(JSON.stringify(r).includes("/admin"),false);
+});
+test("SEO07 never reports a percentage when prior period has zero or no Google metrics",()=>{
+ const d=gscDates("7d",NOW),p=gscPreviousDates("7d",NOW);
+ const base={overview:{rows:[{clicks:5,impressions:50,ctr:.1,position:7}]},
+  daily:{rows:[]},queries:{rows:[]},pages:{rows:[]}};
+ const current=formatGscReport("7d",d,base);
+ const empty=formatGscReport("7d",p,{overview:{rows:[]},daily:{rows:[]},
+  queries:{rows:[]},pages:{rows:[]}});
+ assert.equal(formatGscComparison("7d",current,empty).totals,null);
+ const prior=formatGscReport("7d",p,{...base,
+  overview:{rows:[{clicks:0,impressions:0,ctr:0,position:0}]}});
+ assert.equal(formatGscComparison("7d",current,prior).totals.clicksPercentChange,null);
 });
