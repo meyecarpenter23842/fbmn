@@ -23,7 +23,7 @@ class CeoStatsPeriodFilter extends StatelessWidget {
        borderRadius:BorderRadius.circular(ceoRadius-1),
        onTap:enabled&&period!=item.$1?()=>onChanged(item.$1):null,
        child:AnimatedContainer(duration:ceoMotion,curve:Curves.easeOutCubic,
-        height:height-4,
+        height:height,
         padding:const EdgeInsets.symmetric(horizontal:10),
         decoration:BoxDecoration(
          color:period==item.$1?ceoLavender:Colors.transparent,
