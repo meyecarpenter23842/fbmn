@@ -49,7 +49,7 @@ class CeoGscMovement {
   if(value is! Map<String,dynamic>)return null;
   final label=value['label'],status=value['status'];
   if(label is! String||label.isEmpty||label.length>120||
-    !const ['up','down','flat','new','left'].contains(status))return null;
+    !const ['up','down','flat','new','left'].contains(status)){return null;}
   final current=CeoGscRank.parse(value['current']);
   final previous=CeoGscRank.parse(value['previous']);
   if(status=='new'&&(current==null||previous!=null))return null;
@@ -58,7 +58,7 @@ class CeoGscMovement {
   final c=value['clickDelta'],i=value['impressionsDelta'],p=value['positionImprovement'];
   if(status=='new'||status=='left'){
    if(c!=null||i!=null||p!=null)return null;
-  }else if(c is! int||i is! int||p is! num||!p.isFinite)return null;
+  }else if(c is! int||i is! int||p is! num||!p.isFinite){return null;}
   return CeoGscMovement(label:label,status:status,current:current,previous:previous,
    clickDelta:c is int?c:null,impressionsDelta:i is int?i:null,
    positionImprovement:p is num?p.toDouble():null);
@@ -93,7 +93,7 @@ class CeoGscChangeTotals {
   final c=value['clicksDelta'],i=value['impressionsDelta'],
    ctr=value['ctrPointsDelta'],position=value['positionImprovement'];
   if(c is! int||i is! int||ctr is! num||position is! num||
-   !ctr.isFinite||!position.isFinite)return null;
+   !ctr.isFinite||!position.isFinite){return null;}
   double? percentage(String key){
    final raw=value[key];
    return raw is num&&raw.isFinite?raw.toDouble():null;
@@ -117,7 +117,7 @@ class CeoGscComparison {
   final start=value['startDate'],end=value['endDate'];
   final re=RegExp(r'^\d{4}-\d{2}-\d{2}$');
   if(start is! String||end is! String||
-   !re.hasMatch(start)||!re.hasMatch(end)||start.compareTo(end)>0)return null;
+   !re.hasMatch(start)||!re.hasMatch(end)||start.compareTo(end)>0){return null;}
   return CeoGscComparison(startDate:start,endDate:end,
    metrics:CeoGscMetrics.parse(value['metrics']),
    totals:CeoGscChangeTotals.parse(value['totals']),
