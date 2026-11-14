@@ -354,3 +354,5 @@ Thứ tự mới trước DL8: DL11A (Header một hàng, logo giữa 3+3 tab, t
 
 
 **SEO06-OAUTH-CB (14/11/2026):** Sửa callback OAuth yêu cầu Owner JWT lần hai dù Google redirect không gửi bearer; dùng Owner subject đã seal qua AES-GCM state cookie từ /start và xác minh state/PKCE/TTL. CEO hiển thị chi tiết kết quả callback gsc=... thay vì chỉ Chưa kết nối. Không ảnh hưởng PH01/PH02/SEO05/Neon. Xem docs/seo06-oauth.md. CI/Codex và đồng bộ repo trước khi deploy Owner duyệt.
+
+**SEO06-OAUTH-STATE (14/11/2026, UAT):** Thay phụ thuộc cookie ở callback Google bằng state mã hóa AES-256-GCM chứa Owner subject đã xác thực ở /start, nonce, PKCE verifier và TTL 10 phút. Google redirect không cần JWT/cookie mới; giữ fallback cookie cũ tối đa 10 phút. CEO tiếp tục báo đúng lỗi callback. Không thay database/biến production/SEO05/PH01/PH02. CI/Gateway/Flutter + Codex → squash merge repo phụ → đồng bộ repo chính rồi phát hành CEO theo quyền Owner. Xem docs/seo06-oauth.md.
