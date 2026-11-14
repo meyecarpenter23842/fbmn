@@ -106,7 +106,8 @@ test("website uses the owner-approved logo and verified hero media fallback on b
   assert.ok(logo[20] & 0x10, "transparent logo must carry WebP alpha");
   assert.ok(readFileSync(new URL("../public/brand/fbmn-official-logo.webp", import.meta.url)).byteLength > 1000);
   assert.match(home, /asset=\{approvedSiteMedia.heroBanner\}/);
-  assert.match(home, /NotebookArt cover="sky"/);
+  assert.doesNotMatch(home, /NotebookArt/);
+  assert.match(home, /className="cms-hero-cta"/);
   assert.match(header, /alt="Logo chính thức Futurebook Miền Nam"/);
   assert.match(styles, /\.ref-hero__official-image/);
   assert.match(component, /onError/);
