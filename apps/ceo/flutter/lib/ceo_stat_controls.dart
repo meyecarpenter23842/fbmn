@@ -19,7 +19,7 @@ class CeoStatsPeriodFilter extends StatelessWidget {
    child:Row(mainAxisSize:MainAxisSize.min,children:[
     for(final item in const [('7d','7 ngày'),('30d','30 ngày'),('90d','90 ngày')])
      Semantics(selected:period==item.$1,button:true,
-      child:InkWell(key:ValueKey('ceo-stats-period-'+item.$1),
+      child:InkWell(key:ValueKey('ceo-stats-period-${item.$1}'),
        borderRadius:BorderRadius.circular(ceoRadius-1),
        onTap:enabled&&period!=item.$1?()=>onChanged(item.$1):null,
        child:AnimatedContainer(duration:ceoMotion,curve:Curves.easeOutCubic,
