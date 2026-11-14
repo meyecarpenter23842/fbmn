@@ -42,7 +42,11 @@ test("Hero CMS is one visual composition with low-motion safe carousel",()=>{
  assert.doesNotMatch(carousel,/\{index\+1\} \/ \{slides\.length\}/);
  assert.match(carousel,/media="\(max-width: 800px\)"/);
  assert.match(css,/\.cms-hero-image\{[^}]*object-fit:contain/s);
- assert.match(css,/\.cms-hero-image\{[^}]*mix-blend-mode:multiply/s);
+ assert.doesNotMatch(css,/\.cms-hero-image\{[^}]*mix-blend-mode:multiply/s);
+ assert.match(css,/\.cms-hero-stage\{[^}]*aspect-ratio:16\/7/s);
+ assert.match(css,/\.cms-hero-cta\{position:absolute/);
+ assert.match(carousel,/href=\{item\.ctaUrl\|\|"\/san-pham"\}/);
+ assert.match(carousel,/tabIndex=\{i===index\?0:-1\}/);
  assert.match(css,/\.cms-hero-slide\.is-active/);
  assert.match(css,/\.cms-hero-dot:focus-visible/);
  assert.match(css,/\.cms-hero-controls\{position:absolute;z-index:3;left:50%/);
@@ -59,5 +63,7 @@ test("CMS list/media readiness and Admin scene follow same Hero composition",()=
  assert.match(manager,/Nguồn \/ ghi chú duyệt/);
  assert.match(manager,/Kiểm tra trước khi xuất bản/);
  assert.match(scene,/cms-site-hero-cms-media/);
+ assert.match(scene,/cms-site-hero-cta/);
+ assert.doesNotMatch(scene,/cms-site-hero-copy/);
  assert.doesNotMatch(scene,/slot==="home\.hero"&&slotView/);
 });
