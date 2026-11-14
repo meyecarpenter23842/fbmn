@@ -4,15 +4,15 @@
 `docs/futurebook-ui-contract.md`, `docs/web-component-design-system.md`,
 `docs/cms-placement-contract.md`. Không đổi menu, SKU, NET, phân quyền hoặc slot.
 
-## Bố cục `home.hero`
+## Bố cục `home.hero` — Owner chốt 14/11/2026
 
-- Giữ nguyên Hero text/CTA đã duyệt bên trái (**43%**); bên phải (**57%**) là vùng hình minh họa CMS, **không dựng một card trắng chứa tiêu đề/CTA lặp**.
-- Ảnh CMS là phần thị giác, không tự thay heading, lợi ích, CTA của Hero cố định. Trong Admin, title/summary là metadata và alt; chỉ slot banner ngoài Hero mới render khối copy/CTA riêng.
-- Với ảnh sản phẩm riêng lẻ/cụm sản phẩm, **WebP nền trong suốt** được ưu tiên. Sắp xếp bố cục của từng ảnh **bên trong file** thay vì xếp các lớp bằng CSS không có metadata. Cùng phối cảnh, cùng nguồn sáng; bóng mềm được làm ngay trong artwork.
-- Ảnh poster có nền **cũng được chấp nhận** nếu nền được thiết kế khớp tông tím–kem của vùng Hero. Hero sử dụng `mix-blend-mode:multiply` để hạn chế mảng nền trắng trên tông sáng; đây là fallback trình bày, **không thể tự xóa nền bất kỳ ảnh nào**. Không dùng poster nền tối với vùng này.
-- Dùng đúng hai asset R2 WebP `desktop` / `mobile` từ bản ghi CMS được duyệt. Không crop sản phẩm: `object-fit:contain`, `object-position:center`. Tránh nhét chữ/CTA vào file hình để khỏi trùng copy và vỡ bố cục.
-- **Desktop (1440/1280):** vùng hình giữ mép an toàn khoảng 6–8% mỗi phía. Không giẫm lên hero copy, menu hoặc CTA. **Tablet 768:** chuyển sang trục dọc. **Mobile 390/360:** asset riêng, sản phẩm rõ nét và chiếm một vùng hình bên dưới copy; không ép tỷ lệ desktop vào mobile.
-- Nếu chưa có CMS `home.hero` đã duyệt, giữ hình hero fallback hiện có và giao diện nguyên vẹn. Các slot `home.after_products` và `category.header` giữ mẫu banner riêng phù hợp vị trí.
+- **Một ảnh Hero toàn chiều ngang + đúng một nút HTML “Xem sản phẩm” trên mỗi Slide**. Không còn cột 43% chữ và 57% ảnh; toàn bộ typography/sản phẩm/trang trí của chiến dịch do Owner thiết kế sẵn trong artwork.
+- Mỗi Slide tiếp tục dùng cặp media R2 đã duyệt **Desktop và Mobile riêng**. Khung đích Desktop **16:7** (gợi ý 1600×700 px), Mobile **4:5** (gợi ý 900×1125 px). Artwork đúng tỷ lệ để phủ kín khung, `object-fit:contain` tránh cắt sản phẩm/chữ. Không tự nâng zoom/crop bằng CSS.
+- Chừa một vùng an toàn trong ảnh cho CTA: Desktop góc dưới trái (mép trái 18–42px, dưới 16–30px), Mobile giữa sát dưới (nằm trên chấm điều hướng). **Không vẽ nút vào file ảnh**; nút thật có focus/hover/keyboard và quyền truy cập.
+- CTA của mỗi Banner sử dụng **liên kết CMS `ctaUrl` hiện có cho tất cả Slide trong Banner**, trống thì mở `/san-pham`. Muốn mỗi Slide có đích khác nhau, tạo Banner riêng; không bịa liên kết hoặc âm thầm thêm schema/per-slide link.
+- Tiêu đề H1 Website vẫn tồn tại ở dạng `sr-only` để phục vụ SEO/trình đọc màn hình. Tiêu đề CMS là metadata/alt; không dựng một khối tiêu đề/CTA khác cạnh ảnh.
+- Admin ở **Website Futurebook → Banner & Popup → Trang chủ · Hero** phải cho phép chọn ảnh Desktop/Mobile, motion, thứ tự slide, CTA Banner và xem trước đúng khung tỷ lệ. Không cần tạo Banner mới hoặc di chuyển dữ liệu CMS đã công khai.
+- Nếu chưa có Banner xuất bản, Website dùng media Hero đã phê duyệt làm fallback cùng CTA `/san-pham`, không dựng lại cụm NotebookArt minh họa.
 
 ## Motion
 
@@ -57,7 +57,7 @@ Kiểm tra thật tại 1440 / 1280 / 768 / 390 / 360 và Chrome/Safari; so sán
 ## C5.1 — Chỉ báo Slide và chuẩn artwork ngang (09/11/2026)
 
 - Bỏ bộ đếm `‹ 2/2 ›` nổi trong góc Hero. Khi có từ hai Slide, dùng **chấm điều hướng nhỏ** căn giữa mép dưới, mỗi chấm vẫn có vùng nhấn ≥36px desktop và ≥44px mobile, có `aria-label`, `aria-pressed`, bàn phím và focus rõ ràng. Không có nút/bộ đếm khi chỉ một Slide.
-- **Desktop Hero:** ưu tiên artwork ngang **16:9** (ví dụ 1600×900, 1920×1080). Ảnh có tỷ lệ **nhỏ hơn 1.35:1** được cảnh báo mềm khi chọn và sau khi lưu trong Admin; không chặn vì có thể là bố cục đặc biệt cần chủ ý.
+- **Desktop Hero:** ưu tiên artwork ngang **16:7** (ví dụ 1600×700, 1920×840). Ảnh có tỷ lệ **nhỏ hơn 1.35:1** được cảnh báo mềm khi chọn và sau khi lưu trong Admin; không chặn vì có thể là bố cục đặc biệt cần chủ ý.
 - **Mobile Hero:** dùng asset riêng, kiểm với màn 360–390px để không đè chữ. Không đảo nhầm ảnh dọc vào Desktop. Sản phẩm phải chiếm phần lớn **diện tích ảnh hữu ích**, không chỉ nằm giữa một khung ảnh có nền trong suốt quá rộng.
 - `object-fit:contain` giữ nguyên để **không cắt/méo sản phẩm**. Do đó hai artwork có tỷ lệ khung khác nhau, hoặc có khoảng trống alpha khác nhau, sẽ có **kích thước sản phẩm nhìn thấy khác nhau** dù dung lượng/độ phân giải lớn hơn. Đây là lỗi chuẩn bị asset, không được giải quyết bằng `object-fit:cover` bừa bãi.
 - Căn khung sản phẩm đồng nhất trong từng file WebP, bỏ khoảng trống transparent dư thừa, giữ cùng mức phóng đại và chân sản phẩm. Ảnh dọc đã xuất bản phải được Owner thay bằng artwork ngang đã duyệt; **không tự sửa hoặc thay ảnh production**.
