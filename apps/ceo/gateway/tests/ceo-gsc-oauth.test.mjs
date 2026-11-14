@@ -56,6 +56,14 @@ test("Owner-bound, expiring OAuth state and PKCE verifier are enforced",()=>{
  assert.equal(verifyCallback(config,{state:"a".repeat(43),code},cookie,owner,now+15000),null);
  assert.equal(verifyCallback(config,{state,code},cookie,owner,now+600001),null);
  assert.equal(verifyCallback(config,{state,code},"tampered-cookie",owner,now),null);
+ // When Google redirects, the browser has no Owner JWT header. The AES-GCM
+ // state cookie must recover the Owner subject already verified by /start.
+ const returned=verifyCallback(config,{state,code},cookie,null,now+15000);
+ assert.equal(returned.subject,owner);
+ assert.equal(returned.verifier,granted.verifier);
+ assert.equal(verifyCallback(config,{state,code},"tampered-cookie",null,now),null);
+ assert.equal(verifyCallback(config,{state:"b".repeat(43),code},cookie,null,now),null);
+ assert.equal(verifyCallback(config,{state,code},cookie,null,now+600001),null);
 });
 test("OAuth code exchange and refresh never send client secret to CEO browser",async()=>{
  const post=[];
@@ -123,9 +131,17 @@ test("Google property must match configured FBMN site exactly and grant read per
 test("OAuth routes check Owner, origin and state; do not expose token in query or response",()=>{
  const read=(p)=>readFileSync(new URL("../app/api/ceo/gsc/oauth/"+p+"/route.ts",import.meta.url),"utf8");
  const start=read("start"),callback=read("callback"),status=read("status");
- for(const route of [start,callback,status]){
+ for(const route of [start,status]){
   assert.match(route,/requireOwner/);
   assert.match(route,/no-store/);
+ }
+ assert.match(callback,/no-store/);
+ assert.doesNotMatch(callback,/requireOwner/);
+ assert.match(callback,/saveGscGrant\(verified\.subject/);
+ assert.match(callback,/verifyCallback\(config/);
+ // Distinct safe callback diagnostics must never echo code/state/tokens.
+ for(const reason of ["invalid","permission","config","token","storage","google_api","connected"]){
+  assert.match(callback,new RegExp('finish\\("'+reason+'"\\)'));
  }
  assert.match(start,/allowedOrigin/);
  assert.match(start,/SameSite=Lax/);
@@ -143,4 +159,16 @@ test("OAuth routes check Owner, origin and state; do not expose token in query o
  assert.match(oauthReport,/readGscGrant/);
  assert.match(oauthReport,/fetchGscReport/);
  assert.doesNotMatch(oauthReport,/FBMN_CEO_GSC_SERVICE_ACCOUNT_JSON/);
+});
+
+test("sealed OAuth callback cannot rely on a new JWT from Google's redirect",()=>{
+ const {cookie,authorizationUrl}=authorizationRequest(config,owner,now);
+ const state=new URL(authorizationUrl).searchParams.get("state");
+ const verified=verifyCallback(config,{
+  state,code:"4/0AX4XfWhValidGoogleAuthorizationCode"
+ },cookie,null,now+20000);
+ assert.equal(verified?.subject,owner);
+ assert.equal(verified?.code,"4/0AX4XfWhValidGoogleAuthorizationCode");
+ assert.equal(verifyCallback(config,{state,
+  code:"4/0AX4XfWhValidGoogleAuthorizationCode"},cookie,"other_owner",now+20000),null);
 });

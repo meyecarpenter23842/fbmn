@@ -70,3 +70,19 @@ class CeoGscReport {
   );
  }
 }
+
+ // SEO06: only known, non-sensitive OAuth callback status values are displayed.
+// Google authorization code/state and tokens must never reach Flutter.
+String gscOAuthResultMessage(String? status)=>switch(status){
+ 'connected'=>'Google đã hoàn tất bước cấp quyền. CEO đang xác minh và tải dữ liệu Search Console.',
+ 'cancelled'=>'Google chưa cấp quyền. Có thể kết nối lại từ CEO khi anh sẵn sàng.',
+ 'invalid'=>'Phiên kết nối Google bị mất hoặc hết hạn khi quay về CEO. Vui lòng thử kết nối lại.',
+ 'config'=>'Cấu hình OAuth trên máy chủ CEO chưa hợp lệ. Cần kiểm tra Client ID, Secret và khóa mã hóa.',
+ 'login'=>'Phiên xác thực Owner đã hết hạn trong lúc kết nối Google. Vui lòng đăng nhập CEO rồi thử lại.',
+ 'permission'=>'Tài khoản Google đã cấp quyền nhưng không có quyền đọc property fbmn.vn đang cấu hình. Kiểm tra quyền trong Search Console.',
+ 'token'=>'Google không cấp được token cho CEO. Cần kiểm tra OAuth Client ID/Secret, Redirect URI và quyền được cấp.',
+ 'google_api'=>'Đã cấp quyền Google nhưng CEO chưa xác minh được property Search Console qua API. Vui lòng thử lại.',
+ 'storage'=>'Google đã cấp quyền nhưng CEO chưa lưu được kết nối vào Neon. Cần kiểm tra quyền database của CEO.',
+ 'error'=>'CEO gặp lỗi khi hoàn tất kết nối Google. Vui lòng kết nối lại sau khi kiểm tra cấu hình.',
+ _=>'',
+};

@@ -17,6 +17,23 @@ const active=CeoGscReport(
 
 void main(){
 
+ test('SEO06 presents concrete sanitized Google OAuth callback outcomes',(){
+  for(final status in const [
+   'connected','cancelled','invalid','config','login','permission',
+   'token','google_api','storage','error'
+  ]){
+   expect(gscOAuthResultMessage(status),isNotEmpty,reason:status);
+  }
+  expect(gscOAuthResultMessage('permission'),contains('property fbmn.vn'));
+  expect(gscOAuthResultMessage('storage'),contains('Neon'));
+  expect(gscOAuthResultMessage('token'),contains('OAuth Client'));
+  expect(gscOAuthResultMessage('invalid'),contains('Phiên kết nối'));
+  expect(gscOAuthResultMessage('connected'),contains('hoàn tất'));
+  expect(gscOAuthResultMessage('unknown'),isEmpty);
+  expect(gscOAuthResultMessage(null),isEmpty);
+ });
+
+
  testWidgets('Expired Google grant offers reconnect and disconnect instead of endless retry',(tester)async{
   await tester.pumpWidget(MaterialApp(home:Scaffold(body:CeoGscPanel(
    report:null,loading:false,reconnectRequired:true,

@@ -57,21 +57,26 @@ export function authorizationRequest(config,subject,now=Date.now()){
  }))url.searchParams.set(k,v);
  return {authorizationUrl:url.toString(),cookie};
 }
-export function verifyCallback(config,query,cookie,subject,now=Date.now()){
+// No bearer JWT accompanies Google's cross-site redirect. The Owner subject was
+// verified at /start and sealed with AES-GCM in this short-lived HttpOnly cookie;
+// verifying its authenticated ciphertext and the random state+PKCE is sufficient.
+// "subject" is optional for callback use, but may be required by other callers.
+export function verifyCallback(config,query,cookie,subject=null,now=Date.now()){
  if(!query||typeof query!=="object"||typeof query.state!=="string"||
   !STATE.test(query.state)||typeof query.code!=="string"||!CODE.test(query.code)||
-  typeof subject!=="string"||!subject)return null;
+  (subject!==null&&(typeof subject!=="string"||!subject)))return null;
  let payload;
  try{payload=JSON.parse(decryptSecret(cookie,config.key));}catch{return null;}
  if(!payload||typeof payload!=="object"||
   typeof payload.state!=="string"||!STATE.test(payload.state)||
   typeof payload.verifier!=="string"||!STATE.test(payload.verifier)||
-  typeof payload.subject!=="string"||payload.subject!==subject||
+  typeof payload.subject!=="string"||payload.subject.length<1||
+  payload.subject.length>200||(subject!==null&&payload.subject!==subject)||
   !Number.isFinite(payload.createdAt)||now-payload.createdAt<0||
   now-payload.createdAt>600000)return null;
  const a=Buffer.from(payload.state),b=Buffer.from(query.state);
  if(a.length!==b.length||!timingSafeEqual(a,b))return null;
- return {code:query.code,verifier:payload.verifier};
+ return {code:query.code,verifier:payload.verifier,subject:payload.subject};
 }
 async function googleJson(fetchImpl,url,params,timeout=8000){
  let response;

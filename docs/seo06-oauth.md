@@ -47,3 +47,10 @@ Tạo biến server-only bằng Vercel Settings → Environment Variables → Pr
 - Node: client config/property whitelist; state nonce + PKCE + expires + Owner binding; encrypt/decrypt & tamper detection; exchange/refresh scope readonly; property check; status, origin và callback guard; DB migration permission.
 - Flutter: 360/390/1280px, OAuth button ở chưa kết nối, không nhầm GSC với PostHog, disconnect xác nhận, OAuth start URL domain pinned, callback tự mở Thống kê → SEO.
 - PR CI/Gateway/Flutter + Codex xanh, squash merge repo phụ, đồng bộ repo chính bằng fast-forward sau kiểm tra Git tree. Không deploy hay migrate production khi chưa được Owner cho phép.
+
+## SEO06-OAUTH-CB — sửa callback sau Google consent (14/11/2026)
+- Owner đã bấm Continue trên Google, CEO vẫn hiện 'Chưa kết nối'; Neon ceo_gsc_oauth_grants có 0 row. Callback cũ trả về ?tab=4&gsc=reason nhưng Flutter không hiển thị lý do.
+- /api/ceo/gsc/oauth/start đã xác thực quyền Owner bằng JWT, ràng buộc Owner subject với state ngẫu nhiên, PKCE verifier trong cookie AES-256-GCM, HttpOnly, SameSite=Lax, TTL 10 phút. Callback của Google không mang bearer Owner JWT mới, nên phải xác thực từ cookie đã seal ở /start thay vì bắt requireOwner() gọi lại Better Auth tại callback. Không chấp nhận subject từ query/Google.
+- Callback chỉ redirect về CEO với status cố định connected, cancelled, invalid, config, permission, token, google_api, storage. CEO hiển thị thông báo rõ ràng trong tab SEO, không lộ code, state, token, email/PII hoặc raw Google response.
+- Vẫn chỉ scope webmasters.readonly, property allowlist fbmn.vn, Neon encrypted token theo Owner, PH01/PH02/SEO05 không đổi; không cần migration/database schema mới.
+- UAT production sau Owner duyệt phát hành: cấp quyền thực bằng Gmail có quyền GSC, xác nhận callback connected, Neon tăng 1 ciphertext grant, API trả KPI GSC thật. Nếu status permission: property/quyền Search Console; nếu token: cấu hình Client Secret/Redirect; nếu storage: Neon. Không gọi là nghiệm thu thực tế nếu chưa xác thực kết quả với Owner.
