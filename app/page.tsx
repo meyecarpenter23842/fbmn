@@ -36,9 +36,9 @@ export default async function HomePage() {
                       Ảnh giới thiệu Futurebook đang được cập nhật
                     </div>}
                   />
-                  <a className="cms-hero-cta" href="/san-pham">
+                  <Link className="cms-hero-cta" href="/san-pham">
                     Xem sản phẩm <span aria-hidden="true">↗</span>
-                  </a>
+                  </Link>
                 </div>}
           </Container>
         </section>
