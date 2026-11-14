@@ -212,14 +212,14 @@ test("C4 Admin proxy forwards authenticated CMS capability and rejects query par
  assert.doesNotMatch(relay,/NEXT_PUBLIC.*TOKEN/);
 });
 
-test("C4 published Hero supersedes notebook fallback and grows on narrow mobile",()=>{
+test("C4 published Hero supersedes fallback and remains full artwork on mobile",()=>{
  const home=read("app/page.tsx"),css=read("app/cms-public.css");
  assert.match(home,/const hasCmsHero=cms\.some\(item=>item\.kind==="banner"&&item\.slot==="home\.hero"\)/);
- assert.match(home,/ref-hero__visual--cms/);
- assert.match(home,/hasCmsHero\?<CmsBannerSlot items=\{cms\} slot="home\.hero"\/>:<\>/);
- assert.match(css,/\.ref-hero__visual\.ref-hero__visual--cms\{[^}]*height:auto/s);
- assert.match(css,/@media\(max-width:800px\)\{[\s\S]*?\.ref-hero__visual\.ref-hero__visual--cms\{min-height:0;height:auto/);
- assert.match(css,/\.cms-hero-stage\{position:relative/);
+ assert.match(home,/hasCmsHero[\s\S]*?<CmsBannerSlot items=\{cms\} slot="home\.hero"\/>/);
+ assert.match(home,/className="ref-hero__fallback"/);
+ assert.match(home,/className="cms-hero-cta" href="\/san-pham"/);
+ assert.match(css,/\.cms-hero-stage\{position:relative;[^}]*aspect-ratio:16\/7/s);
+ assert.match(css,/\.cms-hero-stage\{aspect-ratio:4\/5\}/);
  assert.match(css,/\.cms-hero-image\{display:block/);
  assert.match(css,/\.cms-web-popup-heading button:hover/);
  assert.match(css,/\.cms-web-popup-heading button:active/);
