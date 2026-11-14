@@ -8,6 +8,7 @@ const PROPERTIES=new Set(["sc-domain:fbmn.vn","https://www.fbmn.vn/"]);
 const CLIENT_ID=/^[0-9]{8,30}-[a-z0-9_-]{8,90}\.apps\.googleusercontent\.com$/;
 const TOKEN=/^[A-Za-z0-9._~+/\-=]{20,5000}$/;
 const STATE=/^[A-Za-z0-9_-]{32,80}$/;
+const SEALED_STATE=/^v1\.[A-Za-z0-9_-]{40,5000}$/;
 const CODE=/^[A-Za-z0-9/_\-.]{8,2048}$/;
 
 /** @returns {{status:"unconfigured"} | {status:"ready",property:string,clientId:string,clientSecret:string,key:import("node:buffer").Buffer}} */
@@ -48,25 +49,31 @@ export function authorizationRequest(config,subject,now=Date.now()){
  const verifier=randomBytes(48).toString("base64url");
  const challenge=createHash("sha256").update(verifier).digest("base64url");
  const payload=JSON.stringify({state,verifier,subject,createdAt:now});
- const cookie=encryptSecret(payload,config.key);
+ // The Google round-trip must not depend on a browser cookie. A short-lived,
+ // AEAD-sealed state carries the Owner-verified subject, nonce and PKCE verifier.
+ // Google sees only opaque ciphertext. The authorization code remains one-use.
+ const sealedState=encryptSecret(payload,config.key);
  const url=new URL(GSC_AUTH_URL);
  for(const [k,v] of Object.entries({
   client_id:config.clientId,redirect_uri:GSC_CALLBACK,response_type:"code",
-  scope:GSC_SCOPE,state,code_challenge:challenge,
+  scope:GSC_SCOPE,state:sealedState,code_challenge:challenge,
   code_challenge_method:"S256",access_type:"offline",prompt:"consent"
  }))url.searchParams.set(k,v);
- return {authorizationUrl:url.toString(),cookie};
+ return {authorizationUrl:url.toString()};
 }
-// No bearer JWT accompanies Google's cross-site redirect. The Owner subject was
-// verified at /start and sealed with AES-GCM in this short-lived HttpOnly cookie;
-// verifying its authenticated ciphertext and the random state+PKCE is sufficient.
-// "subject" is optional for callback use, but may be required by other callers.
-export function verifyCallback(config,query,cookie,subject=null,now=Date.now()){
- if(!query||typeof query!=="object"||typeof query.state!=="string"||
-  !STATE.test(query.state)||typeof query.code!=="string"||!CODE.test(query.code)||
+// A browser may drop cookies across Google consent (mobile/in-app browsers).
+// Authenticate the AEAD-sealed OAuth state itself; it was created only after
+// requireOwner passed at /start. For pre-release in-flight OAuth attempts,
+// legacy random state + cookie remains supported for up to ten minutes.
+export function verifyCallback(config,query,cookie="",subject=null,now=Date.now()){
+ if(config?.status!=="ready"||!query||typeof query!=="object"||
+  typeof query.state!=="string"||typeof query.code!=="string"||
+  !CODE.test(query.code)||
   (subject!==null&&(typeof subject!=="string"||!subject)))return null;
+ const sealed=SEALED_STATE.test(query.state);
+ if(!sealed&&!STATE.test(query.state))return null;
  let payload;
- try{payload=JSON.parse(decryptSecret(cookie,config.key));}catch{return null;}
+ try{payload=JSON.parse(decryptSecret(sealed?query.state:cookie,config.key));}catch{return null;}
  if(!payload||typeof payload!=="object"||
   typeof payload.state!=="string"||!STATE.test(payload.state)||
   typeof payload.verifier!=="string"||!STATE.test(payload.verifier)||
@@ -74,8 +81,12 @@ export function verifyCallback(config,query,cookie,subject=null,now=Date.now()){
   payload.subject.length>200||(subject!==null&&payload.subject!==subject)||
   !Number.isFinite(payload.createdAt)||now-payload.createdAt<0||
   now-payload.createdAt>600000)return null;
- const a=Buffer.from(payload.state),b=Buffer.from(query.state);
- if(a.length!==b.length||!timingSafeEqual(a,b))return null;
+ // Legacy state needs a timing-safe nonce comparison with its cookie.
+ // New state is fully authenticated by AES-GCM, without browser cookies.
+ if(!sealed){
+  const a=Buffer.from(payload.state),b=Buffer.from(query.state);
+  if(a.length!==b.length||!timingSafeEqual(a,b))return null;
+ }
  return {code:query.code,verifier:payload.verifier,subject:payload.subject};
 }
 async function googleJson(fetchImpl,url,params,timeout=8000){
