@@ -63,8 +63,8 @@ export async function handleAppDownloadSettings({request,actor,db}){
   const req=await bodyJson(request);
   if(!req||!["save","reset"].includes(req.operation)||
      !Number.isSafeInteger(req.revision)||req.revision<1)return fail(400,"invalid_settings");
-  const candidate=req.operation==="reset"?{...DEFAULT_APP_DOWNLOAD,revision:req.revision}:
-   {...req,operation:undefined};
+  const {operation,...settings}=req;
+  const candidate=operation==="reset"?{...DEFAULT_APP_DOWNLOAD,revision:req.revision}:settings;
   if(!validateAppDownload(candidate))return fail(400,"invalid_settings");
   const saved=await db(async client=>{
    await client.query("BEGIN");
