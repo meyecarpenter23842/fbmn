@@ -35,8 +35,8 @@ test("AES-256-GCM seals refresh tokens with randomized IV and verifies integrity
  assert.throws(()=>decryptSecret(a.slice(0,-4)+"AAAA",config.key),/invalid_ciphertext/);
  assert.throws(()=>decryptSecret(a,randomBytes(32)),/invalid_ciphertext/);
 });
-test("Owner-bound, expiring OAuth state and PKCE verifier are enforced",()=>{
- const {authorizationUrl,cookie}=authorizationRequest(config,owner,now);
+test("AEAD-sealed OAuth state works without cookie or JWT and binds Owner + PKCE + TTL",()=>{
+ const {authorizationUrl}=authorizationRequest(config,owner,now);
  const uri=new URL(authorizationUrl);
  assert.equal(uri.origin,new URL(GSC_AUTH_URL).origin);
  assert.equal(uri.searchParams.get("redirect_uri"),GSC_CALLBACK);
@@ -47,23 +47,35 @@ test("Owner-bound, expiring OAuth state and PKCE verifier are enforced",()=>{
  assert.equal(uri.searchParams.get("response_type"),"code");
  assert.equal(uri.searchParams.get("client_secret"),null);
  const state=uri.searchParams.get("state");
+ assert.match(state,/^v1\.[A-Za-z0-9_-]{40,5000}$/);
+ // Google callback only has query parameters. No browser cookie or fresh JWT.
  const code="4/0AX4XfWhValidGoogleAuthorizationCode";
- const granted=verifyCallback(config,{state,code},cookie,owner,now+15000);
+ const granted=verifyCallback(config,{state,code},"",null,now+15000);
  assert.ok(granted);
+ assert.equal(granted.subject,owner);
  assert.equal(createHash("sha256").update(granted.verifier).digest("base64url"),
   uri.searchParams.get("code_challenge"));
- assert.equal(verifyCallback(config,{state,code},cookie,"other_owner",now+15000),null);
- assert.equal(verifyCallback(config,{state:"a".repeat(43),code},cookie,owner,now+15000),null);
- assert.equal(verifyCallback(config,{state,code},cookie,owner,now+600001),null);
- assert.equal(verifyCallback(config,{state,code},"tampered-cookie",owner,now),null);
- // When Google redirects, the browser has no Owner JWT header. The AES-GCM
- // state cookie must recover the Owner subject already verified by /start.
- const returned=verifyCallback(config,{state,code},cookie,null,now+15000);
- assert.equal(returned.subject,owner);
- assert.equal(returned.verifier,granted.verifier);
- assert.equal(verifyCallback(config,{state,code},"tampered-cookie",null,now),null);
- assert.equal(verifyCallback(config,{state:"b".repeat(43),code},cookie,null,now),null);
- assert.equal(verifyCallback(config,{state,code},cookie,null,now+600001),null);
+ assert.equal(verifyCallback(config,{state,code},"","other_owner",now+15000),null);
+ assert.equal(verifyCallback(config,{state,code},"",null,now+600001),null);
+ assert.equal(verifyCallback(config,{state,code},"",null,now-1),null);
+ const flip=state.slice(0,-5)+(state.slice(-5,-4)==="A"?"B":"A")+state.slice(-4);
+ assert.equal(verifyCallback(config,{state:flip,code},"",null,now+15000),null);
+ assert.equal(verifyCallback(config,{state:"a".repeat(43),code},"",null,now+15000),null);
+ assert.equal(verifyCallback(config,{state,code},"",null,now+15000).subject,owner);
+ assert.equal(verifyCallback(oauthConfig({...ENV,
+  FBMN_CEO_GSC_OAUTH_ENCRYPTION_KEY:randomBytes(32).toString("hex")}),
+  {state,code},"",null,now+15000),null);
+ // A stale or corrupt browser cookie cannot break the newly sealed state.
+ assert.equal(verifyCallback(config,{state,code},"stale-cookie",null,now+15000).subject,owner);
+});
+test("legacy random OAuth state is only valid with its authentic cookie",()=>{
+ const state="a".repeat(43),verifier="b".repeat(64);
+ const cookie=encryptSecret(JSON.stringify({state,verifier,subject:owner,createdAt:now}),config.key);
+ const code="4/0AX4XfWhValidGoogleAuthorizationCode";
+ assert.equal(verifyCallback(config,{state,code},cookie,null,now+3000).subject,owner);
+ assert.equal(verifyCallback(config,{state,code},"",null,now+3000),null);
+ assert.equal(verifyCallback(config,{state,code},"tampered-cookie",null,now+3000),null);
+ assert.equal(verifyCallback(config,{state:"c".repeat(43),code},cookie,null,now+3000),null);
 });
 test("OAuth code exchange and refresh never send client secret to CEO browser",async()=>{
  const post=[];
@@ -94,7 +106,7 @@ test("OAuth code exchange and refresh never send client secret to CEO browser",a
  const verifier=verifyCallback(config,{
   state:new URL(auth.authorizationUrl).searchParams.get("state"),
   code:"4/0AX4XfWhValidGoogleAuthorizationCode"
- },auth.cookie,owner,now);
+ },"",owner,now);
  const grant=await exchangeGoogleCode(config,verifier.code,verifier.verifier,fetchImpl);
  assert.equal(typeof grant.refreshToken,"string");
  const refreshed=await refreshGoogleToken(config,grant.refreshToken,fetchImpl);
@@ -144,8 +156,8 @@ test("OAuth routes check Owner, origin and state; do not expose token in query o
   assert.match(callback,new RegExp('finish\\("'+reason+'"\\)'));
  }
  assert.match(start,/allowedOrigin/);
- assert.match(start,/SameSite=Lax/);
- assert.match(start,/HttpOnly/);
+ assert.doesNotMatch(start,/Set-Cookie|HttpOnly|SameSite=/);
+ assert.match(start,/authorizationRequest/);
  assert.match(callback,/verifyCallback/);
  assert.match(callback,/hasGoogleProperty/);
  assert.match(callback,/saveGscGrant/);
@@ -162,13 +174,11 @@ test("OAuth routes check Owner, origin and state; do not expose token in query o
 });
 
 test("sealed OAuth callback cannot rely on a new JWT from Google's redirect",()=>{
- const {cookie,authorizationUrl}=authorizationRequest(config,owner,now);
+ const {authorizationUrl}=authorizationRequest(config,owner,now);
  const state=new URL(authorizationUrl).searchParams.get("state");
- const verified=verifyCallback(config,{
-  state,code:"4/0AX4XfWhValidGoogleAuthorizationCode"
- },cookie,null,now+20000);
+ const code="4/0AX4XfWhValidGoogleAuthorizationCode";
+ const verified=verifyCallback(config,{state,code},"",null,now+20000);
  assert.equal(verified?.subject,owner);
- assert.equal(verified?.code,"4/0AX4XfWhValidGoogleAuthorizationCode");
- assert.equal(verifyCallback(config,{state,
-  code:"4/0AX4XfWhValidGoogleAuthorizationCode"},cookie,"other_owner",now+20000),null);
+ assert.equal(verified?.code,code);
+ assert.equal(verifyCallback(config,{state,code},"","other_owner",now+20000),null);
 });
