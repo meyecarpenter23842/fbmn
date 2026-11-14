@@ -4,12 +4,11 @@ import 'ceo_ui_tokens.dart';
 /// Compact 7/30/90-day segment for CEO statistics, sized from shared UI tokens.
 class CeoStatsPeriodFilter extends StatelessWidget {
  final String period;
- final bool enabled;
+ final bool enabled,mobile;
  final ValueChanged<String> onChanged;
  const CeoStatsPeriodFilter({super.key,required this.period,
-  required this.onChanged,this.enabled=true});
+  required this.onChanged,required this.mobile,this.enabled=true});
  @override Widget build(BuildContext context){
-  final mobile=MediaQuery.sizeOf(context).width<=780;
   final height=mobile?ceoMobileButtonHeight:ceoDesktopButtonHeight;
   return Material(color:Colors.transparent,child:Container(
    key:const ValueKey('ceo-stats-period-filter'),
@@ -42,12 +41,12 @@ class CeoStatsPeriodFilter extends StatelessWidget {
 class CeoStatsSubTabs extends StatelessWidget {
  final List<String> tabs;
  final int selected;
+ final bool mobile;
  final ValueChanged<int> onChanged;
  const CeoStatsSubTabs({super.key,required this.tabs,required this.selected,
-  required this.onChanged});
+  required this.onChanged,required this.mobile});
  @override Widget build(BuildContext context){
-  final height=MediaQuery.sizeOf(context).width<=780?
-   ceoMobileButtonHeight:ceoDesktopButtonHeight;
+  final height=mobile?ceoMobileButtonHeight:ceoDesktopButtonHeight;
   return Container(
    decoration:const BoxDecoration(border:Border(
     bottom:BorderSide(color:ceoBorder))),
