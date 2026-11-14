@@ -22,9 +22,13 @@ export async function generateMetadata({ params,searchParams }: Props): Promise<
   const [catalog, { slug }, raw, seo, modes] = await Promise.all([getPublicCatalog(), params,searchParams,getPublishedSeo(),getPublicCategoryDisplay()]);
   const filtered=["q","nhom","kho","gsm","trang","sap-xep"].some(key=>key in raw);
   const category = getCategoryBySlug(catalog, slug);
-  return category?{...applySeoSetting(categoryMetadata(category,catalog,modes),seoFor(seo,"category",category.slug)),
-    ...(filtered?{robots:{index:false,follow:true}}:{})}
-    :{title:"Danh mục đang cập nhật | Futurebook Miền Nam",robots:{index:false}};
+  // Missing categories must not emit an indexable 200 / soft 404.
+  if(!category)notFound();
+  const holdingCategory=category.id==="p5-uncategorized" ||
+   category.slug==="chua-phan-loai" ||
+   category.name.trim().toLocaleLowerCase("vi")==="chưa phân loại";
+  return {...applySeoSetting(categoryMetadata(category,catalog,modes),seoFor(seo,"category",category.slug)),
+    ...((filtered||holdingCategory)?{robots:{index:false,follow:true}}:{})};
 }
 
 export default async function CategoryPage({ params, searchParams }: Props) {
