@@ -93,18 +93,11 @@ export default function CmsWebsiteScene({kind,slot,title,summary,ctaUrl,image,de
   <SiteHeaderScene device={device}/>
   <main className="cms-site-body">
    {home&&<>
-    <section className="cms-site-hero" aria-label="Hero cố định của Website">
-     <div className="cms-site-hero-copy">
-      <span>FUTUREBOOK MIỀN NAM</span>
-      <h2>VỞ VIẾT<br/>FUTUREBOOK<br/>MIỀN NAM</h2>
-      <p>Đồng hành cùng tri thức<br/>Kiến tạo tương lai</p>
-      <small>Thông tin rõ ràng · Mẫu mã đa dạng · Dành cho đại lý</small>
+    <section className="cms-site-hero" aria-label="Hero một ảnh và nút Xem sản phẩm">
+     <div className="cms-site-hero-cms-media" aria-label="Ảnh Hero hoàn chỉnh">
+      {slot==="home.hero"?image:<span>Ảnh Hero được quản lý trong Banner trang chủ</span>}
      </div>
-     <div className="cms-site-hero-art">
-      {slot==="home.hero"?<div className="cms-site-hero-cms-media" aria-label="Ảnh CMS trong vùng Hero">
-       {image}
-      </div>:<span>Vùng hình Hero cố định trên Website</span>}
-     </div>
+     <span className="cms-site-hero-cta">Xem sản phẩm <span aria-hidden="true">↗</span></span>
     </section>
     <section className="cms-site-categories" aria-label="Dải danh mục theo Website">
      <div className="cms-site-category-tiles">
