@@ -234,7 +234,7 @@ class CeoApi implements CeoRepository {
  @override Future<CeoGscReport> searchConsole(String period,{bool fresh=false})async{
   if(!['7d','30d','90d'].contains(period))throw const CeoApiException(400);
   final raw=await _data('/api/ceo/search-console?period=$period${fresh?'&fresh=1':''}',
-   timeout:const Duration(seconds:25));
+   timeout:const Duration(seconds:40));
   return CeoGscReport.fromJson(raw);
  }
  @override Future<String> startGscOAuth()async{
