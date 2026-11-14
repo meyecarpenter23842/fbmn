@@ -58,9 +58,11 @@ export function selectHomeCatalog(catalog: PublicCatalog, layout: HomeLayout = D
   }
 
   const allowed=new Set(ordered.map(category=>category.id));
-  const curated=layout.categoryIds.length
-    ? layout.categoryIds.filter(id=>allowed.has(id)).map(id=>ordered.find(c=>c.id===id)!)
-    : ordered;
+  const requested=layout.categoryIds.filter(id=>allowed.has(id))
+    .map(id=>ordered.find(c=>c.id===id)!);
+  // Stale Owner curation can still reference only the internal holding
+  // category. Do not let that hide every published product/category.
+  const curated=requested.length?requested:ordered;
   const visible = curated.slice(0, layout.categoryLimit);
   const categories = visible.map(category => {
     const list = byCategory.get(category.id)!;
