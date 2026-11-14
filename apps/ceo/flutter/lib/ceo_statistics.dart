@@ -18,6 +18,7 @@ class CeoStatisticsTab extends StatefulWidget{
  @override State<CeoStatisticsTab> createState()=>CeoStatisticsTabState();
 }
 class CeoStatisticsTabState extends State<CeoStatisticsTab>{
+ final ScrollController _statsScroll=ScrollController();
  String period='7d';
  int section=0;
  bool oauthBusy=false;
@@ -126,7 +127,7 @@ class CeoStatisticsTabState extends State<CeoStatisticsTab>{
    });}
   }
  }
- @override void dispose(){generation++;gscGeneration++;super.dispose();}
+ @override void dispose(){generation++;gscGeneration++;_statsScroll.dispose();super.dispose();}
  Widget summary(CeoWebStatistics value)=>LayoutBuilder(builder:(context,box){
   final columns=box.maxWidth>=720?4:2;
   final cardWidth=math.max(130.0,(box.maxWidth-(columns-1)*10)/columns);
@@ -266,6 +267,9 @@ class CeoStatisticsTabState extends State<CeoStatisticsTab>{
   selected:section,onChanged:(next){
    if(section==next)return;
    setState(()=>section=next);
+   // Changing sections must show the new first panel instead of retaining an
+   // old scroll offset that keeps the tab header but hides new SEO content.
+   if(_statsScroll.hasClients)_statsScroll.jumpTo(0);
    if(next==2||next==4)unawaited(loadGsc());
   });
  List<Widget> selectedPanels(CeoWebStatistics value)=>switch(section){
@@ -333,6 +337,7 @@ class CeoStatisticsTabState extends State<CeoStatisticsTab>{
    final mobile=box.maxWidth<=780;
    final buttonHeight=mobile?ceoMobileButtonHeight:ceoDesktopButtonHeight;
    return CustomScrollView(key:const ValueKey('ceo-stats-scroll'),
+    controller:_statsScroll,
     physics:const AlwaysScrollableScrollPhysics(),
     slivers:[
      SliverToBoxAdapter(child:Padding(
