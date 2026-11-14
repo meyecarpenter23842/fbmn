@@ -86,6 +86,44 @@ void main(){
   expect(tester.takeException(),isNull);
  });
 
+
+ testWidgets('SEO07 displays real period gains/declines and no fabricated zeros',(tester)async{
+  const metric=CeoGscMetrics(clicks:12,impressions:200,ctr:.06,position:8);
+  const older=CeoGscMetrics(clicks:10,impressions:100,ctr:.1,position:12);
+  final current=CeoGscReport(
+   status:'ready',period:'7d',site:'fbmn.vn',oauthStatus:'connected',
+   startDate:'2026-11-04',endDate:'2026-11-10',timezone:'America/Los_Angeles',
+   metrics:metric,
+   comparison:CeoGscComparison(startDate:'2026-10-28',endDate:'2026-11-03',
+    metrics:older,
+    totals:const CeoGscChangeTotals(clicksDelta:2,impressionsDelta:100,
+     ctrPointsDelta:-4.0,positionImprovement:4.0),
+    keywords:const CeoGscMovementGroup(gainers:[
+     CeoGscMovement(label:'tập học sinh',status:'up',clickDelta:3,
+      impressionsDelta:12,positionImprovement:2,
+      current:CeoGscRank('tập học sinh',metric),
+      previous:CeoGscRank('tập học sinh',older))],
+     newInTop:[CeoGscMovement(label:'sổ tay',status:'new',
+      current:CeoGscRank('sổ tay',metric))]),
+    pages:const CeoGscMovementGroup(decliners:[
+     CeoGscMovement(label:'/',status:'down',clickDelta:-3,
+      impressionsDelta:-20,positionImprovement:1,
+      current:CeoGscRank('/',metric),previous:CeoGscRank('/',older))])));
+  await tester.pumpWidget(MaterialApp(home:Scaffold(
+   body:SingleChildScrollView(child:CeoGscPanel(
+    report:current,loading:false,error:'',retry:(){},onConnect:(){},onDisconnect:(){})))));
+  await tester.pumpAndSettle();
+  expect(find.byKey(const ValueKey('ceo-seo07-comparison')),findsOneWidget);
+  expect(find.textContaining('So sánh 7 ngày'),findsOneWidget);
+  expect(find.text('Từ khóa tăng / giảm'),findsOneWidget);
+  expect(find.text('Trang tăng / giảm'),findsOneWidget);
+  expect(find.text('tập học sinh'),findsOneWidget);
+  expect(find.text('sổ tay'),findsOneWidget);
+  expect(find.text('Mới trong top 10'),findsWidgets);
+  expect(tester.takeException(),isNull);
+  await tester.pumpWidget(const SizedBox.shrink());
+ });
+
  for(final width in <double>[360,390,1280]){
   testWidgets('SEO06 OAuth connect and disconnect controls at $width',(tester)async{
    await tester.binding.setSurfaceSize(Size(width,820));
