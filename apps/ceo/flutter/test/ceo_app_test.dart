@@ -740,8 +740,10 @@ void main(){
    expect(find.text('PH02 · Hiệu quả nguồn khách'),findsNothing);
    expect(repo.analyticsLoads,firstLoads);
    expect(tester.takeException(),isNull,reason:'Funnel overflow at $width');
-   await tester.drag(find.byKey(const ValueKey('ceo-stats-scroll')),
-    const Offset(0,1200));
+   final verticalStatsScrollable=find.descendant(
+    of:find.byKey(const ValueKey('ceo-stats-scroll')),
+    matching:find.byType(Scrollable)).first;
+   tester.state<ScrollableState>(verticalStatsScrollable).position.jumpTo(0);
    await tester.pumpAndSettle();
    await tester.ensureVisible(find.byKey(const ValueKey('ceo-stats-period-30d')));
    await tester.pumpAndSettle();
@@ -789,8 +791,10 @@ void main(){
    await tester.pumpAndSettle();
    expect(repo.gscLoads,1,reason:'Returning to same SEO period must reuse GSC data');
    expect(repo.analyticsLoads,1);
-   await tester.drag(find.byKey(const ValueKey('ceo-stats-scroll')),
-    const Offset(0,1200));
+   final verticalStatsScrollable=find.descendant(
+    of:find.byKey(const ValueKey('ceo-stats-scroll')),
+    matching:find.byType(Scrollable)).first;
+   tester.state<ScrollableState>(verticalStatsScrollable).position.jumpTo(0);
    await tester.pumpAndSettle();
    await tester.ensureVisible(find.byKey(const ValueKey('ceo-stats-period-30d')));
    await tester.pumpAndSettle();
