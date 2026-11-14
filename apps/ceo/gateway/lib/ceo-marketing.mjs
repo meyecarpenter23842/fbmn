@@ -83,7 +83,7 @@ function validateDaily(response){
  return response.results.map(row=>{
   if(!Array.isArray(row)||row.length!==4)throw Error("invalid_marketing_daily_row");
   const [day,channel]=row;
-  if(typeof day!=="string"||!/^\\d{4}-\\d{2}-\\d{2}$/.test(day)||
+  if(typeof day!=="string"||!/^\d{4}-\d{2}-\d{2}$/.test(day)||
    !CHANNELS.has(channel))throw Error("invalid_marketing_daily_label");
   const sessions=Number(row[2]),leadSessions=Number(row[3]);
   if(!Number.isSafeInteger(sessions)||sessions<1||
