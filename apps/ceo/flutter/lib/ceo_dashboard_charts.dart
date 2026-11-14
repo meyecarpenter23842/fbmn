@@ -43,7 +43,7 @@ class _CeoMarketingTrendState extends State<CeoMarketingTrend>{
     const Expanded(child:Text('Xu hướng nguồn khách',
      style:TextStyle(fontSize:13,fontWeight:FontWeight.w700,color:ceoInk))),
     SizedBox(width:170,child:DropdownButtonFormField<String>(
-     value:options.contains(channel)?channel:'all',isExpanded:true,
+     initialValue:options.contains(channel)?channel:'all',isExpanded:true,
      decoration:const InputDecoration(isDense:true,contentPadding:EdgeInsets.symmetric(horizontal:9,vertical:8),
       border:OutlineInputBorder()),
      items:[for(final ch in options)DropdownMenuItem(value:ch,
