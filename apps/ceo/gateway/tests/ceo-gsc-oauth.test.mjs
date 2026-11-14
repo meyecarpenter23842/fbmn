@@ -182,9 +182,10 @@ test("OAuth routes check Owner, origin and state; do not expose token in query o
  assert.match(complete,/allowedOrigin/);
  assert.match(callback,/verifyCallback\(config/);
  // Distinct safe callback diagnostics must never echo code/state/tokens.
- for(const reason of ["invalid","permission","config","token","storage","google_api","connected"]){
+ for(const reason of ["invalid","config","cancelled"])
   assert.match(callback,new RegExp('finish\\("'+reason+'"\\)'));
- }
+ for(const reason of ["invalid","login","config","token","permission","google_api","storage","connected"])
+  assert.match(complete,new RegExp('"'+reason+'"'));
  assert.match(start,/allowedOrigin/);
  assert.doesNotMatch(start,/Set-Cookie|HttpOnly|SameSite=/);
  assert.match(start,/authorizationRequest/);
