@@ -16,7 +16,7 @@ const mediaUrl=(id:string,device:"desktop"|"mobile",slide:number)=>
 /** Only the approved, already-published Banner entries may be loaded. */
 export default function CmsHeroCarousel({items}:{items:PublicCmsItem[]}){
  const slides=items.flatMap(item=>(item.slides??[1]).map(slide=>({
-  id:item.id,slide,title:item.title,hasMobile:item.hasMobile,
+  id:item.id,slide,title:item.title,ctaUrl:item.ctaUrl,hasMobile:item.hasMobile,
   motion:item.motion??DEFAULT_MOTION
  }))).slice(0,MAX_HERO_SLIDES);
  const [state,dispatch]=useReducer(heroSlideReducer,initialHeroSlideState);
@@ -95,7 +95,7 @@ export default function CmsHeroCarousel({items}:{items:PublicCmsItem[]}){
       {item.hasMobile&&<source media="(max-width: 800px)"
        srcSet={mediaUrl(item.id,"mobile",item.slide)}/>}
       <Image src={mediaUrl(item.id,"desktop",item.slide)} alt={item.title}
-       width={1200} height={900} sizes="(max-width: 800px) 100vw, 57vw"
+       width={1600} height={700} sizes="(max-width: 800px) 100vw, 100vw"
        className="cms-hero-image" priority={i===0}
        loading={i===0?undefined:"eager"} unoptimized draggable={false}
        onLoad={event=>{
@@ -112,6 +112,11 @@ export default function CmsHeroCarousel({items}:{items:PublicCmsItem[]}){
        }}
        onError={()=>dispatch({type:"failed",index:i})}/>
      </picture>}
+    <a className="cms-hero-cta" href={item.ctaUrl||"/san-pham"}
+     tabIndex={i===index?0:-1}
+     aria-label={"Xem sản phẩm Futurebook · Slide "+(i+1)}>
+      Xem sản phẩm <span aria-hidden="true">↗</span>
+    </a>
    </div>)}
   </div>
   {slides.length>1&&<div className="cms-hero-controls" role="group" aria-label="Chọn ảnh Hero">
