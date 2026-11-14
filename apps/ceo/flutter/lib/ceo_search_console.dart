@@ -4,6 +4,21 @@ import 'ceo_gsc_models.dart';
 import 'ceo_ui_tokens.dart';
 import 'ceo_workspace.dart';
 
+/// Explicit, non-sensitive outcome from the server-side OAuth callback.
+/// Never print the Google authorization code, state, or refresh token.
+String? gscOAuthOutcomeMessage(String? outcome)=>switch(outcome){
+ 'connected'=>'Đã kết nối Google. CEO đang tải dữ liệu Search Console.',
+ 'cancelled'=>'Google chưa cấp quyền. Anh có thể kết nối lại.',
+ 'state'=>'Không xác nhận được phiên kết nối Google (mã bảo vệ hết hạn hoặc cookie không hợp lệ). Hãy thử kết nối lại.',
+ 'invalid'=>'Dữ liệu Google trả về không hợp lệ. Hãy thử kết nối lại.',
+ 'config'=>'Cấu hình Google OAuth phía CEO chưa hợp lệ.',
+ 'permission'=>'Tài khoản Google vừa chọn chưa có quyền đọc đúng property Search Console fbmn.vn.',
+ 'google'=>'Google không hoàn tất cấp quyền OAuth. Hãy thử kết nối lại.',
+ 'storage'=>'Google đã cấp quyền nhưng CEO chưa lưu được kết nối vào Neon. Cần kiểm tra Gateway.',
+ 'error'=>'Kết nối Google thất bại phía Gateway. Vui lòng thử lại.',
+ _=>null
+};
+
 /// SEO06: isolated Google Search Console panel, independent from PostHog statistics.
 class CeoGscPanel extends StatelessWidget{
  final CeoGscReport? report;

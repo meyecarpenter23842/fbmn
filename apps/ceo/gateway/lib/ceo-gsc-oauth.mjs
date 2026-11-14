@@ -57,22 +57,36 @@ export function authorizationRequest(config,subject,now=Date.now()){
  }))url.searchParams.set(k,v);
  return {authorizationUrl:url.toString(),cookie};
 }
-export function verifyCallback(config,query,cookie,subject,now=Date.now()){
- if(!query||typeof query!=="object"||typeof query.state!=="string"||
-  !STATE.test(query.state)||typeof query.code!=="string"||!CODE.test(query.code)||
-  typeof subject!=="string"||!subject)return null;
+// Owner identity was already verified by /oauth/start and sealed by AES-256-GCM
+// into an HttpOnly SameSite=Lax cookie. Google's top-level callback is NOT an
+// authenticated Flutter API call and must not require an in-memory bearer JWT.
+export function verifyCallbackTransaction(config,query,cookie,now=Date.now()){
+ if(config?.status!=="ready"||!query||typeof query!=="object"||
+  typeof query.state!=="string"||!STATE.test(query.state)||
+  typeof query.code!=="string"||!CODE.test(query.code)||
+  typeof cookie!=="string"||cookie.length>15000)return null;
  let payload;
  try{payload=JSON.parse(decryptSecret(cookie,config.key));}catch{return null;}
  if(!payload||typeof payload!=="object"||
   typeof payload.state!=="string"||!STATE.test(payload.state)||
   typeof payload.verifier!=="string"||!STATE.test(payload.verifier)||
-  typeof payload.subject!=="string"||payload.subject!==subject||
+  typeof payload.subject!=="string"||payload.subject.length<1||
+  payload.subject.length>200||
   !Number.isFinite(payload.createdAt)||now-payload.createdAt<0||
   now-payload.createdAt>600000)return null;
  const a=Buffer.from(payload.state),b=Buffer.from(query.state);
  if(a.length!==b.length||!timingSafeEqual(a,b))return null;
- return {code:query.code,verifier:payload.verifier};
+ return {code:query.code,verifier:payload.verifier,subject:payload.subject};
 }
+// Kept for clients that must additionally bind a signed Owner subject to a
+// particular request. The callback itself uses the sealed transaction proof.
+export function verifyCallback(config,query,cookie,subject,now=Date.now()){
+ if(typeof subject!=="string"||subject.length<1||subject.length>200)return null;
+ const proof=verifyCallbackTransaction(config,query,cookie,now);
+ return proof&&proof.subject===subject?
+  {code:proof.code,verifier:proof.verifier}:null;
+}
+
 async function googleJson(fetchImpl,url,params,timeout=8000){
  let response;
  try{response=await fetchImpl(url,{method:"POST",redirect:"error",cache:"no-store",

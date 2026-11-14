@@ -16,6 +16,19 @@ const active=CeoGscReport(
  metrics:CeoGscMetrics(clicks:10,impressions:100,ctr:.1,position:9));
 
 void main(){
+ test('SEO06 reports actual OAuth callback outcome instead of hiding failure',(){
+  expect(gscOAuthOutcomeMessage('connected'),contains('Đã kết nối'));
+  expect(gscOAuthOutcomeMessage('state'),contains('mã bảo vệ'));
+  expect(gscOAuthOutcomeMessage('permission'),contains('property'));
+  expect(gscOAuthOutcomeMessage('storage'),contains('Neon'));
+  expect(gscOAuthOutcomeMessage('google'),contains('Google'));
+  expect(gscOAuthOutcomeMessage('config'),contains('cấu hình'));
+  expect(gscOAuthOutcomeMessage('invalid'),contains('không hợp lệ'));
+  expect(gscOAuthOutcomeMessage('cancelled'),contains('chưa cấp quyền'));
+  expect(gscOAuthOutcomeMessage(null),isNull);
+  expect(gscOAuthOutcomeMessage('https://attacker.invalid'),isNull);
+ });
+
 
  testWidgets('Expired Google grant offers reconnect and disconnect instead of endless retry',(tester)async{
   await tester.pumpWidget(MaterialApp(home:Scaffold(body:CeoGscPanel(

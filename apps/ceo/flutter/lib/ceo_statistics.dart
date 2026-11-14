@@ -21,6 +21,7 @@ class CeoStatisticsTabState extends State<CeoStatisticsTab>{
  bool oauthBusy=false;
  String oauthError='';
  bool oauthReconnectRequired=false;
+ String? oauthOutcome;
  CeoGscReport? gsc;
  bool gscLoading=false;
  String gscError='';
@@ -32,7 +33,8 @@ class CeoStatisticsTabState extends State<CeoStatisticsTab>{
  int generation=0;
  @override void initState(){
   super.initState();
-  if(Uri.base.queryParameters['gsc']!=null)section=4;
+  oauthOutcome=Uri.base.queryParameters['gsc'];
+  if(oauthOutcome!=null)section=4;
   WidgetsBinding.instance.addPostFrameCallback((_){
    if(!mounted)return;
    unawaited(load());
@@ -343,6 +345,12 @@ class CeoStatisticsTabState extends State<CeoStatisticsTab>{
         style:TextStyle(fontSize:11,color:ceoMuted))),
      ],
     ])),
+   if(section==4&&gscOAuthOutcomeMessage(oauthOutcome)!=null)Padding(
+    key:const ValueKey('ceo-gsc-oauth-callback-status'),
+    padding:const EdgeInsets.symmetric(horizontal:12,vertical:8),
+    child:Text(gscOAuthOutcomeMessage(oauthOutcome)!,
+     style:TextStyle(fontSize:13,
+      color:oauthOutcome=='connected'?ceoPurple:const Color(0xFFB45309)))),
    if(section==4)CeoPanel(
     title:'SEO06 · Google Search Console',
     subtitle:'Google tự nhiên · lượt nhấp, hiển thị, CTR và vị trí trung bình',

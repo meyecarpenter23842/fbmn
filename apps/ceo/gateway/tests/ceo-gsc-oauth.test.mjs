@@ -5,6 +5,7 @@ import {readFileSync} from "node:fs";
 import {
  GSC_SCOPE,GSC_CALLBACK,GSC_AUTH_URL,
  oauthConfig,encryptSecret,decryptSecret,authorizationRequest,verifyCallback,
+ verifyCallbackTransaction,
  exchangeGoogleCode,refreshGoogleToken,hasGoogleProperty,revokeGoogleToken
 } from "../lib/ceo-gsc-oauth.mjs";
 const ENV={
@@ -56,6 +57,21 @@ test("Owner-bound, expiring OAuth state and PKCE verifier are enforced",()=>{
  assert.equal(verifyCallback(config,{state:"a".repeat(43),code},cookie,owner,now+15000),null);
  assert.equal(verifyCallback(config,{state,code},cookie,owner,now+600001),null);
  assert.equal(verifyCallback(config,{state,code},"tampered-cookie",owner,now),null);
+});
+test("Google callback uses sealed Owner transaction, not Flutter bearer JWT",()=>{
+ const flow=authorizationRequest(config,owner,now);
+ const state=new URL(flow.authorizationUrl).searchParams.get("state");
+ const code="4/0AX4XfWhValidGoogleAuthorizationCode";
+ const proof=verifyCallbackTransaction(config,{state,code},flow.cookie,now+5000);
+ assert.equal(proof.subject,owner);
+ assert.equal(proof.code,code);
+ assert.equal(proof.verifier.length,64);
+ assert.equal(verifyCallbackTransaction(config,{state,code},flow.cookie,now+600001),null);
+ assert.equal(verifyCallbackTransaction(config,{state,code},"",now+5000),null);
+ assert.equal(verifyCallbackTransaction(config,{state,code},flow.cookie+"broken",now+5000),null);
+ assert.equal(verifyCallbackTransaction(config,{state:"a".repeat(43),code},flow.cookie,now+5000),null);
+ assert.equal(verifyCallbackTransaction(config,{state,code:"https://evil.invalid"},flow.cookie,now+5000),null);
+ assert.equal(verifyCallback(config,{state,code},flow.cookie,"wrong-owner",now+5000),null);
 });
 test("OAuth code exchange and refresh never send client secret to CEO browser",async()=>{
  const post=[];
@@ -123,16 +139,23 @@ test("Google property must match configured FBMN site exactly and grant read per
 test("OAuth routes check Owner, origin and state; do not expose token in query or response",()=>{
  const read=(p)=>readFileSync(new URL("../app/api/ceo/gsc/oauth/"+p+"/route.ts",import.meta.url),"utf8");
  const start=read("start"),callback=read("callback"),status=read("status");
- for(const route of [start,callback,status]){
-  assert.match(route,/requireOwner/);
-  assert.match(route,/no-store/);
- }
+ for(const route of [start,status])assert.match(route,/requireOwner/);
+ for(const route of [start,callback,status])assert.match(route,/no-store/);
+ // Start is Owner-gated; Google callback only carries a sealed Owner-bound
+ // transaction because a top-level Google redirect has no Flutter bearer JWT.
+ assert.doesNotMatch(callback,/requireOwner\(request\)/);
+ assert.match(callback,/verifyCallbackTransaction/);
+ assert.match(callback,/transaction\.subject/);
  assert.match(start,/allowedOrigin/);
  assert.match(start,/SameSite=Lax/);
  assert.match(start,/HttpOnly/);
- assert.match(callback,/verifyCallback/);
+ assert.match(callback,/verifyCallbackTransaction/);
  assert.match(callback,/hasGoogleProperty/);
  assert.match(callback,/saveGscGrant/);
+ assert.match(callback,/GSC_OAUTH_CALLBACK_REJECTED/);
+ assert.match(callback,/"storage"/);
+ assert.match(callback,/"permission"/);
+ assert.doesNotMatch(callback,/console\.log/);
  assert.match(callback,/Max-Age=0/);
  assert.match(status,/deleteGscGrant/);
  assert.match(status,/revokeGoogleToken/);
