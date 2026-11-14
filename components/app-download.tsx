@@ -80,8 +80,15 @@ export function AppDownloadProvider({ children }: { children: ReactNode }) {
   // Fetch a fresh public setting on route/visibility change so Admin edits take
   // effect without redeploy. Missing API fails closed, never shows an unmanaged popup.
   useEffect(()=>{
-    const controller=new AbortController();
+    let latest=0;
+    let activeRequest:AbortController|null=null;
     const refresh=async()=>{
+      // A new visibility/route refresh supersedes every older request.
+      // Out-of-order responses may never re-enable an Owner-disabled popup.
+      activeRequest?.abort();
+      const controller=new AbortController();
+      activeRequest=controller;
+      const generation=++latest;
       configRefreshing.current=true;
       try{
         const response=await fetch("/api/app-download",{cache:"no-store",signal:controller.signal});
@@ -89,14 +96,22 @@ export function AppDownloadProvider({ children }: { children: ReactNode }) {
         const body=await response.json() as {data?:unknown};
         const parsed=parseAppDownloadConfig(body.data);
         if(!parsed)throw Error("invalid_config");
-        if(!controller.signal.aborted)setSettings(parsed);
-      }catch{if(!controller.signal.aborted)setSettings(null);}
-      finally{if(!controller.signal.aborted)configRefreshing.current=false;}
+        if(generation===latest&&!controller.signal.aborted)setSettings(parsed);
+      }catch{
+        if(generation===latest&&!controller.signal.aborted)setSettings(null);
+      }finally{
+        if(generation===latest&&!controller.signal.aborted)configRefreshing.current=false;
+      }
     };
     void refresh();
     const visible=()=>{if(document.visibilityState==="visible")void refresh();};
     document.addEventListener("visibilitychange",visible);
-    return ()=>{controller.abort();document.removeEventListener("visibilitychange",visible);};
+    return ()=>{
+      latest++;
+      activeRequest?.abort();
+      configRefreshing.current=false;
+      document.removeEventListener("visibilitychange",visible);
+    };
   },[pathname]);
 
   const showPopup = useCallback((kind: PopupSource) => {
