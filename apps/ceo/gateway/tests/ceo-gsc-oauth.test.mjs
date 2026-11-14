@@ -5,6 +5,7 @@ import {readFileSync} from "node:fs";
 import {
  GSC_SCOPE,GSC_CALLBACK,GSC_AUTH_URL,
  oauthConfig,encryptSecret,decryptSecret,authorizationRequest,verifyCallback,
+ makeCompletionTicket,verifyCompletionTicket,
  exchangeGoogleCode,refreshGoogleToken,hasGoogleProperty,revokeGoogleToken
 } from "../lib/ceo-gsc-oauth.mjs";
 const ENV={
@@ -77,6 +78,30 @@ test("legacy random OAuth state is only valid with its authentic cookie",()=>{
  assert.equal(verifyCallback(config,{state,code},"tampered-cookie",null,now+3000),null);
  assert.equal(verifyCallback(config,{state:"c".repeat(43),code},cookie,null,now+3000),null);
 });
+test("completion ticket requires fresh initiating Owner proof and expires without leaking raw credentials",()=>{
+ const issued=authorizationRequest(config,owner,now);
+ const state=new URL(issued.authorizationUrl).searchParams.get("state");
+ const code="4/0AX4XfWhValidGoogleAuthorizationCode";
+ const verified=verifyCallback(config,{state,code},"",null,now+1000);
+ assert.equal(verified.subject,owner);
+ const ticket=makeCompletionTicket(config,verified,now+1000);
+ assert.match(ticket,/^v1\.[A-Za-z0-9_-]{40,5000}$/);
+ assert.equal(ticket.includes(code),false);
+ assert.equal(ticket.includes(owner),false);
+ const valid=verifyCompletionTicket(config,ticket,owner,now+2000);
+ assert.equal(valid.subject,owner);
+ assert.equal(valid.code,code);
+ assert.equal(valid.verifier,verified.verifier);
+ assert.equal(verifyCompletionTicket(config,ticket,"other_owner",now+2000),null);
+ assert.equal(verifyCompletionTicket(config,ticket,owner,now+1000-1),null);
+ assert.equal(verifyCompletionTicket(config,ticket,owner,now+300001),null);
+ const flipped=ticket.slice(0,-5)+(ticket.slice(-5,-4)==="A"?"B":"A")+ticket.slice(-4);
+ assert.equal(verifyCompletionTicket(config,flipped,owner,now+2000),null);
+ assert.equal(verifyCompletionTicket(config,state,owner,now+2000),null);
+ assert.equal(verifyCompletionTicket(oauthConfig({...ENV,
+  FBMN_CEO_GSC_OAUTH_ENCRYPTION_KEY:randomBytes(32).toString("hex")}),
+  ticket,owner,now+2000),null);
+});
 test("OAuth code exchange and refresh never send client secret to CEO browser",async()=>{
  const post=[];
  const fetchImpl=async(url,options)=>{
@@ -142,14 +167,19 @@ test("Google property must match configured FBMN site exactly and grant read per
 });
 test("OAuth routes check Owner, origin and state; do not expose token in query or response",()=>{
  const read=(p)=>readFileSync(new URL("../app/api/ceo/gsc/oauth/"+p+"/route.ts",import.meta.url),"utf8");
- const start=read("start"),callback=read("callback"),status=read("status");
- for(const route of [start,status]){
+ const start=read("start"),callback=read("callback"),complete=read("complete"),status=read("status");
+ for(const route of [start,complete,status]){
   assert.match(route,/requireOwner/);
   assert.match(route,/no-store/);
  }
  assert.match(callback,/no-store/);
  assert.doesNotMatch(callback,/requireOwner/);
- assert.match(callback,/saveGscGrant\(verified\.subject/);
+ assert.doesNotMatch(callback,/saveGscGrant|exchangeGoogleCode/);
+ assert.match(complete,/saveGscGrant\(owner\.subject/);
+ assert.match(complete,/verifyCompletionTicket/);
+ assert.match(complete,/exchangeGoogleCode/);
+ assert.match(complete,/hasGoogleProperty/);
+ assert.match(complete,/allowedOrigin/);
  assert.match(callback,/verifyCallback\(config/);
  // Distinct safe callback diagnostics must never echo code/state/tokens.
  for(const reason of ["invalid","permission","config","token","storage","google_api","connected"]){
@@ -159,12 +189,13 @@ test("OAuth routes check Owner, origin and state; do not expose token in query o
  assert.doesNotMatch(start,/Set-Cookie|HttpOnly|SameSite=/);
  assert.match(start,/authorizationRequest/);
  assert.match(callback,/verifyCallback/);
- assert.match(callback,/hasGoogleProperty/);
- assert.match(callback,/saveGscGrant/);
+ assert.match(callback,/makeCompletionTicket/);
+ assert.match(callback,/Content-Security-Policy/);
+ assert.match(callback,/history.replaceState/);
  assert.match(callback,/Max-Age=0/);
  assert.match(status,/deleteGscGrant/);
  assert.match(status,/revokeGoogleToken/);
- for(const route of [start,callback,status])
+ for(const route of [start,callback,complete,status])
   assert.doesNotMatch(route,/console\.log|NEXT_PUBLIC_|localStorage|client_secret\s*:/);
  const oauthReport=readFileSync(new URL("../app/api/ceo/search-console/route.ts",import.meta.url),"utf8");
  assert.match(oauthReport,/refreshGoogleToken/);
