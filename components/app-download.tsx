@@ -76,11 +76,13 @@ export function AppDownloadProvider({ children }: { children: ReactNode }) {
   const lastShownInMemory = useRef(0);
   const returnFocus = useRef<HTMLElement | null>(null);
   const closeButton = useRef<HTMLButtonElement>(null);
+  const configRefreshing = useRef(false);
   // Fetch a fresh public setting on route/visibility change so Admin edits take
   // effect without redeploy. Missing API fails closed, never shows an unmanaged popup.
   useEffect(()=>{
     const controller=new AbortController();
     const refresh=async()=>{
+      configRefreshing.current=true;
       try{
         const response=await fetch("/api/app-download",{cache:"no-store",signal:controller.signal});
         if(!response.ok)throw Error("config_unavailable");
@@ -89,6 +91,7 @@ export function AppDownloadProvider({ children }: { children: ReactNode }) {
         if(!parsed)throw Error("invalid_config");
         if(!controller.signal.aborted)setSettings(parsed);
       }catch{if(!controller.signal.aborted)setSettings(null);}
+      finally{if(!controller.signal.aborted)configRefreshing.current=false;}
     };
     void refresh();
     const visible=()=>{if(document.visibilityState==="visible")void refresh();};
@@ -97,6 +100,7 @@ export function AppDownloadProvider({ children }: { children: ReactNode }) {
   },[pathname]);
 
   const showPopup = useCallback((kind: PopupSource) => {
+    if(configRefreshing.current)return;
     if(!settings || (kind==="automatic"&&!settings.popupEnabled) ||
        (kind==="menu"&&!settings.buttonEnabled))return;
     if (kind === "menu") {
@@ -144,12 +148,12 @@ export function AppDownloadProvider({ children }: { children: ReactNode }) {
     let timeout: number | undefined;
     const schedule = () => {
       if (timeout !== undefined) window.clearTimeout(timeout);
-      if (document.visibilityState === "hidden") return;
+      if (document.visibilityState === "hidden" || configRefreshing.current) return;
       const now = Date.now();
       const saved = readLastShown(lastShownInMemory.current,settings.cooldownMinutes*60_000);
       const delay = getNextAutoPromptDelay(now, saved,settings.firstDelayMs,settings.cooldownMinutes*60_000);
       timeout = window.setTimeout(() => {
-        if (document.visibilityState === "hidden") return;
+        if (document.visibilityState === "hidden" || configRefreshing.current) return;
         const updated = readLastShown(lastShownInMemory.current,settings.cooldownMinutes*60_000);
         if (updated !== null && getNextAutoPromptDelay(Date.now(), updated,settings.firstDelayMs,settings.cooldownMinutes*60_000) > 0) {
           schedule();
