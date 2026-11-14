@@ -1,0 +1,56 @@
+name: Build reviewed App-download Worker release bundles (no secrets)
+on:
+  push:
+    branches: [ci/app-download-reviewed-worker-bundles]
+    paths:
+      - .github/workflows/build-reviewed-worker-bundles.yml
+permissions:
+  contents: write
+jobs:
+  release-bundles:
+    if: github.repository == 'meyecarpenter23842/fbmn'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 18
+    steps:
+      - name: Checkout reviewed source for exact commit
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: true
+      - name: Verify no source changes from PR 114 merged commit
+        shell: bash
+        run: |
+          set -euo pipefail
+          git merge-base --is-ancestor 7fc89dac1172b66946eb9d4d5f72d5910766c82e HEAD
+          unexpected="$(git diff --name-only 7fc89dac1172b66946eb9d4d5f72d5910766c82e HEAD | grep -v '^.github/workflows/build-reviewed-worker-bundles.yml$' || true)"
+          test -z "$unexpected" || { echo 'Unexpected source changes:'; echo "$unexpected"; exit 1; }
+      - name: Node.js 22
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '22'
+      - name: Build Admin/Public Worker from reviewed source without credentials
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --prefix backend/admin-api --no-audit --no-fund --no-package-lock
+          npm install --prefix backend/public-api --no-audit --no-fund --no-package-lock
+          (cd backend/admin-api && npx --no-install wrangler deploy --config wrangler.jsonc --dry-run --outdir ../../.tmp-reviewed-admin)
+          (cd backend/public-api && npx --no-install wrangler deploy --config wrangler.jsonc --dry-run --outdir ../../.tmp-reviewed-public)
+          mkdir -p release-bundles
+          cp .tmp-reviewed-admin/worker-entry.js release-bundles/admin-worker.js
+          cp .tmp-reviewed-public/worker-entry.js release-bundles/public-worker.js
+          test "$(wc -c < release-bundles/admin-worker.js)" -gt 200000
+          test "$(wc -c < release-bundles/public-worker.js)" -gt 100000
+          grep -q '/v1/admin/website/app-download' release-bundles/admin-worker.js
+          grep -q '/v1/public/app-download' release-bundles/public-worker.js
+          sha256sum release-bundles/*.js
+      - name: Save immutable reviewed bundle evidence to this helper branch only
+        shell: bash
+        run: |
+          set -euo pipefail
+          printf 'source_sha=7fc89dac1172b66946eb9d4d5f72d5910766c82e\n' > release-bundles/release.manifest
+          sha256sum release-bundles/*.js >> release-bundles/release.manifest
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -f release-bundles/admin-worker.js release-bundles/public-worker.js release-bundles/release.manifest
+          git commit -m 'ci(bundle): compile reviewed PR 114 Worker bundles' 
+          git push origin HEAD:refs/heads/ci/app-download-reviewed-worker-bundles
