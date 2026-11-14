@@ -5,6 +5,14 @@ const browser=await chromium.launch();
 await mkdir("artifacts/dl11a",{recursive:true});
 try{for(const width of [1440,1280,1024,801,768,390,360]){
  const page=await browser.newPage({viewport:{width,height:900},reducedMotion:"reduce"});
+ // Browser-only fixture: simulate an Owner-published public read model before
+ // the approved Neon/Worker migration. This never writes any live config.
+ await page.route("**/api/app-download",route=>route.fulfill({status:200,
+  contentType:"application/json",headers:{"Cache-Control":"no-store"},
+  body:JSON.stringify({data:{popupEnabled:true,buttonEnabled:true,
+    firstDelayMs:1400,cooldownMinutes:120,title:"Ứng dụng Futurebook",
+    message:"Ứng dụng chưa phát hành. Đường dẫn tải sẽ cập nhật khi có bản chính thức.",
+    iosUrl:null,androidUrl:null,revision:1}})}));
  await page.addInitScript(()=>localStorage.setItem("fbmn:app-download:last-shown:v1",String(Date.now())));
  await page.goto("http://127.0.0.1:3100/",{waitUntil:"domcontentloaded"});
  const header=page.locator(".ref-header");
