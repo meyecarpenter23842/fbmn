@@ -29,6 +29,9 @@ class FakeRepo implements CeoRepository {
    daily:const [CeoStatDay('2026-11-13',2,4)],
    sources:const [CeoStatRank('direct',2)],products:const [CeoStatRank('sku-test',1)],
    categories:const []);
+ @override Future<String> startGscOAuth()async=>
+  'https://accounts.google.com/o/oauth2/v2/auth?client_id=test';
+ @override Future<void> disconnectGscOAuth()async{}
  @override Future<CeoGscReport> searchConsole(String period,{bool fresh=false})async=>
   CeoGscReport(status:'unconfigured',period:period,site:'www.fbmn.vn',
    startDate:'',endDate:'',timezone:'America/Los_Angeles');

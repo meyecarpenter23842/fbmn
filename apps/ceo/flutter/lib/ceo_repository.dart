@@ -20,6 +20,8 @@ abstract class CeoRepository{
  Future<void> markAlertRead(String kind,String id,{String? turnId});
  Future<CeoWebStatistics> websiteStatistics(String period,{bool fresh=false});
  Future<CeoGscReport> searchConsole(String period,{bool fresh=false});
+ Future<String> startGscOAuth();
+ Future<void> disconnectGscOAuth();
  Future<CeoMailPage> mailList(String box,{String? after});
  Future<CeoMailItem> mailDetail(String box,String id);
  Future<String> mailSend({required String to,required String subject,required String text,String? replyId,String? requestId,List<CeoMailAttachment> attachments=const []});
@@ -234,6 +236,21 @@ class CeoApi implements CeoRepository {
   final raw=await _data('/api/ceo/search-console?period=$period${fresh?'&fresh=1':''}',
    timeout:const Duration(seconds:25));
   return CeoGscReport.fromJson(raw);
+ }
+ @override Future<String> startGscOAuth()async{
+  final jwt=await _ownerJwt();
+  final result=await _request('POST','/api/ceo/gsc/oauth/start',bearer:jwt,json:{});
+  final data=result['data'];
+  final url=data is Map<String,dynamic>?data['authorizationUrl']:null;
+  if(url is! String||url.length>2048||
+   !url.startsWith('https://accounts.google.com/o/oauth2/v2/auth?')){
+   throw const CeoApiException(503);
+  }
+  return url;
+ }
+ @override Future<void> disconnectGscOAuth()async{
+  final jwt=await _ownerJwt();
+  await _request('DELETE','/api/ceo/gsc/oauth/status',bearer:jwt,json:{});
  }
  @override Future<CeoMailPage> mailList(String box,{String? after})async{
   if(box!='inbox'&&box!='sent'){throw const CeoApiException(400);}

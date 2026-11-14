@@ -9,9 +9,12 @@ class CeoGscPanel extends StatelessWidget{
  final CeoGscReport? report;
  final bool loading;
  final String error;
- final VoidCallback retry;
+ final VoidCallback retry,onConnect,onDisconnect;
+ final bool connectionBusy;
+ final String connectionError;
  const CeoGscPanel({super.key,required this.report,required this.loading,
-  required this.error,required this.retry});
+  required this.error,required this.retry,required this.onConnect,
+  required this.onDisconnect,this.connectionBusy=false,this.connectionError=''});
  String percent(double n)=> '${(n*100).toStringAsFixed(1)}%';
  Widget kpi(String name,String value,IconData icon,double width)=>SizedBox(
   width:width,child:Container(
@@ -59,17 +62,36 @@ class CeoGscPanel extends StatelessWidget{
     label:const Text('Thử tải lại Search Console')),
   ]);}
   final value=report;
-  if(value==null||!value.configured){return const CeoEmptyResult(
-   key:ValueKey('ceo-gsc-unconfigured'),
-   title:'Chưa kết nối Google Search Console',
-   detail:'Cần cấp quyền đọc cho property fbmn.vn và cấu hình kết nối trên CEO Gateway. Chưa có số liệu GSC để hiển thị.',
-   icon:Icons.link_off_outlined);}
+  if(value==null||!value.configured){return Column(
+   key:const ValueKey('ceo-gsc-unconfigured'),children:[
+   const CeoEmptyResult(
+    title:'Chưa kết nối Google Search Console',
+    detail:'Kết nối tài khoản Google có quyền xem property fbmn.vn. Không cần tạo file JSON.',
+    icon:Icons.link_off_outlined),
+   if(value?.oauthStatus=='disconnected')...[
+    const SizedBox(height:12),
+    FilledButton.icon(key:const ValueKey('gsc-connect-google'),
+     onPressed:connectionBusy?null:onConnect,
+     icon:const Icon(Icons.link),label:const Text('Kết nối Google')),
+   ],
+   if(value?.oauthStatus!='disconnected')const Padding(
+    padding:EdgeInsets.only(top:8),
+    child:Text('Chưa cấu hình Google OAuth Client ID/Secret trên CEO.',
+     style:TextStyle(fontSize:12,color:ceoMuted))),
+   if(connectionError.isNotEmpty)Text(connectionError,
+    style:const TextStyle(fontSize:12,color:Color(0xFFB45309))),
+  ]);}
   final m=value.metrics;
-  if(m==null){return CeoEmptyResult(
-   key:const ValueKey('ceo-gsc-empty'),
-   title:'Chưa có dữ liệu tìm kiếm Google',
-   detail:'Google chưa trả về số liệu hoàn tất trong kỳ ${value.startDate} đến ${value.endDate}.',
-   icon:Icons.search_off_outlined);}
+  if(m==null){return Column(children:[
+   CeoEmptyResult(
+    key:const ValueKey('ceo-gsc-empty'),
+    title:'Chưa có dữ liệu tìm kiếm Google',
+    detail:'Google chưa trả về số liệu hoàn tất trong kỳ ${value.startDate} đến ${value.endDate}.',
+    icon:Icons.search_off_outlined),
+   OutlinedButton.icon(key:const ValueKey('gsc-disconnect-google'),
+    onPressed:connectionBusy?null:onDisconnect,
+    icon:const Icon(Icons.link_off),label:const Text('Ngắt kết nối Google')),
+  ]);}
   final dates=value.daily.length>7?value.daily.sublist(value.daily.length-7):value.daily;
   final maxClicks=dates.fold<int>(1,(n,d)=>math.max(n,d.metrics.clicks));
   return Column(key:const ValueKey('ceo-gsc-ready'),
@@ -109,6 +131,11 @@ class CeoGscPanel extends StatelessWidget{
    const SizedBox(height:8),
    topRows('Top từ khóa tìm kiếm (${value.queries.length})',value.queries),
    topRows('Top trang xuất hiện trên Google (${value.pages.length})',value.pages),
+   const SizedBox(height:12),
+   Align(alignment:Alignment.centerRight,child:OutlinedButton.icon(
+    key:const ValueKey('gsc-disconnect-google'),
+    onPressed:connectionBusy?null:onDisconnect,
+    icon:const Icon(Icons.link_off),label:const Text('Ngắt kết nối Google'))),
    const SizedBox(height:10),
    const Text('GSC đo lượt nhấp/hiển thị từ Google tự nhiên; PostHog đo phiên và yêu cầu B2B. Hai nguồn không được cộng chung. Vị trí trung bình càng thấp càng tốt.',
     style:TextStyle(fontSize:11.5,color:ceoMuted)),

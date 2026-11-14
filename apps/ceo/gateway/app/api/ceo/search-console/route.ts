@@ -1,5 +1,7 @@
 import {requireOwner} from "@/lib/owner-gate";
 import {GSC_PERIODS,fetchGscReport} from "@/lib/ceo-search-console.mjs";
+import {oauthConfig,refreshGoogleToken} from "@/lib/ceo-gsc-oauth.mjs";
+import {readGscGrant,saveGscGrant} from "@/lib/ceo-gsc-store";
 
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
@@ -23,14 +25,30 @@ export async function GET(request:Request){
  const owner=await requireOwner(request);
  if(owner.status!==200||!owner.subject)return fail(owner.status,"owner_required");
  try{
-  const data=await fetchGscReport(period);
-  return Response.json({data},{status:200,headers:HEADERS});
+  const config=oauthConfig();
+  if(config.status!=="ready"){
+   return Response.json({data:{status:"unconfigured",source:"google_search_console",
+    period,site:"www.fbmn.vn",oauthStatus:"unconfigured",
+    metrics:null,daily:[],queries:[],pages:[]}},{headers:HEADERS});
+  }
+  const refresh=await readGscGrant(owner.subject,config.key);
+  if(!refresh){
+   return Response.json({data:{status:"unconfigured",source:"google_search_console",
+    period,site:"www.fbmn.vn",oauthStatus:"disconnected",
+    metrics:null,daily:[],queries:[],pages:[]}},{headers:HEADERS});
+  }
+  const {accessToken,rotated}=await refreshGoogleToken(config,refresh);
+  if(rotated)await saveGscGrant(owner.subject,rotated,config.key);
+  const data=await fetchGscReport(period,{accessToken,site:config.property});
+  return Response.json({data:{...data,oauthStatus:"connected"}},{status:200,headers:HEADERS});
  }catch(error){
   const message=error instanceof Error?error.message:"";
   if(message==="gsc_config_invalid"||message==="gsc_property_invalid")
    return fail(503,"gsc_configuration_invalid");
   if(message==="gsc_permission_denied"||message==="gsc_auth_denied")
    return fail(503,"gsc_permission_denied");
+  if(message==="gsc_oauth_config_invalid")return fail(503,"gsc_oauth_config_invalid");
+  if(message==="gsc_oauth_grant_invalid")return fail(503,"gsc_oauth_reconnect_required");
   if(message==="gsc_rate_limited")return fail(503,"gsc_rate_limited");
   return fail(503,"gsc_unavailable");
  }
