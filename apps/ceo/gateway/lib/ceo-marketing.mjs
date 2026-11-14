@@ -15,6 +15,15 @@ export function marketingQueries(days){
   base+" AND event IN ('web_session_start','web_product_view','web_lead_cta_click',"+
   "'web_contact_submit_success','web_outsourcing_submit_success')"+
   " AND startsWith(distinct_id,'fbmn-web-session-') GROUP BY distinct_id HAVING starts>0";
+ // PH03: previous cohort is determined by when a session *started*, not by
+ // the date of its last event. Allow events after the boundary for the same ID.
+ const previousBase=" FROM events WHERE timestamp >= now() - INTERVAL "+(days*2)+
+  " DAY AND properties.app = 'futurebook_website'";
+ const previousSession=session.replace(base,previousBase).replace(
+  "HAVING starts>0",
+  "HAVING starts>0 AND minIf(timestamp,event='web_session_start') < now() - INTERVAL "+days+" DAY");
+ const dailySession=session.replace("SELECT distinct_id,",
+  "SELECT distinct_id, minIf(timestamp,event='web_session_start') AS startedAt,");
  const channel="multiIf(source='google' AND channel='google_organic','google_organic',"+
   "source='google' AND channel='google_paid','google_paid',"+
   "source='google','google_unclassified',source='facebook','facebook',"+
@@ -27,7 +36,13 @@ export function marketingQueries(days){
    " FROM ("+session+") GROUP BY label ORDER BY sessions DESC LIMIT 8",
   marketingCampaigns:"SELECT campaign,"+channel+" AS label,"+counts+
    " FROM ("+session+") WHERE match(campaign,'^fbmn-[a-z0-9-]{1,48}$') AND NOT match(campaign,'[0-9]{9,}')"+
-   " GROUP BY campaign,label ORDER BY leadSessions DESC,sessions DESC LIMIT 10"
+   " GROUP BY campaign,label ORDER BY leadSessions DESC,sessions DESC LIMIT 10",
+  marketingPreviousSources:"SELECT "+channel+" AS label,"+counts+
+   ",countIf(contacts>0) AS contactSessions,countIf(outsourcing>0) AS outsourcingSessions"+
+   " FROM ("+previousSession+") GROUP BY label ORDER BY sessions DESC LIMIT 8",
+  marketingDaily:"SELECT toDate(startedAt) AS day,"+channel+" AS label,"+
+   "count() AS sessions,countIf(contacts>0 OR outsourcing>0) AS leadSessions"+
+   " FROM ("+dailySession+") GROUP BY day,label ORDER BY day,label LIMIT 750"
  };
 }
 const CHANNELS=new Set(["direct","google_organic","google_paid","google_unclassified",
@@ -60,6 +75,27 @@ function validate(response,campaigns=false){
    ...(campaigns?{}:{contactSessions:numbers[4],outsourcingSessions:numbers[5]})};
  });
 }
-export function formatMarketing(sources,campaigns){
- return {channels:validate(sources),campaigns:validate(campaigns,true)};
+// Aggregate by first-touch channel/day. Return no session identifiers or raw event properties.
+function validateDaily(response){
+ if(!response||!Array.isArray(response.results)||response.results.length>750)
+  throw Error("invalid_marketing_daily");
+ const seen=new Set();
+ return response.results.map(row=>{
+  if(!Array.isArray(row)||row.length!==4)throw Error("invalid_marketing_daily_row");
+  const [day,channel]=row;
+  if(typeof day!=="string"||!/^\d{4}-\d{2}-\d{2}$/.test(day)||
+   !CHANNELS.has(channel))throw Error("invalid_marketing_daily_label");
+  const sessions=Number(row[2]),leadSessions=Number(row[3]);
+  if(!Number.isSafeInteger(sessions)||sessions<1||
+   !Number.isSafeInteger(leadSessions)||leadSessions<0||leadSessions>sessions)
+   throw Error("invalid_marketing_daily_counts");
+  const key=day+":"+channel;
+  if(seen.has(key))throw Error("invalid_marketing_daily_duplicate");
+  seen.add(key);
+  return {day,channel,sessions,leadSessions};
+ });
+}
+export function formatMarketing(sources,campaigns,previous={results:[]},daily={results:[]}){
+ return {channels:validate(sources),campaigns:validate(campaigns,true),
+  previousChannels:validate(previous),daily:validateDaily(daily)};
 }

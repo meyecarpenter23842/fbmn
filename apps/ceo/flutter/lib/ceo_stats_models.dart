@@ -81,11 +81,38 @@ class CeoMarketingRow{
    contactSessions:_n(m['contactSessions']),outsourcingSessions:_n(m['outsourcingSessions']));
  }
 }
+// PH03: aggregated session cohorts; daily points exclude identity and PII.
+class CeoChannelTrendDay{
+ final String day,channel;
+ final int sessions,leadSessions;
+ const CeoChannelTrendDay({required this.day,required this.channel,
+  required this.sessions,required this.leadSessions});
+ factory CeoChannelTrendDay.fromJson(Object? value){
+  final m=value is Map<String,dynamic>?value:<String,dynamic>{};
+  return CeoChannelTrendDay(day:m['day'] is String?m['day'] as String:'',
+   channel:m['channel'] is String?m['channel'] as String:'other',
+   sessions:_n(m['sessions']),leadSessions:_n(m['leadSessions']));
+ }
+}
 class CeoMarketingOverview{
- final List<CeoMarketingRow> channels,campaigns;
- const CeoMarketingOverview({this.channels=const [],this.campaigns=const []});
+ final List<CeoMarketingRow> channels,campaigns,previousChannels;
+ final List<CeoChannelTrendDay> daily;
+ const CeoMarketingOverview({this.channels=const [],this.campaigns=const [],
+  this.previousChannels=const [],this.daily=const []});
  int get sessions=>channels.fold(0,(sum,row)=>sum+row.sessions);
  int get leadSessions=>channels.fold(0,(sum,row)=>sum+row.leadSessions);
+ int get previousSessions=>previousChannels.fold(0,(sum,row)=>sum+row.sessions);
+ int get previousLeadSessions=>previousChannels.fold(0,(sum,row)=>sum+row.leadSessions);
+ double? get sessionsChangePercent=>previousSessions==0?null:
+  (sessions-previousSessions)/previousSessions*100;
+ double? get leadsChangePercent=>previousLeadSessions==0?null:
+  (leadSessions-previousLeadSessions)/previousLeadSessions*100;
+ CeoMarketingRow? previousFor(String channel){
+  for(final row in previousChannels){
+   if(row.channel==channel)return row;
+  }
+  return null;
+ }
  int get productSessions=>channels.fold(0,(sum,row)=>sum+row.productSessions);
  int get ctaSessions=>channels.fold(0,(sum,row)=>sum+row.ctaSessions);
  double? get leadRatePercent=>sessions==0?null:
@@ -94,7 +121,10 @@ class CeoMarketingOverview{
   final m=value is Map<String,dynamic>?value:<String,dynamic>{};
   List<CeoMarketingRow> parse(String key)=>(m[key] as List? ?? const [])
    .map(CeoMarketingRow.fromJson).toList(growable:false);
-  return CeoMarketingOverview(channels:parse('channels'),campaigns:parse('campaigns'));
+  return CeoMarketingOverview(channels:parse('channels'),campaigns:parse('campaigns'),
+   previousChannels:parse('previousChannels'),
+   daily:(m['daily'] as List? ?? const []).map(CeoChannelTrendDay.fromJson)
+    .toList(growable:false));
  }
 }
 class CeoWebStatistics{

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'ceo_repository.dart';
 import 'ceo_stats_models.dart';
 import 'ceo_marketing.dart';
+import 'ceo_dashboard_charts.dart';
 import 'ceo_gsc_models.dart';
 import 'ceo_search_console.dart';
 import 'gsc_oauth_navigation_stub.dart' if (dart.library.js_interop) 'gsc_oauth_navigation_web.dart' as oauth_nav;
@@ -17,6 +18,7 @@ class CeoStatisticsTab extends StatefulWidget{
  @override State<CeoStatisticsTab> createState()=>CeoStatisticsTabState();
 }
 class CeoStatisticsTabState extends State<CeoStatisticsTab>{
+ final ScrollController _statsScroll=ScrollController();
  String period='7d';
  int section=0;
  bool oauthBusy=false;
@@ -51,7 +53,7 @@ class CeoStatisticsTabState extends State<CeoStatisticsTab>{
   if(range!=null)period=range;
   final id=++generation;
   setState((){loading=true;error='';});
-  if(section==4&&(range!=null||fresh))unawaited(loadGsc(fresh:true));
+  if((section==2||section==4)&&(range!=null||fresh))unawaited(loadGsc(fresh:true));
   try{
    final value=await widget.api.websiteStatistics(period,fresh:fresh);
    if(mounted&&id==generation)setState((){data=value;loading=false;});
@@ -125,7 +127,7 @@ class CeoStatisticsTabState extends State<CeoStatisticsTab>{
    });}
   }
  }
- @override void dispose(){generation++;gscGeneration++;super.dispose();}
+ @override void dispose(){generation++;gscGeneration++;_statsScroll.dispose();super.dispose();}
  Widget summary(CeoWebStatistics value)=>LayoutBuilder(builder:(context,box){
   final columns=box.maxWidth>=720?4:2;
   final cardWidth=math.max(130.0,(box.maxWidth-(columns-1)*10)/columns);
@@ -265,7 +267,10 @@ class CeoStatisticsTabState extends State<CeoStatisticsTab>{
   selected:section,onChanged:(next){
    if(section==next)return;
    setState(()=>section=next);
-   if(next==4)unawaited(loadGsc());
+   // Changing sections must show the new first panel instead of retaining an
+   // old scroll offset that keeps the tab header but hides new SEO content.
+   if(_statsScroll.hasClients)_statsScroll.jumpTo(0);
+   if(next==2||next==4)unawaited(loadGsc());
   });
  List<Widget> selectedPanels(CeoWebStatistics value)=>switch(section){
   1=>[
@@ -273,7 +278,8 @@ class CeoStatisticsTabState extends State<CeoStatisticsTab>{
     subtitle:'Xem sản phẩm → Liên hệ → Yêu cầu thành công',
     icon:Icons.filter_alt_outlined,child:funnelPanel(value)),
   ],
-  2=>[CeoMarketingPanel(stats:value.marketing)],
+  2=>[CeoMarketingPanel(stats:value.marketing,gsc:gsc,gscLoading:gscLoading,
+   gscError:gscError,onGscRetry:()=>unawaited(loadGsc(fresh:true)))],
   3=>[
    CeoPanel(title:'Sản phẩm được xem',
     subtitle:value.labelsUnavailable?'Không lấy được tên · đang hiển thị mã gốc':
@@ -298,8 +304,29 @@ class CeoStatisticsTabState extends State<CeoStatisticsTab>{
        child:Text('Chưa phát sinh sự kiện Website trong khoảng thời gian này.',
         style:TextStyle(fontSize:12,color:ceoMuted))),
      ])),
-   CeoPanel(title:'Xu hướng truy cập',subtitle:'Số phiên theo ngày',
-    icon:Icons.show_chart,child:timeline(value)),
+   CeoPanel(title:'Xu hướng truy cập và chuyển đổi',
+    subtitle:'PostHog · phiên Website và phiên tạo yêu cầu theo ngày',
+    icon:Icons.show_chart,child:CeoMarketingTrend(stats:value.marketing)),
+   CeoPanel(title:'So sánh tăng trưởng',
+    subtitle:'PostHog · kỳ hiện tại so với kỳ ngay trước cùng độ dài',
+    icon:Icons.trending_up_outlined,child:Column(
+     crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+      Text('Phiên: ${value.marketing.sessions} · Kỳ trước: ${value.marketing.previousSessions}',
+       style:const TextStyle(fontSize:13,color:ceoInk,fontWeight:FontWeight.w600)),
+      const SizedBox(height:6),
+      Text('Phiên tạo yêu cầu: ${value.marketing.leadSessions} · '
+       'Kỳ trước: ${value.marketing.previousLeadSessions}',
+       style:const TextStyle(fontSize:13,color:ceoInk,fontWeight:FontWeight.w600)),
+      const SizedBox(height:8),
+      Text('Biến động phiên: ${value.marketing.sessionsChangePercent==null?"—":
+       "${value.marketing.sessionsChangePercent!.toStringAsFixed(1)}%"}'
+       ' · Biến động lead: ${value.marketing.leadsChangePercent==null?"—":
+        "${value.marketing.leadsChangePercent!.toStringAsFixed(1)}%"}',
+       style:const TextStyle(fontSize:12,color:ceoPurple)),
+      const SizedBox(height:8),
+      const Text('Không suy ra doanh thu, chi phí Ads hoặc số khách duy nhất.',
+       style:TextStyle(fontSize:11.5,color:ceoMuted))
+     ])),
    CeoPanel(title:'Nguồn truy cập',subtitle:'Nguồn ghi nhận theo phiên (dữ liệu gốc)',
     icon:Icons.hub_outlined,child:ranking(value.sources)),
   ],
@@ -310,6 +337,7 @@ class CeoStatisticsTabState extends State<CeoStatisticsTab>{
    final mobile=box.maxWidth<=780;
    final buttonHeight=mobile?ceoMobileButtonHeight:ceoDesktopButtonHeight;
    return CustomScrollView(key:const ValueKey('ceo-stats-scroll'),
+    controller:_statsScroll,
     physics:const AlwaysScrollableScrollPhysics(),
     slivers:[
      SliverToBoxAdapter(child:Padding(

@@ -96,5 +96,5 @@ export function formatStatistics(period,input){
   cached:input.summary.is_cached===true,metrics,daily,
   sources:pairs(input.sources,10),products:pairs(input.products,10),categories:pairs(input.categories,10),
   seo,seoPages:pairs(input.seoPages,10).filter(item=>safeSeoPage(item.label)),funnel,
-  marketing:formatMarketing(input.marketingSources,input.marketingCampaigns)};
+  marketing:formatMarketing(input.marketingSources,input.marketingCampaigns,input.marketingPreviousSources,input.marketingDaily)};
 }

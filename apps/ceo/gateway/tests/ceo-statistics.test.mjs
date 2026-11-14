@@ -6,7 +6,7 @@ import {readFileSync} from "node:fs";
 test("Only bounded periods and fixed read-only aggregate queries are accepted",()=>{
  for(const period of ["7d","30d","90d"]){
   const queries=queriesFor(period);
-  assert.equal(Object.keys(queries).length,10);
+  assert.equal(Object.keys(queries).length,12);
   assert.match(queries.seoSummary,/google_organic/);
   assert.match(queries.seoSummary,/google_paid/);
   assert.match(queries.seoSummary,/uniqIf\(distinct_id/);
@@ -130,7 +130,7 @@ test("PH02 allows only safe aggregate channel labels and verified campaign codes
  };
  const use=(source,campaign)=>formatStatistics("30d",{...base,
    marketingSources:{results:source},marketingCampaigns:{results:campaign}}).marketing;
- assert.deepEqual(use([],[]),{channels:[],campaigns:[]});
+ assert.deepEqual(use([],[]),{channels:[],campaigns:[],previousChannels:[],daily:[]});
  assert.equal(use([],[["fbmn-20261113","google_paid",1,0,0,0]]).campaigns[0].campaign,"fbmn-20261113");
  assert.throws(()=>use([["google_paid",2,0,1,3,1,1]],[]),/invalid_marketing_counts/);
  assert.throws(()=>use([["unsafe",2,0,0,0,0,0]],[]),/invalid_marketing_channel/);
