@@ -16,7 +16,7 @@
 .appdl-preview>small{font-size:12px;color:var(--fb-ui-muted,#667085)}
 .appdl-preview>strong{font-size:16px;color:var(--fb-ui-primary,#6d249e)}
 .appdl-preview>div{display:flex;gap:10px;flex-wrap:wrap;font-size:12px;color:var(--fb-ui-ink,#20223b)}
-.appdl-preview>p{margin:0;font-size:13px;line-height:1.5;overflow-wrap:break-word}
+.appdl-preview>p{margin:0;font-size:13px;line-height:1.5;overflow-wrap:break-word;white-space:pre-line}
 .appdl-error{padding:14px;color:var(--fb-ui-danger,#b42318)}
 @media(max-width:900px){.appdl-columns{grid-template-columns:minmax(0,1fr)}}
 @media(max-width:480px){.appdl-panel{padding:14px}.appdl-grid{grid-template-columns:minmax(0,1fr)}}
