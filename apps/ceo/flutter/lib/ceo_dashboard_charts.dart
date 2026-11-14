@@ -54,7 +54,7 @@ class _CeoMarketingTrendState extends State<CeoMarketingTrend>{
    ]),
    const SizedBox(height:10),
    const Wrap(spacing:14,runSpacing:6,children:[
-    _LegendDot('Phiên truy cập',ceoPurple),
+    _LegendDot('Phiên theo ngày',ceoPurple),
     _LegendDot('Phiên có yêu cầu',Color(0xFF0B8276))
    ]),
    const SizedBox(height:9),
