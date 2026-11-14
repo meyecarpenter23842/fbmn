@@ -22,7 +22,7 @@ void main(){
   expect(gscOAuthOutcomeMessage('permission'),contains('property'));
   expect(gscOAuthOutcomeMessage('storage'),contains('Neon'));
   expect(gscOAuthOutcomeMessage('google'),contains('Google'));
-  expect(gscOAuthOutcomeMessage('config'),contains('cấu hình'));
+  expect(gscOAuthOutcomeMessage('config'),contains('Cấu hình'));
   expect(gscOAuthOutcomeMessage('invalid'),contains('không hợp lệ'));
   expect(gscOAuthOutcomeMessage('cancelled'),contains('chưa cấp quyền'));
   expect(gscOAuthOutcomeMessage(null),isNull);
