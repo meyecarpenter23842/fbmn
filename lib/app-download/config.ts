@@ -32,6 +32,8 @@ export function parseAppDownloadConfig(raw:unknown):AppDownloadConfig|null{
    typeof o.title!=="string"||!o.title.trim()||o.title.length>80||
    typeof o.message!=="string"||!o.message.trim()||o.message.length>240||
    /[<>]/.test(o.title+o.message)||
+   /[\x00-\x1f\x7f]/.test(o.title)||
+   /[\x00-\x09\x0b-\x1f\x7f]/.test(o.message)||
    !Number.isSafeInteger(o.revision)||Number(o.revision)<1)return null;
   const ios=o.iosUrl==null?null:typeof o.iosUrl==="string"?validStoreUrl(o.iosUrl,"ios"):null;
   const android=o.androidUrl==null?null:typeof o.androidUrl==="string"?validStoreUrl(o.androidUrl,"android"):null;
