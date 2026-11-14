@@ -4,6 +4,8 @@ import 'ceo_stats_models.dart';
 import 'ceo_ui_tokens.dart';
 import 'ceo_workspace.dart';
 
+DateTime _utcDay(String value)=>DateTime.parse('${value}T00:00:00Z');
+
 /// PH03: interactive PostHog series; missing dates remain gaps, never fake zero.
 class CeoMarketingTrend extends StatefulWidget{
  final CeoMarketingOverview stats;
@@ -63,13 +65,13 @@ class _CeoMarketingTrendState extends State<CeoMarketingTrend>{
    else SizedBox(height:208,child:LayoutBuilder(builder:(context,box)=>GestureDetector(
     behavior:HitTestBehavior.opaque,
     onTapDown:(details){
-     final first=DateTime.parse(points.first.day);
-     final span=math.max(1,DateTime.parse(points.last.day).difference(first).inDays);
+     final first=_utcDay(points.first.day);
+     final span=math.max(1,_utcDay(points.last.day).difference(first).inDays);
      final fraction=((details.localPosition.dx-33)/(box.maxWidth-48)).clamp(0.0,1.0);
      var closest=0;
      var distance=double.infinity;
      for(var i=0;i<points.length;i++){
-      final ratio=DateTime.parse(points[i].day).difference(first).inDays/span;
+      final ratio=_utcDay(points[i].day).difference(first).inDays/span;
       if((ratio-fraction).abs()<distance){closest=i;distance=(ratio-fraction).abs();}
      }
      setState(()=>selected=closest);
@@ -104,9 +106,9 @@ class _ChannelLines extends CustomPainter{
   final width=math.max(1.0,size.width-left-right);
   final height=math.max(1.0,size.height-top-bottom);
   final maximum=math.max(1,points.fold<int>(0,(m,p)=>math.max(m,p.sessions)));
-  final first=DateTime.parse(points.first.day);
-  final span=math.max(1,DateTime.parse(points.last.day).difference(first).inDays);
-  double x(int i)=>left+DateTime.parse(points[i].day).difference(first).inDays/span*width;
+  final first=_utcDay(points.first.day);
+  final span=math.max(1,_utcDay(points.last.day).difference(first).inDays);
+  double x(int i)=>left+_utcDay(points[i].day).difference(first).inDays/span*width;
   double y(int amount)=>top+height*(1-amount/maximum);
   void caption(String label,Offset pos){
    final t=TextPainter(text:TextSpan(text:label,
@@ -126,12 +128,14 @@ class _ChannelLines extends CustomPainter{
    Path? line;
    for(var i=0;i<points.length;i++){
     final position=Offset(x(i),y(amount(points[i])));
-    if(i==0||DateTime.parse(points[i].day)
-      .difference(DateTime.parse(points[i-1].day)).inDays>1){
+    if(i==0||_utcDay(points[i].day)
+      .difference(_utcDay(points[i-1].day)).inDays>1){
      if(line!=null)canvas.drawPath(line,paint);
      line=Path()..moveTo(position.dx,position.dy);
     }else{line!.lineTo(position.dx,position.dy);}
-    if(i==selected)canvas.drawCircle(position,4,Paint()..color=color);
+    // Every recorded day gets a marker, even when gaps leave only an isolated
+    // point with no line segment. Highlight selection independently.
+    canvas.drawCircle(position,i==selected?4.5:2.7,Paint()..color=color);
    }
    if(line!=null)canvas.drawPath(line,paint);
   }
