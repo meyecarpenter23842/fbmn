@@ -1,0 +1,52 @@
+name: PR114 post-release public HTTP smoke (GET-only)
+on:
+  push:
+    branches: [ci/app-download-reviewed-worker-bundles]
+    paths:
+      - .github/workflows/smoke-reviewed-app-popup.yml
+permissions:
+  contents: read
+jobs:
+  smoke:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Use Node.js 22
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '22'
+      - name: Read-only production HTTP smoke (no tokens, no writes)
+        shell: bash
+        run: |
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          const get=async(url)=>{
+            const r=await fetch(url,{signal:AbortSignal.timeout(12000),redirect:'manual',headers:{accept:'application/json'}});
+            const text=await r.text();
+            console.log(JSON.stringify({path:new URL(url).pathname,host:new URL(url).hostname,status:r.status,bytes:text.length,cache:r.headers.get('cache-control')}));
+            return {r,text};
+          };
+          const web=await get('https://www.fbmn.vn/');
+          assert.equal(web.r.status,200,'Website homepage HTTP 200');
+          assert.match(web.text,/84 90 154 77 45/,'verified phone visible');
+          assert.match(web.text,/tel:\+84901547745/,'click-to-call link visible');
+          const app=await get('https://www.fbmn.vn/api/app-download');
+          assert.equal(app.r.status,200,'Public configuration must be served end-to-end');
+          assert.match(app.r.headers.get('cache-control')||'',/no-store/);
+          const cfg=JSON.parse(app.text);
+          assert.equal(cfg.data?.revision,1,'expected initial migrated revision');
+          assert.equal(cfg.data?.popupEnabled,true);
+          assert.equal(cfg.data?.title,'Ứng dụng Futurebook');
+          assert.equal(cfg.data?.iosUrl,null);
+          assert.equal(cfg.data?.androidUrl,null);
+          assert.equal('updatedBy' in cfg.data,false);
+          assert.equal('actorSubject' in cfg.data,false);
+          const admin=await get('https://admin.fbmn.vn/');
+          assert.equal(admin.r.status,200);
+          assert.match(admin.text,/Popup tải ứng dụng/);
+          const unauthed=await get('https://admin.fbmn.vn/api/website/app-download');
+          assert.equal(unauthed.r.status,401,'Owner API should refuse anonymous access');
+          const invalidQuery=await get('https://www.fbmn.vn/api/app-download?debug=1');
+          assert.equal(invalidQuery.r.status,400,'Public config disallows query overrides');
+          console.log('PASS: PR114 production public API, phone, Admin auth gate and no-store.');
+          NODE
