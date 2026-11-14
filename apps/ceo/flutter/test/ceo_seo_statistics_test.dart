@@ -119,7 +119,8 @@ void main(){
   testWidgets('SEO06B compact filter and secondary tabs at $width',(tester)async{
    await tester.binding.setSurfaceSize(Size(width,820));
    var selectedPeriod='',selectedTab=-1;
-   await tester.pumpWidget(MaterialApp(home:Scaffold(body:Column(children:[
+   await tester.pumpWidget(MaterialApp(home:MediaQuery(
+    data:MediaQueryData(size:Size(width,820)),child:Scaffold(body:Column(children:[
     Row(children:[
      CeoStatsPeriodFilter(period:'7d',onChanged:(v)=>selectedPeriod=v),
      const Spacer(),
@@ -127,7 +128,7 @@ void main(){
     ]),
     CeoStatsSubTabs(tabs:const ['Tổng quan','Chuyển đổi','Marketing','Sản phẩm','SEO'],
      selected:0,onChanged:(v)=>selectedTab=v),
-   ]))));
+   ])))));
    await tester.pumpAndSettle();
    expect(find.byKey(const ValueKey('ceo-stats-period-filter')),findsOneWidget);
    expect(find.byKey(const ValueKey('ceo-stats-subtabs')),findsOneWidget);
