@@ -9,7 +9,7 @@ test("rebaselined desktop sections follow the new approved screenshot", () => {
   const offsets = order.map(s => page.indexOf(s));
   assert.ok(offsets.every(n => n >= 0), "Missing required desktop section");
   assert.deepEqual([...offsets].sort((a,b) => a-b), offsets);
-  assert.match(page, /VỞ VIẾT/);
+  assert.match(page, /<h1 id="hero-heading" className="sr-only">/);
   assert.match(page, /FUTUREBOOK/);
   assert.match(page, /getPublicCatalog\(\)/);
   assert.match(page, /HomeProductCard/);
@@ -47,6 +47,6 @@ test("unsupported search, cart and account actions remain disabled", () => {
   assert.doesNotMatch(header, /type="button" disabled title="Giỏ hàng chưa mở"/);
   assert.match(header, /ref-header__dealer-cta/);
   assert.doesNotMatch(home, /type="button" disabled title="Giỏ hàng chưa mở"/);
-  assert.match(home, /href="#categories"/);
+  assert.match(home, /className="cms-hero-cta" href="\/san-pham"/);
   assert.match(home, /id="categories"/);
 });
