@@ -27,8 +27,9 @@ export async function GET(request:Request){
  const url=new URL(request.url);
  if(url.origin!=="https://ceo.fbmn.vn")return finish("invalid");
  if(url.searchParams.get("error"))return finish("cancelled");
- if([...url.searchParams.keys()].some(k=>!["code","state","scope","authuser","prompt"].includes(k))||
-    url.searchParams.getAll("state").length!==1||
+ // Google can add harmless provider-owned query parameters; never use them.
+ // Enforce exactly one code and one state rather than rejecting unknown keys.
+ if(url.searchParams.getAll("state").length!==1||
     url.searchParams.getAll("code").length!==1||
     Number(request.headers.get("content-length")||0)>4096)return finish("invalid");
  let config;
