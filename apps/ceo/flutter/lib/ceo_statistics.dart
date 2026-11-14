@@ -20,6 +20,8 @@ class CeoStatisticsTabState extends State<CeoStatisticsTab>{
  int section=0;
  bool oauthBusy=false;
  String oauthError='';
+ String gscCallbackMessage='';
+ bool gscCallbackSuccessful=false;
  bool oauthReconnectRequired=false;
  CeoGscReport? gsc;
  bool gscLoading=false;
@@ -32,7 +34,12 @@ class CeoStatisticsTabState extends State<CeoStatisticsTab>{
  int generation=0;
  @override void initState(){
   super.initState();
-  if(Uri.base.queryParameters['gsc']!=null)section=4;
+  final callbackStatus=Uri.base.queryParameters['gsc'];
+  if(callbackStatus!=null){
+   section=4;
+   gscCallbackMessage=gscOAuthResultMessage(callbackStatus);
+   gscCallbackSuccessful=callbackStatus=='connected';
+  }
   WidgetsBinding.instance.addPostFrameCallback((_){
    if(!mounted)return;
    unawaited(load());
@@ -81,7 +88,7 @@ class CeoStatisticsTabState extends State<CeoStatisticsTab>{
  }
  Future<void> connectGoogle()async{
   if(oauthBusy){return;}
-  setState((){oauthBusy=true;oauthError='';});
+  setState((){oauthBusy=true;oauthError='';gscCallbackMessage='';});
   try{
    final url=await widget.api.startGscOAuth();
    if(!mounted){return;}
@@ -347,12 +354,20 @@ class CeoStatisticsTabState extends State<CeoStatisticsTab>{
     title:'SEO06 · Google Search Console',
     subtitle:'Google tự nhiên · lượt nhấp, hiển thị, CTR và vị trí trung bình',
     icon:Icons.travel_explore_outlined,
-    child:CeoGscPanel(report:gsc,loading:gscLoading,error:gscError,
-     reconnectRequired:oauthReconnectRequired,
-     connectionBusy:oauthBusy,connectionError:oauthError,
-     onConnect:()=>unawaited(connectGoogle()),
-     onDisconnect:()=>unawaited(disconnectGoogle()),
-     retry:()=>unawaited(loadGsc(fresh:true)))),
+    child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+     if(gscCallbackMessage.isNotEmpty)Padding(
+      key:const ValueKey('gsc-callback-result'),
+      padding:const EdgeInsets.only(bottom:12),
+      child:Text(gscCallbackMessage,
+       style:TextStyle(fontSize:12.5,fontWeight:FontWeight.w600,
+        color:gscCallbackSuccessful?ceoPurple:const Color(0xFFB45309)))),
+     CeoGscPanel(report:gsc,loading:gscLoading,error:gscError,
+      reconnectRequired:oauthReconnectRequired,
+      connectionBusy:oauthBusy,connectionError:oauthError,
+      onConnect:()=>unawaited(connectGoogle()),
+      onDisconnect:()=>unawaited(disconnectGoogle()),
+      retry:()=>unawaited(loadGsc(fresh:true))),
+    ])),
    if(value!=null&&!loading&&error.isEmpty)...selectedPanels(value),
   ]);
  }
