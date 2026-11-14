@@ -291,9 +291,14 @@ function CmsEditor({item,kind,onSaved,onSavingChange,dirtyRef,step,onStep,formId
        onChange={e=>set("paragraphs",e.target.value)}
        placeholder="Mỗi đoạn cách nhau một dòng trống; không dùng HTML"/>
      </label>
-     <label className="cms-wide">Liên kết khi bấm (https:// hoặc đường dẫn Website)
+     <label className="cms-wide">
+      {draft.kind==="banner"&&draft.placements.public_web==="home.hero"
+       ?"Liên kết nút Xem sản phẩm (Hero)":"Liên kết khi bấm (https:// hoặc đường dẫn Website)"}
       <input type="text" value={draft.ctaUrl} disabled={busy}
        onChange={e=>set("ctaUrl",e.target.value)} placeholder="/san-pham"/>
+      {draft.kind==="banner"&&draft.placements.public_web==="home.hero"&&
+       <small className="cms-field-help">Áp dụng cho các Slide trong Banner này.
+        Để trống, nút mở /san-pham. Nút thật nằm trên ảnh; không cần vẽ nút vào file ảnh.</small>}
      </label>
     </div>
    </>}
@@ -349,7 +354,9 @@ function CmsEditor({item,kind,onSaved,onSavingChange,dirtyRef,step,onStep,formId
    </>}
    {step===2&&<>
     <div className="cms-wizard-intro"><strong>Chọn ảnh và kiểm tra bố cục</strong>
-     <p>Ảnh Website hiện ngay trong bản xem trước Desktop/Mobile. Bấm Lưu mới tải ảnh vào R2.</p>
+     <p>{draft.kind==="banner"&&draft.placements.public_web==="home.hero"
+      ?"Mỗi Slide là một ảnh hoàn chỉnh toàn khung; nút Xem sản phẩm nằm trên ảnh. Chừa vùng trống dưới ảnh cho nút. Desktop 16:7, Mobile 4:5."
+      :"Ảnh Website hiện ngay trong bản xem trước Desktop/Mobile. Bấm Lưu mới tải ảnh vào R2."}</p>
     </div>
     <CmsMediaEditor recordId={savedRecord?.id??null} revision={savedRecord?.revision??0}
      channels={["public_web"]} pending={pendingImages} onStage={stageImage} disabled={busy}/>
