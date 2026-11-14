@@ -54,3 +54,15 @@ Tạo biến server-only bằng Vercel Settings → Environment Variables → Pr
 - Callback chỉ redirect về CEO với status cố định connected, cancelled, invalid, config, permission, token, google_api, storage. CEO hiển thị thông báo rõ ràng trong tab SEO, không lộ code, state, token, email/PII hoặc raw Google response.
 - Vẫn chỉ scope webmasters.readonly, property allowlist fbmn.vn, Neon encrypted token theo Owner, PH01/PH02/SEO05 không đổi; không cần migration/database schema mới.
 - UAT production sau Owner duyệt phát hành: cấp quyền thực bằng Gmail có quyền GSC, xác nhận callback connected, Neon tăng 1 ciphertext grant, API trả KPI GSC thật. Nếu status permission: property/quyền Search Console; nếu token: cấu hình Client Secret/Redirect; nếu storage: Neon. Không gọi là nghiệm thu thực tế nếu chưa xác thực kết quả với Owner.
+
+## SEO06-OAUTH-STATE (14/11/2026) — xử lý callback mất cookie trên trình duyệt thật
+- Owner gửi POST /start bằng JWT được kiểm chứng; Gateway mã hóa AEAD AES-256-GCM state gồm nonce, Owner subject, PKCE verifier và dấu thời gian; TTL 10 phút. Google nhận ciphertext opaque trong tham số `state`, không nhận JWT, email hay token nội bộ.
+- Google callback kiểm chứng mã hóa/toàn vẹn của `state` và TTL, lấy lại Owner subject đã kiểm chứng tại /start; không phụ thuộc cookie, cross-site redirect hay JWT mới. Mã OAuth Google được trao đổi một lần với PKCE; chỉ đọc `webmasters.readonly`, property allowlist như cũ.
+- Giữ fallback đọc cookie cho phiên state cũ đã khởi tạo trước phát hành (tối đa 10 phút); response callback tiếp tục xóa cookie cũ, không cho redirect tùy ý, không ghi raw state/token/authorization code ra log.
+- Đây là cách sửa cho UAT gặp `gsc=invalid` sau Google consent. Các bài test phải bao gồm callback **không có cookie**, ciphertext bị sửa, hết hạn, sai Owner, PKCE, property và token. Không đổi biến Vercel/Neon/schema; kiểm thử OAuth thật vẫn cần Owner cấp quyền.
+
+### Xác nhận Owner bắt buộc sau callback (bảo vệ chống liên kết nhầm Google)
+- GET callback **chỉ** giải mã state OAuth và hiển thị trang xác nhận cùng origin CEO, **không** trao đổi code hoặc ghi grant. Script trên trang xóa code/state khỏi địa chỉ trình duyệt ngay khi tải, dùng CSP nonce, cache no-store và referrer no-referrer.
+- Owner bấm **Xác nhận kết nối**. Trang lấy JWT session Owner tươi từ `/api/auth/token` (có cơ chế refresh `/api/auth/get-session`), gửi POST `/api/ceo/gsc/oauth/complete` cùng ticket AES-GCM ngắn hạn. Backend kiểm tra Owner JWT, Origin, ticket-bound Owner subject và TTL **2 phút**, sau đó mới đổi Google code một lần, xác minh property và lưu refresh token mã hóa trong Neon.
+- Nếu Owner không còn phiên, CEO hiển thị lý do `login` và cần đăng nhập lại/kết nối mới; nếu Google API hoặc Neon lỗi có trạng thái riêng. Link Google bị chuyển sang trình duyệt khác không đủ để ghi đè grant của Owner.
+- Không thêm cookie mới, không migration hoặc Vercel env mới. UAT sau deploy: Google Continue → **Xác nhận kết nối** → CEO hiển thị connected / dữ liệu GSC thật; không kết luận thành công trước khi Owner nghiệm thu.

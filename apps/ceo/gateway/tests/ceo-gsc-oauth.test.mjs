@@ -5,6 +5,7 @@ import {readFileSync} from "node:fs";
 import {
  GSC_SCOPE,GSC_CALLBACK,GSC_AUTH_URL,
  oauthConfig,encryptSecret,decryptSecret,authorizationRequest,verifyCallback,
+ makeCompletionTicket,verifyCompletionTicket,
  exchangeGoogleCode,refreshGoogleToken,hasGoogleProperty,revokeGoogleToken
 } from "../lib/ceo-gsc-oauth.mjs";
 const ENV={
@@ -35,8 +36,8 @@ test("AES-256-GCM seals refresh tokens with randomized IV and verifies integrity
  assert.throws(()=>decryptSecret(a.slice(0,-4)+"AAAA",config.key),/invalid_ciphertext/);
  assert.throws(()=>decryptSecret(a,randomBytes(32)),/invalid_ciphertext/);
 });
-test("Owner-bound, expiring OAuth state and PKCE verifier are enforced",()=>{
- const {authorizationUrl,cookie}=authorizationRequest(config,owner,now);
+test("AEAD-sealed OAuth state works without cookie or JWT and binds Owner + PKCE + TTL",()=>{
+ const {authorizationUrl}=authorizationRequest(config,owner,now);
  const uri=new URL(authorizationUrl);
  assert.equal(uri.origin,new URL(GSC_AUTH_URL).origin);
  assert.equal(uri.searchParams.get("redirect_uri"),GSC_CALLBACK);
@@ -47,23 +48,59 @@ test("Owner-bound, expiring OAuth state and PKCE verifier are enforced",()=>{
  assert.equal(uri.searchParams.get("response_type"),"code");
  assert.equal(uri.searchParams.get("client_secret"),null);
  const state=uri.searchParams.get("state");
+ assert.match(state,/^v1\.[A-Za-z0-9_-]{40,5000}$/);
+ // Google callback only has query parameters. No browser cookie or fresh JWT.
  const code="4/0AX4XfWhValidGoogleAuthorizationCode";
- const granted=verifyCallback(config,{state,code},cookie,owner,now+15000);
+ const granted=verifyCallback(config,{state,code},"",null,now+15000);
  assert.ok(granted);
+ assert.equal(granted.subject,owner);
  assert.equal(createHash("sha256").update(granted.verifier).digest("base64url"),
   uri.searchParams.get("code_challenge"));
- assert.equal(verifyCallback(config,{state,code},cookie,"other_owner",now+15000),null);
- assert.equal(verifyCallback(config,{state:"a".repeat(43),code},cookie,owner,now+15000),null);
- assert.equal(verifyCallback(config,{state,code},cookie,owner,now+600001),null);
- assert.equal(verifyCallback(config,{state,code},"tampered-cookie",owner,now),null);
- // When Google redirects, the browser has no Owner JWT header. The AES-GCM
- // state cookie must recover the Owner subject already verified by /start.
- const returned=verifyCallback(config,{state,code},cookie,null,now+15000);
- assert.equal(returned.subject,owner);
- assert.equal(returned.verifier,granted.verifier);
- assert.equal(verifyCallback(config,{state,code},"tampered-cookie",null,now),null);
- assert.equal(verifyCallback(config,{state:"b".repeat(43),code},cookie,null,now),null);
- assert.equal(verifyCallback(config,{state,code},cookie,null,now+600001),null);
+ assert.equal(verifyCallback(config,{state,code},"","other_owner",now+15000),null);
+ assert.equal(verifyCallback(config,{state,code},"",null,now+600001),null);
+ assert.equal(verifyCallback(config,{state,code},"",null,now-1),null);
+ const flip=state.slice(0,-5)+(state.slice(-5,-4)==="A"?"B":"A")+state.slice(-4);
+ assert.equal(verifyCallback(config,{state:flip,code},"",null,now+15000),null);
+ assert.equal(verifyCallback(config,{state:"a".repeat(43),code},"",null,now+15000),null);
+ assert.equal(verifyCallback(config,{state,code},"",null,now+15000).subject,owner);
+ assert.equal(verifyCallback(oauthConfig({...ENV,
+  FBMN_CEO_GSC_OAUTH_ENCRYPTION_KEY:randomBytes(32).toString("hex")}),
+  {state,code},"",null,now+15000),null);
+ // A stale or corrupt browser cookie cannot break the newly sealed state.
+ assert.equal(verifyCallback(config,{state,code},"stale-cookie",null,now+15000).subject,owner);
+});
+test("legacy random OAuth state is only valid with its authentic cookie",()=>{
+ const state="a".repeat(43),verifier="b".repeat(64);
+ const cookie=encryptSecret(JSON.stringify({state,verifier,subject:owner,createdAt:now}),config.key);
+ const code="4/0AX4XfWhValidGoogleAuthorizationCode";
+ assert.equal(verifyCallback(config,{state,code},cookie,null,now+3000).subject,owner);
+ assert.equal(verifyCallback(config,{state,code},"",null,now+3000),null);
+ assert.equal(verifyCallback(config,{state,code},"tampered-cookie",null,now+3000),null);
+ assert.equal(verifyCallback(config,{state:"c".repeat(43),code},cookie,null,now+3000),null);
+});
+test("completion ticket requires fresh initiating Owner proof and expires without leaking raw credentials",()=>{
+ const issued=authorizationRequest(config,owner,now);
+ const state=new URL(issued.authorizationUrl).searchParams.get("state");
+ const code="4/0AX4XfWhValidGoogleAuthorizationCode";
+ const verified=verifyCallback(config,{state,code},"",null,now+1000);
+ assert.equal(verified.subject,owner);
+ const ticket=makeCompletionTicket(config,verified,now+1000);
+ assert.match(ticket,/^v1\.[A-Za-z0-9_-]{40,5000}$/);
+ assert.equal(ticket.includes(code),false);
+ assert.equal(ticket.includes(owner),false);
+ const valid=verifyCompletionTicket(config,ticket,owner,now+2000);
+ assert.equal(valid.subject,owner);
+ assert.equal(valid.code,code);
+ assert.equal(valid.verifier,verified.verifier);
+ assert.equal(verifyCompletionTicket(config,ticket,"other_owner",now+2000),null);
+ assert.equal(verifyCompletionTicket(config,ticket,owner,now+1000-1),null);
+ assert.equal(verifyCompletionTicket(config,ticket,owner,now+300001),null);
+ const flipped=ticket.slice(0,-5)+(ticket.slice(-5,-4)==="A"?"B":"A")+ticket.slice(-4);
+ assert.equal(verifyCompletionTicket(config,flipped,owner,now+2000),null);
+ assert.equal(verifyCompletionTicket(config,state,owner,now+2000),null);
+ assert.equal(verifyCompletionTicket(oauthConfig({...ENV,
+  FBMN_CEO_GSC_OAUTH_ENCRYPTION_KEY:randomBytes(32).toString("hex")}),
+  ticket,owner,now+2000),null);
 });
 test("OAuth code exchange and refresh never send client secret to CEO browser",async()=>{
  const post=[];
@@ -94,7 +131,7 @@ test("OAuth code exchange and refresh never send client secret to CEO browser",a
  const verifier=verifyCallback(config,{
   state:new URL(auth.authorizationUrl).searchParams.get("state"),
   code:"4/0AX4XfWhValidGoogleAuthorizationCode"
- },auth.cookie,owner,now);
+ },"",owner,now);
  const grant=await exchangeGoogleCode(config,verifier.code,verifier.verifier,fetchImpl);
  assert.equal(typeof grant.refreshToken,"string");
  const refreshed=await refreshGoogleToken(config,grant.refreshToken,fetchImpl);
@@ -130,29 +167,36 @@ test("Google property must match configured FBMN site exactly and grant read per
 });
 test("OAuth routes check Owner, origin and state; do not expose token in query or response",()=>{
  const read=(p)=>readFileSync(new URL("../app/api/ceo/gsc/oauth/"+p+"/route.ts",import.meta.url),"utf8");
- const start=read("start"),callback=read("callback"),status=read("status");
- for(const route of [start,status]){
+ const start=read("start"),callback=read("callback"),complete=read("complete"),status=read("status");
+ for(const route of [start,complete,status]){
   assert.match(route,/requireOwner/);
   assert.match(route,/no-store/);
  }
  assert.match(callback,/no-store/);
  assert.doesNotMatch(callback,/requireOwner/);
- assert.match(callback,/saveGscGrant\(verified\.subject/);
+ assert.doesNotMatch(callback,/saveGscGrant|exchangeGoogleCode/);
+ assert.match(complete,/saveGscGrant\(owner\.subject/);
+ assert.match(complete,/verifyCompletionTicket/);
+ assert.match(complete,/exchangeGoogleCode/);
+ assert.match(complete,/hasGoogleProperty/);
+ assert.match(complete,/allowedOrigin/);
  assert.match(callback,/verifyCallback\(config/);
  // Distinct safe callback diagnostics must never echo code/state/tokens.
- for(const reason of ["invalid","permission","config","token","storage","google_api","connected"]){
+ for(const reason of ["invalid","config","cancelled"])
   assert.match(callback,new RegExp('finish\\("'+reason+'"\\)'));
- }
+ for(const reason of ["invalid","login","config","token","permission","google_api","storage","connected"])
+  assert.match(complete,new RegExp('"'+reason+'"'));
  assert.match(start,/allowedOrigin/);
- assert.match(start,/SameSite=Lax/);
- assert.match(start,/HttpOnly/);
+ assert.doesNotMatch(start,/Set-Cookie|HttpOnly|SameSite=/);
+ assert.match(start,/authorizationRequest/);
  assert.match(callback,/verifyCallback/);
- assert.match(callback,/hasGoogleProperty/);
- assert.match(callback,/saveGscGrant/);
+ assert.match(callback,/makeCompletionTicket/);
+ assert.match(callback,/Content-Security-Policy/);
+ assert.match(callback,/history.replaceState/);
  assert.match(callback,/Max-Age=0/);
  assert.match(status,/deleteGscGrant/);
  assert.match(status,/revokeGoogleToken/);
- for(const route of [start,callback,status])
+ for(const route of [start,callback,complete,status])
   assert.doesNotMatch(route,/console\.log|NEXT_PUBLIC_|localStorage|client_secret\s*:/);
  const oauthReport=readFileSync(new URL("../app/api/ceo/search-console/route.ts",import.meta.url),"utf8");
  assert.match(oauthReport,/refreshGoogleToken/);
@@ -162,13 +206,11 @@ test("OAuth routes check Owner, origin and state; do not expose token in query o
 });
 
 test("sealed OAuth callback cannot rely on a new JWT from Google's redirect",()=>{
- const {cookie,authorizationUrl}=authorizationRequest(config,owner,now);
+ const {authorizationUrl}=authorizationRequest(config,owner,now);
  const state=new URL(authorizationUrl).searchParams.get("state");
- const verified=verifyCallback(config,{
-  state,code:"4/0AX4XfWhValidGoogleAuthorizationCode"
- },cookie,null,now+20000);
+ const code="4/0AX4XfWhValidGoogleAuthorizationCode";
+ const verified=verifyCallback(config,{state,code},"",null,now+20000);
  assert.equal(verified?.subject,owner);
- assert.equal(verified?.code,"4/0AX4XfWhValidGoogleAuthorizationCode");
- assert.equal(verifyCallback(config,{state,
-  code:"4/0AX4XfWhValidGoogleAuthorizationCode"},cookie,"other_owner",now+20000),null);
+ assert.equal(verified?.code,code);
+ assert.equal(verifyCallback(config,{state,code},"","other_owner",now+20000),null);
 });
