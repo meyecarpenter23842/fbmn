@@ -6,7 +6,7 @@ import 'ceo_stats_models.dart';
 import 'ceo_marketing.dart';
 import 'ceo_gsc_models.dart';
 import 'ceo_search_console.dart';
-import 'gsc_oauth_navigation_stub.dart' if (dart.library.js_interop) 'gsc_oauth_navigation_web.dart' as oauthNav;
+import 'gsc_oauth_navigation_stub.dart' if (dart.library.js_interop) 'gsc_oauth_navigation_web.dart' as oauth_nav;
 import 'ceo_ui_tokens.dart';
 import 'ceo_workspace.dart';
 
@@ -68,12 +68,12 @@ class CeoStatisticsTabState extends State<CeoStatisticsTab>{
   }
  }
  Future<void> connectGoogle()async{
-  if(oauthBusy)return;
+  if(oauthBusy){return;}
   setState((){oauthBusy=true;oauthError='';});
   try{
    final url=await widget.api.startGscOAuth();
-   if(!mounted)return;
-   oauthNav.navigateGoogleConsent(url);
+   if(!mounted){return;}
+   oauth_nav.navigateGoogleConsent(url);
   }catch(_){
    if(mounted)setState((){
     oauthBusy=false;
@@ -90,7 +90,7 @@ class CeoStatisticsTabState extends State<CeoStatisticsTab>{
     TextButton(onPressed:()=>Navigator.of(context).pop(false),child:const Text('Hủy')),
     FilledButton(onPressed:()=>Navigator.of(context).pop(true),child:const Text('Ngắt kết nối')),
    ]));
-  if(ok!=true||!mounted)return;
+  if(ok!=true||!mounted){return;}
   setState((){oauthBusy=true;oauthError='';});
   try{
    await widget.api.disconnectGscOAuth();

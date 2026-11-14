@@ -10,6 +10,7 @@ const TOKEN=/^[A-Za-z0-9._~+/\-=]{20,5000}$/;
 const STATE=/^[A-Za-z0-9_-]{32,80}$/;
 const CODE=/^[A-Za-z0-9/_\-.]{8,2048}$/;
 
+/** @returns {{status:"unconfigured"} | {status:"ready",property:string,clientId:string,clientSecret:string,key:import("node:buffer").Buffer}} */
 export function oauthConfig(env=process.env){
  const property=String(env.FBMN_CEO_GSC_SITE_URL||"").trim();
  const clientId=String(env.FBMN_CEO_GSC_OAUTH_CLIENT_ID||"").trim();

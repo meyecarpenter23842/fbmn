@@ -175,7 +175,7 @@ async function gscQuery(fetchImpl,accessToken,site,dates,dimensions,rowLimit){
 }
 export async function fetchGscReport(period,{
  env=process.env,fetchImpl=fetch,now=new Date(),
- accessToken=null,site=null
+ accessToken=/** @type {string|null} */ (null),site=/** @type {string|null} */ (null)
 }={}){
  const dates=gscDates(period,now);
  // OAuth authorization-code flow supplies a short-lived access token server-side.

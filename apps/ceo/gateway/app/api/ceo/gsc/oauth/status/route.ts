@@ -1,4 +1,3 @@
-import {requireOwner} from "@/lib/owner-gate";
 import {allowedOrigin} from "@/lib/ceo-push-policy.mjs";
 import {oauthConfig,revokeGoogleToken} from "@/lib/ceo-gsc-oauth.mjs";
 import {readGscGrant,deleteGscGrant} from "@/lib/ceo-gsc-store";

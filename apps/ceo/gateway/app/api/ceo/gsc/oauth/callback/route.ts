@@ -1,11 +1,9 @@
-import {requireOwner} from "@/lib/owner-gate";
 import {oauthConfig,verifyCallback,exchangeGoogleCode,hasGoogleProperty} from "@/lib/ceo-gsc-oauth.mjs";
 import {saveGscGrant} from "@/lib/ceo-gsc-store";
 import {requireOwner} from "@/lib/owner-gate";
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
 const noStore={"Cache-Control":"private, no-store","X-Content-Type-Options":"nosniff","Referrer-Policy":"no-referrer"};
-const fail=(status:number,code:string)=>Response.json({error:{code}},{status,headers:noStore});
 
 const LANDING="https://ceo.fbmn.vn/ceo/index.html?tab=4&gsc=";
 const clear="fbmn_gsc_oauth=; Path=/api/ceo/gsc/oauth/callback; Max-Age=0; HttpOnly; Secure; SameSite=Lax";
