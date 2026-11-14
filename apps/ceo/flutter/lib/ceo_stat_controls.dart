@@ -9,30 +9,30 @@ class CeoStatsPeriodFilter extends StatelessWidget {
  const CeoStatsPeriodFilter({super.key,required this.period,
   required this.onChanged,this.enabled=true});
  @override Widget build(BuildContext context){
-  final height=MediaQuery.sizeOf(context).width<=780?
-   ceoMobileButtonHeight:ceoDesktopButtonHeight;
+  final mobile=MediaQuery.sizeOf(context).width<=780;
+  final height=mobile?ceoMobileButtonHeight:ceoDesktopButtonHeight;
   return Material(color:Colors.transparent,child:Container(
    key:const ValueKey('ceo-stats-period-filter'),
    padding:const EdgeInsets.all(2),
    decoration:BoxDecoration(color:const Color(0xFFF8F5FB),
     border:Border.all(color:ceoBorder),borderRadius:BorderRadius.circular(ceoRadius)),
    child:Row(mainAxisSize:MainAxisSize.min,children:[
-    for(final item in const [('7d','7 ngày'),('30d','30 ngày'),('90d','90 ngày')])
-     Semantics(selected:period==item.$1,button:true,
-      child:InkWell(key:ValueKey('ceo-stats-period-${item.$1}'),
+    for(final item in const [('7d','7N','7 ngày'),('30d','30N','30 ngày'),('90d','90N','90 ngày')])
+     Semantics(selected:period==item.$1,button:true,label:item.$3,
+      child:Tooltip(message:item.$3,child:InkWell(key:ValueKey('ceo-stats-period-${item.$1}'),
        borderRadius:BorderRadius.circular(ceoRadius-1),
        onTap:enabled&&period!=item.$1?()=>onChanged(item.$1):null,
        child:AnimatedContainer(duration:ceoMotion,curve:Curves.easeOutCubic,
         height:height,
-        padding:const EdgeInsets.symmetric(horizontal:10),
+        padding:EdgeInsets.symmetric(horizontal:mobile?7:10),
         decoration:BoxDecoration(
          color:period==item.$1?ceoLavender:Colors.transparent,
          borderRadius:BorderRadius.circular(ceoRadius-1),
          border:Border.all(color:period==item.$1?ceoBorder:Colors.transparent)),
-        child:Center(child:Text(item.$2,style:TextStyle(
+        child:Center(child:Text(mobile?item.$2:item.$3,style:TextStyle(
          fontSize:ceoControlFontSize,fontWeight:period==item.$1?
           FontWeight.w700:FontWeight.w500,
-         color:period==item.$1?ceoPurple:ceoMuted))))))
+         color:period==item.$1?ceoPurple:ceoMuted)))))))
    ])));
  }
 }
