@@ -2,6 +2,7 @@
 import { handleCatalogue } from "./catalogue-service.mjs";
 import { handleCms } from "./cms-service.mjs";
 import { handleHomeLayout } from "./home-layout-service.mjs";
+import {handleAppDownloadSettings} from "./app-download-service.mjs";
 import {handleCategoryDisplay} from "./category-display-service.mjs";
 import {handleSeoSettings} from "./seo-service.mjs";
 import {handleChatHistory} from "./chat-history-service.mjs";
@@ -60,7 +61,7 @@ export function createAdminApi({ verifyToken, loadActor, listChannels, recordAud
       const url = new URL(request.url);
       const isPdfUpload=url.pathname==="/v1/admin/website/catalogue/pdf-upload";
       const action = (url.pathname === "/v1/admin/website/catalogue" || url.pathname.startsWith("/v1/admin/website/catalogue/")) ? "website.catalogue" :
-        (url.pathname === "/v1/admin/website/home-layout" || url.pathname === "/v1/admin/website/category-display" || url.pathname === "/v1/admin/website/seo" || url.pathname === "/v1/admin/website/outsourcing-requests" || url.pathname === "/v1/admin/website/contact-requests" || url.pathname === "/v1/admin/website/chatbot-config" || url.pathname === "/v1/admin/website/chat-history") ? "website.layout" : (url.pathname === "/v1/admin/cms" || url.pathname.startsWith("/v1/admin/cms/")) ? "cms.manage" :
+        (url.pathname === "/v1/admin/website/home-layout" || url.pathname === "/v1/admin/website/app-download" || url.pathname === "/v1/admin/website/category-display" || url.pathname === "/v1/admin/website/seo" || url.pathname === "/v1/admin/website/outsourcing-requests" || url.pathname === "/v1/admin/website/contact-requests" || url.pathname === "/v1/admin/website/chatbot-config" || url.pathname === "/v1/admin/website/chat-history") ? "website.layout" : (url.pathname === "/v1/admin/cms" || url.pathname.startsWith("/v1/admin/cms/")) ? "cms.manage" :
         url.pathname.startsWith("/v1/admin/catalogue/") ? "catalogue.manage" :
         url.pathname.startsWith("/v1/admin/pricing/") ? "pricing.private" : ROUTES.get(url.pathname);
       if (!action) return error(404, "not_found", corsOrigin);
@@ -116,6 +117,7 @@ export function createAdminApi({ verifyToken, loadActor, listChannels, recordAud
         const params={request,actor:{...actor,subject},db:catalogueDb};
         if(url.pathname === "/v1/admin/website/chat-history")return handleChatHistory(params);
         if(url.pathname === "/v1/admin/website/seo")return handleSeoSettings(params);
+        if(url.pathname === "/v1/admin/website/app-download")return handleAppDownloadSettings(params);
         if(url.pathname === "/v1/admin/website/chatbot-config")return handleChatbotConfig({...params,googleSecret,credentialStore});
         return url.pathname === "/v1/admin/website/category-display"
           ? handleCategoryDisplay(params) : url.pathname === "/v1/admin/website/outsourcing-requests"
