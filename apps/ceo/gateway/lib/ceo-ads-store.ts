@@ -116,3 +116,13 @@ export async function finishAdsApproval(id:string,status:"verified"|"failed"|"un
   "SET status=$2,result=$3,updated_at=now() WHERE id=$1::uuid",
   [id,status,JSON.stringify(result)]));
 }
+
+export async function updateAdsDraft(subject:string,id:string,revision:number,
+ draft:Record<string,unknown>):Promise<boolean>{
+ const r=await withPushDb(db=>db.query(
+  "UPDATE fbmn_catalog_private.ceo_ads_drafts SET name=$4,kind=$5,payload=$6,"+
+  "revision=revision+1,updated_at=now() WHERE id=$2::uuid "+
+  "AND owner_subject=$1 AND revision=$3",
+  [subject,id,revision,draft.name,draft.kind,JSON.stringify(draft)]));
+ return (r.rowCount||0)===1;
+}
