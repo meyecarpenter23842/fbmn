@@ -26,3 +26,14 @@ export async function deleteGscGrant(subject:string):Promise<void>{
    "WHERE owner_subject=$1",[subject]);
  });
 }
+
+// CEO SEO readers may view the connected company GSC property without OAuth-manage rights.
+// Only authenticated and authorized routes call this server-only function. The grant table
+// contains connections established through the privileged OAuth completion workflow.
+export async function readCompanyGscGrant(key:Buffer):Promise<{subject:string;refreshToken:string}|null>{
+ const result=await withPushDb(async db=>db.query<{owner_subject:string;ciphertext:string}>(
+  "SELECT owner_subject,ciphertext FROM fbmn_catalog_private.ceo_gsc_oauth_grants "+
+  "ORDER BY updated_at DESC LIMIT 1"));
+ const row=result.rows[0];
+ return row?{subject:row.owner_subject,refreshToken:decryptSecret(row.ciphertext,key)}:null;
+}

@@ -60,8 +60,6 @@ export async function GET(request:Request){
 export async function POST(request:Request){
  if(!allowedOrigin(request))return fail("origin_forbidden",403);
  if(request.headers.get("content-type")?.split(";")[0]!=="application/json")return fail("invalid_body",415);
- const owner=await requireOwner(request);
- if(owner.status!==200||!owner.subject)return fail("owner_required",owner.status);
  const stated=request.headers.get("content-length");
  if(stated!==null&&(!/^\d+$/.test(stated)||Number(stated)>512))return fail("invalid_body",400);
  let raw:string;
@@ -77,6 +75,10 @@ export async function POST(request:Request){
   Object.keys(candidate).some(k=>!["kind","id","turnId"].includes(k))||
   (kind==="chat"&&(typeof turnId!=="string"||!/^[1-9][0-9]{0,18}$/.test(turnId)))||
   (kind==="mail"&&turnId!==undefined))return fail("invalid_body",400);
+ // A verified read receipt uses its own data grant, not notification access.
+ const scope=kind==="mail"?"ceo.mail.read":"ceo.conversations";
+ const owner=await requireOwner(request,scope);
+ if(owner.status!==200||!owner.subject)return fail("owner_required",owner.status);
  try{
   const marked=await withPushDb(async db=>{
    // Keep PostgreSQL microseconds intact. Never round-trip timestamptz via JS Date.
