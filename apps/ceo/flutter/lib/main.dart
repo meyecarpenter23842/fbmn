@@ -490,15 +490,21 @@ class _CeoHomeState extends State<CeoHome> with WidgetsBindingObserver{
   try{
    if(tabAtStart==0){
     final calls=<Future<void>>[];
-    if(can('ceo.conversations'))calls.add(widget.api.conversations().then((page){
-     if(mounted)setState(()=>conversations=page);
-    }));
-    if(can('ceo.outsourcing'))calls.add(widget.api.outsourcingRequests().then((page){
-     if(mounted)setState(()=>outsourcing=applyConfirmedViews(page,'outsourcing'));
-    }));
-    if(can('ceo.contacts'))calls.add(widget.api.contactRequests().then((page){
-     if(mounted)setState(()=>contacts=applyConfirmedViews(page,'contact'));
-    }));
+    if(can('ceo.conversations')){
+     calls.add(widget.api.conversations().then((page){
+      if(mounted)setState(()=>conversations=page);
+     }));
+    }
+    if(can('ceo.outsourcing')){
+     calls.add(widget.api.outsourcingRequests().then((page){
+      if(mounted)setState(()=>outsourcing=applyConfirmedViews(page,'outsourcing'));
+     }));
+    }
+    if(can('ceo.contacts')){
+     calls.add(widget.api.contactRequests().then((page){
+      if(mounted)setState(()=>contacts=applyConfirmedViews(page,'contact'));
+     }));
+    }
     await Future.wait(calls);
    }else if(tabAtStart==1){final v=await widget.api.conversations();
     if(mounted)setState(()=>conversations=v);}
