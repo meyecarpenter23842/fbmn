@@ -98,23 +98,8 @@
   background: rgba(255,255,255,.48);
   border-radius: 15px;
 }
-.ref-product-card__copy { display: flex; flex-direction: column; flex: 1; min-width: 0; }
-.ref-product-card__copy h3 { font-size: 15px; line-height: 1.4; font-weight: 650; margin: 0 0 6px; color: var(--fb-glass-ink); overflow-wrap: anywhere; }
-.ref-product-card__copy p { color: var(--fb-glass-muted); margin: 0 0 6px; font-size: 13px; }
-.ref-product-card__copy small { color: var(--fb-glass-muted); font-size: 11px; overflow-wrap: anywhere; }
-.ref-product-card__more {
-  margin-top: auto;
-  display: grid;
-  place-items: center;
-  min-height: var(--fb-control-height-compact);
-  padding: 5px 9px;
-  border-radius: 999px;
-  background: linear-gradient(110deg, var(--color-primary), var(--color-primary-strong));
-  color: #fff;
-  text-align: center;
-  font-size: var(--fb-control-font-size);
-  font-weight: 800;
-}
+.ref-product-card__copy { display: flex; flex-direction: column; flex: 0 0 auto; min-width: 0; padding-bottom: 2px; }
+.ref-product-card__copy h3 { font-size: 15px; line-height: 1.4; font-weight: 700; margin: 0; color: var(--fb-glass-ink); overflow-wrap: anywhere; }
 .ref-catalog-state {
   border: 1px solid var(--fb-glass-border);
   border-radius: var(--fb-glass-panel-radius);
@@ -216,9 +201,7 @@
   .ref-featured .mobile-carousel__controls { display: flex; }
   .ref-product-card__image { min-height: 190px; }
   .ref-product-card__copy h3 { font-size: 14px; }
-  .ref-product-card__copy p { font-size: 12px; }
-  .ref-product-card__copy small { font-size: 11px; }
-  .ref-product-card__more { min-height: var(--fb-control-height-touch); font-size: var(--fb-control-font-size); }
+
   .ref-promos { display: flex; overflow-x: auto; gap: 11px; scroll-snap-type: x mandatory; scrollbar-width: none; }
   .ref-promo { flex: 0 0 100%; scroll-snap-align: start; min-height: 139px; padding: 16px; }
   .ref-promo h2 { font-size: 24px; }

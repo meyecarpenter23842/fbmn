@@ -73,11 +73,11 @@ test("DL3 SSR reads the same public_web adapter as listing with explicit loading
  assert.doesNotMatch(home,/Mẫu trưng bày|Vở A4|Vở B5|ref-promos/);
 });
 
-test("DL3 cards contain one true product link, SKU and optional approved cover, no price leak",()=>{
+test("DL3 cards show verified cover + name with one full-card link, no price leak",()=>{
  const card=read("components/home-product-card.tsx");
  const nav=read("components/category-navigation.tsx");
- assert.match(card,/product\.variants\[0\]\?\.sku/);
- assert.match(card,/product\.variants\.length/);
+ assert.doesNotMatch(card,/product\.variants\[0\]\?\.sku|Mã tham khảo|ref-product-card__more/);
+ assert.doesNotMatch(card,/product\.variants\.length/);
  assert.match(card,/getPublishedProductImageUrl/);
  assert.match(card,/CatalogProductImage/);
  assert.match(card,/GlassCard hover linkCard/);

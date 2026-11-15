@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import { CatalogShell, CatalogBreadcrumb, CatalogListing } from "@/components/catalog-ui";
 import { getPublicCatalog } from "@/lib/catalog/adapter";
 import {getPublicCategoryDisplay} from "@/lib/catalog/category-display";
@@ -25,8 +26,18 @@ export default async function ProductsPage({
   return <CatalogShell>
     <div className="catalog-wrap">
       <CatalogBreadcrumb trail={[{ label: "Sản phẩm" }]}/>
+      <section className="catalog-product-banner" aria-label="Danh mục sản phẩm Futurebook">
+        <div className="catalog-product-banner__copy">
+          <span className="catalog-product-banner__eyebrow">FUTUREBOOK MIỀN NAM</span>
+          <strong>Sản phẩm Futurebook</strong>
+          <span className="catalog-product-banner__categories">Tập vở · Sổ tay · Giấy · Văn phòng phẩm</span>
+        </div>
+        <Image className="catalog-product-banner__logo"
+          src="/brand/fbmn-transparent-logo.webp"
+          alt="Logo Futurebook Miền Nam" width={300} height={84} sizes="(max-width: 700px) 130px, 250px"/>
+      </section>
       <CatalogListing data={catalog} filters={filters} heading="Sản phẩm Futurebook"
-        description="Danh mục tập học sinh, tập sinh viên, sổ ghi chép và văn phòng phẩm Futurebook. Tìm theo mã sản phẩm, khổ giấy, số trang và định lượng có trong dữ liệu đã công khai. Liên hệ để được tư vấn lựa chọn quy cách." modeByCategory={modes}/>
+        description="Danh mục tập học sinh, tập sinh viên, sổ ghi chép và văn phòng phẩm Futurebook. Tìm theo mã sản phẩm, khổ giấy, số trang và định lượng có trong dữ liệu đã công khai. Liên hệ để được tư vấn lựa chọn quy cách." modeByCategory={modes} showIntro={false}/>
     </div>
   </CatalogShell>;
 }
