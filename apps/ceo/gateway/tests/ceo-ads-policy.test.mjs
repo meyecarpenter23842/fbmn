@@ -84,7 +84,8 @@ test("ADS02 paused campaign includes correct negative, match and server owned UR
  const created=createPausedCampaign("1234567890",draft,"fbmn-123456789abc");
  assert.equal(created.preview.after.status,"PAUSED");
  assert.equal(created.operations[1].campaignOperation.create.status,"PAUSED");
- assert.equal(created.operations.at(-1).adGroupAdOperation.create.status,"PAUSED");
+ assert.equal(created.operations.at(-1).adGroupAdOperation.create.status,"ENABLED");
+ assert.equal(created.operations.find(x=>x.adGroupOperation).adGroupOperation.create.status,"ENABLED");
  assert.equal(created.operations.filter(x=>x.adGroupCriterionOperation?.create?.negative).length,1);
  assert.equal(created.operations.find(x=>x.adGroupCriterionOperation?.create?.keyword?.text==="tập vở sỉ")
   .adGroupCriterionOperation.create.keyword.matchType,"PHRASE");

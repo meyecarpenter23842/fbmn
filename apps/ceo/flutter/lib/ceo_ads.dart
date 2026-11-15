@@ -379,7 +379,7 @@ class CeoAdsPanelState extends State<CeoAdsPanel>{
        Text('Trạng thái: '+(old['status']??'Chưa tồn tại').toString()+
         ' → '+(after['status']??'—').toString()),
        Text('Ngân sách/ngày: '+(old['dailyBudget']??'—').toString()+
-        ' → '+(after['dailyBudget']??'—').toString()+' '+currency),
+        ' → '+(after['budgetDaily']??after['dailyBudget']??'—').toString()+' '+currency),
        if(after['landingUrl']!=null)Text('Trang đích: '+after['landingUrl'].toString()),
        const SizedBox(height:10),
        const Text('Thao tác được gửi lên Google Ads một lần duy nhất. '

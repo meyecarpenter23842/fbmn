@@ -71,7 +71,7 @@ export async function adsKeywordsHistorical(customer,token,login,words,geos,fetc
  const key=customer+"|"+keywords.join("|")+"|"+targets.join("|");
  return boundedCache(key,3600000,async()=>{
   const j=await adsRequest("/customers/"+customer+":generateKeywordHistoricalMetrics",token,login,{
-   keywords,geoTargetConstants:targets,language:"languageConstants/1066",
+   keywords,geoTargetConstants:targets,language:"languageConstants/1040",
    keywordPlanNetwork:"GOOGLE_SEARCH",
    historicalMetricsOptions:{includeAverageCpc:true}
   },fetchImpl);
@@ -94,7 +94,7 @@ export async function adsKeywordIdeas(customer,token,login,words,geos,fetchImpl=
  const key="ideas|"+customer+"|"+keywords.join("|")+"|"+targets.join("|");
  return boundedCache(key,3600000,async()=>{
   const j=await adsRequest("/customers/"+customer+":generateKeywordIdeas",token,login,{
-   keywordSeed:{keywords},geoTargetConstants:targets,language:"languageConstants/1066",
+   keywordSeed:{keywords},geoTargetConstants:targets,language:"languageConstants/1040",
    keywordPlanNetwork:"GOOGLE_SEARCH",pageSize:60,
    historicalMetricsOptions:{includeAverageCpc:true}
   },fetchImpl);

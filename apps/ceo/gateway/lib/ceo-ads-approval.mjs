@@ -72,14 +72,14 @@ export function createPausedCampaign(customer,draft,slug){
    campaign:campaignRef,location:{geoTargetConstant:x},negative:false}}})),
   {adGroupOperation:{create:{
    resourceName:groupRef,campaign:campaignRef,name:v.name.slice(0,100),
-   type:"SEARCH_STANDARD",status:"PAUSED"}}},
+   type:"SEARCH_STANDARD",status:"ENABLED"}}},
   ...v.keywords.map(x=>({adGroupCriterionOperation:{create:{
-   adGroup:groupRef,status:"PAUSED",
+   adGroup:groupRef,status:"ENABLED",
    keyword:{text:x,matchType:v.matchType}}}})),
   ...v.negativeKeywords.map(x=>({adGroupCriterionOperation:{create:{
    adGroup:groupRef,negative:true,keyword:{text:x,matchType:"BROAD"}}}})),
   {adGroupAdOperation:{create:{
-   adGroup:groupRef,status:"PAUSED",ad:{
+   adGroup:groupRef,status:"ENABLED",ad:{
     finalUrls:[v.landingUrl],
     responsiveSearchAd:{
      headlines:v.headlines.map(text=>({text})),
