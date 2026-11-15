@@ -2,6 +2,9 @@ import {handleMedia} from "./media-service.mjs";
 // ADM-06 private draft catalogue service. Exact company SKU text is immutable.
 // Never store NET, stock, private image source or publish from these endpoints.
 const roles = new Set(["owner","admin","editor"]);
+// Enforce authenticated per-channel grants before any publication transaction.
+const canPublishChannel=(actor,channel)=>["owner","admin"].includes(actor?.role)||
+ (Array.isArray(actor?.channels)&&actor.channels.includes(channel));
 const reply = (status, data) => new Response(JSON.stringify(data), {status,headers:{
   "Content-Type":"application/json","Cache-Control":"private, no-store",
   "X-Content-Type-Options":"nosniff"
@@ -125,6 +128,7 @@ export async function handleCatalogue({request,actor,db,r2}) {
       const keys=entries.map(row=>row.sku_cong_ty.toUpperCase()+":"+row.channel_code);
       if(skus.length>200||channels.length>3||new Set(keys).size!==entries.length)
         return fail("invalid_visibility_batch");
+      if(channels.some(channel=>!canPublishChannel(actor,channel)))return fail("channel_forbidden",403);
       const saved=await transactional(db,async c=>{
         // Lock SKU rows in a deterministic order. Single-SKU writes acquire
         // the same lock; all expected revisions are checked before any update.
@@ -168,6 +172,7 @@ export async function handleCatalogue({request,actor,db,r2}) {
          !Number.isSafeInteger(input.expected_revision)||input.expected_revision<0||
          input.confirm!=="CAP_NHAT_HIEN_THI")
         return fail("invalid_visibility");
+      if(!canPublishChannel(actor,input.channel_code))return fail("channel_forbidden",403);
       const result=await transactional(db,async c=>{
         const exists=await c.query(
           "SELECT sku_cong_ty FROM fbmn_catalog.skus WHERE sku_cong_ty=$1 FOR UPDATE",

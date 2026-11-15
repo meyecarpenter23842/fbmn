@@ -118,3 +118,19 @@ test("Source-only draft allows review-status edit without inventing standardized
   assert.equal((await response.json()).data.sku_cong_ty,"0114");
 });
 
+
+test("USER01 catalogue visibility cannot change ungranted channels",async()=>{
+ const actor={role:"editor",subject:"staff",permissions:["admin.catalogue.read","admin.catalogue.write"],channels:["public_web"]};
+ const store=memoryDb([{sku_cong_ty:"0114"}]);
+ const single=await handleCatalogue({request:request("visibility","POST",{
+  sku_cong_ty:"0114",channel_code:"dealer_app",visible:true,expected_revision:0,confirm:"CAP_NHAT_HIEN_THI"
+ }),actor,db:store.db});
+ assert.equal(single.status,403);
+ const bulk=await handleCatalogue({request:request("visibility-bulk","POST",{
+  confirm:"CAP_NHAT_HIEN_THI_HANG_LOAT",visible:true,entries:[
+   {sku_cong_ty:"0114",channel_code:"public_web",expected_revision:0},
+   {sku_cong_ty:"0114",channel_code:"consumer_app",expected_revision:0}]
+ }),actor,db:store.db});
+ assert.equal(bulk.status,403);
+ assert.equal(store.queries.length,0);
+});

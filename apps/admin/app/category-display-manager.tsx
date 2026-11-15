@@ -32,7 +32,7 @@ async function categoryRequest<T>(body?:object):Promise<T>{
  if(!value.data)throw Error("Phản hồi cấu hình không hợp lệ.");
  return value.data;
 }
-export default function CategoryDisplayManager({owner}:{owner:boolean}){
+export default function CategoryDisplayManager({owner,readable}:{owner:boolean;readable:boolean}){
  const [categories,setCategories]=useState<Category[]>([]);
  const [editing,setEditing]=useState<Category|null>(null);
  const [editMode,setEditMode]=useState<Mode>("family");
@@ -51,9 +51,9 @@ export default function CategoryDisplayManager({owner}:{owner:boolean}){
   }catch(e){setError(e instanceof Error?e.message:"Không tải được chế độ danh mục.");}
   finally{setLoading(false);}
  },[]);
- useEffect(()=>{if(!owner)return;let cancelled=false;void Promise.resolve().then(()=>{if(!cancelled)return load();});return ()=>{cancelled=true;};},[owner,load]);
+ useEffect(()=>{if(!readable)return;let cancelled=false;void Promise.resolve().then(()=>{if(!cancelled)return load();});return ()=>{cancelled=true;};},[readable,load]);
  async function save(item:Category){
-  if(saving||editMode===item.mode)return;
+  if(!owner||saving||editMode===item.mode)return;
   setSaving(item.categoryId);setError("");
   try{
    const result=await categoryRequest<{category:{categoryId:string;mode:Mode;revision:number}}>({
@@ -65,7 +65,7 @@ export default function CategoryDisplayManager({owner}:{owner:boolean}){
   }catch(e){setNoticeVariant("error");setNotice(e instanceof Error?e.message:"Không lưu được.");setNoticeId(x=>x+1);}
   finally{setSaving("");}
  }
- if(!owner)return <section className="surface dl4-panel"><h1>Danh mục & hiển thị sản phẩm</h1><p>Chỉ Owner được thay đổi.</p></section>;
+ if(!readable)return <section className="surface dl4-panel"><h1>Danh mục & hiển thị sản phẩm</h1><p>Tài khoản chưa được cấp quyền xem danh mục.</p></section>;
  return <div className="dl4-layout">
   <div className="page-title"><div><h1>Danh mục & hiển thị sản phẩm</h1>
    <p>Family (mặc định): một thẻ cho cả nhóm. SKU: mỗi mã công ty đã xuất bản là một thẻ riêng, dùng ảnh và quy cách đúng mã.</p></div>
@@ -82,11 +82,11 @@ export default function CategoryDisplayManager({owner}:{owner:boolean}){
     <div><strong>{c.name}</strong><small>{c.skuCount} SKU công khai · Phiên bản {c.revision||"mặc định"}</small></div>
     <span>{c.mode==="sku"?"SKU — mỗi mã một thẻ":"Family — một thẻ/nhóm"}</span>
     <button type="button" className="fb-ui-button fb-ui-button--secondary"
-     disabled={Boolean(saving)} onClick={()=>{setEditing(c);setEditMode(c.mode);}}>Chỉnh sửa</button>
+     disabled={!owner||Boolean(saving)} onClick={()=>{setEditing(c);setEditMode(c.mode);}}>Chỉnh sửa</button>
    </li>)}</ul>
    <p>Đã lưu thì mở trang danh mục trên Website để kiểm ảnh, lọc và phân trang thực tế. Chế độ Family luôn là lựa chọn an toàn khi API cấu hình gián đoạn.</p>
   </section>}
-  {editing&&<ProductModal title={"Hiển thị danh mục: "+editing.name} locked={Boolean(saving)}
+  {owner&&editing&&<ProductModal title={"Hiển thị danh mục: "+editing.name} locked={Boolean(saving)}
    onClose={()=>setEditing(null)}
    footer={<><CategoryModalCancel saving={Boolean(saving)}/>
     <button type="button" className="fb-ui-button fb-ui-button--primary"

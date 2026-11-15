@@ -62,7 +62,7 @@ function SeoModalFooter({saving,canSave,onSave}:{saving:boolean;canSave:boolean;
    {saving?"Đang lưu…":"Lưu SEO"}</button>
  </>;
 }
-export default function SeoSettingsManager({owner}:{owner:boolean}){
+export default function SeoSettingsManager({owner,readable}:{owner:boolean;readable:boolean}){
  const [items,setItems]=useState<SeoItem[]>([]);
  const [page,setPage]=useState(1);
  const [hasMore,setHasMore]=useState(false);
@@ -85,10 +85,11 @@ export default function SeoSettingsManager({owner}:{owner:boolean}){
   }catch(e){setError(e instanceof Error?e.message:"Không tải được dữ liệu SEO.");}
   finally{setLoading(false);}
  },[]);
- useEffect(()=>{if(!owner)return;let active=true;void Promise.resolve().then(()=>{if(active)void refresh();});
-  return ()=>{active=false;};},[owner,refresh]);
+ useEffect(()=>{if(!readable)return;let active=true;void Promise.resolve().then(()=>{if(active)void refresh();});
+  return ()=>{active=false;};},[readable,refresh]);
  const set=<K extends keyof Draft>(key:K,value:Draft[K])=>setDraft(prev=>({...prev,[key]:value}));
  const open=(item:SeoItem|null)=>{
+  if(!owner)return;
   setEditing(item);
   setDraft(item?{kind:item.kind,url:ORIGIN+PATHS[item.kind]+item.slug,mode:item.mode,
    title:item.title,description:item.description,ogImagePath:item.ogImagePath||""}:blank());
@@ -102,7 +103,7 @@ export default function SeoSettingsManager({owner}:{owner:boolean}){
   setToast(message);setToastVariant(variant);setToastId(n=>n+1);
  };
  const save=async()=>{
-  if(!slug||!target||saving||duplicate)return;
+  if(!owner||!slug||!target||saving||duplicate)return;
   const title=draft.mode==="auto"?"":draft.title.trim();
   const description=draft.mode==="auto"?"":draft.description.trim();
   const image=draft.mode==="auto"||draft.kind!=="product"?null:draft.ogImagePath.trim()||null;
@@ -130,8 +131,8 @@ export default function SeoSettingsManager({owner}:{owner:boolean}){
   }catch(e){showToast(e instanceof Error?e.message:"Không thể lưu.","error");return false;}
   finally{setSaving(false);}
  };
- if(!owner)return <section className="surface dl4-panel"><h1>SEO sản phẩm & nội dung</h1>
-  <p>Chỉ Owner có quyền sửa thiết lập SEO.</p></section>;
+ if(!readable)return <section className="surface dl4-panel"><h1>SEO sản phẩm & nội dung</h1>
+  <p>Tài khoản chưa được cấp quyền xem SEO.</p></section>;
  return <div className="dl4-layout">
   <div className="page-title"><div><h1>SEO sản phẩm & nội dung</h1>
    <p>Quản lý SEO theo URL thực của sản phẩm, danh mục, tin tức và khuyến mãi.</p></div>
@@ -139,7 +140,7 @@ export default function SeoSettingsManager({owner}:{owner:boolean}){
     <button className="fb-ui-button fb-ui-button--secondary" type="button"
      disabled={saving||loading} onClick={()=>void refresh()}>Tải lại</button>
     <button className="fb-ui-button fb-ui-button--primary" type="button"
-     disabled={saving||loading||Boolean(error)} onClick={()=>open(null)}>+ Thêm SEO</button>
+     disabled={!owner||saving||loading||Boolean(error)} onClick={()=>open(null)}>+ Thêm SEO</button>
    </div>
   </div>
   <section className="surface dl4-panel" role="note">
@@ -164,7 +165,7 @@ export default function SeoSettingsManager({owner}:{owner:boolean}){
       <a href={ORIGIN+PATHS[item.kind]+item.slug} target="_blank" rel="noopener noreferrer">
        Mở trang</a>
       <button className="fb-ui-button fb-ui-button--secondary" type="button"
-       onClick={()=>open(item)}>Sửa</button>
+       disabled={!owner} onClick={()=>open(item)}>Sửa</button>
      </li>)}</ul>}
     <div className="action-row">
      <button type="button" className="fb-ui-button fb-ui-button--secondary"
@@ -174,7 +175,7 @@ export default function SeoSettingsManager({owner}:{owner:boolean}){
       disabled={!hasMore||loading} onClick={()=>void refresh(page+1)}>Trang tiếp</button>
     </div>
    </section>}
-  {editing!==undefined&&<ProductModal title={editing?"Chỉnh SEO: "+editing.slug:"Thêm thiết lập SEO"}
+  {owner&&editing!==undefined&&<ProductModal title={editing?"Chỉnh SEO: "+editing.slug:"Thêm thiết lập SEO"}
    locked={saving} onClose={()=>setEditing(undefined)} wide
    footer={<SeoModalFooter saving={saving} canSave={Boolean(slug)&&!duplicate} onSave={save}/>}>
    <div className="cms-form-grid">

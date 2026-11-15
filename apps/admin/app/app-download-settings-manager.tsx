@@ -39,7 +39,7 @@ const acceptedLink=(url:string,platform:"ios"|"android")=>{
    /^[a-zA-Z0-9_.]+$/.test(u.searchParams.get("id")||"");
  }catch{return false;}
 };
-export default function AppDownloadSettingsManager({owner}:{owner:boolean}){
+export default function AppDownloadSettingsManager({owner,readable}:{owner:boolean;readable:boolean}){
  const [saved,setSaved]=useState<Settings|null>(null);
  const [draft,setDraft]=useState<Settings|null>(null);
  const [loading,setLoading]=useState(true);
@@ -60,13 +60,13 @@ export default function AppDownloadSettingsManager({owner}:{owner:boolean}){
   finally{setLoading(false);}
  },[]);
  useEffect(()=>{
-  if(!owner)return;
+  if(!readable)return;
   let active=true;void Promise.resolve().then(()=>{if(active)void load();});
   return ()=>{active=false;};
- },[owner,load]);
+ },[readable,load]);
  const dirty=useMemo(()=>Boolean(saved&&draft&&JSON.stringify(saved)!==JSON.stringify(draft)),[saved,draft]);
  async function save(){
-  if(!draft||!saved||saving)return;
+  if(!owner||!draft||!saved||saving)return;
   const next={...draft,title:draft.title.trim(),message:draft.message.trim(),
    iosUrl:draft.iosUrl?.trim()||null,androidUrl:draft.androidUrl?.trim()||null};
   if(next.title.length<1||next.title.length>80||next.message.length<1||next.message.length>240||
@@ -83,13 +83,13 @@ export default function AppDownloadSettingsManager({owner}:{owner:boolean}){
   }catch(e){notify(e instanceof Error?e.message:"Không lưu được cấu hình.","error");}
   finally{setSaving(false);}
  }
- if(!owner)return <section className="surface"><h1>Popup tải ứng dụng</h1><p>Chỉ Owner được quản lý.</p></section>;
+ if(!readable)return <section className="surface"><h1>Popup tải ứng dụng</h1><p>Tài khoản chưa được cấp quyền xem cấu hình.</p></section>;
  return <div className="appdl-layout">
   <div className="page-title"><div><h1>Popup tải ứng dụng</h1>
    <p>Thiết lập thật cho nút Tải ứng dụng và lời mời tự động trên Website; không phải popup CMS quảng bá.</p></div>
    <div className="action-row">
     <button type="button" className="fb-ui-button fb-ui-button--secondary" disabled={loading||saving} onClick={()=>void load()}>Tải lại</button>
-    <button type="button" className="fb-ui-button fb-ui-button--primary" disabled={!dirty||saving||loading} onClick={()=>void save()}>{saving?"Đang lưu…":"Lưu cấu hình"}</button>
+    <button type="button" className="fb-ui-button fb-ui-button--primary" disabled={!owner||!dirty||saving||loading} onClick={()=>void save()}>{saving?"Đang lưu…":"Lưu cấu hình"}</button>
    </div>
   </div>
   {error&&<p className="surface appdl-error" role="alert">{error}</p>}
@@ -97,22 +97,22 @@ export default function AppDownloadSettingsManager({owner}:{owner:boolean}){
   {!loading&&draft&&<div className="appdl-columns">
    <section className="surface appdl-panel">
     <h2>Hiển thị và thời gian</h2>
-    <label className="appdl-check"><input type="checkbox" checked={draft.popupEnabled} disabled={saving} onChange={e=>patch("popupEnabled",e.target.checked)}/> <span><strong>Bật lời mời tự động</strong><small>Tắt là ngừng tự bật popup, không ảnh hưởng popup CMS khác.</small></span></label>
-    <label className="appdl-check"><input type="checkbox" checked={draft.buttonEnabled} disabled={saving} onChange={e=>patch("buttonEnabled",e.target.checked)}/> <span><strong>Hiện nút Tải ứng dụng</strong><small>Nút ở menu/footer để khách tự mở popup.</small></span></label>
+    <label className="appdl-check"><input type="checkbox" checked={draft.popupEnabled} disabled={saving||!owner} onChange={e=>patch("popupEnabled",e.target.checked)}/> <span><strong>Bật lời mời tự động</strong><small>Tắt là ngừng tự bật popup, không ảnh hưởng popup CMS khác.</small></span></label>
+    <label className="appdl-check"><input type="checkbox" checked={draft.buttonEnabled} disabled={saving||!owner} onChange={e=>patch("buttonEnabled",e.target.checked)}/> <span><strong>Hiện nút Tải ứng dụng</strong><small>Nút ở menu/footer để khách tự mở popup.</small></span></label>
     <div className="appdl-grid">
-     <label>Chờ lần đầu (mili giây)<input className="fb-ui-field" type="number" min={500} max={15000} step={100} disabled={saving} value={draft.firstDelayMs} onChange={e=>patch("firstDelayMs",Number(e.target.value))}/></label>
-     <label>Không lặp trong (phút)<input className="fb-ui-field" type="number" min={30} max={1440} step={1} disabled={saving} value={draft.cooldownMinutes} onChange={e=>patch("cooldownMinutes",Number(e.target.value))}/></label>
+     <label>Chờ lần đầu (mili giây)<input className="fb-ui-field" type="number" min={500} max={15000} step={100} disabled={saving||!owner} value={draft.firstDelayMs} onChange={e=>patch("firstDelayMs",Number(e.target.value))}/></label>
+     <label>Không lặp trong (phút)<input className="fb-ui-field" type="number" min={30} max={1440} step={1} disabled={saving||!owner} value={draft.cooldownMinutes} onChange={e=>patch("cooldownMinutes",Number(e.target.value))}/></label>
     </div>
     <p className="appdl-note">Mặc định: 1,4 giây và 120 phút. Catalogue/Chính sách bảo mật không có popup tự động.</p>
     <h2>Nội dung popup</h2>
-    <label className="appdl-field">Tiêu đề<input className="fb-ui-field" value={draft.title} maxLength={80} disabled={saving} onChange={e=>patch("title",e.target.value)}/></label>
-    <label className="appdl-field">Mô tả<textarea className="fb-ui-field" rows={3} maxLength={240} disabled={saving} value={draft.message} onChange={e=>patch("message",e.target.value)}/></label>
+    <label className="appdl-field">Tiêu đề<input className="fb-ui-field" value={draft.title} maxLength={80} disabled={saving||!owner} onChange={e=>patch("title",e.target.value)}/></label>
+    <label className="appdl-field">Mô tả<textarea className="fb-ui-field" rows={3} maxLength={240} disabled={saving||!owner} value={draft.message} onChange={e=>patch("message",e.target.value)}/></label>
    </section>
    <section className="surface appdl-panel">
     <h2>Liên kết cửa hàng chính thức</h2>
     <p className="appdl-note">Chưa có link thì cửa hàng hiển thị “Sắp có”, không dẫn sang đường link giả.</p>
-    <label className="appdl-field">iOS — App Store<input className="fb-ui-field" type="url" value={draft.iosUrl||""} disabled={saving} maxLength={500} placeholder="https://apps.apple.com/…" onChange={e=>patch("iosUrl",e.target.value||null)}/></label>
-    <label className="appdl-field">Android — CH Play<input className="fb-ui-field" type="url" value={draft.androidUrl||""} disabled={saving} maxLength={500} placeholder="https://play.google.com/store/apps/details?id=…" onChange={e=>patch("androidUrl",e.target.value||null)}/></label>
+    <label className="appdl-field">iOS — App Store<input className="fb-ui-field" type="url" value={draft.iosUrl||""} disabled={saving||!owner} maxLength={500} placeholder="https://apps.apple.com/…" onChange={e=>patch("iosUrl",e.target.value||null)}/></label>
+    <label className="appdl-field">Android — CH Play<input className="fb-ui-field" type="url" value={draft.androidUrl||""} disabled={saving||!owner} maxLength={500} placeholder="https://play.google.com/store/apps/details?id=…" onChange={e=>patch("androidUrl",e.target.value||null)}/></label>
     <div className="appdl-preview" aria-label="Xem trước nội dung popup">
      <small>Bản xem trước nội dung · chưa phải thao tác xuất bản</small>
      <strong>{draft.title||"Ứng dụng Futurebook"}</strong>

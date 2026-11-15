@@ -148,8 +148,8 @@ function CatalogueImage({id,alt}:{id:string;alt:string}){
  </div>;
 }
 const sortAssets=(a:Asset,b:Asset)=>a.sort_order-b.sort_order||a.id.localeCompare(b.id);
-export default function CatalogueBookManager({owner,onBusyChange}:{
- owner:boolean;onBusyChange?:(busy:boolean)=>void;
+export default function CatalogueBookManager({owner,readable,onBusyChange}:{
+ owner:boolean;readable:boolean;onBusyChange?:(busy:boolean)=>void;
 }){
  const [books,setBooks]=useState<Book[]>([]);
  const [bookPage,setBookPage]=useState(1);
@@ -196,7 +196,7 @@ export default function CatalogueBookManager({owner,onBusyChange}:{
   }catch(e){setSettingsError(e instanceof Error?e.message:"Không đọc được cài đặt sách lật.");}
  },[]);
  const saveSettings=async()=>{
-  if(!settings||settingsBusy||busy)return;
+  if(!owner||!settings||settingsBusy||busy)return;
   setSettingsBusy(true);setSettingsError("");
   try{
    const result=await requestCatalogue<{settings:ViewerSettings}>("/settings",{
@@ -230,14 +230,14 @@ export default function CatalogueBookManager({owner,onBusyChange}:{
   }finally{if(seq===loadId.current)setLoading(false);}
  },[]);
  useEffect(()=>{
-  if(!owner)return;
+  if(!readable)return;
   let active=true;
   void Promise.resolve().then(()=>{if(active){void load();void loadSettings();}});
   return ()=>{active=false;loadId.current+=1;};
- },[owner,load,loadSettings]);
+ },[readable,load,loadSettings]);
  useEffect(()=>{onBusyChange?.(busy);return ()=>onBusyChange?.(false);},[busy,onBusyChange]);
  async function mutate(action:string,payload:object,success:string,choose?:string){
-  if(busy)return;
+  if(!owner||busy)return;
   setBusy(true);
   try{
    const result=await requestCatalogue<SavedResult>("/"+action,payload);
@@ -252,8 +252,9 @@ export default function CatalogueBookManager({owner,onBusyChange}:{
  const pages=assets.filter(f=>f.kind==="page").sort(sortAssets);
  const visiblePages=pages.slice(pageOffset,pageOffset+12);
  const cover=assets.find(f=>f.kind==="cover");
- const canEdit=Boolean(book&&book.state!=="ready");
+ const canEdit=Boolean(owner&&book&&book.state!=="ready");
  const onSave=async()=>{
+  if(!owner)return;
   const data={title:title.trim(),edition:edition.trim()};
   if(!data.title||data.title.length>120||data.edition.length>80){
    alert("Tên bộ bắt buộc (≤120 ký tự), phiên bản tối đa 80 ký tự.","error");return;
@@ -264,7 +265,7 @@ export default function CatalogueBookManager({owner,onBusyChange}:{
   if(ok)setDialog(null);
  };
  const upload=async(kind:Kind,file?:File)=>{
-  if(!file||!book||busy)return;
+  if(!owner||!file||!book||busy)return;
   if(book.state==="ready"){
    alert("Bộ đã Sẵn sàng. Chọn “Ẩn bộ để sửa ảnh” trước khi upload.","error");return;
   }
@@ -339,14 +340,14 @@ export default function CatalogueBookManager({owner,onBusyChange}:{
   <span>{label}</span><input type="file" accept="image/webp,.webp" disabled={!canEdit||busy}
    aria-label={label} onChange={e=>{const file=e.currentTarget.files?.[0];e.currentTarget.value="";void upload(kind,file);}}/>
  </label>;
- if(!owner)return <section className="surface dl7b-panel"><h1>Kho Catalogue</h1><p>Chỉ Owner được quản lý bộ Catalogue và ảnh bìa.</p></section>;
+ if(!readable)return <section className="surface dl7b-panel"><h1>Kho Catalogue</h1><p>Tài khoản chưa được cấp quyền xem Catalogue.</p></section>;
  return <div className="dl7b-screen">
   <header className="page-title"><div><h1>Kho Catalogue</h1>
    <p>Quản lý bộ sách lật, trang và bìa trong R2 <strong>fbmn-catalogue</strong>. Không dùng kho ảnh SKU/CMS; Catalogue dùng nền chung toàn website.</p>
    </div><div className="action-row">
     <button type="button" className="fb-ui-button fb-ui-button--secondary" disabled={busy||loading}
      onClick={()=>void load(book?.id,bookPage)}>Tải lại</button>
-    <button type="button" className="fb-ui-button fb-ui-button--primary" disabled={busy}
+    <button type="button" className="fb-ui-button fb-ui-button--primary" disabled={!owner||busy}
      onClick={()=>{setTitle("");setEdition("");setDialog("create");}}>Tạo bộ Catalogue</button>
    </div>
   </header>
@@ -380,9 +381,9 @@ export default function CatalogueBookManager({owner,onBusyChange}:{
        <button type="button" className="fb-ui-button fb-ui-button--secondary" disabled={!canEdit||busy}
         onClick={()=>{setTitle(book.title);setEdition(book.edition);setDialog("edit");}}>Sửa thông tin</button>
        {book.state==="ready"?
-        <button type="button" className="fb-ui-button fb-ui-button--secondary" disabled={busy}
+        <button type="button" className="fb-ui-button fb-ui-button--secondary" disabled={!owner||busy}
          onClick={()=>void mutate("hide",{id:book.id,revision:book.revision},"Đã ẩn bộ Catalogue và thu hồi quyền xem/tải PDF.")}>Ẩn bộ để chỉnh sửa</button>:
-        <button type="button" className="fb-ui-button fb-ui-button--primary" disabled={busy||(!pages.length&&!pdf?.visible)}
+        <button type="button" className="fb-ui-button fb-ui-button--primary" disabled={!owner||busy||(!pages.length&&!pdf?.visible)}
          onClick={()=>void mutate("ready",{id:book.id,revision:book.revision},"Đã phát hành bộ Catalogue.")}>Đánh dấu sẵn sàng</button>}
       </div>
      </div>
@@ -465,45 +466,45 @@ export default function CatalogueBookManager({owner,onBusyChange}:{
     onClick={()=>void loadSettings()}>Tải cài đặt</button>}
    {settings&&<form className="dl7b-settings-form" onSubmit={e=>{e.preventDefault();void saveSettings();}}>
     <label>Tốc độ lật trang
-     <select value={draftSettings.flipDurationMs} disabled={settingsBusy||busy}
+     <select value={draftSettings.flipDurationMs} disabled={settingsBusy||busy||!owner}
       onChange={e=>setDraftSettings(p=>({...p,flipDurationMs:Number(e.target.value)}))}>
       {Array.from({length:16},(_,i)=>750+i*50).map(ms=>
        <option value={ms} key={ms}>{ms} ms{ms===950?" · Đề xuất":""}</option>)}
      </select>
     </label>
     <label>Độ bóng khi lật
-     <select value={draftSettings.shadowOpacity.toFixed(2)} disabled={settingsBusy||busy}
+     <select value={draftSettings.shadowOpacity.toFixed(2)} disabled={settingsBusy||busy||!owner}
       onChange={e=>setDraftSettings(p=>({...p,shadowOpacity:Number(e.target.value)}))}>
       {[0.10,0.15,0.20,0.26,0.30,0.35,0.40,0.45,0.50].map(n=>
        <option value={n.toFixed(2)} key={n}>{Math.round(n*100)}%</option>)}
      </select>
     </label>
     <label className="dl7b-settings-toggle">
-     <input type="checkbox" checked={draftSettings.soundEnabled} disabled={settingsBusy||busy}
+     <input type="checkbox" checked={draftSettings.soundEnabled} disabled={settingsBusy||busy||!owner}
       onChange={e=>setDraftSettings(p=>({...p,soundEnabled:e.target.checked}))}/>
      <span>Cho phép tiếng giấy khi khách lật trang</span>
     </label>
     <label>Âm lượng tiếng giấy ({draftSettings.soundVolume}%)
-      <input type="range" min="0" max="100" step="5" value={draftSettings.soundVolume} disabled={settingsBusy||busy}
+      <input type="range" min="0" max="100" step="5" value={draftSettings.soundVolume} disabled={settingsBusy||busy||!owner}
        onChange={e=>setDraftSettings(p=>({...p,soundVolume:Number(e.target.value)}))}/>
      </label>
      <div className="dl7b-settings-actions">
       <button type="button" className="fb-ui-button fb-ui-button--secondary" disabled={settingsBusy||busy||draftSettings.soundVolume===0}
        onClick={()=>{const player=previewSound.current??(previewSound.current=new PaperSound());void player.play(draftSettings.soundVolume).catch(()=>alert("Không phát được âm thanh thử.","error"));}}>Nghe thử</button>
      <button type="submit" className="fb-ui-button fb-ui-button--primary"
-      disabled={settingsBusy||busy||(
+      disabled={settingsBusy||busy||!owner||(
        draftSettings.flipDurationMs===settings.flipDurationMs&&
        draftSettings.soundEnabled===settings.soundEnabled&&
         draftSettings.soundVolume===settings.soundVolume&&
        draftSettings.shadowOpacity===settings.shadowOpacity
       )}>{settingsBusy?"Đang lưu…":"Lưu cài đặt"}</button>
      <button type="button" className="fb-ui-button fb-ui-button--secondary"
-      disabled={settingsBusy||busy} onClick={()=>void loadSettings()}>Tải lại cấu hình</button>
+      disabled={settingsBusy||busy||!owner} onClick={()=>void loadSettings()}>Tải lại cấu hình</button>
     </div>
     <p>Âm thanh chỉ phát khi trình duyệt cho phép sau thao tác lật của khách. Không phát tự động khi mở trang.</p>
    </form>}
   </section>
-  {dialog&&<ProductModal title={dialog==="create"?"Tạo bộ Catalogue":"Sửa bộ Catalogue"}
+  {owner&&dialog&&<ProductModal title={dialog==="create"?"Tạo bộ Catalogue":"Sửa bộ Catalogue"}
    locked={busy} onClose={()=>setDialog(null)}
    footer={<><ModalCancel busy={busy}/>
     <button type="button" className="fb-ui-button fb-ui-button--primary" disabled={busy} onClick={()=>void onSave()}>{busy?"Đang lưu…":"Lưu"}</button></>}>
@@ -513,7 +514,7 @@ export default function CatalogueBookManager({owner,onBusyChange}:{
     <p>Ảnh sẽ được tải riêng lên R2 sau khi tạo bộ. Không công khai giá NET.</p>
    </div>
   </ProductModal>}
-  {deleteFile&&book&&<ProductModal title="Xóa ảnh khỏi bộ?" locked={busy}
+  {owner&&deleteFile&&book&&<ProductModal title="Xóa ảnh khỏi bộ?" locked={busy}
    onClose={()=>setDeleteFile(null)}
    footer={<><ModalCancel busy={busy}/>
     <button type="button" className="fb-ui-button fb-ui-button--primary" disabled={busy} onClick={()=>void (async()=>{
@@ -522,7 +523,7 @@ export default function CatalogueBookManager({owner,onBusyChange}:{
     })()}>Xác nhận xóa</button></>}>
    <p>Ảnh sẽ bị bỏ khỏi bộ Catalogue. Không ảnh hưởng đến kho ảnh sản phẩm, CMS hoặc tab khác.</p>
   </ProductModal>}
-  {deletePdf&&book&&<ProductModal title="Xóa Catalogue PDF?" locked={busy}
+  {owner&&deletePdf&&book&&<ProductModal title="Xóa Catalogue PDF?" locked={busy}
    onClose={()=>setDeletePdf(false)}
    footer={<><ModalCancel busy={busy}/>
     <button type="button" className="fb-ui-button fb-ui-button--primary" disabled={busy}

@@ -33,9 +33,14 @@ export async function DELETE(request:Request){
  const {config,owner}=info;
  if(config.status!=="ready")return fail(503,"gsc_oauth_not_configured");
  try{
-  const token=await readGscGrant(owner!.subject!,config.key);
-  await deleteGscGrant(owner!.subject!);
-  if(token)await revokeGoogleToken(token);
+  // Disconnect the same company OAuth grant that delegated SEO reports use.
+  const grant=owner!.role==="owner"?
+   {subject:owner!.subject!,refreshToken:await readGscGrant(owner!.subject!,config.key)}:
+   await readCompanyGscGrant(config.key);
+  if(grant){
+   await deleteGscGrant(grant.subject);
+   if(grant.refreshToken)await revokeGoogleToken(grant.refreshToken);
+  }
   return Response.json({data:{status:"disconnected"}},{headers:noStore});
  }catch{return fail(503,"gsc_oauth_store_unavailable");}
 }

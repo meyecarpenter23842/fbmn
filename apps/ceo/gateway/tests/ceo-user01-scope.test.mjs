@@ -42,6 +42,8 @@ test("USER01 authorized SEO readers use the company GSC connection, rotating ori
  assert.match(report,/readCompanyGscGrant\(config\.key\)/);
  assert.match(report,/saveGscGrant\(grant\.subject,rotated,config\.key\)/);
  assert.match(oauthStatus,/readCompanyGscGrant\(config\.key\)/);
+ assert.match(oauthStatus,/await deleteGscGrant\(grant\.subject\)/);
+ assert.match(oauthStatus,/revokeGoogleToken\(grant\.refreshToken\)/);
  assert.match(store,/ORDER BY updated_at DESC LIMIT 1/);
  assert.doesNotMatch(store,/NEXT_PUBLIC_|console\.log/);
 });

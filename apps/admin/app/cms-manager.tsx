@@ -417,8 +417,8 @@ function CmsModalFooter({step,onStep,saving,formId}:{
   </div>
  </div>;
 }
-export default function CmsManager({mode,owner}:{
- mode:"marketing"|"editorial";owner:boolean
+export default function CmsManager({mode,owner,readable}:{
+ mode:"marketing"|"editorial";owner:boolean;readable:boolean
 }){
  const [items,setItems]=useState<CmsSummary[]>([]);
  const latestRequest=useRef(0);
@@ -456,7 +456,7 @@ export default function CmsManager({mode,owner}:{
  const editorDirtyRef=useRef(false);
  const [message,setMessage]=useState("");
  const openEditor=async(item:CmsSummary|null,newKind?:CmsKind)=>{
-  if(opening)return;
+  if(!owner||opening)return;
   editorDirtyRef.current=false;
   setEditorStep(0);
   if(!item){if(newKind)setCreateKind(newKind);setEditing(null);return;}
@@ -471,7 +471,7 @@ export default function CmsManager({mode,owner}:{
  const [error,setError]=useState("");
  const [toastId,setToastId]=useState(0);
  const refresh=useCallback(async()=>{
-  if(!owner)return;
+  if(!readable)return;
   const requestId=++latestRequest.current;
   setLoading(true);
   try{
@@ -494,14 +494,14 @@ export default function CmsManager({mode,owner}:{
    setError(reason);setToastId(v=>v+1);
   }
   finally{if(requestId===latestRequest.current)setLoading(false);}
- },[owner,mode,page,editorialKind,editorialStatus,appliedSearch]);
+ },[readable,mode,page,editorialKind,editorialStatus,appliedSearch]);
  useEffect(()=>{const task=window.setTimeout(()=>{void refresh();},0);return()=>window.clearTimeout(task);},[refresh]);
  const visible=items;
  const kind:CmsKind=mode==="marketing"?"banner":createKind;
  const title=mode==="marketing"?"Banner & Popup":"Bảng tin — Tin tức & Khuyến mãi";
  const notify=(text:string,problem=false)=>{if(problem)setError(text);else setMessage(text);setToastId(v=>v+1);};
  const change=async(item:CmsSummary,action:"publish"|"hide")=>{
-  if(busy||(action==="publish"&&!publishReady)|| !window.confirm(action==="publish"?
+  if(!owner||busy||(action==="publish"&&!publishReady)|| !window.confirm(action==="publish"?
     "Xác nhận nguồn nội dung đã được kiểm chứng và cho xuất bản lên Website?":
     "Ẩn nội dung này khỏi Website?"))return;
   setBusy(true);
@@ -512,14 +512,14 @@ export default function CmsManager({mode,owner}:{
   }catch(e){notify(e instanceof Error?e.message:"Không cập nhật được.",true);}
   finally{setBusy(false);}
  };
- if(!owner)return <div className="cms-panel"><div className="page-title"><h1>{title}</h1></div>
-  <p>Chỉ Owner có quyền quản lý nội dung. Vui lòng dùng tài khoản được cấp quyền.</p></div>;
+ if(!readable)return <div className="cms-panel"><div className="page-title"><h1>{title}</h1></div>
+  <p>Tài khoản chưa được cấp quyền xem nội dung.</p></div>;
  return <div className="cms-panel">
   <AdminToast message={error||message} variant={error?"error":"success"}
    notificationId={toastId} onClose={()=>{setMessage("");setError("");}}/>
   <div className="page-title cms-heading"><div><h1>{title}</h1>
    <p>{mode==="editorial"?"Quản lý chung bài Tin tức và Khuyến mãi. Lưu nháp, kiểm chứng nguồn rồi xuất bản; không tự công bố.":"Chọn vị trí và ảnh Desktop/Mobile riêng cho Website Futurebook. Lưu nháp không tự xuất bản."}</p></div>
-   <div className="cms-heading-actions">
+   {owner&&<div className="cms-heading-actions">
     {mode==="editorial"?<>
      <button type="button" className="fb-ui-button fb-ui-button--primary"
       disabled={busy||opening} onClick={()=>void openEditor(null,"article")}>Thêm tin tức</button>
@@ -527,7 +527,7 @@ export default function CmsManager({mode,owner}:{
       disabled={busy||opening} onClick={()=>void openEditor(null,"promotion")}>Thêm khuyến mãi</button>
     </>:<button type="button" className="fb-ui-button fb-ui-button--primary"
       disabled={busy||opening} onClick={()=>void openEditor(null)}>Thêm nội dung</button>}
-   </div>
+   </div>}
   </div>
   {mode==="editorial"&&<form className="cms-editorial-filters" role="search" aria-label="Tìm và lọc bài viết"
    onSubmit={e=>{e.preventDefault();setPage(1);setAppliedSearch(searchInput.trim());}}>
@@ -571,7 +571,8 @@ export default function CmsManager({mode,owner}:{
            "Đủ điều kiện nội dung"}
          </small>}
         </td>
-       <td><div className="cms-row-actions">
+       <td><div className="cms-row-actions">{owner?<>
+
         <button type="button" className="fb-ui-button fb-ui-button--secondary"
          disabled={busy||opening||item.status==="published"} onClick={()=>void openEditor(item)}>Sửa</button>
         {item.status==="published"?
@@ -588,7 +589,8 @@ export default function CmsManager({mode,owner}:{
            "Cần bổ sung: "+cmsPublishIssues(item).map(issue=>issue.label).join(" · "):undefined}
           onClick={()=>void change(item,"publish")}>
           {publishReady?"Xuất bản":"Chờ kết nối Website"}</button>}
-       </div></td>
+       
+</>:<span className="subtle">Chỉ xem</span>}</div></td>
       </tr>)
      }
     </tbody>
@@ -604,7 +606,7 @@ export default function CmsManager({mode,owner}:{
   <p className="cms-help">Đã lưu nháp và có ảnh chưa đồng nghĩa đã xuất bản lên Website.
    {publishReady?" Chỉ Owner được xuất bản khi đủ nguồn, vị trí, ảnh và lịch hợp lệ.":
     " Chỉ bật xuất bản sau khi Public Worker, migration và Website đã nghiệm thu, rồi mở capability tại Worker."}</p>
-  {editing!==undefined&&<ProductModal title={editing?"Sửa "+LABELS[editing.kind]:"Thêm nội dung"}
+  {owner&&editing!==undefined&&<ProductModal title={editing?"Sửa "+LABELS[editing.kind]:"Thêm nội dung"}
    onClose={()=>{setEditing(undefined);void refresh();}} wide locked={busy||editorSaving}
    beforeClose={()=>!editorDirtyRef.current || window.confirm("Nội dung hoặc ảnh chưa lưu. Đóng mà không lưu?")}
    footer={<CmsModalFooter step={editorStep} onStep={setEditorStep}
