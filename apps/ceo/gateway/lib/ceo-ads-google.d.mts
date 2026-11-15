@@ -6,7 +6,10 @@ export declare function adsKeywordsHistorical(customer:string,token:string,login
  words:string[],geos:string[]):Promise<unknown>;
 export declare function adsKeywordIdeas(customer:string,token:string,login:string|null,
  words:string[],geos:string[]):Promise<unknown>;
-export declare function adsCampaigns(customer:string,token:string,login:string|null):Promise<unknown[]>;
+export declare function adsCampaigns(customer:string,token:string,login:string|null):Promise<Array<{
+ id:string;name:string;status:string;type:string;dailyBudget:number|null;
+ budgetResource:string;explicitlyShared:boolean
+}>>;
 export declare function adsPerformance(customer:string,token:string,login:string|null,
  period:string,timezone:string):Promise<unknown>;
 

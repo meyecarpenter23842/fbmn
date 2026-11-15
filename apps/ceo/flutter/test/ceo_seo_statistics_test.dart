@@ -5,6 +5,28 @@ import 'package:futurebook_ceo/ceo_stats_models.dart';
 import 'package:futurebook_ceo/ceo_gsc_models.dart';
 
 void main(){
+
+ testWidgets('ADS131 eight direct statistic child tabs stay scrollable on mobile',(tester)async{
+  const tabs=['Tổng quan','Chuyển đổi','Marketing','Sản phẩm','SEO',
+   'Từ khóa Ads','Chiến dịch Ads','Hiệu quả Ads'];
+  for(final width in <double>[360,390,1280,1440]){
+   await tester.binding.setSurfaceSize(Size(width,860));
+   var chosen=-1;
+   await tester.pumpWidget(MaterialApp(home:Scaffold(body:
+    CeoStatsSubTabs(tabs:tabs,selected:5,mobile:width<=780,
+     onChanged:(v)=>chosen=v))));
+   await tester.pumpAndSettle();
+   expect(find.byKey(const ValueKey('ceo-stats-subtabs')),findsOneWidget);
+   expect(find.byKey(const ValueKey('ceo-stats-tab-7')),findsOneWidget);
+   expect(tester.takeException(),isNull);
+   await tester.ensureVisible(find.byKey(const ValueKey('ceo-stats-tab-7')));
+   await tester.tap(find.byKey(const ValueKey('ceo-stats-tab-7')));
+   expect(chosen,7);
+   await tester.pumpWidget(const SizedBox.shrink());
+  }
+  await tester.binding.setSurfaceSize(null);
+ });
+
  test('SEO05 parses aggregate sessions and keeps paid traffic separate',(){
   final data=CeoWebStatistics.fromJson({
    'period':'7d','timezone':'UTC','generatedAt':'','metrics':{'visits':4},
