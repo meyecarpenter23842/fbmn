@@ -101,7 +101,12 @@ export function createAdminApi({ verifyToken, loadActor, listChannels, recordAud
         action==="pricing.private" ? (request.method==="GET"?"admin.pricing.read":"admin.pricing.write") :
         action==="cms.manage" ? (request.method==="GET"?"admin.cms.read":"admin.cms.write") :
         (action==="website.layout"||action==="website.catalogue") ? (request.method==="GET"?"admin.website.read":"admin.website.write") : null;
-      if ((permission && !allowed(actor,permission)) || (!permission && !PERMITTED[action].has(actor.role))) {
+      const delegatedCeoScope = request.method==="GET" && action==="website.layout" ? ({
+        "/v1/admin/website/chat-history":"ceo.conversations",
+        "/v1/admin/website/contact-requests":"ceo.contacts",
+        "/v1/admin/website/outsourcing-requests":"ceo.outsourcing",
+      })[url.pathname] : null;
+      if ((permission && !allowed(actor,permission) && !(delegatedCeoScope && allowed(actor,delegatedCeoScope))) || (!permission && !PERMITTED[action].has(actor.role))) {
         try { await recordAudit({ subject, action, outcome: "denied" }); }
         catch { return error(503, "service_unavailable", corsOrigin); }
         return error(403, "forbidden", corsOrigin);
