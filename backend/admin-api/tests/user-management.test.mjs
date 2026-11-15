@@ -61,5 +61,7 @@ test("USER01 SQL migration is single, complete, and enforces Admin staff grants"
  assert.match(source,/permission_key text PRIMARY KEY CHECK \(permission_key ~ '\^\(admin\|ceo\)\[\.\]\[a-z\.\]\+\$'\)/);
  assert.match(source,/v_actor_role='admin' AND NOT EXISTS/);
  assert.match(source,/permission_key='admin.users.manage'/);
+ assert.match(source,/ALTER TABLE fbmn_admin.audit_events ADD CONSTRAINT audit_events_action_check/);
+ assert.match(source,/'website.catalogue','users.manage'/);
  assert.doesNotMatch(source,/DROP TABLE|TRUNCATE|DELETE FROM neon_auth/);
 });

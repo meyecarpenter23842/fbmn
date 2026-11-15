@@ -2,6 +2,14 @@
 -- Existing Owner and existing catalogue/pricing data remain unchanged.
 BEGIN;
 
+-- Extend the established restricted Worker audit action set without dropping history.
+ALTER TABLE fbmn_admin.audit_events DROP CONSTRAINT audit_events_action_check;
+ALTER TABLE fbmn_admin.audit_events ADD CONSTRAINT audit_events_action_check CHECK (
+  action IN ('session.read','channels.read','publish.check','pricing.check',
+  'catalogue.manage','pricing.private','cms.manage','website.layout',
+  'website.catalogue','users.manage')
+);
+
 CREATE TABLE IF NOT EXISTS fbmn_admin.user01_permissions (
   permission_key text PRIMARY KEY CHECK (permission_key ~ '^(admin|ceo)[.][a-z.]+$')
 );
