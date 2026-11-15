@@ -1,6 +1,7 @@
 "use client";
 import {useCallback,useEffect,useMemo,useRef,useState} from "react";
 import AdminToast from "./admin-toast";
+import ProductModal from "./product-modal";
 
 type Permission={key:string;group:string;label:string;detail:string};
 type Staff={id:string;email:string;name:string;verified:boolean;role:string;enabled:boolean;revision:number;permissions:string[];channels:string[]};
@@ -40,10 +41,8 @@ export default function UserManagement({actorRole}:{actorRole:string}){
  const [busy,setBusy]=useState(false);
  const [query,setQuery]=useState("");
  const [draft,setDraft]=useState<Draft|null>(null);
- const [closing,setClosing]=useState(false);
  const [notice,setNotice]=useState<{message:string;variant:"success"|"error"|"info";id:number}|null>(null);
  const [persistentError,setPersistentError]=useState("");
- const modalRef=useRef<HTMLDivElement|null>(null);
  const openButton=useRef<HTMLButtonElement|null>(null);
  const isManager=actorRole==="owner"||actorRole==="admin";
  const toast=(message:string,variant:"success"|"error"|"info"="success")=>
@@ -66,33 +65,15 @@ export default function UserManagement({actorRole}:{actorRole:string}){
  },[catalog]);
  const beginCreate=()=>{
   if(!catalog)return;
-  setDraft(emptyDraft(catalog.defaults));setClosing(false);setPersistentError("");
+  setDraft(emptyDraft(catalog.defaults));setPersistentError("");
  };
  const beginEdit=(person:Staff)=>{
   if(person.role==="owner")return;
   setDraft({id:person.id,email:person.email,name:person.name,role:person.role,
    enabled:person.enabled,permissions:[...person.permissions],channels:[...person.channels],revision:person.revision});
-  setClosing(false);setPersistentError("");
+  setPersistentError("");
  };
- const cancel=()=>{
-  if(busy)return;
-  setClosing(true);
-  window.setTimeout(()=>{setDraft(null);setClosing(false);openButton.current?.focus();},220);
- };
- useEffect(()=>{
-  if(!draft||closing)return;
-  if(modalRef.current?.contains(document.activeElement))return;
-  const current=modalRef.current;
-  current?.querySelector<HTMLInputElement>("input,select,button")?.focus();
- },[draft,closing]);
- function onModalKeys(event:React.KeyboardEvent<HTMLDivElement>){
-  if(event.key==="Escape"){event.preventDefault();cancel();return;}
-  if(event.key!=="Tab")return;
-  const elements=Array.from(modalRef.current?.querySelectorAll<HTMLElement>("button:not(:disabled),input:not(:disabled),select:not(:disabled)")||[]);
-  const first=elements[0],last=elements[elements.length-1];
-  if(event.shiftKey&&document.activeElement===first){event.preventDefault();last?.focus();}
-  else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first?.focus();}
- }
+ const cancel=()=>{if(!busy){setDraft(null);openButton.current?.focus();}};
  function changeRole(next:string){
   if(!draft||!catalog)return;
   const defaults=catalog.defaults[next]||[];
@@ -100,7 +81,14 @@ export default function UserManagement({actorRole}:{actorRole:string}){
  }
  function togglePermission(key:string,enabled:boolean){
   if(!draft)return;
-  setDraft({...draft,permissions:enabled?[...draft.permissions,key]:draft.permissions.filter(p=>p!==key)});
+  const permissions=new Set(draft.permissions);
+  if(enabled)permissions.add(key);else permissions.delete(key);
+  if(enabled&&key.startsWith("admin.pricing.")){permissions.add("admin.catalogue.read");permissions.add("admin.pricing.read");}
+  if(!enabled&&key==="admin.catalogue.read"){
+   permissions.delete("admin.pricing.read");permissions.delete("admin.pricing.write");
+  }
+  if(!enabled&&key==="admin.pricing.read")permissions.delete("admin.pricing.write");
+  setDraft({...draft,permissions:[...permissions]});
  }
  function toggleChannel(key:string,enabled:boolean){
   if(!draft)return;
@@ -115,7 +103,7 @@ export default function UserManagement({actorRole}:{actorRole:string}){
     permissions:draft.permissions,channels:draft.channels};
    if(draft.id)await usersApi("PATCH",{...payload,revision:draft.revision});
    else await usersApi("POST",{...payload,name:draft.name.trim()});
-   setDraft(null);setClosing(false);
+   setDraft(null);
    toast(draft.id?"Đã cập nhật quyền nhân viên.":"Đã tạo tài khoản. Nhân viên cần xác minh email và tự đặt mật khẩu.");
    await load();
   }catch(error){
@@ -152,11 +140,10 @@ export default function UserManagement({actorRole}:{actorRole:string}){
        <button type="button" className="btn btn-outline" onClick={()=>beginEdit(person)}>Sửa quyền</button>}</td>
     </tr>)}</tbody></table>{filtered.length===0&&<p className="user01-empty">Không tìm thấy tài khoản phù hợp.</p>}</div>}
   </div>
-  {draft&&<div className={"user01-overlay"+(closing?" is-closing":"")} onMouseDown={e=>{if(e.target===e.currentTarget)cancel();}}>
-   <div className="user01-dialog" ref={modalRef} role="dialog" aria-modal="true" aria-labelledby="user01-title" onKeyDown={onModalKeys}>
-    <header className="user01-dialog-header"><h2 id="user01-title">{draft.id?"Sửa quyền nhân viên":"Tạo tài khoản nhân viên"}</h2>
-     <button type="button" className="user01-close" onClick={cancel} disabled={busy} aria-label="Đóng">×</button></header>
-    <div className="user01-dialog-body">
+  {draft&&<ProductModal title={draft.id?"Sửa quyền nhân viên":"Tạo tài khoản nhân viên"} onClose={cancel} locked={busy} wide
+    footer={<><button type="button" className="btn btn-outline" onClick={cancel} disabled={busy}>Hủy</button>
+     <button type="button" className="btn btn-primary" onClick={()=>void save()} disabled={busy}>{busy?"Đang lưu…":draft.id?"Lưu thay đổi":"Tạo tài khoản"}</button></>}>
+   <div className="user01-staff-form">
       <div className="user01-form-grid">
        <label>Họ tên<input className="fb-ui-field" type="text" maxLength={150} value={draft.name} readOnly={!!draft.id} onChange={e=>setDraft({...draft,name:e.target.value})}/></label>
        <label>Email đăng nhập<input className="fb-ui-field" type="email" maxLength={200} value={draft.email} readOnly={!!draft.id} onChange={e=>setDraft({...draft,email:e.target.value})}/></label>
@@ -182,10 +169,7 @@ export default function UserManagement({actorRole}:{actorRole:string}){
       <p className="user01-advice">Nhân viên mới mở trang đăng nhập Admin hoặc CEO, chọn xác minh email để nhận mã rồi tự đặt mật khẩu. Không chia sẻ mật khẩu Owner.</p>
       {persistentError&&<p className="user01-error" role="alert">{persistentError}</p>}
     </div>
-    <footer className="user01-dialog-footer"><button type="button" className="btn btn-outline" onClick={cancel} disabled={busy}>Hủy</button>
-     <button type="button" className="btn btn-primary" onClick={()=>void save()} disabled={busy}>{busy?"Đang lưu…":draft.id?"Lưu thay đổi":"Tạo tài khoản"}</button></footer>
-   </div>
-  </div>}
+   </ProductModal>}
   <AdminToast message={notice?.message||""} variant={notice?.variant||"success"} notificationId={notice?.id}
    onClose={()=>setNotice(null)}/>
  </section>;

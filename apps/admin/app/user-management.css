@@ -19,19 +19,8 @@
 .user01-immutable{color:#7e7793;font-size:12px}
 .user01-empty{padding:20px;margin:0;color:#706b82}
 .user01-error{background:#fff3f1;border:1px solid #ffd6d0;color:#a22f1a;padding:10px 12px;border-radius:9px;line-height:1.5;margin:12px 16px}
-.user01-overlay{position:fixed;inset:0;z-index:80;background:rgba(19,15,37,.48);display:flex;justify-content:center;align-items:center;padding:12px;animation:user01-shade-in 220ms both}
-.user01-dialog{background:white;border:1px solid #e9deef;box-shadow:0 20px 64px #24133d40;border-radius:12px;max-height:calc(100dvh - 24px);width:min(880px,100%);display:flex;flex-direction:column;min-width:0;animation:user01-popup-in 280ms cubic-bezier(.22,1,.36,1) both}
-.user01-overlay.is-closing{animation:user01-shade-out 220ms both}
-.user01-overlay.is-closing .user01-dialog{animation:user01-popup-out 220ms cubic-bezier(.4,0,1,1) both}
-.user01-dialog-header{flex-shrink:0;min-height:52px;background:#f9f6fd;border-bottom:1px solid #ece1f4;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:0 16px;position:relative}
-.user01-dialog-header:before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:#6d249e;border-radius:12px 0 0 0}
-.user01-dialog-header h2{font-size:16px;font-weight:700;color:#372147;margin:0}
-.user01-close{border:0;background:transparent;color:#564269;font-size:25px;width:36px;height:36px;border-radius:9px}
-.user01-close:hover{background:#ece1f4}
-.user01-dialog-body{overflow-y:auto;overscroll-behavior:contain;padding:16px;min-height:0}
 .user01-form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
 .user01-form-grid>label{display:flex;flex-direction:column;gap:7px;color:#3e3150;font-weight:600;font-size:13px}
-.user01-form-grid input,.user01-form-grid select{height:40px;width:100%;font-size:13px;border:1px solid #dbd1e9;border-radius:9px;padding:0 11px;background:white}
 .user01-form-grid input:read-only{background:#faf9fc;color:#706d7e}
 .user01-fieldset{border:1px solid #eee6f4;border-radius:10px;padding:12px;margin:14px 0 0;min-width:0}
 .user01-fieldset legend{padding:0 6px;color:#43215f;font-size:13px;font-weight:700}
@@ -47,12 +36,5 @@
 .user01-permission strong{font-size:13px;color:#3d2854}
 .user01-permission small{font-size:12px;color:#6c657b;line-height:1.45}
 .user01-advice{font-size:12px;line-height:1.6;color:#625c73;margin:16px 2px 6px}
-.user01-dialog-footer{display:flex;flex-shrink:0;justify-content:flex-end;gap:10px;border-top:1px solid #eee5f4;padding:12px 16px;background:#fff}
-.user01-dialog-footer .btn{min-height:36px;font-size:13px;border-radius:9px}
-.user01 button,.user01 input,.user01 select{transition:background-color 190ms,border-color 190ms,box-shadow 190ms}
-@keyframes user01-shade-in{from{opacity:0}to{opacity:1}}
-@keyframes user01-shade-out{from{opacity:1}to{opacity:0}}
-@keyframes user01-popup-in{from{opacity:0;transform:scale(.97)}to{opacity:1;transform:scale(1)}}
-@keyframes user01-popup-out{from{opacity:1;transform:scale(1)}to{opacity:0;transform:scale(.98)}}
-@media(max-width:780px){.user01-dialog-header{min-height:56px;padding:0 12px}.user01-close{width:44px;height:44px}.user01-form-grid,.user01-permission-grid{grid-template-columns:1fr}.user01-toolbar{flex-wrap:wrap}.user01-toolbar>div{width:100%}.user01-toolbar input{min-width:0;flex:1}.user01-dialog-body{padding:12px}.user01-dialog-footer .btn{min-height:44px}}
-@media(prefers-reduced-motion:reduce){.user01-overlay,.user01-dialog,.user01-overlay.is-closing,.user01-overlay.is-closing .user01-dialog{animation-duration:.01ms!important}.user01 button,.user01 input,.user01 select{transition:none!important}}
+@media(max-width:780px){.user01-form-grid,.user01-permission-grid{grid-template-columns:1fr}.user01-toolbar{flex-wrap:wrap}.user01-toolbar>div{width:100%}.user01-toolbar input{min-width:0;flex:1}}
+
