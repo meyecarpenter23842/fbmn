@@ -40,7 +40,7 @@ export async function adsAccessibleCustomers(token,fetchImpl=fetch){
 }
 async function adsSearch(customer,token,login,query,fetchImpl=fetch){
  if(!validCustomer(customer))throw new Error("ads_invalid_customer");
- const j=await adsRequest("/customers/"+customer+"/googleAds:search",token,login,{query,pageSize:500},fetchImpl);
+ const j=await adsRequest("/customers/"+customer+"/googleAds:search",token,login,{query},fetchImpl);
  if(j.nextPageToken)throw new Error("ads_result_limit");
  return Array.isArray(j.results)?j.results:[];
 }
