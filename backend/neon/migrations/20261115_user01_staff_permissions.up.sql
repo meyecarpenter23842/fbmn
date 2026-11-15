@@ -3,7 +3,7 @@
 BEGIN;
 
 CREATE TABLE IF NOT EXISTS fbmn_admin.user01_permissions (
-  permission_key text PRIMARY KEY CHECK (permission_key ~ '^(admin|ceo)\.[a-z.]+)
+  permission_key text PRIMARY KEY CHECK (permission_key ~ '^(admin|ceo)[.][a-z.]+
 );
 INSERT INTO fbmn_admin.user01_permissions(permission_key) VALUES
  ('admin.catalogue.read'),('admin.catalogue.write'),
