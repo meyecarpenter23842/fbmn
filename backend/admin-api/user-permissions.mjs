@@ -44,6 +44,12 @@ export function validStaffPayload(value,{update=false}={}){
     value.channels.some(c=>!CHANNELS.includes(c)) || new Set(value.channels).size!==value.channels.length)return false;
   // Pricing workspaces select real SKU catalogue; read access is mandatory.
   if(value.permissions.some(p=>p.startsWith("admin.pricing."))&&!value.permissions.includes("admin.catalogue.read"))return false;
+  // A CEO account always needs a visible landing tab, and dependent tabs must be usable.
+  const ceo=value.permissions.filter(p=>p.startsWith("ceo."));
+  if(ceo.length>0&&!ceo.includes("ceo.overview"))return false;
+  if(ceo.includes("ceo.mail.send")&&!ceo.includes("ceo.mail.read"))return false;
+  if(ceo.includes("ceo.seo")&&!ceo.includes("ceo.statistics"))return false;
+  if(ceo.includes("ceo.gsc.manage")&&(!ceo.includes("ceo.seo")||!ceo.includes("ceo.statistics")))return false;
   // A non-admin role cannot become a staff administrator through a checkbox.
   if(value.role!=="admin" && value.permissions.includes("admin.users.manage"))return false;
   return true;

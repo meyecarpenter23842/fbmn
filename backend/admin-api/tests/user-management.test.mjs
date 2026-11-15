@@ -65,3 +65,12 @@ test("USER01 SQL migration is single, complete, and enforces Admin staff grants"
  assert.match(source,/'website.catalogue','users.manage'/);
  assert.doesNotMatch(source,/DROP TABLE|TRUNCATE|DELETE FROM neon_auth/);
 });
+
+test("USER01 CEO dependent capabilities cannot create blank or unusable panels",()=>{
+ const base={...payload,role:"ceo",permissions:[],channels:["public_web"]};
+ assert.equal(validStaffPayload({...base,permissions:["ceo.mail.send"]}),false);
+ assert.equal(validStaffPayload({...base,permissions:["ceo.overview","ceo.mail.send"]}),false);
+ assert.equal(validStaffPayload({...base,permissions:["ceo.overview","ceo.mail.read","ceo.mail.send"]}),true);
+ assert.equal(validStaffPayload({...base,permissions:["ceo.overview","ceo.gsc.manage"]}),false);
+ assert.equal(validStaffPayload({...base,permissions:["ceo.overview","ceo.statistics","ceo.seo","ceo.gsc.manage"]}),true);
+});

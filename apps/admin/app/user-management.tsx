@@ -84,6 +84,14 @@ export default function UserManagement({actorRole}:{actorRole:string}){
   const permissions=new Set(draft.permissions);
   if(enabled)permissions.add(key);else permissions.delete(key);
   if(enabled&&key.startsWith("admin.pricing.")){permissions.add("admin.catalogue.read");permissions.add("admin.pricing.read");}
+  if(enabled&&key.startsWith("ceo."))permissions.add("ceo.overview");
+  if(enabled&&key==="ceo.mail.send")permissions.add("ceo.mail.read");
+  if(enabled&&key==="ceo.seo")permissions.add("ceo.statistics");
+  if(enabled&&key==="ceo.gsc.manage"){permissions.add("ceo.statistics");permissions.add("ceo.seo");}
+  if(!enabled&&key==="ceo.overview")for(const p of [...permissions])if(p.startsWith("ceo."))permissions.delete(p);
+  if(!enabled&&key==="ceo.mail.read")permissions.delete("ceo.mail.send");
+  if(!enabled&&key==="ceo.statistics"){permissions.delete("ceo.seo");permissions.delete("ceo.gsc.manage");}
+  if(!enabled&&key==="ceo.seo")permissions.delete("ceo.gsc.manage");
   if(!enabled&&key==="admin.catalogue.read"){
    permissions.delete("admin.pricing.read");permissions.delete("admin.pricing.write");
   }
