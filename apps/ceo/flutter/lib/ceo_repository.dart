@@ -1,3 +1,4 @@
+// ignore_for_file: prefer_interpolation_to_compose_strings, curly_braces_in_flow_control_structures
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'ceo_models.dart';
@@ -10,7 +11,7 @@ import 'http_client_stub.dart' if (dart.library.js_interop) 'http_client_web.dar
 const allCeoScopes=<String>{
  'ceo.overview','ceo.conversations','ceo.outsourcing','ceo.contacts',
  'ceo.mail.read','ceo.mail.send','ceo.statistics','ceo.seo',
- 'ceo.notifications','ceo.gsc.manage'
+ 'ceo.notifications','ceo.gsc.manage','ceo.ads.read','ceo.ads.draft','ceo.ads.manage'
 };
 // Existing test implementations remain source-compatible without extra methods.
 extension CeoGrantAccess on CeoRepository{
@@ -268,6 +269,56 @@ class CeoApi implements CeoRepository {
   final jwt=await _ownerJwt();
   await _request('DELETE','/api/ceo/gsc/oauth/status',bearer:jwt,json:{});
  }
+
+ // ADS131: same-origin authenticated routes. Flutter receives no Google credentials.
+ Future<Map<String,dynamic>> adsStatus()async=>_data('/api/ceo/ads/oauth/status');
+ Future<Map<String,dynamic>> adsReport(String view,{
+  String? period,List<String> words=const [],List<String> geos=const [],
+  List<String> names=const []})async{
+  final params=<String,String>{'view':view,
+   if(period!=null)'period':period,
+   if(words.isNotEmpty)'words':words.join('|'),
+   if(geos.isNotEmpty)'geos':geos.join('|'),
+   if(names.isNotEmpty)'names':names.join('|')};
+  return _data('/api/ceo/ads?'+Uri(queryParameters:params).query,
+   timeout:const Duration(seconds:40));
+ }
+ Future<List<dynamic>> adsDrafts()async{
+  final data=await _data('/api/ceo/ads/drafts');
+  return data['drafts'] is List?data['drafts'] as List<dynamic>:const [];
+ }
+ Future<Map<String,dynamic>> adsPost(String route,Map<String,dynamic> payload)async{
+  const routes=['/api/ceo/ads/oauth/start','/api/ceo/ads/oauth/status',
+   '/api/ceo/ads/drafts','/api/ceo/ads/approvals'];
+  if(!routes.contains(route))throw const CeoApiException(400);
+  final response=await _request('POST',route,bearer:await _ownerJwt(),
+   json:payload,timeout:const Duration(seconds:35));
+  final data=response['data'];
+  if(data is Map<String,dynamic>)return data;
+  throw const CeoApiException(503);
+ }
+ Future<void> adsPatchDraft(String id,int revision,Map<String,dynamic> draft)async{
+  if(!RegExp(r'^[a-fA-F0-9-]{36}$').hasMatch(id))throw const CeoApiException(400);
+  await _request('PATCH','/api/ceo/ads/drafts?id='+id,
+   bearer:await _ownerJwt(),json:{'revision':revision,'draft':draft});
+ }
+ Future<void> adsDeleteDraft(String id)async{
+  if(!RegExp(r'^[a-fA-F0-9-]{36}$').hasMatch(id))throw const CeoApiException(400);
+  await _request('DELETE','/api/ceo/ads/drafts?id='+id,
+   bearer:await _ownerJwt(),json:<String,dynamic>{});
+ }
+ Future<String> adsStartOAuth()async{
+  final result=await adsPost('/api/ceo/ads/oauth/start',{});
+  final url=result['authorizationUrl'];
+  if(url is! String||url.length>2048||
+   !url.startsWith('https://accounts.google.com/o/oauth2/v2/auth?'))
+   throw const CeoApiException(503);
+  return url;
+ }
+ Future<void> adsDisconnect()async{
+  await _request('DELETE','/api/ceo/ads/oauth/status',
+   bearer:await _ownerJwt(),json:<String,dynamic>{});
+ }
  @override Future<CeoMailPage> mailList(String box,{String? after})async{
   if(box!='inbox'&&box!='sent'){throw const CeoApiException(400);}
   final afterParam=after==null?'':'&after=$after';
@@ -296,4 +347,25 @@ class CeoApi implements CeoRepository {
   return data['id'] as String;
  }
  @override void dispose()=>_client.close();
+}
+
+/// ADS feature access keeps existing repository mocks source-compatible.
+extension CeoAdsAccess on CeoRepository{
+ CeoApi get _adsApi {
+  if(this is CeoApi)return this as CeoApi;
+  throw const CeoApiException(503);
+ }
+ Future<Map<String,dynamic>> adsStatus()=>_adsApi.adsStatus();
+ Future<Map<String,dynamic>> adsReport(String view,{
+  String? period,List<String> words=const [],List<String> geos=const [],
+  List<String> names=const []})=>
+   _adsApi.adsReport(view,period:period,words:words,geos:geos,names:names);
+ Future<List<dynamic>> adsDrafts()=>_adsApi.adsDrafts();
+ Future<Map<String,dynamic>> adsPost(String route,Map<String,dynamic> payload)=>
+  _adsApi.adsPost(route,payload);
+ Future<void> adsPatchDraft(String id,int revision,Map<String,dynamic> draft)=>
+  _adsApi.adsPatchDraft(id,revision,draft);
+ Future<void> adsDeleteDraft(String id)=>_adsApi.adsDeleteDraft(id);
+ Future<String> adsStartOAuth()=>_adsApi.adsStartOAuth();
+ Future<void> adsDisconnect()=>_adsApi.adsDisconnect();
 }

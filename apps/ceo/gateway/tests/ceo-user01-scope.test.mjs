@@ -8,6 +8,10 @@ test("USER01 CEO permissions match exact routes and methods",()=>{
  assert.equal(ceoScope(url("/api/ceo/mail"),"GET"),"ceo.mail.read");
  assert.equal(ceoScope(url("/api/ceo/mail"),"POST"),"ceo.mail.send");
  assert.equal(ceoScope(url("/api/ceo/statistics")),"ceo.statistics");
+ assert.equal(ceoScope(url("/api/ceo/ads"),"GET"),"ceo.ads.read");
+ assert.equal(ceoScope(url("/api/ceo/ads/drafts"),"POST"),"ceo.ads.draft");
+ assert.equal(ceoScope(url("/api/ceo/ads/oauth/status"),"POST"),"ceo.ads.manage");
+ assert.equal(ceoScope(url("/api/ceo/ads/oauth/callback"),"GET"),null);
  assert.equal(ceoScope(url("/api/ceo/contact-requests")),"ceo.contacts");
  assert.equal(ceoScope(url("/api/ceo/gsc/oauth/status"),"DELETE"),"ceo.gsc.manage");
  // Reads receipt scope is determined by validated JSON kind in the route.

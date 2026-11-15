@@ -18,6 +18,8 @@ export const PERMISSIONS = Object.freeze([
   {key:"ceo.statistics",group:"CEO · Báo cáo",label:"Thống kê Marketing",detail:"Xem PostHog, funnel B2B, lưu lượng và chuyển đổi."},
   {key:"ceo.seo",group:"CEO · Báo cáo",label:"Báo cáo SEO",detail:"Xem dữ liệu Google Search Console, từ khóa và trang."},
   {key:"ceo.notifications",group:"CEO · Thông báo",label:"Thông báo và Push",detail:"Nhận thông báo, badge và đăng ký Push trên thiết bị."},
+  {key:"ceo.ads.read",group:"CEO · Google Ads",label:"Xem dữ liệu Google Ads",detail:"Xem từ khóa, chiến dịch và chi phí quảng cáo; không thay ngân sách hoặc phát hành."},
+  {key:"ceo.ads.draft",group:"CEO · Google Ads",label:"Chuẩn bị quảng cáo nháp",detail:"Nghiên cứu và lưu bộ từ khóa, soạn bản nháp quảng cáo; không phát sinh chi phí."},
   {key:"ceo.gsc.manage",group:"CEO · Cấu hình",label:"Kết nối Google Search Console",detail:"Kết nối/ngắt OAuth Search Console của công ty."},
 ]);
 export const PERMISSION_KEYS = new Set(PERMISSIONS.map(permission=>permission.key));
@@ -47,6 +49,8 @@ export function validStaffPayload(value,{update=false}={}){
   // A CEO account always needs a visible landing tab, and dependent tabs must be usable.
   const ceo=value.permissions.filter(p=>p.startsWith("ceo."));
   if(ceo.length>0&&!ceo.includes("ceo.overview"))return false;
+  if(ceo.includes("ceo.ads.read")&&!ceo.includes("ceo.statistics"))return false;
+  if(ceo.includes("ceo.ads.draft")&&(!ceo.includes("ceo.ads.read")||!ceo.includes("ceo.statistics")))return false;
   if(ceo.includes("ceo.mail.send")&&!ceo.includes("ceo.mail.read"))return false;
   if(ceo.includes("ceo.seo")&&!ceo.includes("ceo.statistics"))return false;
   if(ceo.includes("ceo.gsc.manage")&&(!ceo.includes("ceo.seo")||!ceo.includes("ceo.statistics")))return false;

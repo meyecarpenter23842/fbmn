@@ -11,6 +11,7 @@ import 'gsc_oauth_navigation_stub.dart' if (dart.library.js_interop) 'gsc_oauth_
 import 'ceo_ui_tokens.dart';
 import 'ceo_stat_controls.dart';
 import 'ceo_workspace.dart';
+import 'ceo_ads.dart';
 
 class CeoStatisticsTab extends StatefulWidget{
  final CeoRepository api;
@@ -19,6 +20,7 @@ class CeoStatisticsTab extends StatefulWidget{
 }
 class CeoStatisticsTabState extends State<CeoStatisticsTab>{
  final ScrollController _statsScroll=ScrollController();
+ final adsKey=GlobalKey<CeoAdsPanelState>();
  String period='7d';
  int section=0;
  bool oauthBusy=false;
@@ -38,6 +40,9 @@ class CeoStatisticsTabState extends State<CeoStatisticsTab>{
  @override void initState(){
   super.initState();
   final callbackStatus=Uri.base.queryParameters['gsc'];
+  if(Uri.base.queryParameters.containsKey('ads')&&callbackStatus==null){
+   section=5;
+  }
   if(callbackStatus!=null){
    section=4;
    gscCallbackMessage=gscOAuthResultMessage(callbackStatus);
@@ -263,7 +268,8 @@ class CeoStatisticsTabState extends State<CeoStatisticsTab>{
   ]);
  }
  Widget sectionPicker({required bool mobile})=>CeoStatsSubTabs(
-  mobile:mobile,tabs:const ['Tổng quan','Chuyển đổi','Marketing','Sản phẩm','SEO'],
+  mobile:mobile,tabs:const ['Tổng quan','Chuyển đổi','Marketing','Sản phẩm','SEO',
+   'Từ khóa Ads','Chiến dịch Ads','Hiệu quả Ads'],
   selected:section,onChanged:(next){
    if(section==next)return;
    setState(()=>section=next);
@@ -344,23 +350,28 @@ class CeoStatisticsTabState extends State<CeoStatisticsTab>{
       key:const ValueKey('ceo-stats-toolbar'),
       padding:const EdgeInsets.fromLTRB(8,2,8,4),
       child:Row(children:[
-       CeoStatsPeriodFilter(period:period,mobile:mobile,enabled:!loading,
-        onChanged:(range)=>unawaited(load(range:range,fresh:true))),
+       if(section<5||section==7)
+        CeoStatsPeriodFilter(period:period,mobile:mobile,enabled:!loading,
+         onChanged:(range){
+          if(section==7){unawaited(load(range:range));}
+          else{unawaited(load(range:range,fresh:true));}
+         }),
        const Spacer(),
        IconButton(key:const ValueKey('ceo-stats-refresh'),
         tooltip:'Tải lại thống kê',
         constraints:BoxConstraints.tightFor(width:buttonHeight,height:buttonHeight),
-        onPressed:loading?null:()=>unawaited(load(fresh:true)),
+        onPressed:section>=5?()=>adsKey.currentState?.reload():
+          loading?null:()=>unawaited(load(fresh:true)),
         icon:const Icon(Icons.refresh,color:ceoPurple))
       ]))),
      SliverPersistentHeader(key:const ValueKey('ceo-stats-sticky-tabs'),
       pinned:true,delegate:CeoStatsStickyHeader(height:buttonHeight+1,
        child:sectionPicker(mobile:mobile))),
      SliverList(delegate:SliverChildListDelegate([
-      if(loading)const LinearProgressIndicator(
+      if(loading&&section<5)const LinearProgressIndicator(
        key:ValueKey('ceo-stats-loading'),minHeight:2,
        color:ceoPurple,backgroundColor:ceoLavender),
-      if(error.isNotEmpty)Padding(
+      if(error.isNotEmpty&&section<5)Padding(
        padding:const EdgeInsets.all(12),
        child:Row(children:[
         Expanded(child:Text(error,style:const TextStyle(
@@ -368,7 +379,7 @@ class CeoStatisticsTabState extends State<CeoStatisticsTab>{
         TextButton.icon(onPressed:()=>unawaited(load(fresh:true)),
          icon:const Icon(Icons.refresh,size:16),label:const Text('Thử lại'))
        ])),
-      if(!loading&&error.isEmpty&&value?.cached==true)
+      if(section<5&&!loading&&error.isEmpty&&value?.cached==true)
        const Padding(padding:EdgeInsets.fromLTRB(12,6,12,9),
         child:Text('Đang xem số liệu PostHog được lưu tạm.',
          style:TextStyle(fontSize:12,color:ceoMuted))),
@@ -390,7 +401,10 @@ class CeoStatisticsTabState extends State<CeoStatisticsTab>{
       onDisconnect:()=>unawaited(disconnectGoogle()),
       retry:()=>unawaited(loadGsc(fresh:true))),
     ])),
-   if(value!=null&&!loading&&error.isEmpty)...selectedPanels(value),
+   if(section>=5)CeoAdsPanel(
+    key:adsKey,api:widget.api,kind:section-5,period:period,
+    marketing:value?.marketing),
+   if(section<5&&value!=null&&!loading&&error.isEmpty)...selectedPanels(value),
    const SizedBox(height:24),
    ])),
    ]);
