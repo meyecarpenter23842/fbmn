@@ -41,6 +41,6 @@ test("L01 price list uses selected SKU only and does not expose a bulk price end
   assert.match(side,/disabled=\{mediaBusy\|\|priceBusy\}/);
   assert.match(page,/if\(workspaceOperationBusy&&\["media","pricing"\]\.includes\(section\)&&to!==section\)return/);
   assert.ok(price.includes('fetch("/api/pricing/entries?sku="+encodeURIComponent(sku)'));
-  assert.match(price,/setOwner\(identity.data\?\.role==="owner"\)/);
+  assert.match(price,/setOwner\(identity.data\?\.role==="owner"\|\|identity.data\?\.permissions\?\.includes\("admin.pricing.write"\)===true\)/);
   assert.match(price,/confirm:"LUU_GIA_NHAP"/);
 });

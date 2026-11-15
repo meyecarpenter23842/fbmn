@@ -223,7 +223,7 @@ async function approve(db,input,actor){
   e.message==="effective_period_conflict"?"effective_period_conflict":"pricebook_conflict");}
 }
 export async function handleBulkPricebook({request,actor,db}){
- if(!actor||actor.role!=="owner"||typeof actor.subject!=="string")return error(403,"owner_required");
+ if(!actor||(actor.role!=="owner" && !actor.permissions?.includes(request.method==="GET"?"admin.pricing.read":"admin.pricing.write"))||typeof actor.subject!=="string")return error(403,"owner_required");
  const url=new URL(request.url),path=url.pathname;
  try{
   if(request.method==="GET"){

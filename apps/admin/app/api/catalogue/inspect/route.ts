@@ -44,8 +44,9 @@ export async function POST(request:Request){
     if(session.status===401)return fail(401,"unauthenticated");
     if(session.status===403)return fail(403,"forbidden");
     if(!session.ok)return fail(503,"admin_api_unavailable");
-    const role=(await session.json())?.data?.role;
-    if(!["owner","admin","editor"].includes(role))return fail(403,"forbidden");
+    const identity=(await session.json())?.data as {role?:string;permissions?:string[]}|undefined;
+    const delegated=Array.isArray(identity?.permissions)&&identity.permissions.includes("admin.catalogue.write");
+    if(!["owner","admin","editor"].includes(identity?.role||"")&&!delegated)return fail(403,"forbidden");
   }catch{return fail(503,"admin_api_unavailable");}
   let form:FormData;
   try{

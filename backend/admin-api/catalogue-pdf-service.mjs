@@ -154,7 +154,7 @@ async function upload(db,r2,actor,request){
  }
 }
 export async function handleCataloguePdf({request,action,actor,db,r2}){
- if(actor?.role!=="owner")return fail(403,"owner_required");
+ if(actor?.role!=="owner"&&!actor?.permissions?.includes("admin.website.write"))return fail(403,"owner_required");
  if(typeof db!=="function"||!r2?.put||!r2?.delete)return fail(503,"catalogue_storage_unavailable");
  if(action==="pdf-upload"){
   if(request.method!=="POST"||new URL(request.url).search)return fail(405,"method_not_allowed");

@@ -94,7 +94,7 @@ class _CeoLoginState extends State<CeoLogin>{
     const Text('Bảng điều hành CEO',textAlign:TextAlign.center,
      style:TextStyle(fontSize:28,fontWeight:FontWeight.w800)),
     const SizedBox(height:6),
-    const Text('Đăng nhập với tài khoản Owner đã được cấp quyền trong Futurebook Admin.',
+    const Text('Đăng nhập với tài khoản đã được cấp quyền CEO trong Futurebook Admin.',
       textAlign:TextAlign.center),
     const SizedBox(height:24),
     TextFormField(controller:email,keyboardType:TextInputType.emailAddress,
@@ -123,6 +123,11 @@ class CeoHome extends StatefulWidget{
  @override State<CeoHome> createState()=>_CeoHomeState();
 }
 class _CeoHomeState extends State<CeoHome> with WidgetsBindingObserver{
+ bool can(String scope)=>widget.api.grantedScopes.contains(scope);
+ bool canTab(int tab)=>switch(tab){
+  0=>can('ceo.overview'),1=>can('ceo.conversations'),2=>can('ceo.outsourcing'),
+  3=>can('ceo.contacts')||can('ceo.mail.read'),4=>can('ceo.statistics'),_=>false};
+ List<int> get navigationTabs=>[for(var i=0;i<5;i++)if(canTab(i))i];
  int selected=0;
  bool loading=false;
  String error='';
@@ -161,6 +166,7 @@ class _CeoHomeState extends State<CeoHome> with WidgetsBindingObserver{
   unawaited(push.badge(incoming.total));
  }
  Future<void> loadAlerts()async{
+  if(!can('ceo.notifications'))return;
   try{applyAlerts(await widget.api.loadAlerts());}
   catch(_){/* Preserve the last confirmed unread count if offline. */}
  }
@@ -185,13 +191,16 @@ class _CeoHomeState extends State<CeoHome> with WidgetsBindingObserver{
     RegExp(r'^[0-9a-fA-F-]{36}$').hasMatch(id))){
    selected=tabNumber;initialTab=tabNumber;initialTarget=id;
   }
+  if(!canTab(selected))selected=navigationTabs.isEmpty?0:navigationTabs.first;
+  if(!can('ceo.contacts')&&can('ceo.mail.read'))contactSection='inbox';
+  if(initialTab!=null&&!canTab(initialTab!)){initialTab=null;initialTarget=null;}
   Future.microtask(refresh);
-  Future.microtask(loadPushState);
-  Future.microtask(loadAlerts);
+  if(can('ceo.notifications')){Future.microtask(loadPushState);Future.microtask(loadAlerts);}
   WidgetsBinding.instance.addObserver(this);
   alertsTimer=Timer.periodic(const Duration(seconds:60),(_)=>loadAlerts());
  }
  Future<void> loadPushState()async{
+  if(!can('ceo.notifications'))return;
   final status=await push.status();
   // A slower initial lookup must not overwrite a user-initiated change.
   if(mounted&&!pushBusy){
@@ -200,6 +209,7 @@ class _CeoHomeState extends State<CeoHome> with WidgetsBindingObserver{
   }
  }
  Future<void> togglePush()async{
+  if(!can('ceo.notifications'))return;
   if(pushBusy||pushState=='unknown')return;
   // Start the browser permission prompt within the user gesture, no awaits first.
   final action=pushState=='enabled'?push.disable():push.enable();
@@ -479,13 +489,23 @@ class _CeoHomeState extends State<CeoHome> with WidgetsBindingObserver{
   setState((){loading=true;error='';});
   try{
    if(tabAtStart==0){
-    final result=await Future.wait<Object>([
-      widget.api.conversations(),widget.api.outsourcingRequests(),widget.api.contactRequests()]);
-    if(mounted){setState((){
-      conversations=result[0] as CeoPage<CeoConversation>;
-      outsourcing=applyConfirmedViews(result[1] as CeoPage<CeoRequest>,'outsourcing');
-      contacts=applyConfirmedViews(result[2] as CeoPage<CeoRequest>,'contact');
-    });}
+    final calls=<Future<void>>[];
+    if(can('ceo.conversations')){
+     calls.add(widget.api.conversations().then((page){
+      if(mounted)setState(()=>conversations=page);
+     }));
+    }
+    if(can('ceo.outsourcing')){
+     calls.add(widget.api.outsourcingRequests().then((page){
+      if(mounted)setState(()=>outsourcing=applyConfirmedViews(page,'outsourcing'));
+     }));
+    }
+    if(can('ceo.contacts')){
+     calls.add(widget.api.contactRequests().then((page){
+      if(mounted)setState(()=>contacts=applyConfirmedViews(page,'contact'));
+     }));
+    }
+    await Future.wait(calls);
    }else if(tabAtStart==1){final v=await widget.api.conversations();
     if(mounted)setState(()=>conversations=v);}
    else if(tabAtStart==2){final v=await widget.api.outsourcingRequests();
@@ -511,6 +531,7 @@ class _CeoHomeState extends State<CeoHome> with WidgetsBindingObserver{
  }
  // Notification shortcuts must open customer requests, even if the Owner was reading mail.
  void showAllContactRequests(){
+  if(!can('ceo.contacts'))return;
   if(contactSection!='requests')setState(()=>contactSection='requests');
   if(selected==3){
    Future.microtask(refresh);
@@ -519,7 +540,7 @@ class _CeoHomeState extends State<CeoHome> with WidgetsBindingObserver{
   }
  }
  void choose(int value){
-  if(value==selected)return;
+  if(!canTab(value)||value==selected)return;
   setState((){selected=value;error='';requestFilter='all';searchController.clear();});
   if(value!=4)Future.microtask(refresh);
  }
@@ -561,23 +582,23 @@ class _CeoHomeState extends State<CeoHome> with WidgetsBindingObserver{
     children:[Image.asset('assets/brand/fbmn-official-logo.webp',height:42,width:152,
      fit:BoxFit.contain,alignment:Alignment.centerLeft)]),
     actions:[
-     IconButton(
+     if(can('ceo.notifications'))IconButton(
       tooltip:'Xem thông báo và yêu cầu mới',
       onPressed:openNotifications,
       icon:bellIcon()),
      IconButton(tooltip:'Tải lại dữ liệu',onPressed:loading?null:refresh,
       icon:const Icon(Icons.refresh)),
      IconButton(tooltip:'Đăng xuất',onPressed:loading?null:logout,icon:const Icon(Icons.logout))]),
-   bottomNavigationBar:wide?null:NavigationBar(selectedIndex:selected,onDestinationSelected:choose,
+   bottomNavigationBar:wide?null:NavigationBar(selectedIndex:navigationTabs.isEmpty?0:navigationTabs.indexOf(selected),onDestinationSelected:(index)=>choose(navigationTabs[index]),
      labelBehavior:box.maxWidth<400?NavigationDestinationLabelBehavior.onlyShowSelected:
       NavigationDestinationLabelBehavior.alwaysShow,
-     destinations:List.generate(5,(i)=>NavigationDestination(icon:tabIcon(i),label:names[i]))),
+     destinations:navigationTabs.map((i)=>NavigationDestination(icon:tabIcon(i),label:names[i])).toList()),
    body:Stack(children:[
     Row(children:[
-     if(wide)NavigationRail(selectedIndex:selected,onDestinationSelected:choose,
+     if(wide)NavigationRail(selectedIndex:navigationTabs.isEmpty?0:navigationTabs.indexOf(selected),onDestinationSelected:(index)=>choose(navigationTabs[index]),
        labelType:NavigationRailLabelType.all,
-       destinations:List.generate(5,(i)=>NavigationRailDestination(
-        icon:tabIcon(i),label:Text(names[i])))),
+       destinations:navigationTabs.map((i)=>NavigationRailDestination(
+        icon:tabIcon(i),label:Text(names[i]))).toList()),
      Expanded(child:SafeArea(child:Center(child:ConstrainedBox(
       constraints:const BoxConstraints(maxWidth:1180),
       child:RefreshIndicator(onRefresh:refresh,child:content()))))),
@@ -593,7 +614,7 @@ class _CeoHomeState extends State<CeoHome> with WidgetsBindingObserver{
  // All CEO screens share the same panel, search and row primitives.
  Widget content(){
   if(selected==4)return CeoStatisticsTab(key:statsKey,api:widget.api);
-  if(loading&&((selected==0&&(conversations==null||outsourcing==null||contacts==null))||
+  if(loading&&((selected==0&&((can('ceo.conversations')&&conversations==null)||(can('ceo.outsourcing')&&outsourcing==null)||(can('ceo.contacts')&&contacts==null)))||
    (selected==1&&conversations==null)||(selected==2&&outsourcing==null)||
    (selected==3&&contactSection=='requests'&&contacts==null))){
    return const Center(child:CircularProgressIndicator());
@@ -622,6 +643,7 @@ class _CeoHomeState extends State<CeoHome> with WidgetsBindingObserver{
    child:Wrap(spacing:7,runSpacing:4,children:[
     for(final tab in const <(String,String)>[
      ('requests','Khách liên hệ'),('inbox','Hộp thư đến'),('sent','Đã gửi')])
+     if((tab.$1=='requests'&&can('ceo.contacts'))||(tab.$1!='requests'&&can('ceo.mail.read')))
      ChoiceChip(
       key:ValueKey('ceo-contact-${tab.$1}'),
       label:Row(mainAxisSize:MainAxisSize.min,children:[
@@ -648,54 +670,53 @@ class _CeoHomeState extends State<CeoHome> with WidgetsBindingObserver{
  }
 
  Widget overview(){
-  if(conversations==null||outsourcing==null||contacts==null){
-   return ListView(physics:const AlwaysScrollableScrollPhysics(),children:[
-    const CeoPanel(title:'Chưa có dữ liệu',subtitle:'Chỉ hiển thị dữ liệu thật',
-     icon:Icons.cloud_off_outlined,
-     child:CeoEmptyResult(title:'Chưa tải được thông tin',
-      detail:'Kéo xuống hoặc bấm tải lại để kết nối dịch vụ Owner.')),
-   ]);
-  }
-  final pendingOut=outsourcing!.items.where((r)=>r.pending).length;
-  final pendingContacts=contacts!.items.where((r)=>r.pending).length;
+  final cards=<Widget>[
+   if(can('ceo.conversations')&&conversations!=null)
+    CeoMetricCard(label:'Hội thoại',count:conversations!.items.length,icon:Icons.forum_outlined),
+   if(can('ceo.outsourcing')&&outsourcing!=null)
+    CeoMetricCard(label:'Gia công chưa xử lý',
+     count:outsourcing!.items.where((r)=>r.pending).length,icon:Icons.handyman_outlined),
+   if(can('ceo.contacts')&&contacts!=null)
+    CeoMetricCard(label:'Liên hệ chưa xử lý',
+     count:contacts!.items.where((r)=>r.pending).length,icon:Icons.contact_mail_outlined),
+  ];
   return ListView(physics:const AlwaysScrollableScrollPhysics(),children:[
-   CeoPanel(title:'Hoạt động gần đây',
-    subtitle:'Số liệu trong trang đầu mỗi danh sách, không phải tổng hệ thống',
+   CeoPanel(title:'Hoạt động gần đây',subtitle:'Chỉ hiển thị dữ liệu thuộc quyền được cấp',
     icon:Icons.space_dashboard_outlined,
-    child:LayoutBuilder(builder:(context,box){
-     final cols=box.maxWidth>=660?3:box.maxWidth>=260?2:1;
-     const gap=10.0;
-     final width=(box.maxWidth-gap*(cols-1))/cols;
-     final items=<Widget>[
-      CeoMetricCard(label:'Hội thoại',count:conversations!.items.length,icon:Icons.forum_outlined),
-      CeoMetricCard(label:'Gia công chưa xử lý',count:pendingOut,icon:Icons.handyman_outlined),
-      CeoMetricCard(label:'Liên hệ chưa xử lý',count:pendingContacts,icon:Icons.contact_mail_outlined),
-     ];
-     return Wrap(spacing:gap,runSpacing:gap,children:[
-      for(var i=0;i<items.length;i++)
-       SizedBox(width:cols==2&&i==2?box.maxWidth:width,child:items[i]),
-     ]);
-    })),
-   CeoPanel(title:'Gia công gần đây',subtitle:'Đã xem và chưa xử lý là hai trạng thái riêng biệt',
-    icon:Icons.handyman_outlined,
-    child:outsourcing!.items.isEmpty?
-     const CeoEmptyResult(title:'Chưa có yêu cầu gia công',detail:'Khi có yêu cầu mới, dữ liệu sẽ hiển thị tại đây.'):
-     Column(children:outsourcing!.items.take(3).map((r)=>caseRow(r,true)).toList())),
-   CeoPanel(title:'Liên hệ gần đây',subtitle:'Đã xem và chưa xử lý là hai trạng thái riêng biệt',
-    icon:Icons.contact_mail_outlined,
-    child:contacts!.items.isEmpty?
-     const CeoEmptyResult(title:'Chưa có liên hệ',detail:'Yêu cầu từ Website sẽ xuất hiện tại đây.'):
-     Column(children:contacts!.items.take(3).map((r)=>caseRow(r,false)).toList())),
-   CeoPanel(title:'Hội thoại gần đây',subtitle:'Lịch sử chatbot đang lưu trong Admin',
-    icon:Icons.forum_outlined,
-    child:conversations!.items.isEmpty?
-     const CeoEmptyResult(title:'Chưa có hội thoại',detail:'Không có phiên chat trong dữ liệu đã tải.'):
-     Column(children:conversations!.items.take(3).map(chatRow).toList())),
+    child:cards.isEmpty?
+     const CeoEmptyResult(title:'Chưa có dữ liệu được cấp quyền',
+      detail:'Quản trị viên có thể cấp thêm quyền Hội thoại, Gia công hoặc Liên hệ trong Admin.'):
+     LayoutBuilder(builder:(context,box){
+      final cols=box.maxWidth>=660?3:box.maxWidth>=260?2:1;
+      const gap=10.0;
+      final width=(box.maxWidth-gap*(cols-1))/cols;
+      return Wrap(spacing:gap,runSpacing:gap,children:[
+       for(final card in cards)SizedBox(width:width,child:card),
+      ]);
+     })),
+   if(can('ceo.outsourcing')&&outsourcing!=null)
+    CeoPanel(title:'Gia công gần đây',subtitle:'Dữ liệu đã được cấp quyền',
+     icon:Icons.handyman_outlined,
+     child:outsourcing!.items.isEmpty?
+      const CeoEmptyResult(title:'Chưa có yêu cầu gia công',detail:'Danh sách đang trống.'):
+      Column(children:outsourcing!.items.take(3).map((r)=>caseRow(r,true)).toList())),
+   if(can('ceo.contacts')&&contacts!=null)
+    CeoPanel(title:'Liên hệ gần đây',subtitle:'Dữ liệu đã được cấp quyền',
+     icon:Icons.contact_mail_outlined,
+     child:contacts!.items.isEmpty?
+      const CeoEmptyResult(title:'Chưa có liên hệ',detail:'Danh sách đang trống.'):
+      Column(children:contacts!.items.take(3).map((r)=>caseRow(r,false)).toList())),
+   if(can('ceo.conversations')&&conversations!=null)
+    CeoPanel(title:'Hội thoại gần đây',subtitle:'Dữ liệu đã được cấp quyền',
+     icon:Icons.forum_outlined,
+     child:conversations!.items.isEmpty?
+      const CeoEmptyResult(title:'Chưa có hội thoại',detail:'Danh sách đang trống.'):
+      Column(children:conversations!.items.take(3).map(chatRow).toList())),
    const SizedBox(height:24),
   ]);
  }
 
- Widget chatList(){
+Widget chatList(){
   final q=searchController.text.trim().toLowerCase();
   final visible=(conversations?.items??<CeoConversation>[]).where((r)=>
    q.isEmpty||r.session.toLowerCase().contains(q)||

@@ -66,8 +66,8 @@ export default function CatalogueSideWorkspace({mode,onBusyChange}:{mode:Workspa
           headers:{Authorization:"Bearer "+credentials.token,Accept:"application/json"}
         });
         if(!actor.ok)throw new Error("Không kiểm tra được quyền xem giá.");
-        const identity=await actor.json() as Envelope<{role?:string}>;
-        if(!controller.signal.aborted)setPricingOwner(identity.data?.role==="owner");
+        const identity=await actor.json() as Envelope<{role?:string;permissions?:string[]}>;
+        if(!controller.signal.aborted)setPricingOwner(identity.data?.role==="owner"||identity.data?.permissions?.includes("admin.pricing.write")===true);
       }
       const response=await fetch("/api/catalogue/skus",{
         cache:"no-store",credentials:"same-origin",signal:controller.signal,
@@ -149,7 +149,7 @@ export default function CatalogueSideWorkspace({mode,onBusyChange}:{mode:Workspa
       </div>
     </div>
     {pricing&&<p className="catalogue-side-privacy">
-      Bảng giá được quản lý riêng trong Admin. Chỉ Owner được tạo và sửa giá.
+      Bảng giá được quản lý riêng trong Admin. Chỉ tài khoản được cấp quyền cập nhật giá mới được sửa.
       Việc chọn Website hoặc App không tự công khai giá cho khách hàng.
     </p>}
     {pricing&&pricingOwner&&<>

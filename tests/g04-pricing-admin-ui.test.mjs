@@ -20,7 +20,7 @@ test("G04 UI keeps price memory private, gates by verified Admin session, and re
  assert.match(parent,/<CataloguePricebookPanel key=\{selectedSku\}/);
  assert.match(panel,/fetch\("\/api\/admin\/session"/);
  assert.match(panel,/if\(prices.status===403\|\|session.status===403\)/);
- assert.match(panel,/setOwner\(identity.data\?\.role==="owner"\)/);
+ assert.match(panel,/setOwner\(identity.data\?\.role==="owner"\|\|identity.data\?\.permissions\?\.includes\("admin.pricing.write"\)===true\)/);
  assert.match(panel,/if\(!owner\|\|saving\|\|loading\)return/);
  assert.match(panel,/Chưa có giá cho loại này. Không có giá không có nghĩa là 0 đồng/);
  assert.match(panel,/Chưa được duyệt hoặc công khai/);

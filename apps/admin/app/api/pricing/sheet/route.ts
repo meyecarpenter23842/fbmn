@@ -41,7 +41,9 @@ export async function POST(request:Request){
   if(check.status===403)return fail(403,"forbidden");
   if(!check.ok||!check.headers.get("content-type")?.includes("application/json"))
    return fail(503,"admin_api_unavailable");
-  if((await check.json())?.data?.role!=="owner")return fail(403,"owner_required");
+  const identity=(await check.json())?.data as {role?:string;permissions?:string[]}|undefined;
+  if(identity?.role!=="owner"&&!identity?.permissions?.includes("admin.pricing.write"))
+   return fail(403,"pricing_write_required");
  }catch{return fail(503,"admin_api_unavailable");}
  try{
   const incoming=await readCapped(request);if(!incoming)return fail(413,"file_too_large");

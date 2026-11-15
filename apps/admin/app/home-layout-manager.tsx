@@ -34,7 +34,7 @@ async function requestLayout<T>(body?:object):Promise<T>{
  if(!value.data)throw Error("Phản hồi API không hợp lệ.");
  return value.data;
 }
-export default function HomeLayoutManager({owner}:{owner:boolean}){
+export default function HomeLayoutManager({owner,readable}:{owner:boolean;readable:boolean}){
  const [saved,setSaved]=useState<Layout|null>(null);
  const [draft,setDraft]=useState<Layout|null>(null);
  const [catalog,setCatalog]=useState<Payload["available"]>({categories:[],skus:[]});
@@ -55,11 +55,11 @@ export default function HomeLayoutManager({owner}:{owner:boolean}){
   }catch(e){setError(e instanceof Error?e.message:"Không tải được cấu hình.");}
   finally{setLoading(false);}
  },[]);
- useEffect(()=>{if(!owner)return;let cancelled=false;void Promise.resolve().then(()=>{if(!cancelled)return load();});return ()=>{cancelled=true;};},[owner,load]);
+ useEffect(()=>{if(!readable)return;let cancelled=false;void Promise.resolve().then(()=>{if(!cancelled)return load();});return ()=>{cancelled=true;};},[readable,load]);
  const dirty=useMemo(()=>draft&&saved&&JSON.stringify(draft)!==JSON.stringify(saved),[draft,saved]);
  const patch=(p:Partial<Layout>)=>setDraft(v=>v?{...v,...p}:v);
  async function save(operation:"save"|"reset"){
-  if(!draft||!saved||busy)return;
+  if(!owner||!draft||!saved||busy)return;
   setBusy(true);setError("");
   try{
    const result=await requestLayout<{layout:Layout}>({operation,revision:saved.revision,
@@ -84,20 +84,20 @@ export default function HomeLayoutManager({owner}:{owner:boolean}){
  const pinned=(draft?.featuredSkus||[]).map(id=>skuMap.get(id))
   .filter((s):s is Sku=>Boolean(s)).filter(s=>validCategoryIds.has(s.categoryId))
   .slice(0,draft?.productLimit||4);
- if(!owner)return <section className="surface dl4-panel"><h1>Trang chủ & bố cục</h1><p>Chỉ Owner được sử dụng tính năng này.</p></section>;
+ if(!readable)return <section className="surface dl4-panel"><h1>Trang chủ & bố cục</h1><p>Tài khoản chưa được cấp quyền xem bố cục.</p></section>;
  return <div className="dl4-layout">
   <div className="page-title"><div><h1>Trang chủ & bố cục</h1><p>Cấu hình từ danh mục/SKU đã công khai. Không sửa SKU, family, giá hay CMS Hero.</p></div>
    <div className="action-row">
     <button type="button" className="fb-ui-button fb-ui-button--secondary" disabled={loading||busy} onClick={()=>void load()}>Tải lại</button>
-    <button type="button" className="fb-ui-button fb-ui-button--secondary" disabled={!draft||busy} onClick={()=>setResetOpen(true)}>Mặc định</button>
-    <button type="button" className="fb-ui-button fb-ui-button--primary" disabled={!dirty||busy} onClick={()=>void save("save")}>{busy?"Đang lưu…":"Lưu cấu hình"}</button>
+    <button type="button" className="fb-ui-button fb-ui-button--secondary" disabled={!owner||!draft||busy} onClick={()=>setResetOpen(true)}>Mặc định</button>
+    <button type="button" className="fb-ui-button fb-ui-button--primary" disabled={!owner||!dirty||busy} onClick={()=>void save("save")}>{busy?"Đang lưu…":"Lưu cấu hình"}</button>
    </div>
   </div>
   {saved&&<p className="dl4-version">Phiên bản {saved.revision} · Cấu hình có lịch sử audit · <a href="https://fbmn-web.vercel.app" target="_blank" rel="noreferrer">Mở Website</a></p>}
   {loading&&<div role="status" aria-busy="true" className="surface dl4-panel">Đang tải cấu hình thực tế…</div>}
   {error&&<div role="alert" className="dl4-error">{error} <button type="button" className="fb-ui-button fb-ui-button--secondary" onClick={()=>void load()}>Thử lại</button></div>}
   {!loading&&draft&&<div className="dl4-columns">
-   <div className="dl4-settings"><fieldset className="dl4-edit-fields" disabled={busy} aria-busy={busy}>
+   <div className="dl4-settings"><fieldset className="dl4-edit-fields" disabled={busy||!owner} aria-busy={busy}>
     <section className="surface dl4-panel">
      <h2>Danh mục nổi bật</h2><p>Chỉ danh mục có SKU đã công khai. Bỏ chọn tất cả để dùng thứ tự tự động.</p>
      <label className="dl4-field">Số danh mục <select value={draft.categoryLimit} onChange={e=>patch({categoryLimit:Number(e.target.value)})}>
@@ -173,7 +173,7 @@ export default function HomeLayoutManager({owner}:{owner:boolean}){
     <p>Ảnh, biến thể và cách gộp family phải kiểm trực tiếp trên Website sau phát hành.</p>
    </section>
   </div>}
-  {resetOpen&&<ProductModal title="Khôi phục mặc định?" locked={busy} onClose={()=>setResetOpen(false)}
+  {owner&&resetOpen&&<ProductModal title="Khôi phục mặc định?" locked={busy} onClose={()=>setResetOpen(false)}
    footer={<><button type="button" className="fb-ui-button fb-ui-button--secondary" disabled={busy} onClick={()=>setResetOpen(false)}>Hủy</button>
     <button type="button" className="fb-ui-button fb-ui-button--primary" disabled={busy} onClick={()=>void save("reset")}>Xác nhận và lưu</button></>}>
     <p>Trở về 6 danh mục, 4 thẻ, không ghim SKU, danh mục trước sản phẩm. Thay đổi được ghi revision và audit.</p>

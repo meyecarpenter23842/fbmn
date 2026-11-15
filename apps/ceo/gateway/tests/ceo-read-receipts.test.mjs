@@ -22,12 +22,13 @@ test("DL12E read flags come only from Owner receipts; no change to request workf
  assert.equal(body.data.requests[0].viewedAt,undefined);
  assert.equal(attachReadReceipts(body,[]).data.requests[0].viewedAt,null);
 });
-test("DL12E Owner POST is origin-checked, bounded, and never mutates business status",()=>{
+test("DL12E delegated receipt POST validates kind, origin and never mutates business status",()=>{
  const route=readFileSync(new URL("../app/api/ceo/reads/route.ts",import.meta.url),"utf8");
  const gate=readFileSync(new URL("../app/api/ceo/[section]/route.ts",import.meta.url),"utf8");
  const migration=readFileSync(new URL("../../../../backend/neon/migrations/20261111_dl12e_ceo_request_reads.up.sql",import.meta.url),"utf8");
  assert.match(route,/allowedOrigin\(request\)/);
- assert.match(route,/requireOwner\(request\)/);
+ assert.match(route,/requireOwner\(request,scope\)/);
+ assert.match(route,/parsed\.kind==="contact"\?"ceo\.contacts":"ceo\.outsourcing"/);
  assert.match(route,/ON CONFLICT DO NOTHING/);
  assert.doesNotMatch(route,/DELETE FROM fbmn_catalog_private\\.ceo_request_reads WHERE viewed_at/);
  // A viewed but still unhandled request must not regain "unread" after 90d.

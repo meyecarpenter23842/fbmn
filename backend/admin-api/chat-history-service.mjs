@@ -43,7 +43,9 @@ function parseQuery(url){
 export async function handleChatHistory({request,actor,db}){
  const url=new URL(request.url);
  if(url.pathname!=="/v1/admin/website/chat-history")return fail(404,"not_found");
- if(actor?.role!=="owner")return fail(403,"forbidden");
+ if(actor?.role!=="owner" && !(request.method==="GET" &&
+   (actor?.permissions?.includes("admin.website.read")||actor?.permissions?.includes("ceo.conversations"))) &&
+   !(request.method==="POST"&&actor?.permissions?.includes("admin.website.write")))return fail(403,"forbidden");
  if(!["GET","POST"].includes(request.method))return fail(405,"method_not_allowed");
  if(typeof db!=="function")return fail(503,"history_unavailable");
  try{

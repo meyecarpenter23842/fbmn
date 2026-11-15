@@ -56,13 +56,13 @@ export default function CataloguePricebookPanel({sku,onBusyChange}:{sku:string;o
   if(prices.status===403||session.status===403){setAuthorized(false);setLoadFailed(false);setEntries([]);return;}
   if(!session.ok||!prices.ok)throw new Error(
     prices.status===401?"Phiên đăng nhập đã hết hạn.":"Không tải được bảng giá riêng tư.");
-  const identity=await session.json() as Data<{role?:string}>;
+  const identity=await session.json() as Data<{role?:string;permissions?:string[]}>;
   const payload=await prices.json() as Data<PriceList>;
   if(!payload.data||!Array.isArray(payload.data.entries))
     throw new Error("Dữ liệu giá không hợp lệ.");
   setAuthorized(true);
   setLoadFailed(false);
-  setOwner(identity.data?.role==="owner");
+  setOwner(identity.data?.role==="owner"||identity.data?.permissions?.includes("admin.pricing.write")===true);
   setEntries(payload.data.entries);
  },[sku]);
  useEffect(()=>{

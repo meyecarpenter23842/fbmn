@@ -7,6 +7,15 @@ import 'ceo_gsc_models.dart';
 import 'http_client_stub.dart' if (dart.library.js_interop) 'http_client_web.dart' as platform;
 
 /// Same-origin only. No token storage, credential logging or direct private Worker requests.
+const allCeoScopes=<String>{
+ 'ceo.overview','ceo.conversations','ceo.outsourcing','ceo.contacts',
+ 'ceo.mail.read','ceo.mail.send','ceo.statistics','ceo.seo',
+ 'ceo.notifications','ceo.gsc.manage'
+};
+// Existing test implementations remain source-compatible without extra methods.
+extension CeoGrantAccess on CeoRepository{
+ Set<String> get grantedScopes => this is CeoApi ? (this as CeoApi).grantedScopes : allCeoScopes;
+}
 abstract class CeoRepository{
  Future<void> signIn(String email,String password);
  Future<void> signOut();
@@ -32,7 +41,7 @@ class CeoApiException implements Exception{
  const CeoApiException(this.status);
  @override String toString()=>switch(status){
   401=>"Phiên đăng nhập chưa được xác nhận. Vui lòng đăng nhập lại.",
-  403=>"Tài khoản không có quyền Owner.",
+  403=>"Tài khoản chưa được cấp quyền truy cập chức năng này.",
   400=>"Thông tin email chưa hợp lệ.",
   413=>"Email hoặc tệp đính kèm vượt dung lượng cho phép.",
   429=>"Dịch vụ email đang giới hạn lượt gửi; vui lòng thử lại.",
@@ -40,6 +49,8 @@ class CeoApiException implements Exception{
   _=>"Chưa tải được dữ liệu. Vui lòng thử lại."};
 }
 class CeoApi implements CeoRepository {
+ Set<String> _grants=<String>{};
+ Set<String> get grantedScopes=>_grants;
  final http.Client _client;
  CeoApi({http.Client? client}):_client=client??platform.createClient();
  Uri _url(String path)=>Uri.base.resolve(path);
@@ -120,6 +131,7 @@ class CeoApi implements CeoRepository {
  }
  @override Future<void> signOut() async{
   await _request("POST","/api/auth/sign-out",json:{});
+  _grants=<String>{};
  }
  @override Future<bool> ownerSession() async{
   String jwt;
@@ -130,7 +142,11 @@ class CeoApi implements CeoRepository {
   }
   Future<bool> checkRole(String token)async{
    final response=await _request('GET','/api/ceo/session',bearer:token);
-   return (response['data'] as Map<String,dynamic>?)?['role']=='owner';
+   final session=response['data'] as Map<String,dynamic>?;
+   if(session?['role']=='owner'){_grants=allCeoScopes;return true;}
+   final granted=session?['permissions'];
+   _grants=granted is List?granted.whereType<String>().where((p)=>p.startsWith('ceo.')).toSet():<String>{};
+   return session?['allowed']==true && _grants.isNotEmpty;
   }
   try{return await checkRole(jwt);}
   on CeoApiException catch(e){

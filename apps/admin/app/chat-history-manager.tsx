@@ -23,7 +23,7 @@ async function api<T>(params:URLSearchParams,body?:object):Promise<T>{
  return result.data;
 }
 function CloseModal(){const close=useProductModalClose();return <button type="button" className="fb-ui-button fb-ui-button--secondary" onClick={close}>Hủy</button>;}
-export default function ChatHistoryManager({owner}:{owner:boolean}){
+export default function ChatHistoryManager({owner,readable}:{owner:boolean;readable:boolean}){
  const [filters,setFilters]=useState<Filters>(emptyFilters);
  const [applied,setApplied]=useState<Filters>(emptyFilters);
  const [items,setItems]=useState<Conversation[]>([]);
@@ -44,8 +44,8 @@ export default function ChatHistoryManager({owner}:{owner:boolean}){
   }catch(e){if(epoch===listEpoch.current){setItems([]);setMore(false);setError(e instanceof Error?e.message:"Lỗi tải dữ liệu.");}}
   finally{if(epoch===listEpoch.current)setLoading(false);}
  },[]);
- useEffect(()=>{if(!owner)return;let active=true;void Promise.resolve().then(()=>{if(active)return load(1,emptyFilters);});
-  return ()=>{active=false;listEpoch.current++;detailEpoch.current++;};},[owner,load]);
+ useEffect(()=>{if(!readable)return;let active=true;void Promise.resolve().then(()=>{if(active)return load(1,emptyFilters);});
+  return ()=>{active=false;listEpoch.current++;detailEpoch.current++;};},[readable,load]);
  async function detail(item:Conversation,p:number){
   const epoch=++detailEpoch.current;setDetailLoading(true);setDetailError("");
   if(p===1){setSelected(item);setTurns([]);setDetailMore(false);setDetailPage(1);setConfirm(false);}
@@ -57,7 +57,7 @@ export default function ChatHistoryManager({owner}:{owner:boolean}){
  }
  function close(){detailEpoch.current++;setSelected(null);setTurns([]);setConfirm(false);setDetailLoading(false);}
  async function remove(){
-  if(!selected||!confirm||busy)return;
+  if(!owner||!selected||!confirm||busy)return;
   setBusy(true);
   try{await api(new URLSearchParams(),{operation:"delete",session:selected.session});
    close();setVariant("success");setNotice("Đã xóa hội thoại và toàn bộ tin nhắn.");setNoticeId(v=>v+1);
@@ -65,7 +65,7 @@ export default function ChatHistoryManager({owner}:{owner:boolean}){
   }catch(e){setVariant("error");setNotice(e instanceof Error?e.message:"Không thể xóa hội thoại.");setNoticeId(v=>v+1);}
   finally{setBusy(false);}
  }
- if(!owner)return <section className="surface dl4-panel"><h1>Quản lý hội thoại</h1><p>Chỉ Owner có quyền xem và xóa hội thoại.</p></section>;
+ if(!readable)return <section className="surface dl4-panel"><h1>Quản lý hội thoại</h1><p>Tài khoản chưa được cấp quyền xem hội thoại.</p></section>;
  return <div className={"dl4-layout dl10c-workspace"+(selected?" dl10c-has-selection":"")}>
   <div className="page-title"><div><h1>Quản lý hội thoại</h1><p>Lịch sử trao đổi của khách với chatbot Website Futurebook.</p></div>
    <button type="button" className="fb-ui-button fb-ui-button--secondary" disabled={loading||busy} onClick={()=>{void load(page,applied);if(selected)void detail(selected,1);}}>Tải lại</button></div>
@@ -98,7 +98,7 @@ export default function ChatHistoryManager({owner}:{owner:boolean}){
        <button type="button" className="fb-ui-button fb-ui-button--secondary dl10c-back" disabled={busy} onClick={close}>← Danh sách</button>
        <span className="dl10c-avatar" aria-hidden="true">K</span>
        <div className="dl10c-thread-title"><h2>Khách · {selected.session.slice(0,8)}</h2><small className="dl10c-session" title={selected.session}>Mã phiên: {selected.session}</small><small>{fmt(selected.updatedAt)} · {selected.messageCount} tin nhắn</small></div>
-       <button type="button" className="fb-ui-button fb-ui-button--secondary" disabled={busy||detailLoading} onClick={()=>setConfirm(true)}>Xóa hội thoại</button>
+       {owner&&<button type="button" className="fb-ui-button fb-ui-button--secondary" disabled={busy||detailLoading} onClick={()=>setConfirm(true)}>Xóa hội thoại</button>}
       </header>
       <div className="dl10c-thread-scroll" tabIndex={0} aria-label="Tin nhắn trong hội thoại">
        {detailError&&<p role="alert" className="dl4-error">{detailError} <button type="button" className="fb-ui-button fb-ui-button--secondary" onClick={()=>void detail(selected,turns.length?detailPage+1:1)}>Thử lại</button></p>}
@@ -116,7 +116,7 @@ export default function ChatHistoryManager({owner}:{owner:boolean}){
     </section>
    </div>
   </section>
-  {selected&&confirm&&<ProductModal title="Xóa hội thoại" locked={busy} onClose={()=>setConfirm(false)}
+  {owner&&selected&&confirm&&<ProductModal title="Xóa hội thoại" locked={busy} onClose={()=>setConfirm(false)}
    footer={<><CloseModal/><button type="button" className="fb-ui-button fb-ui-button--danger" disabled={busy} onClick={()=>void remove()}>Xác nhận xóa vĩnh viễn</button></>}>
     <p className="dl10c-session">Mã phiên: {selected.session}</p>
     <p role="alert">Xóa toàn bộ nội dung cuộc hội thoại này. Không thể hoàn tác.</p>

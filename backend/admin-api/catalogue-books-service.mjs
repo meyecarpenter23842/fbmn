@@ -276,7 +276,7 @@ async function upload(db,r2,actor,request){
  }
 }
 export async function handleCatalogueBooks({request,actor,db,r2}){
- if(actor?.role!=="owner")return fail(403,"owner_required");
+ if(actor?.role!=="owner" && !actor?.permissions?.includes(request.method==="GET"?"admin.website.read":"admin.website.write"))return fail(403,"owner_required");
  if(typeof db!=="function"||!r2?.get||!r2?.put||!r2?.delete)
   return fail(503,"catalogue_storage_unavailable");
  const u=new URL(request.url);

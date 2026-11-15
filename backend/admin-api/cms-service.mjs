@@ -196,7 +196,7 @@ async function mutate(db,input,subject,action,publicSurfaceReady=false){
 }
 export async function handleCms({request,actor,db,r2,publicSurfaceReady=false}){
  // Limit release rights until Editor/Publisher scope is approved by Owner.
- if(actor?.role!=="owner")return fail(403,"owner_required");
+ if(actor?.role!=="owner" && !actor?.permissions?.includes(request.method==="GET"?"admin.cms.read":"admin.cms.write"))return fail(403,"owner_required");
  const u=new URL(request.url);
  const action=u.pathname===ROOT?"":u.pathname.startsWith(ROOT+"/")?
   u.pathname.slice(ROOT.length+1):"unknown";

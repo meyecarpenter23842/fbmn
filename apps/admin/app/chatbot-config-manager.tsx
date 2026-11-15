@@ -29,7 +29,7 @@ function CloseAfterSave({ready}:{ready:boolean}){
  useEffect(()=>{if(ready)void Promise.resolve().then(close);},[ready,close]);
  return null;
 }
-export default function ChatbotConfigManager({owner}:{owner:boolean}){
+export default function ChatbotConfigManager({owner,readable}:{owner:boolean;readable:boolean}){
  const [stored,setStored]=useState<Stored|null>(null),[draft,setDraft]=useState<Config>(empty);
  const [open,setOpen]=useState(false),[busy,setBusy]=useState(false),[saved,setSaved]=useState(false),[error,setError]=useState("");
  const credential=useRef<string>("");
@@ -39,7 +39,7 @@ export default function ChatbotConfigManager({owner}:{owner:boolean}){
  const [variant,setVariant]=useState<"success"|"error">("success");
  const notify=(message:string,v:"success"|"error")=>{setNotice(message);setVariant(v);setNoticeId(n=>n+1);};
  const load=useCallback(async()=>{setError("");try{setStored(await api<Stored>());}catch(e){setError(e instanceof Error?e.message:"Không tải được cấu hình.");}},[]);
- useEffect(()=>{if(owner)void Promise.resolve().then(load);},[owner,load]);
+ useEffect(()=>{if(readable)void Promise.resolve().then(load);},[readable,load]);
  const resetDiscovery=()=>{setAgents([]);setModels(null);};
  const change=(key:keyof Config,value:string)=>{setDraft(d=>({...d,[key]:value,...(key!=="model"?{model:""}:{})}));if(key!=="model")setModels(null);};
  const withCredential=(body:object)=>({...body,...(credential.current?{credential:credential.current}:{})});
@@ -76,16 +76,16 @@ export default function ChatbotConfigManager({owner}:{owner:boolean}){
   }catch(e){notify(e instanceof Error?e.message:"Không kết nối được Google.","error");}finally{setBusy(false);}
  }
  async function save(){
-  if(!stored)return;setBusy(true);
+  if(!owner||!stored)return;setBusy(true);
   try{const result=await api<Stored>(withCredential({operation:"save",config:draft,revision:stored.revision}));
    setStored({...result,credentialsConfigured:Boolean(credential.current)||stored.credentialsConfigured});setDraft({...empty,...result.config});credential.current="";setSaved(true);setNotice("");
   }catch(e){notify(e instanceof Error?e.message:"Không lưu được cấu hình.","error");}finally{setBusy(false);}
  }
- if(!owner)return <section className="surface dl4-panel"><h1>Cấu hình Chatbot</h1><p>Chỉ Owner được quản lý cấu hình.</p></section>;
+ if(!readable)return <section className="surface dl4-panel"><h1>Cấu hình Chatbot</h1><p>Tài khoản chưa được cấp quyền xem cấu hình.</p></section>;
  return <div className="dl4-layout">
   <div className="page-title"><div><h1>Cấu hình Chatbot</h1><p>Dialogflow CX · Website Futurebook</p></div>
    <div className="action-row"><button className="fb-ui-button fb-ui-button--secondary" disabled={busy} onClick={()=>void load()}>Tải lại</button>
-   <button className="fb-ui-button fb-ui-button--primary" disabled={!stored||busy} onClick={()=>{setDraft({...empty,...stored?.config});resetDiscovery();credential.current="";setFileName("");setRegion("all");setSaved(false);setNotice("");setOpen(true);}}>Chỉnh cấu hình</button></div></div>
+   <button className="fb-ui-button fb-ui-button--primary" disabled={!owner||!stored||busy} onClick={()=>{setDraft({...empty,...stored?.config});resetDiscovery();credential.current="";setFileName("");setRegion("all");setSaved(false);setNotice("");setOpen(true);}}>Chỉnh cấu hình</button></div></div>
   {error&&<p role="alert">{error}</p>}
   {!stored&&!error&&<p role="status">Đang tải cấu hình…</p>}
   {stored&&<section className="surface dl4-panel"><h2>Kết nối Google</h2>
@@ -93,7 +93,7 @@ export default function ChatbotConfigManager({owner}:{owner:boolean}){
    <dl className="dl6-request-details">{(Object.keys(labels) as (keyof Config)[]).filter(k=>k!=="environmentId").map(k=><Fragment key={k}><dt>{labels[k]}</dt><dd>{k==="model"&&stored.config[k]==="agent-default"?"Mặc định của Agent":stored.config[k]||"Chưa cấu hình"}</dd></Fragment>)}</dl>
    <p className="content-small-note">Website sử dụng Agent và model đã lưu. Prompt/Playbook quản lý bên Google. Chưa lưu lịch sử hội thoại.</p>
   </section>}
-  {open&&<ProductModal title="Cấu hình Dialogflow CX" locked={busy} onClose={()=>{credential.current="";setFileName("");setOpen(false);setNotice("");if(saved)notify("Đã lưu cấu hình.","success");}}
+  {owner&&open&&<ProductModal title="Cấu hình Dialogflow CX" locked={busy} onClose={()=>{credential.current="";setFileName("");setOpen(false);setNotice("");if(saved)notify("Đã lưu cấu hình.","success");}}
    beforeClose={()=>saved||(!credential.current&&JSON.stringify(draft)===JSON.stringify({...empty,...stored?.config}))||window.confirm("Bỏ thay đổi chưa lưu?")}
    footer={<><Cancel/><button className="fb-ui-button fb-ui-button--primary" disabled={busy||saved||!draft.projectId||!draft.agentId||!draft.model} onClick={()=>void save()}>Lưu cấu hình</button></>}>
    <CloseAfterSave ready={saved&&!busy}/>

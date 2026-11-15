@@ -39,7 +39,10 @@ export async function POST(request:Request){
       redirect:"manual",cache:"no-store",signal:AbortSignal.timeout(7000)});
     if(role.status===401)return fail(401,"unauthenticated");
     if(role.status===403)return fail(403,"forbidden");
-    if(!role.ok || (await role.json())?.data?.role!=="owner")return fail(403,"owner_required");
+    if(!role.ok)return fail(503,"admin_api_unavailable");
+    const identity=(await role.json())?.data as {role?:string;permissions?:string[]}|undefined;
+    if(identity?.role!=="owner"&&!identity?.permissions?.includes("admin.catalogue.write"))
+      return fail(403,"catalogue_write_required");
   }catch{return fail(503,"admin_api_unavailable");}
   if(Number(request.headers.get("content-length")||0)>8_100_000)return fail(413,"file_too_large");
   let fields:FormData;

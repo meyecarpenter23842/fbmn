@@ -1,7 +1,7 @@
 import {requireOwner} from "@/lib/owner-gate";
 import {GSC_PERIODS,fetchGscReport} from "@/lib/ceo-search-console.mjs";
 import {oauthConfig,refreshGoogleToken} from "@/lib/ceo-gsc-oauth.mjs";
-import {readGscGrant,saveGscGrant} from "@/lib/ceo-gsc-store";
+import {readGscGrant,readCompanyGscGrant,saveGscGrant} from "@/lib/ceo-gsc-store";
 
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
@@ -31,14 +31,16 @@ export async function GET(request:Request){
     period,site:"www.fbmn.vn",oauthStatus:"unconfigured",
     metrics:null,daily:[],queries:[],pages:[]}},{headers:HEADERS});
   }
-  const refresh=await readGscGrant(owner.subject,config.key);
-  if(!refresh){
+  const grant=owner.role==="owner"?
+   {subject:owner.subject,refreshToken:await readGscGrant(owner.subject,config.key)}:
+   await readCompanyGscGrant(config.key);
+  if(!grant?.refreshToken){
    return Response.json({data:{status:"unconfigured",source:"google_search_console",
     period,site:"www.fbmn.vn",oauthStatus:"disconnected",
     metrics:null,daily:[],queries:[],pages:[]}},{headers:HEADERS});
   }
-  const {accessToken,rotated}=await refreshGoogleToken(config,refresh);
-  if(rotated)await saveGscGrant(owner.subject,rotated,config.key);
+  const {accessToken,rotated}=await refreshGoogleToken(config,grant.refreshToken);
+  if(rotated)await saveGscGrant(grant.subject,rotated,config.key);
   const data=await fetchGscReport(period,{accessToken,site:config.property,compare:true});
   return Response.json({data:{...data,oauthStatus:"connected"}},{status:200,headers:HEADERS});
  }catch(error){

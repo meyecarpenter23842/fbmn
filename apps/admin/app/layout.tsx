@@ -12,6 +12,7 @@ import "./cms-manager.css";
 import "./home-layout.css";
 import "./app-download-settings.css";
 import "./catalogue-book-manager.css";
+import "./user-management.css";
 import "./cms-website-scene.css";
 
 export const metadata: Metadata = {

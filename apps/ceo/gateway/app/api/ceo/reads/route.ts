@@ -9,8 +9,6 @@ const fail=(status:number,code:string)=>Response.json({error:{code}},{status,hea
 export async function POST(request:Request){
  if(!allowedOrigin(request))return fail(403,"origin_forbidden");
  if(request.headers.get("content-type")?.split(";")[0]!=="application/json")return fail(415,"invalid_content_type");
- const owner=await requireOwner(request);
- if(owner.status!==200||!owner.subject)return fail(owner.status,"owner_required");
  if(Number(request.headers.get("content-length")||0)>256)return fail(400,"invalid_body");
  let body:unknown;
  try{
@@ -20,6 +18,10 @@ export async function POST(request:Request){
  }catch{return fail(400,"invalid_body");}
  const parsed=parseReadMark(body);
  if(!parsed)return fail(400,"invalid_body");
+ // The request kind is validated server-side, not a client-provided scope.
+ const scope=parsed.kind==="contact"?"ceo.contacts":"ceo.outsourcing";
+ const owner=await requireOwner(request,scope);
+ if(owner.status!==200||!owner.subject)return fail(owner.status,"owner_required");
  const source=parsed.kind==="contact"?
   "fbmn_catalog_private.contact_requests":"fbmn_catalog_private.outsourcing_requests";
  try{

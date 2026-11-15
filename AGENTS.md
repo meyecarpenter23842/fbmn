@@ -4,6 +4,14 @@
 
 Đây là chỉ dẫn **áp dụng toàn repo**, cho mọi phiên AI/chat, Codex, developer và PR. Nội dung của một chat riêng lẻ **không** thay thế quy tắc này.
 
+## Quy tắc Neon production-only — Owner chốt 15/11/2026
+
+- **Chỉ sử dụng nhánh Neon `production`** của project Futurebook Miền Nam (`lively-paper-20200386`; tại ngày chốt: `br-nameless-night-b5xnk5qx`, `primary=true`, `default=true`). Trước khi thao tác phải xác minh lại nhánh production thực tế, không tin vào ID cố định khi hạ tầng thay đổi.
+- **Không tự tạo nhánh Neon staging/test/rehearsal/backup hoặc bất kỳ nhánh Neon phụ nào**. Không dùng việc thiếu nhánh thử nghiệm làm lý do trì hoãn vô hạn; rà soát SQL, quyền, phạm vi dữ liệu, migration và cách phục hồi trước khi thực thi trực tiếp trên production.
+- Migration, sửa schema/dữ liệu và Auth trên production chỉ thực hiện theo **phạm vi Owner đã phê duyệt**, sau khi kiểm tra CI/review phù hợp; chạy SQL có kiểm soát, ghi log và xác minh kết quả. Không tự tạo bản sao Neon để chạy thử. Không xóa/sửa production hoặc các nhánh tổ tiên mà production phụ thuộc.
+- **Phân biệt Neon với Git:** quy tắc này chỉ cấm tạo nhánh **database Neon**. Quy trình lập trình trên repo phụ bằng **Git branch → PR → CI → review → merge → đồng bộ repo chính** vẫn bắt buộc, không push code chưa test trực tiếp.
+- Tính đến 15/11/2026, đã xóa 7 nhánh Neon phụ. Hai nhánh tổ tiên `pr03-auth-migration-test` và `legacy-empty-root-20261102` phải giữ vì `production` còn là nhánh hậu duệ.
+
 ## Quy tắc UI bắt buộc
 
 Trước khi tạo/sửa bất kỳ giao diện Futurebook nào, đọc:

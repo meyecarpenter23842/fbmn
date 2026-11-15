@@ -113,7 +113,7 @@ async function transaction(db,fn){
  });
 }
 export async function handleManagedPriceImport({action,input,actor,db}){
- if(actor?.role!=="owner")return res(403,"owner_required");
+ if(actor?.role!=="owner" && !actor?.permissions?.includes("admin.pricing.write"))return res(403,"owner_required");
  const bad=invalid(input);if(bad)return res(400,bad);
  if(action!=="bulk-preview"&&action!=="bulk-apply")return res(404,"not_found");
  if(action==="bulk-apply"&&(!/^[0-9a-f]{64}$/.test(input.preview_fingerprint||"")||

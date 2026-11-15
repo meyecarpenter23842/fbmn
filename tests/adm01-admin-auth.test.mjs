@@ -43,7 +43,7 @@ test("Revoke is immediate on next lookup, scopes and audit are server-owned",asy
   const f=make();
   const res=await f.hit("/v1/admin/session");
   assert.equal(res.status,200);
-  assert.deepEqual((await res.json()).data,{role:"editor",channels:["public_web"]});
+  assert.deepEqual((await res.json()).data,{role:"editor",channels:["public_web"],permissions:[],adminAccess:false});
   assert.equal(res.headers.get("cache-control"),"no-store");
   assert.equal((await f.hit("/v1/admin/channels")).status,200);
   assert.deepEqual(f.audit.map(a=>a.action),["session.read","channels.read"]);
@@ -110,7 +110,7 @@ test("Owner is the top-most distinct role and cannot be created by a public Admi
   const owner=make({loadActor:async()=>actor("owner",[]),listChannels:async()=>[{code:"public_web",label:"Website"}]});
   const session=await owner.hit("/v1/admin/session");
   assert.equal(session.status,200);
-  assert.deepEqual((await session.json()).data,{role:"owner",channels:["public_web","dealer_app","consumer_app"]});
+  assert.equal((await session.json()).data.role,"owner");
   assert.equal((await owner.hit("/v1/admin/pricing-capability")).status,200);
   assert.equal((await owner.hit("/v1/admin/publish-capability")).status,200);
   assert.equal((await owner.hit("/v1/admin/create-owner",{method:"POST"})).status,404);

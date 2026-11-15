@@ -2,6 +2,9 @@ import {handleMedia} from "./media-service.mjs";
 // ADM-06 private draft catalogue service. Exact company SKU text is immutable.
 // Never store NET, stock, private image source or publish from these endpoints.
 const roles = new Set(["owner","admin","editor"]);
+// Enforce authenticated per-channel grants before any publication transaction.
+const canPublishChannel=(actor,channel)=>["owner","admin"].includes(actor?.role)||
+ (Array.isArray(actor?.channels)&&actor.channels.includes(channel));
 const reply = (status, data) => new Response(JSON.stringify(data), {status,headers:{
   "Content-Type":"application/json","Cache-Control":"private, no-store",
   "X-Content-Type-Options":"nosniff"
@@ -87,11 +90,11 @@ export async function handleCatalogue({request,actor,db,r2}) {
   const route=url.pathname.slice("/v1/admin/catalogue/".length);
   if(!["snapshot","skus","families","categories","apply","sync","group","visibility","visibility-bulk","membership"].includes(route))
     return fail("not_found",404);
-  if(!roles.has(actor?.role))return fail("forbidden",403);
+  if(!roles.has(actor?.role)&&!actor?.permissions?.includes("admin.catalogue.read")&&!actor?.permissions?.includes("admin.catalogue.write"))return fail("forbidden",403);
   if(url.search)return fail("invalid_query");
   if(!db)return fail("catalogue_db_unavailable",503);
   if(!["GET","POST","PATCH"].includes(request.method))return fail("method_not_allowed",405);
-  if(["apply","sync","group","membership"].includes(route) && actor.role!=="owner")
+  if(["apply","sync","group","membership"].includes(route) && (actor.role!=="owner"&&!actor.permissions?.includes("admin.catalogue.write")))
     return fail("owner_required",403);
   if(request.method==="GET"){
     if(!["snapshot","skus","families","categories","visibility"].includes(route))return fail("method_not_allowed",405);
@@ -111,7 +114,7 @@ export async function handleCatalogue({request,actor,db,r2}) {
   try{input=await parsed(request);}catch{return fail("invalid_body");}
   try{
     if(route==="visibility-bulk" && request.method==="POST"){
-      if(actor.role!=="owner")return fail("owner_required",403);
+      if((actor.role!=="owner"&&!actor.permissions?.includes("admin.catalogue.write")))return fail("owner_required",403);
       const entries=input?.entries;
       if(!Array.isArray(entries)||entries.length<1||entries.length>600||
          typeof input.visible!=="boolean"||
@@ -125,6 +128,7 @@ export async function handleCatalogue({request,actor,db,r2}) {
       const keys=entries.map(row=>row.sku_cong_ty.toUpperCase()+":"+row.channel_code);
       if(skus.length>200||channels.length>3||new Set(keys).size!==entries.length)
         return fail("invalid_visibility_batch");
+      if(channels.some(channel=>!canPublishChannel(actor,channel)))return fail("channel_forbidden",403);
       const saved=await transactional(db,async c=>{
         // Lock SKU rows in a deterministic order. Single-SKU writes acquire
         // the same lock; all expected revisions are checked before any update.
@@ -161,13 +165,14 @@ export async function handleCatalogue({request,actor,db,r2}) {
       return reply(200,{data:{items:saved,updated:saved.length,sku_count:skus.length}});
     }
     if(route==="visibility" && request.method==="POST"){
-      if(actor.role!=="owner")return fail("owner_required",403);
+      if((actor.role!=="owner"&&!actor.permissions?.includes("admin.catalogue.write")))return fail("owner_required",403);
       if(!validSku(input?.sku_cong_ty)||
          !["public_web","dealer_app","consumer_app"].includes(input.channel_code)||
          typeof input.visible!=="boolean"||
          !Number.isSafeInteger(input.expected_revision)||input.expected_revision<0||
          input.confirm!=="CAP_NHAT_HIEN_THI")
         return fail("invalid_visibility");
+      if(!canPublishChannel(actor,input.channel_code))return fail("channel_forbidden",403);
       const result=await transactional(db,async c=>{
         const exists=await c.query(
           "SELECT sku_cong_ty FROM fbmn_catalog.skus WHERE sku_cong_ty=$1 FOR UPDATE",
@@ -384,7 +389,7 @@ export async function handleCatalogue({request,actor,db,r2}) {
     // Owner-only single-SKU membership update. Compare-and-swap prevents stale UI
     // from overwriting another administrator's group choice.
     if(route==="membership" && request.method==="POST"){
-      if(actor.role!=="owner")return fail("owner_required",403);
+      if((actor.role!=="owner"&&!actor.permissions?.includes("admin.catalogue.write")))return fail("owner_required",403);
       if(!validSku(input?.sku_cong_ty)||
          !Number.isSafeInteger(input.expected_revision)||input.expected_revision<1||
          !(input.family_id===null||uuid(input.family_id))||
@@ -408,7 +413,7 @@ export async function handleCatalogue({request,actor,db,r2}) {
       return reply(200,{data:result});
     }
     if(route==="categories" && request.method==="PATCH"){
-      if(actor.role!=="owner")return fail("owner_required",403);
+      if((actor.role!=="owner"&&!actor.permissions?.includes("admin.catalogue.write")))return fail("owner_required",403);
       if(input && Object.hasOwn(input,"category_code")){
         if(!uuid(input.id)||!validTaxonomyCode(input.category_code)||
            !validTaxonomyCode(input.expected_code)||input.category_code===input.expected_code)
@@ -444,7 +449,7 @@ export async function handleCatalogue({request,actor,db,r2}) {
       return reply(200,{data:result});
     }
     if(route==="categories" && request.method==="POST"){
-      if(actor.role!=="owner")return fail("owner_required",403);
+      if((actor.role!=="owner"&&!actor.permissions?.includes("admin.catalogue.write")))return fail("owner_required",403);
       if(typeof input?.category_label!=="string"||!input.category_label.trim()||
          !validText(input.category_label,160)||!validCategory(input.parent_id)||
          !validTaxonomyCode(input.category_code))
@@ -467,7 +472,7 @@ export async function handleCatalogue({request,actor,db,r2}) {
     }
 
     if(route==="families" && request.method==="PATCH"){
-      if(actor.role!=="owner")return fail("owner_required",403);
+      if((actor.role!=="owner"&&!actor.permissions?.includes("admin.catalogue.write")))return fail("owner_required",403);
       if(input && Object.hasOwn(input,"family_code")){
         if(!uuid(input.id)||!validTaxonomyCode(input.family_code)||
            !validTaxonomyCode(input.expected_code)||
@@ -510,7 +515,7 @@ export async function handleCatalogue({request,actor,db,r2}) {
       return reply(200,{data:result});
     }
     if(route==="families" && request.method==="POST"){
-      if(actor.role!=="owner")return fail("owner_required",403);
+      if((actor.role!=="owner"&&!actor.permissions?.includes("admin.catalogue.write")))return fail("owner_required",403);
       if(typeof input?.family_label!=="string" || !input.family_label.trim()||
         !validText(input.family_label,160)||!validTaxonomyCode(input.family_code))
         return fail("invalid_family_label");

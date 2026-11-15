@@ -54,7 +54,7 @@ export async function handleAppDownloadSettings({request,actor,db}){
  if(url.pathname!=="/v1/admin/website/app-download")return fail(404,"not_found");
  if(url.search)return fail(400,"invalid_query");
  if(!["GET","POST"].includes(request.method))return fail(405,"method_not_allowed");
- if(actor?.role!=="owner"||!actor.subject)return fail(403,"owner_only");
+ if((actor?.role!=="owner"&&!actor?.permissions?.includes(request.method==="GET"?"admin.website.read":"admin.website.write"))||!actor?.subject)return fail(403,"owner_only");
  if(typeof db!=="function")return fail(503,"config_unavailable");
  try{
   if(request.method==="GET"){

@@ -1,6 +1,6 @@
 import {allowedOrigin} from "@/lib/ceo-push-policy.mjs";
 import {oauthConfig,revokeGoogleToken} from "@/lib/ceo-gsc-oauth.mjs";
-import {readGscGrant,deleteGscGrant} from "@/lib/ceo-gsc-store";
+import {readGscGrant,readCompanyGscGrant,deleteGscGrant} from "@/lib/ceo-gsc-store";
 import {requireOwner} from "@/lib/owner-gate";
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
@@ -20,7 +20,9 @@ export async function GET(request:Request){
  const {config,owner}=info;
  if(config.status!=="ready")return Response.json({data:{status:"unconfigured"}},{headers:noStore});
  try{
-  const token=await readGscGrant(owner!.subject!,config.key);
+  const token=owner!.role==="owner"?
+   await readGscGrant(owner!.subject!,config.key):
+   (await readCompanyGscGrant(config.key))?.refreshToken;
   return Response.json({data:{status:token?"connected":"disconnected"}},{headers:noStore});
  }catch{return fail(503,"gsc_oauth_store_unavailable");}
 }
@@ -31,9 +33,14 @@ export async function DELETE(request:Request){
  const {config,owner}=info;
  if(config.status!=="ready")return fail(503,"gsc_oauth_not_configured");
  try{
-  const token=await readGscGrant(owner!.subject!,config.key);
-  await deleteGscGrant(owner!.subject!);
-  if(token)await revokeGoogleToken(token);
+  // Disconnect the same company OAuth grant that delegated SEO reports use.
+  const grant=owner!.role==="owner"?
+   {subject:owner!.subject!,refreshToken:await readGscGrant(owner!.subject!,config.key)}:
+   await readCompanyGscGrant(config.key);
+  if(grant){
+   await deleteGscGrant(grant.subject);
+   if(grant.refreshToken)await revokeGoogleToken(grant.refreshToken);
+  }
   return Response.json({data:{status:"disconnected"}},{headers:noStore});
  }catch{return fail(503,"gsc_oauth_store_unavailable");}
 }

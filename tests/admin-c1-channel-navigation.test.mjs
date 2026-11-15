@@ -17,14 +17,14 @@ test("C1 groups existing Website CMS screens underneath one channel heading",()=
   assert.match(page,/aria-hidden=\{!websiteMenuExpanded\} inert=\{!websiteMenuExpanded\}/);
   assert.match(page,/aria-hidden=\{!productMenuExpanded\} inert=\{!productMenuExpanded\}/);
   assert.doesNotMatch(page,/\{websiteMenuExpanded&&<div/);
-  assert.match(page,/websiteSections\.map\(item=>/);
+  assert.match(page,/websiteSections\.filter\(item=>canSection\(item\.key\)\)\.map\(item=>/);
   assert.doesNotMatch(page,/menu\.filter\(item=>\["pricing","banners","content"\]\.includes\(item\.key\)\)/);
-  assert.match(page,/menu\.filter\(item=>item\.key==="pricing"\)/);
+  assert.match(page,/menu\.filter\(item=>item\.key==="pricing"&&can\("admin.pricing.read"\)\)/);
 });
 
 test("C1 preserves both live CMS managers, SKU and price workspaces",()=>{
-  assert.match(page,/section==="banners"&&<CmsManager mode="marketing" owner=\{session\?\.role==="owner"\}\/>/);
-  assert.match(page,/section==="content"&&<CmsManager mode="editorial" owner=\{session\?\.role==="owner"\}\/>/);
+  assert.match(page,/section==="banners"&&<CmsManager mode="marketing" readable=\{can\("admin.cms.read"\)\|\|can\("admin.cms.write"\)\} owner=\{can\("admin.cms.write"\)\}\/>/);
+  assert.match(page,/section==="content"&&<CmsManager mode="editorial" readable=\{can\("admin.cms.read"\)\|\|can\("admin.cms.write"\)\} owner=\{can\("admin.cms.write"\)\}\/>/);
   assert.match(page,/section==="pricing"&&<CatalogueSideWorkspace mode="pricing" onBusyChange=\{setWorkspaceOperationBusy\}\/>/);
   assert.match(page,/section==="media"&&<CatalogueSideWorkspace mode="media" onBusyChange=\{setWorkspaceOperationBusy\}\/>/);
   for(const section of ["products","structure","media","import-products"])

@@ -302,6 +302,18 @@ File người dùng cung cấp: `Futurebook_MASTER_SAN_PHAM_VA_ANH_2026.xlsx` (*
 - Kết nối CRM, push nâng cao, analytics, kho/ERP hoặc vận hành nhiều pháp nhân chỉ bổ sung khi có yêu cầu nghiệp vụ, không trộn vào roadmap đang chốt.
 
 
+## Owner 15/11/2026 — Neon chỉ production, không tạo nhánh phụ
+
+Owner yêu cầu mọi công việc **database/Neon Futurebook làm trực tiếp trên nhánh production**; không tạo các nhánh Neon thử nghiệm, staging, rehearsal hoặc backup. Nhánh đang dùng: `production` / `br-nameless-night-b5xnk5qx` (phải đối chiếu default/primary trước thao tác). Đã xóa 7 nhánh phụ; không thể xóa 2 nhánh tổ tiên do production đang phụ thuộc. Khi migration production phải đọc SQL, kiểm tra tác động, review và xác minh kết quả; chỉ làm theo phạm vi được Owner cho phép. **Không thay đổi quy trình Git branch/PR/CI/review trên repo phụ.** Quy tắc hiện hành ưu tiên hơn các ghi chú staging/migration rehearsal lịch sử bên dưới.
+
+## USER01 — Quản lý tài khoản nhân sự (đang phát triển, 15/11/2026)
+
+- Admin → Quản lý tài khoản: tạo, sửa, khóa nhân viên; Owner và Admin có chức năng cấp quyền, Admin được tạo Admin khác, tuyệt đối không tạo Owner thứ hai.
+- Gán quyền chi tiết theo chức năng (Admin sản phẩm/giá/CMS/Website/nhân sự, CEO hội thoại/liên hệ/gia công/email đọc/gửi/thống kê/SEO/Push/GSC), mỗi checkbox giải thích tác dụng; quyền do Worker kiểm tra từ Neon.
+- Neon Auth chung; tài khoản mới tự xác minh email/đặt mật khẩu. CEO Gateway kiểm tra permission ở từng route. Không thay SKU/NET/dữ liệu khách.
+- Migration hai bước `20261115_user01_ceo_role.up.sql` rồi `20261115_user01_staff_permissions.up.sql`. Chỉ áp production sau CI, review, migration rehearsal và Owner cho phép.
+- PR phát triển: #116 trên repo phụ; trạng thái chưa phát hành production.
+
 ## Owner 11/11/2026 — Website compact header, Policy, Analytics và CEO
 Thứ tự mới trước DL8: DL11A (Header một hàng, logo giữa 3+3 tab, tìm kiếm ngắn, khoảng hở, nút tải app footer) → DL11B (Policy độc lập /policy, không link menu/footer) → DL11C (PostHog Website, tracking không PII) → DL12A (Flutter/Dart CEO PWA, Owner, 5 tab, đọc chat/gia công/liên hệ, chưa đọc) → DL12B (Analytics CEO qua API server) → DL12C (Web Push, badge, deep link, thiết bị hỗ trợ) → DL12D (Vercel riêng fbmn-ceo, ceo.fbmn.vn, test thiết bị thật) → DL8. DL11A chỉ Website UI: bảo toàn sáu URL, search SKU, CTA đại lý, mobile hamburger, popup app và store URL chưa có; CI/Codex + browser 1440/1280/768/390/360 trước release. Không sửa backend/DB/Admin. Các lô sau chưa triển khai.
 

@@ -177,7 +177,7 @@ export async function discoverCx(config,secret,fetcher=fetch){
 export async function handleChatbotConfig({request,actor,db,googleSecret,credentialStore,discover=discoverCx,listAgents=listCxAgents,listEnvironments=listCxEnvironments}){
  const url=new URL(request.url);
  if(url.pathname!=="/v1/admin/website/chatbot-config")return fail(404,"not_found");
- if(actor?.role!=="owner")return fail(403,"forbidden");
+ if(actor?.role!=="owner" && !actor?.permissions?.includes(request.method==="GET"?"admin.website.read":"admin.website.write"))return fail(403,"forbidden");
  if(url.search)return fail(400,"invalid_query");
  if(!["GET","POST"].includes(request.method))return fail(405,"method_not_allowed");
  if(typeof db!=="function")return fail(503,"config_unavailable");

@@ -29,7 +29,7 @@ async function inboxRequest<T>(page:number,body?:object):Promise<T>{
 const displayDate=(value:string)=>new Date(value).toLocaleString("vi-VN",{timeZone:"Asia/Ho_Chi_Minh"});
 function CloseModal(){const close=useProductModalClose();return <button type="button"
  className="fb-ui-button fb-ui-button--secondary" onClick={close}>Đóng</button>;}
-export default function ContactRequestsManager({owner}:{owner:boolean}){
+export default function ContactRequestsManager({owner,readable}:{owner:boolean;readable:boolean}){
  const [requests,setRequests]=useState<RequestItem[]>([]);
  const [page,setPage]=useState(1),[hasMore,setHasMore]=useState(false);
  const [loading,setLoading]=useState(true),[busy,setBusy]=useState(false);
@@ -45,10 +45,10 @@ export default function ContactRequestsManager({owner}:{owner:boolean}){
   catch(e){setError(e instanceof Error?e.message:"Không tải được yêu cầu.");}
   finally{setLoading(false);}
  },[]);
- useEffect(()=>{if(!owner)return;let active=true;void Promise.resolve().then(()=>{if(active)return load(1);});
-  return ()=>{active=false;};},[owner,load]);
+ useEffect(()=>{if(!readable)return;let active=true;void Promise.resolve().then(()=>{if(active)return load(1);});
+  return ()=>{active=false;};},[readable,load]);
  async function act(operation:"set_status"|"delete",status?:"new"|"handled"){
-  if(!selected||busy)return;
+  if(!owner||!selected||busy)return;
   setBusy(true);
   try{
    await inboxRequest(page,{operation,id:selected.id,expectedStatus:selected.status,...(status?{status}:{})});
@@ -59,11 +59,11 @@ export default function ContactRequestsManager({owner}:{owner:boolean}){
    setNoticeId(v=>v+1);}
   finally{setBusy(false);}
  }
- if(!owner)return <section className="surface dl4-panel"><h1>Liên hệ & đăng ký đại lý</h1>
-  <p>Chỉ Owner có quyền xem thông tin khách hàng.</p></section>;
+ if(!readable)return <section className="surface dl4-panel"><h1>Liên hệ & đăng ký đại lý</h1>
+  <p>Tài khoản chưa được cấp quyền xem thông tin khách hàng.</p></section>;
  return <div className="dl4-layout">
   <div className="page-title"><div><h1>Liên hệ & đăng ký đại lý</h1>
-   <p>Hộp thư tiếp nhận từ Website. Chỉ Owner được xem; không phải đơn hàng hay báo giá đã chấp thuận.</p></div>
+   <p>Hộp thư tiếp nhận từ Website theo phân quyền; không phải đơn hàng hay báo giá đã chấp thuận.</p></div>
    <div className="action-row"><button type="button" className="fb-ui-button fb-ui-button--secondary"
     disabled={loading||busy} onClick={()=>void load(page)}>Tải lại</button></div></div>
   {error&&<p className="dl4-error" role="alert">{error}</p>}
@@ -89,14 +89,14 @@ export default function ContactRequestsManager({owner}:{owner:boolean}){
   {selected&&<ProductModal title={"Liên hệ & đăng ký đại lý — "+selected.customerGroup} locked={busy}
    onClose={()=>{setSelected(null);setConfirmDelete(false);}}
    footer={<><CloseModal/>
-    {!confirmDelete?<button type="button" className="fb-ui-button fb-ui-button--secondary"
+    {owner&&<>{!confirmDelete?<button type="button" className="fb-ui-button fb-ui-button--secondary"
       disabled={busy} onClick={()=>setConfirmDelete(true)}>Xóa thông tin</button>:
      <button type="button" className="fb-ui-button fb-ui-button--danger"
       disabled={busy} onClick={()=>void act("delete")}>Xác nhận xóa vĩnh viễn</button>}
     <button type="button" className="fb-ui-button fb-ui-button--primary"
       disabled={busy||confirmDelete}
       onClick={()=>void act("set_status",selected.status==="new"?"handled":"new")}>
-      {selected.status==="new"?"Đánh dấu đã xử lý":"Mở lại yêu cầu"}</button></>}>
+      {selected.status==="new"?"Đánh dấu đã xử lý":"Mở lại yêu cầu"}</button></>}</>}>
    <dl className="dl6-request-details">
     <dt>Người liên hệ</dt><dd>{selected.name}</dd>
     <dt>Đơn vị</dt><dd>{selected.company||"Không cung cấp"}</dd>
