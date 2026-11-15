@@ -11,6 +11,7 @@ import 'gsc_oauth_navigation_stub.dart' if (dart.library.js_interop) 'gsc_oauth_
 import 'ceo_ui_tokens.dart';
 import 'ceo_stat_controls.dart';
 import 'ceo_workspace.dart';
+import 'ceo_ads.dart';
 
 class CeoStatisticsTab extends StatefulWidget{
  final CeoRepository api;
@@ -19,6 +20,7 @@ class CeoStatisticsTab extends StatefulWidget{
 }
 class CeoStatisticsTabState extends State<CeoStatisticsTab>{
  final ScrollController _statsScroll=ScrollController();
+ final adsKey=GlobalKey<CeoAdsPanelState>();
  String period='7d';
  int section=0;
  bool oauthBusy=false;
@@ -263,7 +265,8 @@ class CeoStatisticsTabState extends State<CeoStatisticsTab>{
   ]);
  }
  Widget sectionPicker({required bool mobile})=>CeoStatsSubTabs(
-  mobile:mobile,tabs:const ['Tổng quan','Chuyển đổi','Marketing','Sản phẩm','SEO'],
+  mobile:mobile,tabs:const ['Tổng quan','Chuyển đổi','Marketing','Sản phẩm','SEO',
+   'Từ khóa Ads','Chiến dịch Ads','Hiệu quả Ads'],
   selected:section,onChanged:(next){
    if(section==next)return;
    setState(()=>section=next);
@@ -350,7 +353,8 @@ class CeoStatisticsTabState extends State<CeoStatisticsTab>{
        IconButton(key:const ValueKey('ceo-stats-refresh'),
         tooltip:'Tải lại thống kê',
         constraints:BoxConstraints.tightFor(width:buttonHeight,height:buttonHeight),
-        onPressed:loading?null:()=>unawaited(load(fresh:true)),
+        onPressed:section>=5?()=>adsKey.currentState?.reload():
+          loading?null:()=>unawaited(load(fresh:true)),
         icon:const Icon(Icons.refresh,color:ceoPurple))
       ]))),
      SliverPersistentHeader(key:const ValueKey('ceo-stats-sticky-tabs'),

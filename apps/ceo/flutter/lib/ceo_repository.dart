@@ -268,6 +268,81 @@ class CeoApi implements CeoRepository {
   final jwt=await _ownerJwt();
   await _request('DELETE','/api/ceo/gsc/oauth/status',bearer:jwt,json:{});
  }
+
+ // ADS131: same-origin, authenticated endpoints. No credentials ever enter Flutter.
+ Future<Map<String,dynamic>> adsStatus()async=>
+  _data('/api/ceo/ads/oauth/status');
+ Future<Map<String,dynamic>> adsReport(String view,{
+  String? period,List<String> words=const [],List<String> geos=const [],
+  List<String> names=const []})async{
+  final params=<String,String>{'view':view,
+   if(period!=null)'period':period,
+   if(words.isNotEmpty)'words':words.join('|'),
+   if(geos.isNotEmpty)'geos':geos.join('|'),
+   if(names.isNotEmpty)'names':names.join('|')};
+  return _data('/api/ceo/ads?'+Uri(queryParameters:params).query,
+   timeout:const Duration(seconds:40));
+ }
+ Future<List<dynamic>> adsDrafts()async{
+  final data=await _data('/api/ceo/ads/drafts');
+  return data['drafts'] is List?data['drafts'] as List<dynamic>:const [];
+ }
+ Future<Map<String,dynamic>> adsPost(String route,Map<String,dynamic> payload)async{
+  const routes=['/api/ceo/ads/oauth/start','/api/ceo/ads/oauth/status',
+   '/api/ceo/ads/drafts'];
+  if(!routes.contains(route))throw const CeoApiException(400);
+  final response=await _request('POST',route,bearer:await _ownerJwt(),
+   json:payload,timeout:const Duration(seconds:35));
+  final data=response['data'];
+  if(data is Map<String,dynamic>)return data;
+  throw const CeoApiException(503);
+ }
+ Future<void> adsDeleteDraft(String id)async{
+  if(!RegExp(r'^[a-fA-F0-9-]{36}
+  if(box!='inbox'&&box!='sent'){throw const CeoApiException(400);}
+  final afterParam=after==null?'':'&after=$after';
+  final j=await _data('/api/ceo/mail?box=$box&limit=20$afterParam');
+  return CeoMailPage.fromJson(j);
+ }
+ @override Future<CeoMailItem> mailDetail(String box,String id)async{
+  if(!['inbox','sent'].contains(box)||id.length!=36){
+   throw const CeoApiException(400);
+  }
+  return CeoMailItem.fromJson(await _data('/api/ceo/mail/$id?box=$box'));
+ }
+ @override Future<String> mailSend({required String to,required String subject,
+  required String text,String? replyId,String? requestId,List<CeoMailAttachment> attachments=const []})async{
+  final jwt=await _ownerJwt();
+  final result=await _request('POST','/api/ceo/mail',bearer:jwt,timeout:const Duration(seconds:40),json:{
+   'to':to,'subject':subject,'text':text,
+   if(replyId!=null)'replyId':replyId,
+   if(requestId!=null)'requestId':requestId,
+   if(attachments.isNotEmpty)'attachments':attachments.map((a)=>a.toJson()).toList(),
+  });
+  final data=result['data'];
+  if(data is! Map<String,dynamic>||data['id'] is! String){
+   throw const CeoApiException(503);
+  }
+  return data['id'] as String;
+ }
+ @override void dispose()=>_client.close();
+}
+).hasMatch(id))throw const CeoApiException(400);
+  await _request('DELETE','/api/ceo/ads/drafts?id='+id,
+   bearer:await _ownerJwt(),json:<String,dynamic>{});
+ }
+ Future<String> adsStartOAuth()async{
+  final result=await adsPost('/api/ceo/ads/oauth/start',{});
+  final url=result['authorizationUrl'];
+  if(url is! String||url.length>2048||
+   !url.startsWith('https://accounts.google.com/o/oauth2/v2/auth?'))
+   throw const CeoApiException(503);
+  return url;
+ }
+ Future<void> adsDisconnect()async{
+  await _request('DELETE','/api/ceo/ads/oauth/status',
+   bearer:await _ownerJwt(),json:<String,dynamic>{});
+ }
  @override Future<CeoMailPage> mailList(String box,{String? after})async{
   if(box!='inbox'&&box!='sent'){throw const CeoApiException(400);}
   final afterParam=after==null?'':'&after=$after';
@@ -296,4 +371,23 @@ class CeoApi implements CeoRepository {
   return data['id'] as String;
  }
  @override void dispose()=>_client.close();
+}
+
+/// ADS feature access keeps existing repository mocks source-compatible.
+extension CeoAdsAccess on CeoRepository{
+ CeoApi get _adsApi {
+  if(this is CeoApi)return this as CeoApi;
+  throw const CeoApiException(503);
+ }
+ Future<Map<String,dynamic>> adsStatus()=>_adsApi.adsStatus();
+ Future<Map<String,dynamic>> adsReport(String view,{
+  String? period,List<String> words=const [],List<String> geos=const [],
+  List<String> names=const []})=>
+   _adsApi.adsReport(view,period:period,words:words,geos:geos,names:names);
+ Future<List<dynamic>> adsDrafts()=>_adsApi.adsDrafts();
+ Future<Map<String,dynamic>> adsPost(String route,Map<String,dynamic> payload)=>
+  _adsApi.adsPost(route,payload);
+ Future<void> adsDeleteDraft(String id)=>_adsApi.adsDeleteDraft(id);
+ Future<String> adsStartOAuth()=>_adsApi.adsStartOAuth();
+ Future<void> adsDisconnect()=>_adsApi.adsDisconnect();
 }
