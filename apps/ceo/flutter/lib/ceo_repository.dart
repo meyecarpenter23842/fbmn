@@ -10,7 +10,7 @@ import 'http_client_stub.dart' if (dart.library.js_interop) 'http_client_web.dar
 const allCeoScopes=<String>{
  'ceo.overview','ceo.conversations','ceo.outsourcing','ceo.contacts',
  'ceo.mail.read','ceo.mail.send','ceo.statistics','ceo.seo',
- 'ceo.notifications','ceo.gsc.manage'
+ 'ceo.notifications','ceo.gsc.manage','ceo.ads.read','ceo.ads.draft'
 };
 // Existing test implementations remain source-compatible without extra methods.
 extension CeoGrantAccess on CeoRepository{

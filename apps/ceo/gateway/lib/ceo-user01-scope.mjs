@@ -8,6 +8,13 @@ export function ceoScope(url,method="GET"){
  if(path==="/api/ceo/contact-requests"&&method==="GET")return "ceo.contacts";
  if(path==="/api/ceo/outsourcing-requests"&&method==="GET")return "ceo.outsourcing";
  if(path==="/api/ceo/statistics"&&method==="GET")return "ceo.statistics";
+ if(path==="/api/ceo/ads"&&method==="GET")return "ceo.ads.read";
+ if(path==="/api/ceo/ads/drafts"&&method==="GET")return "ceo.ads.read";
+ if(path==="/api/ceo/ads/drafts"&&["POST","DELETE"].includes(method))return "ceo.ads.draft";
+ if(path==="/api/ceo/ads/oauth/status"&&method==="GET")return "ceo.ads.read";
+ if(path==="/api/ceo/ads/oauth/status"&&["POST","DELETE"].includes(method))return "ceo.ads.manage";
+ if(path==="/api/ceo/ads/oauth/start"&&method==="POST")return "ceo.ads.manage";
+ if(path==="/api/ceo/ads/oauth/complete"&&method==="POST")return "ceo.ads.manage";
  if(path==="/api/ceo/search-console"&&method==="GET")return "ceo.seo";
  if(path==="/api/ceo/gsc/oauth/status"&&method==="GET")return "ceo.seo";
  if(path==="/api/ceo/gsc/oauth/status"&&method==="DELETE")return "ceo.gsc.manage";

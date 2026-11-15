@@ -87,11 +87,14 @@ export default function UserManagement({actorRole}:{actorRole:string}){
   if(enabled&&key.startsWith("ceo."))permissions.add("ceo.overview");
   if(enabled&&key==="ceo.mail.send")permissions.add("ceo.mail.read");
   if(enabled&&key==="ceo.seo")permissions.add("ceo.statistics");
+  if(enabled&&key==="ceo.ads.read")permissions.add("ceo.statistics");
+  if(enabled&&key==="ceo.ads.draft"){permissions.add("ceo.statistics");permissions.add("ceo.ads.read");}
   if(enabled&&key==="ceo.gsc.manage"){permissions.add("ceo.statistics");permissions.add("ceo.seo");}
   if(!enabled&&key==="ceo.overview")for(const p of [...permissions])if(p.startsWith("ceo."))permissions.delete(p);
   if(!enabled&&key==="ceo.mail.read")permissions.delete("ceo.mail.send");
-  if(!enabled&&key==="ceo.statistics"){permissions.delete("ceo.seo");permissions.delete("ceo.gsc.manage");}
+  if(!enabled&&key==="ceo.statistics"){permissions.delete("ceo.seo");permissions.delete("ceo.gsc.manage");permissions.delete("ceo.ads.read");permissions.delete("ceo.ads.draft");}
   if(!enabled&&key==="ceo.seo")permissions.delete("ceo.gsc.manage");
+  if(!enabled&&key==="ceo.ads.read")permissions.delete("ceo.ads.draft");
   if(!enabled&&key==="admin.catalogue.read"){
    permissions.delete("admin.pricing.read");permissions.delete("admin.pricing.write");
   }
