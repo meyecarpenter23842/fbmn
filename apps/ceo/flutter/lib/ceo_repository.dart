@@ -12,9 +12,11 @@ const allCeoScopes=<String>{
  'ceo.mail.read','ceo.mail.send','ceo.statistics','ceo.seo',
  'ceo.notifications','ceo.gsc.manage'
 };
+// Existing test implementations remain source-compatible without extra methods.
+extension CeoGrantAccess on CeoRepository{
+ Set<String> get grantedScopes => this is CeoApi ? (this as CeoApi).grantedScopes : allCeoScopes;
+}
 abstract class CeoRepository{
- // Fake/test Owner repositories retain complete access by default.
- Set<String> get grantedScopes=>allCeoScopes;
  Future<void> signIn(String email,String password);
  Future<void> signOut();
  Future<bool> ownerSession();
@@ -48,7 +50,7 @@ class CeoApiException implements Exception{
 }
 class CeoApi implements CeoRepository {
  Set<String> _grants=<String>{};
- @override Set<String> get grantedScopes=>_grants;
+ Set<String> get grantedScopes=>_grants;
  final http.Client _client;
  CeoApi({http.Client? client}):_client=client??platform.createClient();
  Uri _url(String path)=>Uri.base.resolve(path);
