@@ -28,7 +28,15 @@ export const metadata: Metadata = {
   description: "Tập vở, sổ, giấy và văn phòng phẩm Futurebook Miền Nam. Khám phá sản phẩm, catalogue và liên hệ hợp tác.",
   metadataBase: new URL("https://www.fbmn.vn"),
   robots: { index: true, follow: true },
-  icons: { icon: [{ url: "/brand/fbmn-mark.svg?v=20261104", type: "image/svg+xml" }], shortcut: "/favicon.ico", apple: "/brand/fbmn-mark.svg?v=20261104" },
+  icons: {
+    icon: [
+      { url: "/favicon.ico", type: "image/x-icon", sizes: "any" },
+      { url: "/favicon-96.png", type: "image/png", sizes: "96x96" },
+    ],
+    shortcut: "/favicon.ico",
+    apple: "/apple-touch-icon.png",
+  },
+  openGraph: { siteName: "Futurebook Miền Nam" },
 };
 
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {

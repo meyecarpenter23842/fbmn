@@ -1,4 +1,6 @@
 import Link from "next/link";
+import {SeoJsonLd} from "@/lib/seo/json-ld";
+import {websiteSchema} from "@/lib/seo/structured-data";
 import { Suspense } from "react";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
@@ -21,6 +23,7 @@ export default async function HomePage() {
   const hasCmsHero=cms.some(item=>item.kind==="banner"&&item.slot==="home.hero");
   return (
     <>
+      <SeoJsonLd data={websiteSchema()}/>
       <SiteHeader />
       <main className="ref-site" id="home">
         <section className="ref-hero" aria-labelledby="hero-heading">

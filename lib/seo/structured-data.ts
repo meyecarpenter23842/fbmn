@@ -77,6 +77,11 @@ export function articleMetadata(article:PublicArticle):Metadata{
  return {title,description,alternates:{canonical:url},
   openGraph:{type:"article",title,description,url,siteName:BRAND,publishedTime:article.publishedAt}};
 }
+// Google Search site name: emit WebSite once, on the canonical homepage.
+export function websiteSchema():Record<string,unknown>{
+ return {"@context":"https://schema.org","@type":"WebSite",
+   name:BRAND,alternateName:["FBMN","fbmn.vn"],url:SEO_ORIGIN+"/"};
+}
 export function organizationSchema():Record<string,unknown>{
  return {"@context":"https://schema.org","@type":"Organization",
   name:BRAND,url:SEO_ORIGIN,logo:absolute("/brand/fbmn-mark.svg?v=20261104")};
