@@ -12,6 +12,7 @@ export function ceoScope(url,method="GET"){
  if(path==="/api/ceo/gsc/oauth/status"&&method==="GET")return "ceo.seo";
  if(path==="/api/ceo/gsc/oauth/status"&&method==="DELETE")return "ceo.gsc.manage";
  if(path.startsWith("/api/ceo/gsc/oauth/")&&method==="POST")return "ceo.gsc.manage";
+ if(path==="/api/ceo/mail/webhook")return null;
  if(path==="/api/ceo/mail"&&method==="POST")return "ceo.mail.send";
  if((path==="/api/ceo/mail"||/^\/api\/ceo\/mail\/[a-zA-Z0-9-]+$/.test(path))&&method==="GET")return "ceo.mail.read";
  if(path==="/api/ceo/alerts"&&["GET","POST"].includes(method))return "ceo.notifications";
