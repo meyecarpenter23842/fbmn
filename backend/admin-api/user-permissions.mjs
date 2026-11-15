@@ -27,7 +27,7 @@ export const ROLE_DEFAULTS = Object.freeze({
   viewer:["admin.catalogue.read"],
   editor:["admin.catalogue.read","admin.catalogue.write","admin.cms.read"],
   publisher:["admin.cms.read","admin.cms.write","admin.website.read"],
-  pricing:["admin.pricing.read","admin.pricing.write"],
+  pricing:["admin.catalogue.read","admin.pricing.read","admin.pricing.write"],
   admin:PERMISSIONS.filter(p=>p.key.startsWith("admin.")).map(p=>p.key),
   ceo:PERMISSIONS.filter(p=>p.key.startsWith("ceo.") && !["ceo.mail.send","ceo.gsc.manage"].includes(p.key)).map(p=>p.key),
 });
@@ -42,6 +42,8 @@ export function validStaffPayload(value,{update=false}={}){
   if(value.permissions.some(p=>typeof p!=="string"||!PERMISSION_KEYS.has(p)) ||
     new Set(value.permissions).size!==value.permissions.length ||
     value.channels.some(c=>!CHANNELS.includes(c)) || new Set(value.channels).size!==value.channels.length)return false;
+  // Pricing workspaces select real SKU catalogue; read access is mandatory.
+  if(value.permissions.some(p=>p.startsWith("admin.pricing."))&&!value.permissions.includes("admin.catalogue.read"))return false;
   // A non-admin role cannot become a staff administrator through a checkbox.
   if(value.role!=="admin" && value.permissions.includes("admin.users.manage"))return false;
   return true;
