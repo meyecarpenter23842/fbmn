@@ -9,6 +9,8 @@ test("USER01 CEO permissions match exact routes and methods",()=>{
  assert.equal(ceoScope(url("/api/ceo/statistics")),"ceo.statistics");
  assert.equal(ceoScope(url("/api/ceo/contact-requests")),"ceo.contacts");
  assert.equal(ceoScope(url("/api/ceo/gsc/oauth/status"),"DELETE"),"ceo.gsc.manage");
+ // Reads receipt scope is determined by validated JSON kind in the route.
+ assert.equal(ceoScope(url("/api/ceo/reads"),"POST"),"ceo.notifications");
  for(const path of ["/api/ceo/random","/api/ceo/mail/webhook","/api/ceo/push/dispatch"]){
   assert.equal(ceoScope(url(path)) ,null,path);
  }

@@ -11,7 +11,7 @@ export function workerOrigin():string|null{
 }
 /** Short-lived same-origin Neon browser bearer (or server cookie fallback) -> Worker.
  * The Worker verifies JWT and Owner DB grants. Never log or persist credentials. */
-export async function requireOwner(request?:Request):Promise<Gate>{
+export async function requireOwner(request?:Request,verifiedScope?:string):Promise<Gate>{
  const base=workerOrigin();
  if(!base)return {status:503};
  // Prefer same-origin, in-memory Neon JWT provided by the Flutter client,
@@ -39,7 +39,8 @@ export async function requireOwner(request?:Request):Promise<Gate>{
   const role=typeof data?.data?.role==="string"?data.data.role:"";
   const permissions=Array.isArray(data?.data?.permissions)&&data.data.permissions.every((p:unknown)=>typeof p==="string")
     ?data.data.permissions as string[]:[];
-  const scope=request?ceoScope(request.url,request.method):null;
+  // For read receipts only, the handler validates the JSON kind before this call.
+  const scope=verifiedScope??(request?ceoScope(request.url,request.method):null);
   if(!canAccessCeo(role,permissions,scope))return {status:403};
   // Worker has verified the JWT signature and Owner DB grant.
   // The token sub is used only to associate/revoke this owner's devices.
