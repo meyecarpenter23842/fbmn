@@ -35,11 +35,6 @@ export function ProductCard({ product, glass = false, priority = false }: {
     ? (product.media.find(m=>m.sku===product.listingSku) ?? product.media[0])
     : product.media[0];
   const image = media ? getPublishedProductImageUrl(media.r2Key, process.env.NEXT_PUBLIC_MEDIA_BASE_URL) : null;
-  const label = product.priceLabel ?? (
-    product.variants.find(v => v.price)?.price
-      ? formatRetail(product.variants.find(v => v.price)!.price!.amountVnd)
-      : "Liên hệ báo giá"
-  );
   const targetSku=product.listingSku ?? product.initialSku;
   const href = "/san-pham/" + encodeURIComponent(product.slug) +
     (targetSku ? "?sku="+encodeURIComponent(targetSku) : "");
@@ -54,8 +49,6 @@ export function ProductCard({ product, glass = false, priority = false }: {
     </div>
     <div className={glass ? "fb-song-related-body" : "catalog-product__body"}>
       <h3>{product.listingSku ? product.variants[0]?.name || product.name : product.name}</h3>
-      <p>{product.listingSku ? "Mã "+product.listingSku : product.variants.length+" quy cách đã xác minh"}</p>
-      <strong className={glass ? "fb-song-related-price" : "catalog-price"}>{label}</strong>
     </div>
   </Link>;
   return glass
@@ -78,8 +71,8 @@ export function EmptyState({ heading, message, link = "/san-pham" }: {
   </div>;
 }
 
-export function CatalogListing({ data, heading, description, filters, actionPath = "/san-pham", modeByCategory = {} }: {
-  data: PublicCatalog; heading: string; description: string;
+export function CatalogListing({ data, heading, description, filters, actionPath = "/san-pham", modeByCategory = {}, showIntro = true }: {
+  data: PublicCatalog; heading: string; description: string; showIntro?: boolean;
   filters: CatalogFilters; actionPath?: string;
   modeByCategory?: Readonly<Record<string,"family"|"sku">>;
 }) {
@@ -88,7 +81,7 @@ export function CatalogListing({ data, heading, description, filters, actionPath
     {/* Keep the semantic H1 for SEO/accessibility; filters and results
          are the visible catalogue entry point, not duplicated hero copy. */}
     <h1 className="sr-only">{heading}</h1>
-    <p className="catalog-seo-intro">{description}</p>
+    {showIntro && <p className="catalog-seo-intro">{description}</p>}
     <div className="catalog-layout">
       <aside className="catalog-sidebar">
         <form action={actionPath} method="get" className="catalog-filters" role="search" aria-label="Tìm kiếm và lọc sản phẩm">

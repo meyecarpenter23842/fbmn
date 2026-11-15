@@ -11,7 +11,6 @@ export function HomeProductCard({ product }: { product: PublicProduct }) {
   const photo = media
     ? getPublishedProductImageUrl(media.r2Key, process.env.NEXT_PUBLIC_MEDIA_BASE_URL)
     : null;
-  const sku = product.variants[0]?.sku;
   return <GlassCard hover linkCard className="fb-glass-home-product">
     <Link href={"/san-pham/" + encodeURIComponent(product.slug)} prefetch={false}
       className="ref-product-card__hit" aria-label={"Xem sản phẩm " + product.name}>
@@ -21,9 +20,6 @@ export function HomeProductCard({ product }: { product: PublicProduct }) {
       </div>
       <div className="ref-product-card__copy">
         <h3>{product.name}</h3>
-        <p>{product.variants.length} mã hàng đã công khai</p>
-        {sku && <small>Mã tham khảo: {sku}</small>}
-        <span className="ref-product-card__more">Xem sản phẩm và quy cách</span>
       </div>
     </Link>
   </GlassCard>;

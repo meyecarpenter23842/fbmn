@@ -406,3 +406,9 @@ Thứ tự mới trước DL8: DL11A (Header một hàng, logo giữa 3+3 tab, t
 | **ADS03** | Google Ads cost_micros, impressions/clicks/CTR/CPC theo 7/30/90 ngày và kỳ trước; PostHog lead B2B đặt song song | Không JOIN khác nguồn thiếu campaign/UTM mapping; CPL không đủ attribution là —; không suy ROAS/lợi nhuận hoặc lấy chi phí từ GSC/PostHog |
 
 **Triển khai:** branch/PR repo phụ → CI Flutter/Gateway + Codex review → squash merge → kiểm tra đồng bộ repo chính trước khi phát hành CEO. SQL migration (nếu có) chỉ làm trên Neon production theo phạm vi Owner duyệt riêng; không tạo Neon branch phụ. Chức năng chạy quảng cáo, bật campaign hoặc thay ngân sách vẫn phải có xác nhận riêng của Owner **ngay trong CEO** bất kể đã deploy phần mềm. Triển khai API theo chế độ fail-closed khi thiếu Google Ads OAuth/customer/quyền, không render số 0 thay dữ liệu chưa có.
+
+
+### WEB-PROD-UI01 — Card chỉ ảnh/tên + banner ngang trang sản phẩm (15/11/2026, Owner)
+- Website: card ở Trang chủ, trang Sản phẩm và gợi ý chỉ giữ ảnh bìa đã công khai cùng tên sản phẩm; toàn card là liên kết thực, không nút CTA riêng, không hiện số SKU/mã tham khảo/giá liên hệ trên card; mã và quy cách thật còn tại trang chi tiết.
+- Trang `/san-pham`: bỏ đoạn hướng dẫn dài đầu trang, giữ H1 ẩn cho trợ năng và metadata; trang danh mục vẫn giữ giới thiệu SEO riêng. Thêm một banner ngang giữa breadcrumb và bộ lọc với logo chính thức và đồ họa CSS sắc tím/vàng/xanh; không dùng ảnh sản phẩm giả hay thêm CMS slot/migration.
+- Giữ navigation, filters, pagination, canonical/noindex, media đã duyệt, glass V2 và responsive 360/390/768/1280/1440. CI/Codex, squash merge dev, đồng bộ repo chính; phát hành Website production theo lệnh Owner.

@@ -296,10 +296,11 @@
 
 .fb-song-related-body {
   display: flex;
-  flex: 1;
+  flex: 0 0 auto;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
   min-width: 0;
+  padding-bottom: 2px;
 }
 
 .fb-song-related-body h3 {
