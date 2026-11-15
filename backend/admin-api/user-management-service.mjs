@@ -30,7 +30,7 @@ export async function handleStaffUsers({request,actor,db}){
  const update=request.method==="PATCH";
  if(!validStaffPayload(body,{update})||
     typeof body.email!=="string"||body.email.length>200||
-    !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(body.email)||
+    !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(body.email)||
     (update&&typeof body.name!=="undefined"))return fail(400,"invalid_grant");
  if(path.endsWith("/preflight"))return update?fail(405,"method_not_allowed"):reply(200,{data:{allowed:true}});
  try{
