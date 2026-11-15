@@ -45,6 +45,25 @@ GRANT SELECT,INSERT,UPDATE,DELETE ON fbmn_catalog_private.ceo_ads_connections TO
 GRANT SELECT,INSERT,UPDATE,DELETE ON fbmn_catalog_private.ceo_ads_drafts TO fbmn_ceo_push_login;
 GRANT SELECT,INSERT ON fbmn_catalog_private.ceo_ads_audit TO fbmn_ceo_push_login;
 GRANT USAGE,SELECT ON SEQUENCE fbmn_catalog_private.ceo_ads_audit_id_seq TO fbmn_ceo_push_login;
+CREATE TABLE IF NOT EXISTS fbmn_catalog_private.ceo_ads_approvals(
+ id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+ approval_hash text NOT NULL UNIQUE CHECK(length(approval_hash)=64),
+ owner_subject text NOT NULL,
+ action text NOT NULL CHECK(action IN ('create_paused','status','budget')),
+ draft_id uuid,
+ customer_id text NOT NULL CHECK(customer_id ~ '^[0-9]{10}$'),
+ currency text NOT NULL CHECK(currency ~ '^[A-Z]{3}$'),
+ preview jsonb NOT NULL,
+ result jsonb,
+ status text NOT NULL CHECK(status IN ('in_flight','verified','failed','unknown')),
+ created_at timestamptz NOT NULL DEFAULT now(),
+ updated_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS ceo_ads_approvals_owner_idx
+ ON fbmn_catalog_private.ceo_ads_approvals(owner_subject,created_at DESC);
+REVOKE ALL ON fbmn_catalog_private.ceo_ads_approvals FROM PUBLIC;
+GRANT SELECT,INSERT,UPDATE ON fbmn_catalog_private.ceo_ads_approvals TO fbmn_ceo_push_login;
+
 -- USER01 permission catalogue, introduced separately from GSC.
 INSERT INTO fbmn_admin.user01_permissions(permission_key)
  VALUES ('ceo.ads.read'),('ceo.ads.draft'),('ceo.ads.manage')

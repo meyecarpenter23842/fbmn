@@ -32,6 +32,12 @@ export function validLandingUrl(value){
    decodeURIComponent(u.pathname));
  }catch{return false;}
 }
+function safeAdLines(value,min,max,maxLength){
+ if(!Array.isArray(value)||value.length<min||value.length>max)return null;
+ const items=value.map(v=>typeof v==="string"?v.trim():"");
+ if(items.some(s=>s.length<3||s.length>maxLength||/[\x00-\x1f<>]/.test(s)))return null;
+ return new Set(items).size===items.length?items:null;
+}
 export function validateDraft(value){
  if(!value||typeof value!=="object"||Array.isArray(value)||
   typeof value.name!=="string"||value.name.trim().length<3||
@@ -47,10 +53,12 @@ export function validateDraft(value){
   !["EXACT","PHRASE","BROAD"].includes(value.matchType))return null;
  const negative=Array.isArray(value.negativeKeywords)?
   value.negativeKeywords.length===0?[]:safeKeywords(value.negativeKeywords):null;
- if(negative===null||!safeGeos(value.geos))return null;
+ const headlines=safeAdLines(value.headlines,3,8,30);
+ const descriptions=safeAdLines(value.descriptions,2,4,90);
+ if(negative===null||!safeGeos(value.geos)||!headlines||!descriptions)return null;
  return {kind:"campaign",name:value.name.trim(),keywords,
   negativeKeywords:negative,geos:safeGeos(value.geos),
-  matchType:value.matchType,landingUrl:value.landingUrl,
+  matchType:value.matchType,headlines,descriptions,landingUrl:value.landingUrl,
   budgetDaily:value.budgetDaily,currency:null,status:"DRAFT_PAUSED"};
 }
 export function reportingDates(period,localToday){
