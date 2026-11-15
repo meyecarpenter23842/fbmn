@@ -40,6 +40,7 @@ CREATE TABLE IF NOT EXISTS fbmn_admin.user01_audit (
 CREATE INDEX IF NOT EXISTS user01_audit_actor_idx ON fbmn_admin.user01_audit(actor_subject,created_at DESC);
 GRANT SELECT ON fbmn_admin.principal_permissions TO fbmn_admin_runtime;
 GRANT SELECT ON fbmn_admin.principal_permissions TO fbmn_admin_http_staging;
+GRANT SELECT ON fbmn_admin.principal_permissions TO fbmn_ceo_push_login;
 
 -- SECURITY DEFINER only exposes nonsecret identity fields and explicit staff grants.
 -- Neither Worker nor browser gets direct INSERT/UPDATE on principal tables or neon_auth.
