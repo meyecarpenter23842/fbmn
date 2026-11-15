@@ -158,7 +158,7 @@ export async function adsMutate(customer,token,login,operations,validateOnly,fet
   operations.length>80||typeof validateOnly!=="boolean")throw new Error("ads_invalid_mutation");
  const json=await adsRequest("/customers/"+customer+"/googleAds:mutate",token,login,{
   mutateOperations:operations,partialFailure:false,validateOnly,
-  responseContentType:"RESOURCE_NAME"
+  responseContentType:"RESOURCE_NAME_ONLY"
  },fetchImpl);
  if(json.partialFailureError)throw new Error("ads_mutation_rejected");
  return json;
