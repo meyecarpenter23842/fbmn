@@ -286,7 +286,7 @@ class CeoAdsPanelState extends State<CeoAdsPanel>{
         ' – '+money(row['highTopOfPageBid'])+
         ' · CPC ước tính (nếu có): '+money(row['estimatedAverageCpc']),
         style:const TextStyle(fontSize:12,color:ceoMuted)),
-      ]))),
+      ])),
   ],
   draftList('Bộ từ khóa đã lưu','keyword_set'),
   const Padding(padding:EdgeInsets.only(top:10),child:Text(
