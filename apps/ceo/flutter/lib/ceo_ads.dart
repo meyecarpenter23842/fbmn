@@ -309,6 +309,8 @@ class CeoAdsPanelState extends State<CeoAdsPanel>{
   final name=await askName('Tạo chiến dịch Search B2B nháp');
   if(name==null||name.length<3||!mounted)return;
   final keywords=TextEditingController(text:seed.text);
+  final headlines=TextEditingController();
+  final descriptions=TextEditingController();
   final result=await showDialog<Map<String,dynamic>>(context:context,builder:(dialog)=>
    AlertDialog(title:const Text('Soạn chiến dịch · chưa phát hành'),
     content:SizedBox(width:460,child:SingleChildScrollView(
@@ -328,6 +330,10 @@ class CeoAdsPanelState extends State<CeoAdsPanel>{
        decoration:InputDecoration(labelText:'Ngân sách/ngày · '+currency)),
       TextField(controller:landing,
        decoration:const InputDecoration(labelText:'Trang đích https://www.fbmn.vn/...')),
+      TextField(controller:headlines,maxLines:3,
+       decoration:const InputDecoration(labelText:'3–8 tiêu đề quảng cáo, mỗi dòng ≤30 ký tự')),
+      TextField(controller:descriptions,maxLines:2,
+       decoration:const InputDecoration(labelText:'2–4 mô tả, mỗi dòng ≤90 ký tự')),
       const SizedBox(height:12),
       const Text('Mặc định DRAFT_PAUSED. Chưa gửi chiến dịch sang Google Ads.',
        style:TextStyle(fontSize:12,color:ceoMuted))
@@ -338,11 +344,80 @@ class CeoAdsPanelState extends State<CeoAdsPanel>{
       'kind':'campaign','name':name,'keywords':lines(keywords.text),
       'negativeKeywords':lines(negatives.text),'matchType':matchType,
       'budgetDaily':double.tryParse(budget.text.trim())??-1,
-      'geos':chosenGeos,'landingUrl':landing.text.trim()}),
+      'geos':chosenGeos,'landingUrl':landing.text.trim(),
+      'headlines':lines(headlines.text),
+      'descriptions':lines(descriptions.text)}),
       child:const Text('Lưu bản nháp'))
     ]));
-  keywords.dispose();
+  keywords.dispose();headlines.dispose();descriptions.dispose();
   if(result!=null&&mounted)await createDraft(result);
+ }
+
+ Future<void> ownerPreview(Map<String,dynamic> input)async{
+  if(!widget.api.grantedScopes.contains('ceo.ads.manage'))return;
+  setState((){saving=true;error='';notice='';});
+  try{
+   final preview=await widget.api.adsPost('/api/ceo/ads/approvals',
+    {'stage':'preview','input':input});
+   if(!mounted)return;
+   final p=obj(preview['preview']);
+   final old=obj(p['before']),after=obj(p['after']);
+   final token=preview['ticket'];
+   if(token is! String)throw const CeoApiException(503);
+   final approved=await showDialog<bool>(context:context,builder:(dialog)=>
+    AlertDialog(title:const Text('Owner · xác nhận đúng thay đổi'),
+     content:SingleChildScrollView(child:Column(
+      crossAxisAlignment:CrossAxisAlignment.start,mainAxisSize:MainAxisSize.min,children:[
+       Text('Customer '+(preview['customerId']??'').toString()+
+        ' · '+(preview['currency']??'').toString(),
+        style:const TextStyle(fontSize:13,fontWeight:FontWeight.w700)),
+       const SizedBox(height:10),
+       Text('Hành động: '+(p['action']??'').toString(),
+        style:const TextStyle(fontSize:13)),
+       const SizedBox(height:8),
+       Text('Chiến dịch: '+(after['name']??'').toString()),
+       Text('Trạng thái: '+(old['status']??'Chưa tồn tại').toString()+
+        ' → '+(after['status']??'—').toString()),
+       Text('Ngân sách/ngày: '+(old['dailyBudget']??'—').toString()+
+        ' → '+(after['dailyBudget']??'—').toString()+' '+currency),
+       if(after['landingUrl']!=null)Text('Trang đích: '+after['landingUrl'].toString()),
+       const SizedBox(height:10),
+       const Text('Thao tác được gửi lên Google Ads một lần duy nhất. '
+        'Nếu bật ENABLED, quảng cáo có thể phát sinh chi phí. '
+        'Không tự thử lại khi Google chưa xác nhận kết quả.',
+        style:TextStyle(fontSize:12,color:ceoMuted))
+      ])),
+     actions:[
+      TextButton(onPressed:()=>Navigator.pop(dialog,false),child:const Text('Hủy')),
+      FilledButton(onPressed:()=>Navigator.pop(dialog,true),
+       child:const Text('Owner xác nhận thao tác'))
+     ]));
+   if(approved!=true||!mounted)return;
+   final result=await widget.api.adsPost('/api/ceo/ads/approvals',{
+    'stage':'apply','ticket':token,'confirmed':true});
+   if(!mounted)return;
+   setState(()=>notice=result['status']=='verified'?
+    'Google Ads đã xác nhận thay đổi; xem lại chiến dịch.' :
+    'Đã gửi yêu cầu. Google chưa hậu kiểm được; KHÔNG thử lại, kiểm tra Google Ads trước.');
+   await reload();
+  }catch(e){
+   if(mounted)setState(()=>error=humanError(e));
+  }finally{if(mounted)setState(()=>saving=false);}
+ }
+ Future<void> changeBudget(Map<String,dynamic> campaign)async{
+  final input=TextEditingController(text:(campaign['dailyBudget']??'').toString());
+  final daily=await showDialog<double>(context:context,builder:(dialog)=>
+   AlertDialog(title:const Text('Đề nghị thay ngân sách/ngày'),
+    content:TextField(controller:input,keyboardType:TextInputType.number,
+     decoration:InputDecoration(labelText:'Đơn vị '+currency)),
+    actions:[
+     TextButton(onPressed:()=>Navigator.pop(dialog),child:const Text('Hủy')),
+     FilledButton(onPressed:()=>Navigator.pop(
+      dialog,double.tryParse(input.text.trim())),
+      child:const Text('Xem trước tác động'))]));
+  input.dispose();
+  if(daily==null||!mounted)return;
+  await ownerPreview({'action':'budget','campaignId':campaign['id'],'budgetDaily':daily});
  }
  Widget draftList(String title,String kind){
   final records=draftRows.where((d)=>d['kind']==kind).toList();
@@ -356,6 +431,11 @@ class CeoAdsPanelState extends State<CeoAdsPanel>{
       Text((d['name']??'').toString(),style:const TextStyle(fontSize:13,color:ceoInk)),
       Text('Nháp · chưa phát hành',style:const TextStyle(fontSize:12,color:ceoMuted)),
      ])),
+     if(kind=='campaign'&&widget.api.grantedScopes.contains('ceo.ads.manage'))
+      IconButton(tooltip:'Owner duyệt và tạo Google Ads PAUSED',
+       onPressed:saving?null:()=>unawaited(ownerPreview({
+        'action':'create_paused','draftId':d['id']})),
+       icon:const Icon(Icons.fact_check_outlined,size:20,color:ceoPurple)),
      if(widget.api.grantedScopes.contains('ceo.ads.draft'))
       IconButton(tooltip:'Xóa bản nháp',onPressed:()=>unawaited(
        deleteDraft((d['id']??'').toString())),
@@ -382,7 +462,17 @@ class CeoAdsPanelState extends State<CeoAdsPanel>{
        ' · '+(c['type']??'').toString(),
        style:const TextStyle(fontSize:12,color:ceoMuted)),
       Text('Ngân sách/ngày: '+money(c['dailyBudget']),
-       style:const TextStyle(fontSize:12,color:ceoMuted))
+       style:const TextStyle(fontSize:12,color:ceoMuted)),
+      if(widget.api.grantedScopes.contains('ceo.ads.manage'))
+       actions([
+        OutlinedButton(onPressed:saving?null:()=>unawaited(ownerPreview({
+         'action':'status','campaignId':c['id'],
+         'status':c['status']=='ENABLED'?'PAUSED':'ENABLED'})),
+         child:Text(c['status']=='ENABLED'?'Owner duyệt tạm dừng':'Owner duyệt kích hoạt')),
+        OutlinedButton(onPressed:saving?null:()=>unawaited(changeBudget(c)),
+         child:const Text('Owner duyệt ngân sách'))
+       ])
+
      ])),
   if(widget.api.grantedScopes.contains('ceo.ads.draft'))...[
    geoPicker(),
@@ -393,8 +483,8 @@ class CeoAdsPanelState extends State<CeoAdsPanel>{
   ],
   draftList('Chiến dịch Futurebook đã lưu nháp','campaign'),
   const Padding(padding:EdgeInsets.only(top:10),
-   child:Text('Chưa có thao tác phát hành/bật/tắt/đổi ngân sách lên Google Ads. '
-    'Mọi thay đổi phát sinh chi phí phải được Owner duyệt đúng payload trong CEO.',
+   child:Text('Tạo mới ở trạng thái PAUSED. Mọi thao tác áp dụng/bật/tắt/đổi ngân sách '
+    'đều yêu cầu Owner xem trước và xác nhận một lần trên đúng Customer ID.',
     style:TextStyle(fontSize:12,color:ceoMuted))),
  ]);
  Widget statText(String label,Object? raw,{int decimals=0})=>Padding(

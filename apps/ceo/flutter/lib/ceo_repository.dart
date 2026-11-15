@@ -11,7 +11,7 @@ import 'http_client_stub.dart' if (dart.library.js_interop) 'http_client_web.dar
 const allCeoScopes=<String>{
  'ceo.overview','ceo.conversations','ceo.outsourcing','ceo.contacts',
  'ceo.mail.read','ceo.mail.send','ceo.statistics','ceo.seo',
- 'ceo.notifications','ceo.gsc.manage','ceo.ads.read','ceo.ads.draft'
+ 'ceo.notifications','ceo.gsc.manage','ceo.ads.read','ceo.ads.draft','ceo.ads.manage'
 };
 // Existing test implementations remain source-compatible without extra methods.
 extension CeoGrantAccess on CeoRepository{
@@ -289,7 +289,7 @@ class CeoApi implements CeoRepository {
  }
  Future<Map<String,dynamic>> adsPost(String route,Map<String,dynamic> payload)async{
   const routes=['/api/ceo/ads/oauth/start','/api/ceo/ads/oauth/status',
-   '/api/ceo/ads/drafts'];
+   '/api/ceo/ads/drafts','/api/ceo/ads/approvals'];
   if(!routes.contains(route))throw const CeoApiException(400);
   final response=await _request('POST',route,bearer:await _ownerJwt(),
    json:payload,timeout:const Duration(seconds:35));
