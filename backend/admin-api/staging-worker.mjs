@@ -6,6 +6,7 @@ import { createAdminApi } from "./handler.mjs";
 
 const ACCOUNT = "SELECT role::text AS role, enabled FROM fbmn_admin.principals WHERE auth_subject = $1";
 const SCOPES = "SELECT channel_code FROM fbmn_admin.principal_channels WHERE auth_subject = $1 ORDER BY channel_code";
+const STAFF_PERMISSIONS = "SELECT permission_key FROM fbmn_admin.principal_permissions WHERE auth_subject=$1 ORDER BY permission_key";
 const CHANNELS = "SELECT code, label FROM fbmn_admin.channels ORDER BY code";
 const AUDIT = "INSERT INTO fbmn_admin.audit_events (auth_subject, action, outcome) VALUES ($1, $2, $3)";
 const unavailable = () => new Response(JSON.stringify({error:{code:"service_unavailable",message:"Yêu cầu không thể xử lý."}}),{
@@ -60,8 +61,9 @@ export function createAdminStagingWorker({ createDbClient = opts => new Client(o
           const result = await client.query(ACCOUNT,[subject]);
           if (result.rows.length !== 1) return null;
           const scopes = await client.query(SCOPES,[subject]);
+          const permissions=await client.query(STAFF_PERMISSIONS,[subject]);
           return { role: result.rows[0].role, enabled:result.rows[0].enabled,
-            channels:scopes.rows.map(r=>r.channel_code) };
+            channels:scopes.rows.map(r=>r.channel_code),permissions:permissions.rows.map(r=>r.permission_key) };
         }),
         listChannels: (subject, isAdmin) => db(async client => {
           const rows = await client.query(CHANNELS);
