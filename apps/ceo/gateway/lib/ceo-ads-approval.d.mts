@@ -1,3 +1,5 @@
+export declare function canonicalApprovalTicket(ticket:unknown):boolean;
+export declare function approvalClaimHash(ticket:unknown):string|null;
 export declare function safeDraftId(id:unknown):boolean;
 export declare function safeCampaignId(id:unknown):boolean;
 export declare function approvalHash(payload:unknown):string;

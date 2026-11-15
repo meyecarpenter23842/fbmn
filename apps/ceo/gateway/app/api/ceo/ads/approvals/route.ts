@@ -1,8 +1,7 @@
-import {createHash} from "node:crypto";
 import {requireOwner} from "@/lib/owner-gate";
 import {allowedOrigin} from "@/lib/ceo-push-policy.mjs";
 import {adsOAuthConfig,adsRefresh} from "@/lib/ceo-ads-oauth.mjs";
-import {approvalHash,approvalTicket,verifyApprovalTicket,validateApprovalAction,
+import {approvalHash,approvalClaimHash,approvalTicket,verifyApprovalTicket,validateApprovalAction,
  createPausedCampaign,existingCampaignOperation} from "@/lib/ceo-ads-approval.mjs";
 import {adsCampaigns,adsMutate} from "@/lib/ceo-ads-google.mjs";
 import {readAdsConnection,rotateAdsGrant,adsDraftById,reserveAdsApproval,
@@ -89,7 +88,8 @@ export async function POST(request:Request){
   if(!prepared||prepared.fingerprint!==signed.fingerprint||
    approvalHash(prepared.preview)!==approvalHash(signed.preview))
    return fail(409,"approval_changed");
-  const key=createHash("sha256").update(body.ticket as string).digest("hex");
+  const key=approvalClaimHash(body.ticket as string);
+  if(!key)return fail(409,"approval_expired_or_invalid");
   const approvalId=await reserveAdsApproval(owner.subject,key,String(input.action),
    account.customerId,account.currency,prepared.draftId,prepared.preview);
   if(!approvalId)return fail(409,"approval_already_consumed");

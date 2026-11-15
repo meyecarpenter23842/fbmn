@@ -4,6 +4,18 @@ import {validCustomer,validateDraft} from "./ceo-ads-policy.mjs";
 const TICKET=/^v1\.[A-Za-z0-9_-]{40,12000}$/;
 const UUID=/^[a-f0-9]{8}-[a-f0-9]{4}-[1-8][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/i;
 const CAMPAIGN=/^[0-9]{1,20}$/;
+// The same authenticated ciphertext must never have multiple consent identities.
+// Node's base64url decoder tolerates alternative spellings; require exact roundtrip.
+export function canonicalApprovalTicket(ticket){
+ if(typeof ticket!=="string"||!TICKET.test(ticket))return false;
+ const encoded=ticket.slice(3);
+ const bytes=Buffer.from(encoded,"base64url");
+ return bytes.length>=29&&bytes.toString("base64url")===encoded;
+}
+export function approvalClaimHash(ticket){
+ if(!canonicalApprovalTicket(ticket))return null;
+ return createHash("sha256").update(Buffer.from(ticket.slice(3),"base64url")).digest("hex");
+}
 export function safeDraftId(id){return typeof id==="string"&&UUID.test(id);}
 export function safeCampaignId(id){return typeof id==="string"&&CAMPAIGN.test(id);}
 export function approvalHash(payload){
@@ -19,7 +31,7 @@ export function approvalTicket(config,owner,payload,now=Date.now()){
  }),config.key);
 }
 export function verifyApprovalTicket(config,owner,ticket,now=Date.now()){
- if(config.status!=="ready"||typeof ticket!=="string"||!TICKET.test(ticket))return null;
+ if(config.status!=="ready"||!canonicalApprovalTicket(ticket))return null;
  try{
   const v=JSON.parse(decryptSecret(ticket,config.key));
   if(v.kind!=="ads131_owner_approval_v1"||v.owner!==owner||

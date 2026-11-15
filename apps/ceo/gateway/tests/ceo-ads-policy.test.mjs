@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import {safeKeywords,safeGeos,validLandingUrl,validateDraft,moneyFromMicros,
  reportingDates,googleReportRows} from "../lib/ceo-ads-policy.mjs";
 import {adsOAuthConfig,adsAuthorize,adsCallback,adsTicket,adsVerifyTicket} from "../lib/ceo-ads-oauth.mjs";
-import {approvalTicket,verifyApprovalTicket,createPausedCampaign,
+import {approvalTicket,verifyApprovalTicket,canonicalApprovalTicket,approvalClaimHash,createPausedCampaign,
  existingCampaignOperation,validateApprovalAction,budgetMicros} from "../lib/ceo-ads-approval.mjs";
 test("ADS01 distinguishes real bidding ranges, CPC and missing values",()=>{
  assert.equal(moneyFromMicros("1234567"),1.234567);
@@ -103,4 +103,29 @@ test("ADS02 external shared budgets cannot be silently updated",()=>{
  assert.equal(st.preview.before.status,"ENABLED");
  assert.equal(st.preview.after.status,"PAUSED");
  assert.equal(st.operations[0].campaignOperation.updateMask,"status");
+});
+
+test("ADS02 one-use approval rejects alternate base64url spellings of same encrypted ticket",()=>{
+ const cfg=adsOAuthConfig({FBMN_CEO_ADS_OAUTH_CLIENT_ID:"1234567890-exampleproject.apps.googleusercontent.com",
+  FBMN_CEO_ADS_OAUTH_CLIENT_SECRET:"01234567890123456789",
+  FBMN_CEO_ADS_OAUTH_ENCRYPTION_KEY:"b".repeat(64)});
+ const ticket=approvalTicket(cfg,"owner-id",{
+  action:{action:"status",campaignId:"1234",status:"PAUSED"},
+  customerId:"1234567890",currency:"VND",fingerprint:"x"},1000);
+ assert.equal(canonicalApprovalTicket(ticket),true);
+ assert.equal(approvalClaimHash(ticket)?.length,64);
+ const encoded=ticket.slice(3),original=Buffer.from(encoded,"base64url");
+ const alphabet="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
+ const variants=[];
+ for(const char of alphabet){
+  variants.push("v1."+encoded+char);
+  variants.push("v1."+encoded.slice(0,-1)+char);
+ }
+ const alternate=variants.find(v=>v!==ticket&&
+  Buffer.from(v.slice(3),"base64url").equals(original));
+ assert.ok(alternate,"Expected a permissively decodable noncanonical alias");
+ assert.equal(canonicalApprovalTicket(alternate),false);
+ assert.equal(approvalClaimHash(alternate),null);
+ assert.equal(verifyApprovalTicket(cfg,"owner-id",alternate,1500),null);
+ assert.equal(verifyApprovalTicket(cfg,"owner-id",ticket,1500).customerId,"1234567890");
 });
