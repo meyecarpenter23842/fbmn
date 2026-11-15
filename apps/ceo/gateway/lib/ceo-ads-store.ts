@@ -88,3 +88,31 @@ export async function withAdsApprovalLock<T>(key:string,work:(db:PoolClient)=>Pr
   }catch(error){await db.query("ROLLBACK");throw error;}
  });
 }
+
+export async function adsDraftById(owner:string,id:string):Promise<{
+ id:string;revision:number;payload:Record<string,unknown>}|null>{
+ const r=await withPushDb(db=>db.query<{
+  id:string;revision:number;payload:Record<string,unknown>}>(
+  "SELECT id::text,revision,payload FROM fbmn_catalog_private.ceo_ads_drafts "+
+  "WHERE owner_subject=$1 AND id=$2::uuid LIMIT 1",[owner,id]));
+ return r.rows[0]||null;
+}
+export async function reserveAdsApproval(owner:string,hash:string,action:string,
+ customer:string,currency:string,draftId:string|null,preview:object):Promise<string|null>{
+ return withPushDb(async db=>{
+  const r=await db.query<{id:string}>(
+   "INSERT INTO fbmn_catalog_private.ceo_ads_approvals "+
+   "(approval_hash,owner_subject,action,customer_id,currency,draft_id,preview,status) "+
+   "VALUES($1,$2,$3,$4,$5,$6::uuid,$7,'in_flight') "+
+   "ON CONFLICT(approval_hash) DO NOTHING RETURNING id::text",
+   [hash,owner,action,customer,currency,draftId,JSON.stringify(preview)]);
+  return r.rows[0]?.id??null;
+ });
+}
+export async function finishAdsApproval(id:string,status:"verified"|"failed"|"unknown",
+ result:object):Promise<void>{
+ await withPushDb(db=>db.query(
+  "UPDATE fbmn_catalog_private.ceo_ads_approvals "+
+  "SET status=$2,result=$3,updated_at=now() WHERE id=$1::uuid",
+  [id,status,JSON.stringify(result)]));
+}

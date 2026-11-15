@@ -9,3 +9,6 @@ export declare function adsKeywordIdeas(customer:string,token:string,login:strin
 export declare function adsCampaigns(customer:string,token:string,login:string|null):Promise<unknown[]>;
 export declare function adsPerformance(customer:string,token:string,login:string|null,
  period:string,timezone:string):Promise<unknown>;
+
+export declare function adsMutate(customer:string,token:string,login:string|null,
+ operations:unknown[],validateOnly:boolean):Promise<Record<string,unknown>>;

@@ -112,12 +112,13 @@ export async function adsKeywordIdeas(customer,token,login,words,geos,fetchImpl=
 }
 export async function adsCampaigns(customer,token,login,fetchImpl=fetch){
  const rows=await adsSearch(customer,token,login,
-  "SELECT campaign.id, campaign.name, campaign.status, campaign.advertising_channel_type, campaign_budget.amount_micros, campaign_budget.resource_name FROM campaign ORDER BY campaign.id DESC LIMIT 100",fetchImpl);
+  "SELECT campaign.id, campaign.name, campaign.status, campaign.advertising_channel_type, campaign_budget.amount_micros, campaign_budget.resource_name, campaign_budget.explicitly_shared FROM campaign ORDER BY campaign.id DESC LIMIT 100",fetchImpl);
  return rows.map(x=>({id:String(x.campaign?.id||""),
   name:String(x.campaign?.name||""),status:String(x.campaign?.status||""),
   type:String(x.campaign?.advertisingChannelType||""),
   dailyBudget:moneyFromMicros(x.campaignBudget?.amountMicros),
-  budgetResource:String(x.campaignBudget?.resourceName||"")}));
+  budgetResource:String(x.campaignBudget?.resourceName||""),
+  explicitlyShared:x.campaignBudget?.explicitlyShared===true}));
 }
 export async function adsPerformance(customer,token,login,period,timezone,fetchImpl=fetch){
  if(!ADS_PERIODS[period])throw new Error("ads_invalid_period");
@@ -136,4 +137,15 @@ export async function adsPerformance(customer,token,login,period,timezone,fetchI
  return {source:"google_ads",period,timezone,dates,
   metrics:now.totals,previous:before.totals,daily:now.daily,
   attribution:"not_joined",cpl:null};
+}
+
+export async function adsMutate(customer,token,login,operations,validateOnly,fetchImpl=fetch){
+ if(!validCustomer(customer)||!Array.isArray(operations)||operations.length<1||
+  operations.length>80||typeof validateOnly!=="boolean")throw new Error("ads_invalid_mutation");
+ const json=await adsRequest("/customers/"+customer+"/googleAds:mutate",token,login,{
+  mutateOperations:operations,partialFailure:false,validateOnly,
+  responseContentType:"RESOURCE_NAME"
+ },fetchImpl);
+ if(json.partialFailureError)throw new Error("ads_mutation_rejected");
+ return json;
 }

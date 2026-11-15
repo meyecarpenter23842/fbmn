@@ -15,6 +15,7 @@ export function ceoScope(url,method="GET"){
  if(path==="/api/ceo/ads/oauth/status"&&["POST","DELETE"].includes(method))return "ceo.ads.manage";
  if(path==="/api/ceo/ads/oauth/start"&&method==="POST")return "ceo.ads.manage";
  if(path==="/api/ceo/ads/oauth/complete"&&method==="POST")return "ceo.ads.manage";
+ if(path==="/api/ceo/ads/approvals"&&method==="POST")return "ceo.ads.manage";
  if(path==="/api/ceo/search-console"&&method==="GET")return "ceo.seo";
  if(path==="/api/ceo/gsc/oauth/status"&&method==="GET")return "ceo.seo";
  if(path==="/api/ceo/gsc/oauth/status"&&method==="DELETE")return "ceo.gsc.manage";
