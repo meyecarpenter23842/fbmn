@@ -268,9 +268,9 @@ class CeoApi implements CeoRepository {
   final jwt=await _ownerJwt();
   await _request('DELETE','/api/ceo/gsc/oauth/status',bearer:jwt,json:{});
  }
- // ADS131: same-origin, authenticated endpoints. No credentials ever enter Flutter.
- Future<Map<String,dynamic>> adsStatus()async=>
-  _data('/api/ceo/ads/oauth/status');
+
+ // ADS131: same-origin authenticated routes. Flutter receives no Google credentials.
+ Future<Map<String,dynamic>> adsStatus()async=>_data('/api/ceo/ads/oauth/status');
  Future<Map<String,dynamic>> adsReport(String view,{
   String? period,List<String> words=const [],List<String> geos=const [],
   List<String> names=const []})async{
@@ -297,51 +297,6 @@ class CeoApi implements CeoRepository {
   throw const CeoApiException(503);
  }
  Future<void> adsDeleteDraft(String id)async{
-  if(!RegExp(r'^[a-fA-F0-9-]{36}
-  if(box!='inbox'&&box!='sent'){throw const CeoApiException(400);}
-  final afterParam=after==null?'':'&after=$after';
-  final j=await _data('/api/ceo/mail?box=$box&limit=20$afterParam');
-  return CeoMailPage.fromJson(j);
- }
- @override Future<CeoMailItem> mailDetail(String box,String id)async{
-  if(!['inbox','sent'].contains(box)||id.length!=36){
-   throw const CeoApiException(400);
-  }
-  return CeoMailItem.fromJson(await _data('/api/ceo/mail/$id?box=$box'));
- }
- @override Future<String> mailSend({required String to,required String subject,
-  required String text,String? replyId,String? requestId,List<CeoMailAttachment> attachments=const []})async{
-  final jwt=await _ownerJwt();
-  final result=await _request('POST','/api/ceo/mail',bearer:jwt,timeout:const Duration(seconds:40),json:{
-   'to':to,'subject':subject,'text':text,
-   if(replyId!=null)'replyId':replyId,
-   if(requestId!=null)'requestId':requestId,
-   if(attachments.isNotEmpty)'attachments':attachments.map((a)=>a.toJson()).toList(),
-  });
-  final data=result['data'];
-  if(data is! Map<String,dynamic>||data['id'] is! String){
-   throw const CeoApiException(503);
-  }
-  return data['id'] as String;
- }
- @override void dispose()=>_client.close();
-}
-).hasMatch(id))throw const CeoApiException(400);
-  await _request('DELETE','/api/ceo/ads/drafts?id='+id,
-   bearer:await _ownerJwt(),json:<String,dynamic>{});
- }
- Future<String> adsStartOAuth()async{
-  final result=await adsPost('/api/ceo/ads/oauth/start',{});
-  final url=result['authorizationUrl'];
-  if(url is! String||url.length>2048||
-   !url.startsWith('https://accounts.google.com/o/oauth2/v2/auth?'))
-   throw const CeoApiException(503);
-  return url;
- }
- Future<void> adsDisconnect()async{
-  await _request('DELETE','/api/ceo/ads/oauth/status',
-   bearer:await _ownerJwt(),json:<String,dynamic>{});
- }  Future<void> adsDeleteDraft(String id)async{
   if(!RegExp(r'^[a-fA-F0-9-]{36}$').hasMatch(id))throw const CeoApiException(400);
   await _request('DELETE','/api/ceo/ads/drafts?id='+id,
    bearer:await _ownerJwt(),json:<String,dynamic>{});
