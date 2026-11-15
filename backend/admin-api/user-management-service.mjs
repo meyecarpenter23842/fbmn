@@ -1,4 +1,4 @@
-import {allowed,PERMISSIONS,CHANNELS,ROLES,validStaffPayload} from "./user-permissions.mjs";
+import {allowed,PERMISSIONS,CHANNELS,ROLES,ROLE_DEFAULTS,validStaffPayload} from "./user-permissions.mjs";
 const headers={"Content-Type":"application/json; charset=utf-8","Cache-Control":"private, no-store","X-Content-Type-Options":"nosniff"};
 const reply=(status,body)=>new Response(JSON.stringify(body),{status,headers});
 const fail=(status,code)=>reply(status,{error:{code}});
@@ -15,7 +15,7 @@ export async function handleStaffUsers({request,actor,db}){
  if(path==="/v1/admin/users" && request.method==="GET"){
    try{
      const result=await db(client=>client.query("SELECT fbmn_admin.user01_list_staff($1) AS users",[actor.subject]));
-     return reply(200,{data:{users:result.rows?.[0]?.users??[],roles:ROLES,permissions:PERMISSIONS,channels:CHANNELS}});
+     return reply(200,{data:{users:result.rows?.[0]?.users??[],roles:ROLES,permissions:PERMISSIONS,defaults:ROLE_DEFAULTS,channels:CHANNELS}});
    }catch(error){return staffError(error);}
  }
  if(!["/v1/admin/users","/v1/admin/users/preflight"].includes(path)||
