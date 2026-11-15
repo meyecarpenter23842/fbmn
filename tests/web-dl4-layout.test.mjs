@@ -143,7 +143,7 @@ test("DL4 Admin save errors use shared toast and editor locks while busy",()=>{
  const source=readFileSync(new URL("../apps/admin/app/home-layout-manager.tsx",import.meta.url),"utf8");
  assert.match(source,/setNoticeVariant\("error"\)/);
  assert.match(source,/variant=\{noticeVariant\}/);
- assert.match(source,/<fieldset className="dl4-edit-fields" disabled=\{busy\}/);
+ assert.match(source,/<fieldset className="dl4-edit-fields" disabled=\{busy\|\|!owner\}/);
 });
 
 test("DL4 automatic Admin preview honors first-public-category order, not alphabetic labels",()=>{

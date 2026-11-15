@@ -23,8 +23,8 @@ test("C1 groups existing Website CMS screens underneath one channel heading",()=
 });
 
 test("C1 preserves both live CMS managers, SKU and price workspaces",()=>{
-  assert.match(page,/section==="banners"&&<CmsManager mode="marketing" owner=\{can\("admin.cms.write"\)\}\/>/);
-  assert.match(page,/section==="content"&&<CmsManager mode="editorial" owner=\{can\("admin.cms.write"\)\}\/>/);
+  assert.match(page,/section==="banners"&&<CmsManager mode="marketing" readable=\{can\("admin.cms.read"\)\|\|can\("admin.cms.write"\)\} owner=\{can\("admin.cms.write"\)\}\/>/);
+  assert.match(page,/section==="content"&&<CmsManager mode="editorial" readable=\{can\("admin.cms.read"\)\|\|can\("admin.cms.write"\)\} owner=\{can\("admin.cms.write"\)\}\/>/);
   assert.match(page,/section==="pricing"&&<CatalogueSideWorkspace mode="pricing" onBusyChange=\{setWorkspaceOperationBusy\}\/>/);
   assert.match(page,/section==="media"&&<CatalogueSideWorkspace mode="media" onBusyChange=\{setWorkspaceOperationBusy\}\/>/);
   for(const section of ["products","structure","media","import-products"])
