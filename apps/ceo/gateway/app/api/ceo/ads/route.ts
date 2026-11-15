@@ -19,7 +19,7 @@ export async function GET(request:Request){
  if(!["geo","historical","ideas","campaigns","performance"].includes(view))
   return fail(400,"invalid_view");
  const p=url.searchParams.get("period")||"7d";
- if(view==="performance"&&!ADS_PERIODS[p])return fail(400,"invalid_period");
+ if(view==="performance"&&!Object.prototype.hasOwnProperty.call(ADS_PERIODS,p))return fail(400,"invalid_period");
  const words=url.searchParams.get("words")?.split("|")||[];
  const geos=url.searchParams.get("geos")?.split("|")||[];
  const names=url.searchParams.get("names")?.split("|")||[];
