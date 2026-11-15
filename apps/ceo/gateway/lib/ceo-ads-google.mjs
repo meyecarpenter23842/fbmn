@@ -129,13 +129,27 @@ export async function adsPerformance(customer,token,login,period,timezone,fetchI
  const query=(from,to)=>
   "SELECT segments.date, metrics.clicks, metrics.impressions, metrics.cost_micros "+
   "FROM customer WHERE segments.date BETWEEN '"+from+"' AND '"+to+"' ORDER BY segments.date";
- const [current,previous]=await Promise.all([
+ const [current,previous,campaigns]=await Promise.all([
   adsSearch(customer,token,login,query(dates.from,dates.to),fetchImpl),
-  adsSearch(customer,token,login,query(dates.previousFrom,dates.previousTo),fetchImpl)]);
+  adsSearch(customer,token,login,query(dates.previousFrom,dates.previousTo),fetchImpl),
+  adsSearch(customer,token,login,
+   "SELECT campaign.id, campaign.name, metrics.clicks, metrics.impressions, metrics.cost_micros "+
+   "FROM campaign WHERE segments.date BETWEEN '"+dates.from+"' AND '"+dates.to+
+   "' ORDER BY metrics.cost_micros DESC LIMIT 50",fetchImpl)
+ ]);
  const now=googleReportRows(current),before=googleReportRows(previous);
  if(!now||!before)throw new Error("ads_metrics_invalid");
+ const topCampaigns=campaigns.map(row=>{
+  const m=row.metrics||{},cost=moneyFromMicros(m.costMicros);
+  if(cost===null||!/^[0-9]+$/.test(String(m.clicks))||
+   !/^[0-9]+$/.test(String(m.impressions)))throw new Error("ads_metrics_invalid");
+  const clicks=Number(m.clicks),impressions=Number(m.impressions);
+  return {id:String(row.campaign?.id||""),name:String(row.campaign?.name||""),
+   clicks,impressions,cost,ctr:impressions?clicks/impressions:null,
+   cpc:clicks?cost/clicks:null};
+ });
  return {source:"google_ads",period,timezone,dates,
-  metrics:now.totals,previous:before.totals,daily:now.daily,
+  metrics:now.totals,previous:before.totals,daily:now.daily,topCampaigns,
   attribution:"not_joined",cpl:null};
 }
 

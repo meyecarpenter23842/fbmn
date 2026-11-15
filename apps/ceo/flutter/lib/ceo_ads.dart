@@ -540,12 +540,33 @@ class CeoAdsPanelState extends State<CeoAdsPanel>{
    groupLabel('PostHog · nguồn Google Ads (không cộng vào Google Ads API)'),
    statText('Phiên theo first-touch PostHog',sessions),
    statText('Phiên có lead B2B PostHog',leads),
+   statText('Phiên xem sản phẩm PostHog',
+    adsChannels==null?null:adsChannels.fold<int>(0,(a,b)=>a+b.productSessions)),
+   statText('Phiên bấm CTA PostHog',
+    adsChannels==null?null:adsChannels.fold<int>(0,(a,b)=>a+b.ctaSessions)),
+   statText('Phiên liên hệ thành công PostHog',
+    adsChannels==null?null:adsChannels.fold<int>(0,(a,b)=>a+b.contactSessions)),
+   statText('Phiên gia công thành công PostHog',
+    adsChannels==null?null:adsChannels.fold<int>(0,(a,b)=>a+b.outsourcingSessions)),
    const Text('CPL: — · Chưa có khóa đối sánh đáng tin cậy giữa campaign Google Ads, '
     'UTM và phiên PostHog. Một phiên không đồng nghĩa một khách hàng/hợp đồng.',
     style:TextStyle(fontSize:12,color:ceoMuted)),
    const SizedBox(height:6),
    const Text('Không suy chi phí từ PostHog/GSC; không tự tính ROAS, doanh thu hay lợi nhuận.',
     style:TextStyle(fontSize:12,color:ceoMuted)),
+   groupLabel('Google Ads · chiến dịch nhiều chi phí nhất'),
+   if(objects(report['topCampaigns']).isEmpty)
+    const Text('Không có chiến dịch có chi phí trong kỳ.',
+     style:TextStyle(fontSize:12,color:ceoMuted)),
+   for(final c in objects(report['topCampaigns']))Padding(
+    padding:const EdgeInsets.symmetric(vertical:4),
+    child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+     Text((c['name']??'').toString(),style:const TextStyle(
+      fontSize:12,fontWeight:FontWeight.w700,color:ceoInk)),
+     Text('ID '+(c['id']??'').toString()+' · '+money(c['cost'])+
+      ' · '+value(c['clicks'])+' click',
+      style:const TextStyle(fontSize:12,color:ceoMuted))
+    ])),
    groupLabel('Google Ads · chi phí từng ngày'),
    for(final d in objects(report['daily']))Padding(
     padding:const EdgeInsets.symmetric(vertical:5),
