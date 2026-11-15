@@ -3,8 +3,16 @@ import 'package:flutter/material.dart';
 import 'package:futurebook_ceo/ceo_stat_controls.dart';
 import 'package:futurebook_ceo/ceo_stats_models.dart';
 import 'package:futurebook_ceo/ceo_gsc_models.dart';
+import 'package:futurebook_ceo/ceo_ads.dart';
 
 void main(){
+ test('ADS02 creative copy preserves commas and semicolons within each line',(){
+  expect(adsCreativeLines('Liên hệ Futurebook, nhận báo giá; tư vấn.\nGiao hàng đại lý'),
+   ['Liên hệ Futurebook, nhận báo giá; tư vấn.','Giao hàng đại lý']);
+  expect(adsCreativeLines('  Sổ tay A4\r\n\r\nTập vở học sinh  '),
+   ['Sổ tay A4','Tập vở học sinh']);
+ });
+
 
  testWidgets('ADS131 eight direct statistic child tabs stay scrollable on mobile',(tester)async{
   const tabs=['Tổng quan','Chuyển đổi','Marketing','Sản phẩm','SEO',

@@ -7,6 +7,10 @@ import 'ceo_ui_tokens.dart';
 import 'ceo_workspace.dart';
 import 'gsc_oauth_navigation_stub.dart' if (dart.library.js_interop) 'gsc_oauth_navigation_web.dart' as oauth_nav;
 
+/// Keep one advertising asset per line. Commas and semicolons are meaningful copy.
+List<String> adsCreativeLines(String text)=>text.split(RegExp(r'\r?\n'))
+ .map((value)=>value.trim()).where((value)=>value.isNotEmpty).toList();
+
 /// Three lazy-load panels share the existing Statistics subtab rail.
 /// Never contains a Google credential and never sends a Google Ads mutation.
 class CeoAdsPanel extends StatefulWidget{
@@ -27,7 +31,7 @@ class CeoAdsPanelState extends State<CeoAdsPanel>{
  final negatives=TextEditingController();
  String matchType='PHRASE';
  String status='',error='',notice='',customer='',currency='',zone='';
- bool loading=true,searching=false,saving=false;
+ bool loading=true,searching=false,saving=false,reconnectNeeded=false;
  int generation=0;
  List<Map<String,dynamic>> suggestions=[],keywordRows=[],campaignRows=[],draftRows=[];
  List<String> chosenGeos=[];
@@ -80,7 +84,7 @@ class CeoAdsPanelState extends State<CeoAdsPanel>{
  }
  Future<void> reload()async{
   final id=++generation;
-  if(mounted)setState((){loading=true;error='';notice='';});
+  if(mounted)setState((){loading=true;error='';notice='';reconnectNeeded=false;});
   try{
    final info=await widget.api.adsStatus();
    if(!mounted||id!=generation)return;
@@ -108,7 +112,7 @@ class CeoAdsPanelState extends State<CeoAdsPanel>{
     if(mounted&&id==generation)setState(()=>performance=obj(res['result']));
    }
   }catch(e){
-   if(mounted&&id==generation)setState((){loading=false;error=humanError(e);});
+   if(mounted&&id==generation)setState((){loading=false;error=humanError(e);reconnectNeeded=e is CeoApiException&&e.status==409;});
   }
  }
  Future<void> lookupGeos()async{
@@ -345,8 +349,8 @@ class CeoAdsPanelState extends State<CeoAdsPanel>{
       'negativeKeywords':lines(negatives.text),'matchType':matchType,
       'budgetDaily':double.tryParse(budget.text.trim())??-1,
       'geos':chosenGeos,'landingUrl':landing.text.trim(),
-      'headlines':lines(headlines.text),
-      'descriptions':lines(descriptions.text)}),
+      'headlines':adsCreativeLines(headlines.text),
+      'descriptions':adsCreativeLines(descriptions.text)}),
       child:const Text('Lưu bản nháp'))
     ]));
   keywords.dispose();headlines.dispose();descriptions.dispose();
@@ -594,6 +598,11 @@ class CeoAdsPanelState extends State<CeoAdsPanel>{
     if(!loading&&status!='ready')showStatus(),
     if(!loading&&status=='ready')switch(widget.kind){
      0=>keywordPanel(),1=>campaignsPanel(),_=>performancePanel()},
+    if(!loading&&reconnectNeeded&&widget.api.grantedScopes.contains('ceo.ads.manage'))
+     actions([FilledButton.icon(
+      onPressed:saving?null:()=>unawaited(connect()),
+      icon:const Icon(Icons.link,size:17),
+      label:const Text('Owner kết nối lại Google Ads'))]),
     if(!loading&&error.isNotEmpty)actions([
      OutlinedButton.icon(onPressed:()=>unawaited(reload()),
       icon:const Icon(Icons.refresh,size:17),label:const Text('Thử lại'))])
