@@ -32,7 +32,7 @@ class CeoApiException implements Exception{
  const CeoApiException(this.status);
  @override String toString()=>switch(status){
   401=>"Phiên đăng nhập chưa được xác nhận. Vui lòng đăng nhập lại.",
-  403=>"Tài khoản không có quyền Owner.",
+  403=>"Tài khoản chưa được cấp quyền truy cập chức năng này.",
   400=>"Thông tin email chưa hợp lệ.",
   413=>"Email hoặc tệp đính kèm vượt dung lượng cho phép.",
   429=>"Dịch vụ email đang giới hạn lượt gửi; vui lòng thử lại.",
@@ -130,7 +130,8 @@ class CeoApi implements CeoRepository {
   }
   Future<bool> checkRole(String token)async{
    final response=await _request('GET','/api/ceo/session',bearer:token);
-   return (response['data'] as Map<String,dynamic>?)?['role']=='owner';
+   final session=response['data'] as Map<String,dynamic>?;
+   return session?['allowed']==true || session?['role']=='owner';
   }
   try{return await checkRole(jwt);}
   on CeoApiException catch(e){
