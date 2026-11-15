@@ -4,6 +4,6 @@ const headers={"Cache-Control":"private, no-store","X-Content-Type-Options":"nos
 export async function GET(request:Request){
  const gate=await requireOwner(request);
  return gate.status===200
-  ? Response.json({data:{role:"owner"}},{headers})
+  ? Response.json({data:{role:gate.role,permissions:gate.permissions||[],allowed:true}},{headers})
   : Response.json({error:{code:gate.status===403?"forbidden":"unauthenticated"}},{status:gate.status,headers});
 }
