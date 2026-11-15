@@ -29,6 +29,13 @@ export async function saveAdsConnection(subject:string,refresh:string,key:Buffer
   "customer_id=NULL,login_customer_id=NULL,currency=NULL,time_zone=NULL,"+
   "customer_name=NULL,updated_at=now()",[subject,ciphertext]));
 }
+// Rotated grants must preserve the customer and its currency/timezone.
+export async function rotateAdsGrant(subject:string,refresh:string,key:Buffer):Promise<void>{
+ const ciphertext=encryptSecret(refresh,key);
+ await withPushDb(db=>db.query(
+  "UPDATE fbmn_catalog_private.ceo_ads_connections "+
+  "SET ciphertext=$2,updated_at=now() WHERE owner_subject=$1",[subject,ciphertext]));
+}
 export async function chooseAdsCustomer(subject:string,info:{
  id:string;name:string;currency:string;timeZone:string},login:string|null):Promise<boolean>{
  const r=await withPushDb(db=>db.query(

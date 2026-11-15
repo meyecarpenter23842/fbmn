@@ -4,7 +4,7 @@ import {validCustomer} from "@/lib/ceo-ads-policy.mjs";
 import {adsOAuthConfig,adsRefresh,adsRevoke} from "@/lib/ceo-ads-oauth.mjs";
 import {adsAccessibleCustomers,adsCustomerInfo} from "@/lib/ceo-ads-google.mjs";
 import {readAdsConnection,readCompanyAdsConnection,
- chooseAdsCustomer,deleteAdsConnection,saveAdsConnection,auditAds} from "@/lib/ceo-ads-store";
+ chooseAdsCustomer,deleteAdsConnection,rotateAdsGrant,auditAds} from "@/lib/ceo-ads-store";
 export const runtime="nodejs";export const dynamic="force-dynamic";
 const headers={"Cache-Control":"private, no-store","Referrer-Policy":"no-referrer",
  "X-Content-Type-Options":"nosniff"};
@@ -42,7 +42,7 @@ export async function POST(request:Request){
   const row=await readAdsConnection(gate.subject,config.key);
   if(!row)return fail(409,"ads_disconnected");
   const access=await adsRefresh(config,row.refreshToken);
-  if(access.rotated)await saveAdsConnection(gate.subject,access.rotated,config.key);
+  if(access.rotated)await rotateAdsGrant(gate.subject,access.rotated,config.key);
   const allowed=await adsAccessibleCustomers(access.accessToken);
   if(customerId===undefined)return Response.json({data:{customers:allowed}},{headers});
   if(!allowed.includes(customerId as string))return fail(403,"customer_not_allowed");

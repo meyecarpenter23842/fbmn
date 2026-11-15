@@ -1,9 +1,9 @@
 import {requireOwner} from "@/lib/owner-gate";
 import {adsOAuthConfig,adsRefresh} from "@/lib/ceo-ads-oauth.mjs";
-import {adsAccessibleCustomers,adsGeoSuggestions,adsKeywordsHistorical,
+import {adsGeoSuggestions,adsKeywordsHistorical,
  adsKeywordIdeas,adsCampaigns,adsPerformance} from "@/lib/ceo-ads-google.mjs";
 import {safeGeos,safeKeywords,ADS_PERIODS} from "@/lib/ceo-ads-policy.mjs";
-import {readAdsConnection,readCompanyAdsConnection} from "@/lib/ceo-ads-store";
+import {readAdsConnection,readCompanyAdsConnection,rotateAdsGrant} from "@/lib/ceo-ads-store";
 export const runtime="nodejs";export const dynamic="force-dynamic";
 const headers={"Cache-Control":"private, no-store","Referrer-Policy":"no-referrer",
  "X-Content-Type-Options":"nosniff"};
@@ -35,9 +35,7 @@ export async function GET(request:Request){
   if(!grant)return Response.json({data:{status:"disconnected"}},{headers});
   if(!grant.customerId)return Response.json({data:{status:"select_customer"}},{headers});
   const token=await adsRefresh(config,grant.refreshToken);
-  // If Google rotates the token, do not silently invalidate the customer selection.
-  // Persisting rotated grants with reset is intentionally forbidden; reconnect instead.
-  if(token.rotated)return fail(409,"ads_reconnect_required");
+  if(token.rotated)await rotateAdsGrant(grant.subject,token.rotated,config.key);
   const login=grant.loginCustomerId;
   let data:unknown;
   if(view==="geo")data=await adsGeoSuggestions(token.accessToken,login,names);
