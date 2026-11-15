@@ -30,13 +30,13 @@ test("Admin popup blocks the workspace until both Neon session and DB principal 
   assert.doesNotMatch(page,/<Brand subtitle="Miền Nam · Quản trị"\/>/);
   assert.match(page,/authState==="authorised" && <>/);
   assert.match(page,/authClient\.signIn\.email\(/);
-  assert.match(page,/Lần đầu dùng Owner/);
+  assert.match(page,/Lần đầu sử dụng tài khoản/);
   assert.match(page,/if\(status===403\)\{/);
     assert.doesNotMatch(page,/domain Admin trong Neon Auth/);
     assert.match(page,/else if\(status===401 \|\| status===422\)/);
     assert.match(page,/<span className="staging-pill">ADMIN<\/span>/);
     assert.doesNotMatch(page,/>STAGING<\/span>/);
-  assert.match(page,/Kích hoạt \/ Xác minh Owner/);
+  assert.match(page,/Kích hoạt \/ Xác minh tài khoản/);
   assert.doesNotMatch(page,/Không kết nối được dịch vụ đăng nhập Neon Auth/);
   assert.match(page,/authClient\.emailOtp\.resetPassword\(/);
   assert.match(page,/authClient\.emailOtp\.verifyEmail\(/);

@@ -7,7 +7,7 @@ import {handlePricebook} from "../backend/admin-api/pricebook-service.mjs";
 const sku="0114";
 const id="10000000-0000-0000-0000-000000000001";
 const owner={role:"owner",enabled:true,subject:"owner-subject"};
-const pricing={role:"pricing",enabled:true,subject:"pricing-subject"};
+const pricing={role:"pricing",enabled:true,subject:"pricing-subject",permissions:["admin.pricing.read"]};
 const make=(path,method="GET",body,auth="Bearer example")=>new Request("https://staging.example.test"+path,{
   method,headers:{Authorization:auth,...(body?{"Content-Type":"application/json"}:{})},
   ...(body?{body:JSON.stringify(body)}:{})

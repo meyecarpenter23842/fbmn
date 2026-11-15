@@ -63,7 +63,7 @@ export async function POST(request:Request){
  try{
   const created=await fetch(auth.toString().replace(/\/$/,"")+"/sign-up/email",{
     method:"POST",redirect:"manual",cache:"no-store",
-    headers:{"Content-Type":"application/json","Accept":"application/json"},
+    headers:{"Content-Type":"application/json","Accept":"application/json",Origin:new URL(request.url).origin},
     body:JSON.stringify({email,name,password}),signal:AbortSignal.timeout(9000)});
   if(!created.ok){
     const info=await created.json().catch(()=>null) as {code?:unknown}|null;

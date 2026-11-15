@@ -95,7 +95,9 @@ export async function GET(request:Request){
      "SELECT s.endpoint,s.p256dh,s.auth,s.created_at,s.owner_subject"+
      " FROM fbmn_catalog_private.ceo_push_subscriptions s"+
      " JOIN fbmn_admin.principals p ON p.auth_subject=s.owner_subject"+
-     " WHERE p.role='owner' AND p.enabled=true"+
+     " WHERE p.enabled=true AND (p.role='owner' OR EXISTS ("+
+     " SELECT 1 FROM fbmn_admin.principal_permissions gp WHERE gp.auth_subject=p.auth_subject"+
+     " AND gp.permission_key='ceo.notifications'))"+
      " AND s.last_seen_at>=now()-interval '180 days'"+
      " AND s.created_at<=$2 AND NOT EXISTS ("+
      "SELECT 1 FROM fbmn_catalog_private.ceo_push_delivery_receipts r"+

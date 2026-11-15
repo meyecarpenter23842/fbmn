@@ -57,7 +57,7 @@ export default function UserManagement({actorRole}:{actorRole:string}){
   }catch(error){setPersistentError(error instanceof Error?error.message:"Không tải được nhân sự.");}
   finally{setLoading(false);}
  },[]);
- useEffect(()=>{void load();},[load]);
+ useEffect(()=>{queueMicrotask(()=>{void load();});},[load]);
  const filtered=useMemo(()=>catalog?.users.filter(u=>(u.email+" "+u.name+" "+u.role).toLowerCase().includes(query.trim().toLowerCase()))||[],[catalog,query]);
  const groups=useMemo(()=>{
   const results:Record<string,Permission[]>={};
@@ -81,9 +81,10 @@ export default function UserManagement({actorRole}:{actorRole:string}){
  };
  useEffect(()=>{
   if(!draft||closing)return;
+  if(modalRef.current?.contains(document.activeElement))return;
   const current=modalRef.current;
   current?.querySelector<HTMLInputElement>("input,select,button")?.focus();
- },[draft?.id,!!draft,closing]);
+ },[draft,closing]);
  function onModalKeys(event:React.KeyboardEvent<HTMLDivElement>){
   if(event.key==="Escape"){event.preventDefault();cancel();return;}
   if(event.key!=="Tab")return;
