@@ -17,11 +17,12 @@ import ContactRequestsManager from "./contact-requests-manager";
 import OutsourcingRequestsManager from "./outsourcing-requests-manager";
 import CatalogueBookManager from "./catalogue-book-manager";
 import AdminTelemetry from "./admin-telemetry";
+import UserManagement from "./user-management";
 
 type AuthState = "checking" | "anonymous" | "authorised" | "forbidden" | "unavailable";
 type Section = "dashboard" | "products" | "structure" | "pricing" | "import-products" | "new-product" | "media" | "categories" | "banners" | "content" | "home-layout" | "app-download" | "category-display" | "seo-settings" | "outsourcing-requests" | "contact-requests" | "chatbot-config" | "chat-history" | "catalogue-books" | "customers" | "accounts" | "settings";
 type GlyphName = "home" | "box" | "folder" | "image" | "layers" | "file" | "users" | "user" | "settings" | "search" | "bell" | "chevron" | "plus" | "upload" | "save" | "eye" | "edit" | "copy" | "trash" | "check" | "alert" | "logout" | "grid" | "arrow-left" | "link" | "book" | "sparkle" | "menu" | "globe" | "close" | "shield" | "filter" | "refresh";
-type SessionData = { role: string; channels: string[] };
+type SessionData = { role: string; channels: string[]; permissions?: string[]; adminAccess?: boolean };
 type Channel = { code: string; label: string };
 type LocalImage = { id: number; name: string; url: string; bytes: number };
 type ProductDraft = { name: string; sku: string; slug: string; family: string; category: string; brand: string; description: string; size: string; pages: string; paper: string; unit: string; pack: string; metaTitle: string; metaDescription: string };
@@ -151,7 +152,7 @@ export default function AdminPage() {
       if(result.data.user.emailVerified===false){
         setAdminEmail(result.data.user.email?.trim().toLowerCase() || "");
         setLoginMode("login");
-        setNotice("Email Owner chưa xác minh. Chọn Kích hoạt / Xác minh Owner để nhận mã qua email.");
+        setNotice("Email Owner chưa xác minh. Chọn Kích hoạt / Xác minh tài khoản để nhận mã qua email.");
         setAuthState("anonymous");return;
       }
       setName(result.data.user.name || result.data.user.email || "Nhân sự Futurebook");
@@ -190,6 +191,7 @@ export default function AdminPage() {
       if(!response.ok){setNotice("Chưa xác minh được quyền quản trị của tài khoản.");setAuthState("unavailable");return;}
       const data=await response.json() as {data?:SessionData};
       if(!data.data?.role || !Array.isArray(data.data.channels))throw Error("Invalid API response");
+      if(data.data.adminAccess===false){setAuthState("forbidden");return;}
       setSession(data.data);
       setAuthState("authorised");
       const channelResult=await adminRequest("channels");
@@ -369,6 +371,12 @@ export default function AdminPage() {
               </div>
             </div>
           </div>
+          {(session?.role==="owner"||(session?.role==="admin"&&session?.permissions?.includes("admin.users.manage")))&&<>
+           <div className="side-menu-divider" aria-hidden="true"/>
+           <button type="button" className={"side-link "+(section==="accounts"?"active":"")} onClick={()=>navigate("accounts")}>
+             <Glyph name="users" size={20}/><span>Quản lý tài khoản</span>
+           </button>
+          </>}
         </nav>
         <div className="side-footer"><div className="decorative-books" aria-hidden="true"><div/><div/><div/></div><p>Tri thức hôm nay<br/>Kiến tạo ngày mai</p><i/></div>
       </aside>
@@ -404,6 +412,7 @@ export default function AdminPage() {
               <div className="editor-aside"><Panel><SectionHeading icon="image">Ảnh sản phẩm</SectionHeading><div className="photo-feature">{activePhoto?<img src={activePhoto.url} alt={activePhoto.name}/>:<div className="photo-placeholder"><Glyph name="image" size={37}/><span>Chưa có ảnh sản phẩm</span></div>}</div><div className="mini-thumbs">{photos.slice(0,4).map(p=><button type="button" key={p.id} className={selectedPhoto===p.id?"selected":""} onClick={()=>setSelectedPhoto(p.id)}><img src={p.url} alt={p.name}/></button>)}<button type="button" className="add-thumb" onClick={()=>{navigate("media");inputFile.current?.click();}}><Glyph name="plus"/></button></div><Button variant="outline" icon="image" onClick={()=>navigate("media")}>Quản lý ảnh</Button><p className="subtle">JPG, PNG, WEBP • tối đa 10MB/ảnh. Ảnh chỉ xem tạm trên máy.</p></Panel><Panel><SectionHeading icon="search">SEO / hiển thị</SectionHeading><Field label="Meta title" value={draft.metaTitle} setValue={v=>updateDraft("metaTitle",v)} placeholder="Tên sản phẩm - Futurebook Miền Nam"/><Field label="Meta description" value={draft.metaDescription} setValue={v=>updateDraft("metaDescription",v)} area/><small className="subtle">Địa chỉ web và SEO thật sẽ tạo sau khi xuất bản.</small></Panel><div className="suggestion-box"><Glyph name="sparkle"/><div><b>Gợi ý nhập liệu</b><p>Không tự đoán giá, mã SKU hoặc chất lượng giấy. Dùng bảng giá và catalogue đã đối chiếu.</p></div></div></div></div>
             </>}
             {section==="media"&&<CatalogueSideWorkspace mode="media" onBusyChange={setWorkspaceOperationBusy}/>}
+            {section==="accounts"&&<UserManagement actorRole={session?.role||""}/>}
             {section==="dashboard"&&<><div className="page-title"><div><h1>Tổng quan quản trị</h1><p>Thông tin tài khoản và quyền quản trị hiện tại.</p></div><span className="tag">Thông tin tài khoản</span></div><div className="metric-grid"><div className="metric"><span className="metric-icon green"><Glyph name="shield"/></span><div><small>Trạng thái</small><strong className="metric-word">Đã xác thực</strong><em>Phiên đăng nhập hợp lệ</em></div></div><div className="metric"><span className="metric-icon purple"><Glyph name="user"/></span><div><small>Vai trò</small><strong className="metric-word">{roleLabel}</strong><em>Quyền theo tài khoản</em></div></div><div className="metric"><span className="metric-icon blue"><Glyph name="layers"/></span><div><small>Kênh được xem</small><strong>{session?.channels.length||0}</strong><em>Phạm vi theo tài khoản</em></div></div></div><Panel><SectionHeading icon="layers">Kênh kinh doanh được cấp quyền</SectionHeading>{channels.map(c=><div className="channel-row" key={c.code}><span>{c.label}</span><b>{session?.role==="admin"||session?.channels.includes(c.code)?"Có quyền":"Không có quyền"}</b></div>)}</Panel></>}
             {!["dashboard","products","structure","pricing","import-products","new-product","media","banners","content","home-layout","app-download","seo-settings","catalogue-books"].includes(section)&&<><div className="page-title"><div><h1>{sectionName[section]}</h1></div></div><Placeholder title={sectionName[section]+" chưa kích hoạt"} text="Chức năng này đang được hoàn thiện."/></>}
           </>}
@@ -416,7 +425,7 @@ export default function AdminPage() {
       {authState==="checking"?<><h1 id="auth-title">Đang xác minh phiên đăng nhập</h1><p className="modal-subtitle">Đang kiểm tra quyền truy cập Futurebook…</p><div className="modal-spinner" role="status" aria-label="Đang tải"/></>:
        authState==="anonymous"?<><h1 id="auth-title">{loginMode==="verify"?"Xác minh email":loginMode==="forgot"?"Khôi phục mật khẩu":loginMode==="reset"?"Đặt mật khẩu mới":"Đăng nhập quản trị"}</h1>
        <p className="modal-subtitle">{loginMode==="verify"?"Nhập mã được gửi đến email để xác minh quyền sở hữu hộp thư.":loginMode==="forgot"?"Nhận mã qua email để đặt lại mật khẩu an toàn.":loginMode==="reset"?"Nhập mã email và mật khẩu mới; không dùng lại mật khẩu đã chia sẻ.":"Dành riêng cho nhân sự quản trị được cấp quyền. Đăng nhập bằng email và mật khẩu."}</p>
-       {loginMode==="login"&&<div className="first-login-hint" role="note"><Glyph name="alert" size={17}/><span><strong>Lần đầu dùng Owner?</strong> Chọn <b>Kích hoạt / Xác minh Owner</b> bên dưới để nhận mã email và đặt mật khẩu mới.</span></div>}
+       {loginMode==="login"&&<div className="first-login-hint" role="note"><Glyph name="alert" size={17}/><span><strong>Lần đầu sử dụng tài khoản?</strong> Chọn <b>Kích hoạt / Xác minh tài khoản</b> bên dưới để nhận mã email và đặt mật khẩu mới.</span></div>}
        <form className="admin-login-form" onSubmit={e=>{e.preventDefault();void (loginMode==="login"?signIn():loginMode==="verify"?verifyEmail():loginMode==="forgot"?requestReset():resetPassword());}}>
          <label className="login-label">Email quản trị<input type="email" value={adminEmail} onChange={e=>setAdminEmail(e.target.value)} placeholder="email@congty.vn" autoComplete="email" required maxLength={200}/></label>
          {(loginMode==="verify"||loginMode==="reset")&&<label className="login-label">Mã xác minh qua email<input inputMode="numeric" autoComplete="one-time-code" value={emailCode} onChange={e=>setEmailCode(e.target.value)} placeholder="Nhập mã đã nhận" required maxLength={12}/></label>}
