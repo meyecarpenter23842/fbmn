@@ -164,14 +164,14 @@ const getJson=async request=>{
   return JSON.parse(raw);
 };
 export async function handleMedia({request,actor,db,r2}){
-  if(!ROLES.has(actor?.role))return fail(403,"forbidden");
+  if(!ROLES.has(actor?.role)&&!actor?.permissions?.includes("admin.catalogue.read")&&!actor?.permissions?.includes("admin.catalogue.write"))return fail(403,"forbidden");
   const url=new URL(request.url),action=url.pathname.slice("/v1/admin/catalogue/media/".length);
   if(!["list","library","upload","file","link","order","scan","adopt","cleanup"].includes(action))
     return fail(404,"not_found");
   if(!db)return fail(503,"media_db_unavailable");
   if(!r2||typeof r2.put!=="function"||typeof r2.get!=="function")
     return fail(503,"media_storage_unavailable");
-  const owner=actor.role==="owner";
+  const owner=actor.role==="owner"||actor.permissions?.includes("admin.catalogue.write");
   if(url.search&&action!=="list"&&action!=="file")return fail(400,"invalid_query");
   try{
     if(action==="scan"&&request.method==="GET"){

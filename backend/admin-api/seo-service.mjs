@@ -32,7 +32,7 @@ async function body(request){
  try{return JSON.parse(raw);}catch{return null;}
 }
 export async function handleSeoSettings({request,actor,db}){
- if(actor?.role!=="owner")return fail(403,"owner_required");
+ if(actor?.role!=="owner"&&!actor?.permissions?.includes(request.method==="GET"?"admin.website.read":"admin.website.write"))return fail(403,"owner_required");
  const url=new URL(request.url);
  if(url.pathname!=="/v1/admin/website/seo")return fail(400,"invalid_route");
  if(request.method!=="GET"&&url.search)return fail(400,"invalid_query");
