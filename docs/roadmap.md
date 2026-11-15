@@ -392,3 +392,17 @@ Thứ tự mới trước DL8: DL11A (Header một hàng, logo giữa 3+3 tab, t
 - Desktop ratio **16:7**, Mobile ratio **4:5**; `object-fit:contain`, chọn ảnh riêng qua Admin và giữ toàn bộ motion/dot/slide hiện có. CTA dùng `ctaUrl` của Banner, rỗng → `/san-pham`; không cần đổi DB/API/Worker.
 - Admin preview Website phải cùng bố cục này; cho chỉnh đường dẫn nút trong Banner và mô tả vùng an toàn. Các Banner khác, catalogue, SKU, NET không đổi.
 - Phát triển qua repo phụ PR → CI/Codex → squash merge → đồng bộ repo chính; chỉ deploy Website/Admin production khi Owner duyệt.
+
+
+## ADS01–ADS03 — Google Ads trong CEO → Thống kê (15/11/2026; Issue #131)
+
+**Nguồn duy nhất:** [Issue #131](https://github.com/alibaba240185/fbmn/issues/131). Triển khai trong **CEO → Thống kê**, thêm đúng ba tab con cùng cấp sau năm tab hiện tại: (1) Tổng quan, (2) Chuyển đổi, (3) Marketing, (4) Sản phẩm, (5) SEO, (6) **Từ khóa Ads**, (7) **Chiến dịch Ads**, (8) **Hiệu quả Ads**. Giữ sticky tab rail, lazy loading, UI token và responsive 360/390/1280/1440; **không thêm menu chính**, không thay chức năng SEO/GSC/PostHog/PH03.
+
+| Mã | Phạm vi và nguồn dữ liệu | Gate bắt buộc |
+|---|---|---|
+| **ADS-CORE** | OAuth Google Ads riêng GSC, Owner-bound/PKCE, customer được Owner chọn, dữ liệu credentials mã hóa server-side, RBAC Gateway và trạng thái lỗi rõ ràng | Phải kiểm tra Google Cloud API access thực tế, customer, currency, timezone; không lộ token và không đoán developer token |
+| **ADS01** | Gợi ý/nghiên cứu từ khóa cho tập vở, sổ, giấy photocopy, VPP sỉ, đại lý và gia công; target Việt Nam/TP.HCM/miền Tây từ geo target Google Ads; lưu bộ từ khóa nháp | Search volume/competition/top-of-page bid chỉ từ Google Ads, nhãn lịch sử/ước tính; CPC thực chỉ từ dữ liệu thực; không bịa số |
+| **ADS02** | Xem campaign; soạn draft Search B2B (nhóm từ khóa, match type, negative, location, ngân sách/ngày, URL www.fbmn.vn), Owner duyệt trước mọi thay đổi có thể phát sinh chi phí | Preview before/after + customer/currency/amount, Owner xác nhận payload một lần/idempotency/audit, tạo campaign mặc định PAUSED; không tự phát quảng cáo |
+| **ADS03** | Google Ads cost_micros, impressions/clicks/CTR/CPC theo 7/30/90 ngày và kỳ trước; PostHog lead B2B đặt song song | Không JOIN khác nguồn thiếu campaign/UTM mapping; CPL không đủ attribution là —; không suy ROAS/lợi nhuận hoặc lấy chi phí từ GSC/PostHog |
+
+**Triển khai:** branch/PR repo phụ → CI Flutter/Gateway + Codex review → squash merge → kiểm tra đồng bộ repo chính trước khi phát hành CEO. SQL migration (nếu có) chỉ làm trên Neon production theo phạm vi Owner duyệt riêng; không tạo Neon branch phụ. Chức năng chạy quảng cáo, bật campaign hoặc thay ngân sách vẫn phải có xác nhận riêng của Owner **ngay trong CEO** bất kể đã deploy phần mềm. Triển khai API theo chế độ fail-closed khi thiếu Google Ads OAuth/customer/quyền, không render số 0 thay dữ liệu chưa có.
