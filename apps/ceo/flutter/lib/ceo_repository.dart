@@ -7,7 +7,14 @@ import 'ceo_gsc_models.dart';
 import 'http_client_stub.dart' if (dart.library.js_interop) 'http_client_web.dart' as platform;
 
 /// Same-origin only. No token storage, credential logging or direct private Worker requests.
+const allCeoScopes=<String>{
+ 'ceo.overview','ceo.conversations','ceo.outsourcing','ceo.contacts',
+ 'ceo.mail.read','ceo.mail.send','ceo.statistics','ceo.seo',
+ 'ceo.notifications','ceo.gsc.manage'
+};
 abstract class CeoRepository{
+ // Fake/test Owner repositories retain complete access by default.
+ Set<String> get grantedScopes=>allCeoScopes;
  Future<void> signIn(String email,String password);
  Future<void> signOut();
  Future<bool> ownerSession();
@@ -40,6 +47,8 @@ class CeoApiException implements Exception{
   _=>"Chưa tải được dữ liệu. Vui lòng thử lại."};
 }
 class CeoApi implements CeoRepository {
+ Set<String> _grants=<String>{};
+ @override Set<String> get grantedScopes=>_grants;
  final http.Client _client;
  CeoApi({http.Client? client}):_client=client??platform.createClient();
  Uri _url(String path)=>Uri.base.resolve(path);
@@ -120,6 +129,7 @@ class CeoApi implements CeoRepository {
  }
  @override Future<void> signOut() async{
   await _request("POST","/api/auth/sign-out",json:{});
+  _grants=<String>{};
  }
  @override Future<bool> ownerSession() async{
   String jwt;
@@ -131,7 +141,10 @@ class CeoApi implements CeoRepository {
   Future<bool> checkRole(String token)async{
    final response=await _request('GET','/api/ceo/session',bearer:token);
    final session=response['data'] as Map<String,dynamic>?;
-   return session?['allowed']==true || session?['role']=='owner';
+   if(session?['role']=='owner'){_grants=allCeoScopes;return true;}
+   final granted=session?['permissions'];
+   _grants=granted is List?granted.whereType<String>().where((p)=>p.startsWith('ceo.')).toSet():<String>{};
+   return session?['allowed']==true && _grants.isNotEmpty;
   }
   try{return await checkRole(jwt);}
   on CeoApiException catch(e){
