@@ -40,6 +40,9 @@ class CeoStatisticsTabState extends State<CeoStatisticsTab>{
  @override void initState(){
   super.initState();
   final callbackStatus=Uri.base.queryParameters['gsc'];
+  if(Uri.base.queryParameters.containsKey('ads')&&callbackStatus==null){
+   section=5;
+  }
   if(callbackStatus!=null){
    section=4;
    gscCallbackMessage=gscOAuthResultMessage(callbackStatus);

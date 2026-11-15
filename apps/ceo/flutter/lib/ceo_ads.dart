@@ -396,10 +396,11 @@ class CeoAdsPanelState extends State<CeoAdsPanel>{
    final result=await widget.api.adsPost('/api/ceo/ads/approvals',{
     'stage':'apply','ticket':token,'confirmed':true});
    if(!mounted)return;
-   setState(()=>notice=result['status']=='verified'?
+   final finished=result['status']=='verified'?
     'Google Ads đã xác nhận thay đổi; xem lại chiến dịch.' :
-    'Đã gửi yêu cầu. Google chưa hậu kiểm được; KHÔNG thử lại, kiểm tra Google Ads trước.');
+    'Đã gửi yêu cầu. Google chưa hậu kiểm được; KHÔNG thử lại, kiểm tra Google Ads trước.';
    await reload();
+   if(mounted)setState(()=>notice=finished);
   }catch(e){
    if(mounted)setState(()=>error=humanError(e));
   }finally{if(mounted)setState(()=>saving=false);}
@@ -419,6 +420,23 @@ class CeoAdsPanelState extends State<CeoAdsPanel>{
   if(daily==null||!mounted)return;
   await ownerPreview({'action':'budget','campaignId':campaign['id'],'budgetDaily':daily});
  }
+
+ Future<void> renameDraft(Map<String,dynamic> item)async{
+  if(!widget.api.grantedScopes.contains('ceo.ads.draft'))return;
+  final name=await askName('Đổi tên bản nháp');
+  if(name==null||name.length<3||!mounted)return;
+  final id=(item['id']??'').toString(),rev=item['revision'];
+  final payload=obj(item['payload']);
+  if(rev is! int||payload.isEmpty)return;
+  payload['name']=name;
+  setState((){saving=true;error='';});
+  try{
+   await widget.api.adsPatchDraft(id,rev,payload);
+   final rows=await widget.api.adsDrafts();
+   if(mounted)setState((){draftRows=objects(rows);notice='Đã cập nhật bản nháp.';});
+  }catch(e){if(mounted)setState(()=>error=humanError(e));}
+  finally{if(mounted)setState(()=>saving=false);}
+ }
  Widget draftList(String title,String kind){
   final records=draftRows.where((d)=>d['kind']==kind).toList();
   return Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
@@ -436,6 +454,10 @@ class CeoAdsPanelState extends State<CeoAdsPanel>{
        onPressed:saving?null:()=>unawaited(ownerPreview({
         'action':'create_paused','draftId':d['id']})),
        icon:const Icon(Icons.fact_check_outlined,size:20,color:ceoPurple)),
+     if(widget.api.grantedScopes.contains('ceo.ads.draft'))
+      IconButton(tooltip:'Đổi tên bản nháp',
+       onPressed:()=>unawaited(renameDraft(d)),
+       icon:const Icon(Icons.edit_outlined,size:20,color:ceoMuted)),
      if(widget.api.grantedScopes.contains('ceo.ads.draft'))
       IconButton(tooltip:'Xóa bản nháp',onPressed:()=>unawaited(
        deleteDraft((d['id']??'').toString())),

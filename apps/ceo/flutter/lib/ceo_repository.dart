@@ -297,6 +297,11 @@ class CeoApi implements CeoRepository {
   if(data is Map<String,dynamic>)return data;
   throw const CeoApiException(503);
  }
+ Future<void> adsPatchDraft(String id,int revision,Map<String,dynamic> draft)async{
+  if(!RegExp(r'^[a-fA-F0-9-]{36}$').hasMatch(id))throw const CeoApiException(400);
+  await _request('PATCH','/api/ceo/ads/drafts?id='+id,
+   bearer:await _ownerJwt(),json:{'revision':revision,'draft':draft});
+ }
  Future<void> adsDeleteDraft(String id)async{
   if(!RegExp(r'^[a-fA-F0-9-]{36}$').hasMatch(id))throw const CeoApiException(400);
   await _request('DELETE','/api/ceo/ads/drafts?id='+id,
@@ -358,6 +363,8 @@ extension CeoAdsAccess on CeoRepository{
  Future<List<dynamic>> adsDrafts()=>_adsApi.adsDrafts();
  Future<Map<String,dynamic>> adsPost(String route,Map<String,dynamic> payload)=>
   _adsApi.adsPost(route,payload);
+ Future<void> adsPatchDraft(String id,int revision,Map<String,dynamic> draft)=>
+  _adsApi.adsPatchDraft(id,revision,draft);
  Future<void> adsDeleteDraft(String id)=>_adsApi.adsDeleteDraft(id);
  Future<String> adsStartOAuth()=>_adsApi.adsStartOAuth();
  Future<void> adsDisconnect()=>_adsApi.adsDisconnect();
