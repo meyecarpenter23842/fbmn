@@ -13,6 +13,8 @@ import { handleCatalogueBooks } from "./catalogue-books-service.mjs";
 import { handlePricebook } from "./pricebook-service.mjs";
 import { handleBulkPricebook } from "./pricebook-bulk-service.mjs";
 import { handleManagedPriceLists } from "./managed-price-lists-service.mjs";
+import {handleStaffUsers} from "./user-management-service.mjs";
+import {allowed,PERMISSIONS} from "./user-permissions.mjs";
 // No cookie/JWT claims may supply roles or channel scopes.
 const ROUTES = new Map([
   ["/v1/admin/session", "session.read"],
@@ -20,7 +22,7 @@ const ROUTES = new Map([
   ["/v1/admin/publish-capability", "publish.check"],
   ["/v1/admin/pricing-capability", "pricing.check"],
 ]);
-const ROLES = new Set(["viewer", "editor", "publisher", "pricing", "admin", "owner"]);
+const ROLES = new Set(["viewer", "editor", "publisher", "pricing", "admin", "ceo", "owner"]);
 const PERMITTED = Object.freeze({
   "session.read": ROLES,
   "channels.read": ROLES,
@@ -60,7 +62,7 @@ export function createAdminApi({ verifyToken, loadActor, listChannels, recordAud
       if (origin && !corsOrigin) return error(403, "origin_forbidden", null);
       const url = new URL(request.url);
       const isPdfUpload=url.pathname==="/v1/admin/website/catalogue/pdf-upload";
-      const action = (url.pathname === "/v1/admin/website/catalogue" || url.pathname.startsWith("/v1/admin/website/catalogue/")) ? "website.catalogue" :
+      const action = (url.pathname === "/v1/admin/users" || url.pathname === "/v1/admin/users/preflight") ? "users.manage" : (url.pathname === "/v1/admin/website/catalogue" || url.pathname.startsWith("/v1/admin/website/catalogue/")) ? "website.catalogue" :
         (url.pathname === "/v1/admin/website/home-layout" || url.pathname === "/v1/admin/website/app-download" || url.pathname === "/v1/admin/website/category-display" || url.pathname === "/v1/admin/website/seo" || url.pathname === "/v1/admin/website/outsourcing-requests" || url.pathname === "/v1/admin/website/contact-requests" || url.pathname === "/v1/admin/website/chatbot-config" || url.pathname === "/v1/admin/website/chat-history") ? "website.layout" : (url.pathname === "/v1/admin/cms" || url.pathname.startsWith("/v1/admin/cms/")) ? "cms.manage" :
         url.pathname.startsWith("/v1/admin/catalogue/") ? "catalogue.manage" :
         url.pathname.startsWith("/v1/admin/pricing/") ? "pricing.private" : ROUTES.get(url.pathname);
@@ -94,11 +96,17 @@ export function createAdminApi({ verifyToken, loadActor, listChannels, recordAud
         catch { return error(503, "service_unavailable", corsOrigin); }
         return error(403, "forbidden", corsOrigin);
       }
-      if (!PERMITTED[action].has(actor.role)) {
+      const permission = action==="users.manage" ? "admin.users.manage" :
+        action==="catalogue.manage" ? (request.method==="GET"?"admin.catalogue.read":"admin.catalogue.write") :
+        action==="pricing.private" ? (request.method==="GET"?"admin.pricing.read":"admin.pricing.write") :
+        action==="cms.manage" ? (request.method==="GET"?"admin.cms.read":"admin.cms.write") :
+        (action==="website.layout"||action==="website.catalogue") ? (request.method==="GET"?"admin.website.read":"admin.website.write") : null;
+      if (permission && !allowed(actor,permission)) {
         try { await recordAudit({ subject, action, outcome: "denied" }); }
         catch { return error(503, "service_unavailable", corsOrigin); }
         return error(403, "forbidden", corsOrigin);
       }
+      if (action === "users.manage")return handleStaffUsers({request,actor:{...actor,subject},db:catalogueDb});
       if (action === "website.catalogue") {
         const response=await handleCatalogueBooks({request,actor:{...actor,subject},
           db:catalogueDb,r2:catalogueBookR2});
@@ -145,7 +153,9 @@ export function createAdminApi({ verifyToken, loadActor, listChannels, recordAud
       try {
         let data;
         if (action === "session.read") {
-          data = { role: actor.role, channels: ["admin","owner"].includes(actor.role) ? ["public_web","dealer_app","consumer_app"] : actor.channels };
+          const permissions=actor.role==="owner" ? PERMISSIONS.map(p=>p.key) : (actor.permissions||[]);
+          data = { role: actor.role, channels: ["admin","owner"].includes(actor.role) ? ["public_web","dealer_app","consumer_app"] : actor.channels,
+            permissions, adminAccess:actor.role==="owner"||permissions.some(p=>p.startsWith("admin.")) };
         } else if (action === "channels.read") {
           data = await listChannels(subject, ["admin","owner"].includes(actor.role));
         } else {
