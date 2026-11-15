@@ -41,7 +41,11 @@ DECLARE result jsonb;
 BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM fbmn_admin.principals
-    WHERE auth_subject=p_actor AND enabled AND role::text IN ('owner','admin')
+    WHERE auth_subject=p_actor AND enabled AND
+      (role::text='owner' OR (role::text='admin' AND EXISTS(
+        SELECT 1 FROM fbmn_admin.principal_permissions
+        WHERE auth_subject=p_actor AND permission_key='admin.users.manage'
+      )))
   ) THEN RAISE EXCEPTION 'forbidden' USING ERRCODE='42501'; END IF;
   SELECT COALESCE(jsonb_agg(
     jsonb_build_object(
@@ -72,7 +76,11 @@ DECLARE v_actor_role text; v_subject text; v_old_role text; v_old_revision integ
 BEGIN
   SELECT role::text INTO v_actor_role FROM fbmn_admin.principals
   WHERE auth_subject=p_actor AND enabled;
-  IF v_actor_role NOT IN ('owner','admin') OR v_actor_role IS NULL
+  IF v_actor_role NOT IN ('owner','admin') OR v_actor_role IS NULL OR
+     (v_actor_role='admin' AND NOT EXISTS (
+        SELECT 1 FROM fbmn_admin.principal_permissions
+        WHERE auth_subject=p_actor AND permission_key='admin.users.manage'
+     ))
     THEN RAISE EXCEPTION 'forbidden' USING ERRCODE='42501'; END IF;
   IF p_role NOT IN ('viewer','editor','publisher','pricing','admin','ceo')
      OR p_email IS NULL OR length(trim(p_email)) NOT BETWEEN 3 AND 200

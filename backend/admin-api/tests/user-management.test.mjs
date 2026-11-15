@@ -51,3 +51,15 @@ test("USER01 permissions are explicit, role presets are not implicit access",()=
  assert.equal(allowed({role:"editor",enabled:true,permissions:["admin.users.manage"]},"admin.users.manage"),false);
  assert.equal(allowed({role:"owner",enabled:true,permissions:[]},"ceo.mail.send"),true);
 });
+
+test("USER01 SQL migration is single, complete, and enforces Admin staff grants",async()=>{
+ const {readFileSync}=await import("node:fs");
+ const source=readFileSync(new URL("../../neon/migrations/20261115_user01_staff_permissions.up.sql",import.meta.url),"utf8");
+ assert.equal((source.match(/CREATE TABLE IF NOT EXISTS fbmn_admin.user01_permissions/g)||[]).length,1);
+ assert.equal((source.match(/CREATE OR REPLACE FUNCTION/g)||[]).length,2);
+ assert.equal((source.match(/COMMIT;/g)||[]).length,1);
+ assert.match(source,/permission_key text PRIMARY KEY CHECK \(permission_key ~ '\^\(admin\|ceo\)\[\.\]\[a-z\.\]\+\$'\)/);
+ assert.match(source,/v_actor_role='admin' AND NOT EXISTS/);
+ assert.match(source,/permission_key='admin.users.manage'/);
+ assert.doesNotMatch(source,/DROP TABLE|TRUNCATE|DELETE FROM neon_auth/);
+});
