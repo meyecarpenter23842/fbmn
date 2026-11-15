@@ -73,10 +73,11 @@ export async function POST(request: Request) {
   if (response.status === 403) return fail(403, "forbidden");
   if (!response.ok || !response.headers.get("content-type")?.includes("application/json"))
     return fail(503, "admin_api_unavailable");
-  let role: unknown;
-  try { role = (await response.json()).data?.role; }
+  let identity: {role?:string;permissions?:string[]}|undefined;
+  try { identity = (await response.json()).data; }
   catch { return fail(503, "admin_api_unavailable"); }
-  if (typeof role !== "string" || !ROLES.has(role)) return fail(403, "insufficient_role");
+  const delegated=Array.isArray(identity?.permissions)&&identity.permissions.includes("admin.catalogue.write");
+  if (!ROLES.has(identity?.role||"") && !delegated) return fail(403, "insufficient_role");
 
   let incoming: Uint8Array | null;
   try { incoming = await readWithCap(request); }
