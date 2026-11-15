@@ -311,7 +311,7 @@ async function resolvePrice(db,input){
  }catch{return ERR(503,"price_resolution_unavailable");}
 }
 export async function handleManagedPriceLists({request,actor,db}){
- if(actor?.role!=="owner")return ERR(403,"owner_required");
+ if(actor?.role!=="owner" && !actor?.permissions?.includes(request.method==="GET"?"admin.pricing.read":"admin.pricing.write"))return ERR(403,"owner_required");
  const u=new URL(request.url),prefix="/v1/admin/pricing/managed";
  const action=u.pathname===prefix?"":u.pathname.startsWith(prefix+"/")?
   u.pathname.slice(prefix.length+1):"unknown";

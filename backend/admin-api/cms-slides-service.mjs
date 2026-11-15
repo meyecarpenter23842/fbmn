@@ -64,7 +64,7 @@ async function audit(c,id,actor,action,before,after){
  [id,actor,action,JSON.stringify(before),JSON.stringify(after)]);
 }
 export async function handleCmsSlides({request,db,r2,actor,action}){
- if(actor?.role!=="owner")return fail(403,"owner_required");
+ if(actor?.role!=="owner" && !actor?.permissions?.includes(request.method==="GET"?"admin.cms.read":"admin.cms.write"))return fail(403,"owner_required");
  const u=new URL(request.url);
  if(request.method==="GET"&&action==="slides"){
   if(!getOne(u,["id"])||!UUID.test(u.searchParams.get("id")))return fail(400,"invalid_query");

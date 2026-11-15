@@ -49,7 +49,7 @@ function validEdit(x){
     x.confirm==="CAP_NHAT_GIA_NHAP";
 }
 export async function handlePricebook({request,actor,db}){
-  if(!canRead.has(actor?.role)||typeof actor.subject!=="string")return error(403,"pricing_forbidden");
+  if((!canRead.has(actor?.role)&&!actor?.permissions?.includes("admin.pricing.read")&&!actor?.permissions?.includes("admin.pricing.write"))||typeof actor.subject!=="string")return error(403,"pricing_forbidden");
   const url=new URL(request.url);
   if(url.pathname!=="/v1/admin/pricing/entries")return error(404,"not_found");
   if(request.method==="GET"){
@@ -71,7 +71,7 @@ export async function handlePricebook({request,actor,db}){
   }
   if(!["POST","PATCH"].includes(request.method))return error(405,"method_not_allowed");
   // Pricing role can inspect internal prices but cannot alter them.
-  if(actor.role!=="owner")return error(403,"owner_required");
+  if(actor.role!=="owner" && !actor.permissions?.includes("admin.pricing.write"))return error(403,"owner_required");
   if(url.search!=="")return error(400,"invalid_query");
   const input=await parseBody(request);
   if(request.method==="POST"&&!validEntry(input))return error(400,"invalid_price_draft");
