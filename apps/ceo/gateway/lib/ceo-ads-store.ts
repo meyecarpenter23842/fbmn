@@ -104,7 +104,7 @@ export async function reserveAdsApproval(owner:string,hash:string,action:string,
    "INSERT INTO fbmn_catalog_private.ceo_ads_approvals "+
    "(approval_hash,owner_subject,action,customer_id,currency,draft_id,preview,status) "+
    "VALUES($1,$2,$3,$4,$5,$6::uuid,$7,'in_flight') "+
-   "ON CONFLICT(approval_hash) DO NOTHING RETURNING id::text",
+   "ON CONFLICT DO NOTHING RETURNING id::text",
    [hash,owner,action,customer,currency,draftId,JSON.stringify(preview)]);
   return r.rows[0]?.id??null;
  });

@@ -59,6 +59,10 @@ CREATE TABLE IF NOT EXISTS fbmn_catalog_private.ceo_ads_approvals(
  created_at timestamptz NOT NULL DEFAULT now(),
  updated_at timestamptz NOT NULL DEFAULT now()
 );
+-- Prevent two distinct consent tickets creating the same draft twice.
+CREATE UNIQUE INDEX IF NOT EXISTS ceo_ads_approvals_one_create_per_draft
+ ON fbmn_catalog_private.ceo_ads_approvals(owner_subject,draft_id)
+ WHERE action='create_paused';
 CREATE INDEX IF NOT EXISTS ceo_ads_approvals_owner_idx
  ON fbmn_catalog_private.ceo_ads_approvals(owner_subject,created_at DESC);
 REVOKE ALL ON fbmn_catalog_private.ceo_ads_approvals FROM PUBLIC;
