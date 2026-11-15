@@ -123,7 +123,7 @@ export default function AdminPage() {
   const [adminPassword,setAdminPassword] = useState("");
   const [repeatPassword,setRepeatPassword] = useState("");
   const [emailCode,setEmailCode] = useState("");
-  const [section,setSection] = useState<Section>("products");
+  const [section,setSection] = useState<Section>("dashboard");
   const [menuOpen,setMenuOpen] = useState(false);
   const [productMenuExpanded,setProductMenuExpanded]=useState(true);
   const [websiteMenuExpanded,setWebsiteMenuExpanded]=useState(true);
@@ -303,6 +303,16 @@ export default function AdminPage() {
   }
   function removePhoto(id:number){setPhotos(prev=>{const found=prev.find(p=>p.id===id);if(found){URL.revokeObjectURL(found.url);photoUrls.current=photoUrls.current.filter(u=>u!==found.url);}return prev.filter(p=>p.id!==id);});if(selectedPhoto===id)setSelectedPhoto(null);if(coverId===id)setCoverId(null);}
   const activePhoto=photos.find(p=>p.id===selectedPhoto)||photos[0];
+  const can=(key:string)=>session?.role==="owner"||session?.permissions?.includes(key)===true;
+  const canSection=(key:Section)=>{
+    if(key==="dashboard")return true;
+    if(key==="accounts")return can("admin.users.manage");
+    if(["products","structure","media"].includes(key))return can("admin.catalogue.read");
+    if(["import-products","new-product"].includes(key))return can("admin.catalogue.write");
+    if(key==="pricing")return can("admin.pricing.read");
+    if(["banners","content"].includes(key))return can("admin.cms.read");
+    return can("admin.website.read");
+  };
   const roleLabel=session?.role?.toUpperCase() || "";
   const sectionName:Record<Section,string>={dashboard:"Tổng quan",products:"Danh sách sản phẩm",structure:"Danh mục & nhóm mẫu",pricing:"Giá & bảng giá","import-products":"Nhập / cập nhật Excel","new-product":"Thêm sản phẩm",media:"Thư viện hình ảnh",categories:"Danh mục",banners:"Banner & Popup",content:"Tin tức & Khuyến mãi","home-layout":"Trang chủ & bố cục","app-download":"Popup tải ứng dụng","category-display":"Danh mục & hiển thị sản phẩm","seo-settings":"SEO sản phẩm & nội dung","outsourcing-requests":"Yêu cầu gia công","contact-requests":"Liên hệ & đăng ký đại lý","chatbot-config":"Cấu hình Chatbot","chat-history":"Quản lý hội thoại","catalogue-books":"Kho Catalogue",customers:"Khách hàng",accounts:"Tài khoản",settings:"Cài đặt"};
   return <div className="admin-app">
@@ -329,7 +339,7 @@ export default function AdminPage() {
             </button>
             <div id="product-navigation" className={"side-submenu-motion"+(productMenuExpanded?" is-expanded":"")} aria-hidden={!productMenuExpanded} inert={!productMenuExpanded}>
               <div className="side-submenu">
-              {productSections.map(item=>
+              {productSections.filter(item=>canSection(item.key)).map(item=>
                 <button type="button" key={item.key}
                   className={"side-sub-link"+(section===item.key?" active":"")}
                   aria-current={section===item.key?"page":undefined}
@@ -341,7 +351,7 @@ export default function AdminPage() {
             </div>
           </div>
           <div className="side-menu-divider" aria-hidden="true"/>
-          {menu.filter(item=>item.key==="pricing").map(item=>
+          {menu.filter(item=>item.key==="pricing"&&can("admin.pricing.read")).map(item=>
             <button type="button" key={item.key}
               className={"side-link "+(section===item.key?"active":"")}
               aria-current={section===item.key?"page":undefined}
@@ -360,7 +370,7 @@ export default function AdminPage() {
             </button>
             <div id="website-navigation" className={"side-submenu-motion"+(websiteMenuExpanded?" is-expanded":"")} aria-hidden={!websiteMenuExpanded} inert={!websiteMenuExpanded}>
               <div className="side-submenu">
-              {websiteSections.map(item=>
+              {websiteSections.filter(item=>canSection(item.key)).map(item=>
                 <button type="button" key={item.key}
                   className={"side-sub-link"+(section===item.key?" active":"")}
                   aria-current={section===item.key?"page":undefined}
@@ -387,27 +397,27 @@ export default function AdminPage() {
         </header>
         <main className="workspace-main">
           {authState==="authorised" && <>{section!=="contact-requests"&&section!=="chatbot-config"&&section!=="chat-history"&&section!=="seo-settings"&&section!=="app-download"&&<AdminTelemetry section={section}/>}
-            {section==="products" && <CatalogueManager
+            {canSection("products")&&section==="products" && <CatalogueManager
               onImport={()=>navigate("import-products")}
               onStructure={pane=>{setStructureTab(pane);navigate("structure");}}/>}
-            {section==="structure"&&<CatalogueManager key={structureTab}
+            {canSection("structure")&&section==="structure"&&<CatalogueManager key={structureTab}
               view="structure" initialPane={structureTab}
               onImport={()=>navigate("import-products")}
               onStructure={pane=>setStructureTab(pane)}/>}
-            {section==="pricing"&&<CatalogueSideWorkspace mode="pricing" onBusyChange={setWorkspaceOperationBusy}/>}
-            {section==="import-products" && <CatalogueImportPreview/>}
-            {section==="home-layout"&&<HomeLayoutManager owner={session?.role==="owner"}/>}
-             {section==="app-download"&&<AppDownloadSettingsManager owner={session?.role==="owner"}/>}
-            {section==="category-display"&&<CategoryDisplayManager owner={session?.role==="owner"}/>}
-            {section==="seo-settings"&&<SeoSettingsManager owner={session?.role==="owner"}/>}
-            {section==="outsourcing-requests"&&<OutsourcingRequestsManager owner={session?.role==="owner"}/>}
-            {section==="contact-requests"&&<ContactRequestsManager owner={session?.role==="owner"}/>}
-            {section==="chat-history"&&<ChatHistoryManager owner={session?.role==="owner"}/>}
+            {canSection("pricing")&&section==="pricing"&&<CatalogueSideWorkspace mode="pricing" onBusyChange={setWorkspaceOperationBusy}/>}
+            {canSection("import-products")&&section==="import-products" && <CatalogueImportPreview/>}
+            {canSection("home-layout")&&section==="home-layout"&&<HomeLayoutManager owner={can("admin.website.write")}/>}
+             {canSection("app-download")&&section==="app-download"&&<AppDownloadSettingsManager owner={can("admin.website.write")}/>}
+            {canSection("category-display")&&section==="category-display"&&<CategoryDisplayManager owner={can("admin.website.write")}/>}
+            {canSection("seo-settings")&&section==="seo-settings"&&<SeoSettingsManager owner={can("admin.website.write")}/>}
+            {canSection("outsourcing-requests")&&section==="outsourcing-requests"&&<OutsourcingRequestsManager owner={can("admin.website.write")}/>}
+            {canSection("contact-requests")&&section==="contact-requests"&&<ContactRequestsManager owner={can("admin.website.write")}/>}
+            {canSection("chat-history")&&section==="chat-history"&&<ChatHistoryManager owner={can("admin.website.write")}/>}
             {section==="chatbot-config"&&<ChatbotConfigManager owner={session?.role==="owner"}/> }
-            {section==="catalogue-books"&&<CatalogueBookManager owner={session?.role==="owner"} onBusyChange={setWorkspaceOperationBusy}/>}
-            {section==="banners"&&<CmsManager mode="marketing" owner={session?.role==="owner"}/>}
-            {section==="content"&&<CmsManager mode="editorial" owner={session?.role==="owner"}/>}
-            {section==="new-product" && <><div className="page-title"><div><h1>Thêm sản phẩm mới</h1><p>Chuẩn bị thông tin sản phẩm cho Website và App Futurebook.</p></div><div className="action-row"><Button icon="arrow-left" variant="outline" onClick={()=>navigate("products")}>Quay lại</Button><Button icon="save" disabled title="API ghi bản nháp chưa triển khai">Lưu nháp</Button><Button icon="eye" variant="outline" disabled title="Cần bản nháp thật để xem trước">Xem trước</Button><Button icon="upload" variant="primary" disabled title="Cần quyền publisher và API duyệt/xuất bản">Xuất bản</Button></div></div><p className="draft-warning"><Glyph name="alert" size={17}/>Mẫu nhập liệu đang ở chế độ giao diện thử nghiệm. Thông tin chưa lưu lên database; nút lưu và xuất bản bị khóa cho đến khi có API catalogue.</p>
+            {canSection("catalogue-books")&&section==="catalogue-books"&&<CatalogueBookManager owner={can("admin.website.write")} onBusyChange={setWorkspaceOperationBusy}/>}
+            {canSection("banners")&&section==="banners"&&<CmsManager mode="marketing" owner={can("admin.cms.write")}/>}
+            {canSection("content")&&section==="content"&&<CmsManager mode="editorial" owner={can("admin.cms.write")}/>}
+            {canSection("new-product")&&section==="new-product" && <><div className="page-title"><div><h1>Thêm sản phẩm mới</h1><p>Chuẩn bị thông tin sản phẩm cho Website và App Futurebook.</p></div><div className="action-row"><Button icon="arrow-left" variant="outline" onClick={()=>navigate("products")}>Quay lại</Button><Button icon="save" disabled title="API ghi bản nháp chưa triển khai">Lưu nháp</Button><Button icon="eye" variant="outline" disabled title="Cần bản nháp thật để xem trước">Xem trước</Button><Button icon="upload" variant="primary" disabled title="Cần quyền publisher và API duyệt/xuất bản">Xuất bản</Button></div></div><p className="draft-warning"><Glyph name="alert" size={17}/>Mẫu nhập liệu đang ở chế độ giao diện thử nghiệm. Thông tin chưa lưu lên database; nút lưu và xuất bản bị khóa cho đến khi có API catalogue.</p>
               <div className="editor-grid"><div className="editor-main"><Panel><SectionHeading icon="file">Thông tin cơ bản</SectionHeading><div className="form-grid cols-3"><Field label="Tên sản phẩm" required value={draft.name} setValue={v=>updateDraft("name",v)} placeholder="Nhập tên theo catalogue"/><Field label="Mã SKU" required value={draft.sku} setValue={v=>updateDraft("sku",v)} placeholder="Giữ nguyên mã công ty"/><Field label="Slug" required value={draft.slug} setValue={v=>updateDraft("slug",v)} placeholder="ten-san-pham"/><Field label="Nhóm hàng" required value={draft.family} setValue={v=>updateDraft("family",v)} placeholder="Tập học sinh / Văn phòng phẩm"/><Field label="Danh mục" required value={draft.category} setValue={v=>updateDraft("category",v)} placeholder="Danh mục sản phẩm"/><Field label="Thương hiệu" value={draft.brand} setValue={v=>updateDraft("brand",v)}/></div></Panel><Panel><SectionHeading icon="layers">Mô tả sản phẩm</SectionHeading><Field label="Thông tin mô tả" value={draft.description} area setValue={v=>updateDraft("description",v)} placeholder="Mô tả đúng thông số đã xác minh"/></Panel><Panel><SectionHeading icon="grid">Quy cách & thông số</SectionHeading><div className="form-grid cols-5"><Field label="Kích thước" value={draft.size} setValue={v=>updateDraft("size",v)} placeholder="Ví dụ A4"/><Field label="Số trang/tờ" value={draft.pages} setValue={v=>updateDraft("pages",v)}/><Field label="Chất liệu" value={draft.paper} setValue={v=>updateDraft("paper",v)}/><Field label="Đơn vị tính" value={draft.unit} setValue={v=>updateDraft("unit",v)}/><Field label="Đóng gói" value={draft.pack} setValue={v=>updateDraft("pack",v)}/></div></Panel><Panel><div className="panel-title-line"><SectionHeading icon="box">Biến thể / SKU phụ</SectionHeading><Button icon="plus" variant="outline" disabled title="Chờ API quản lý biến thể">Thêm biến thể</Button></div><div className="empty-mini">Một sản phẩm có thể chứa nhiều mẫu bìa, quy cách và màu sắc. Dữ liệu biến thể sẽ liên kết theo SKU công ty sau khi kích hoạt API.</div></Panel></div>
               <div className="editor-aside"><Panel><SectionHeading icon="image">Ảnh sản phẩm</SectionHeading><div className="photo-feature">{activePhoto?<img src={activePhoto.url} alt={activePhoto.name}/>:<div className="photo-placeholder"><Glyph name="image" size={37}/><span>Chưa có ảnh sản phẩm</span></div>}</div><div className="mini-thumbs">{photos.slice(0,4).map(p=><button type="button" key={p.id} className={selectedPhoto===p.id?"selected":""} onClick={()=>setSelectedPhoto(p.id)}><img src={p.url} alt={p.name}/></button>)}<button type="button" className="add-thumb" onClick={()=>{navigate("media");inputFile.current?.click();}}><Glyph name="plus"/></button></div><Button variant="outline" icon="image" onClick={()=>navigate("media")}>Quản lý ảnh</Button><p className="subtle">JPG, PNG, WEBP • tối đa 10MB/ảnh. Ảnh chỉ xem tạm trên máy.</p></Panel><Panel><SectionHeading icon="search">SEO / hiển thị</SectionHeading><Field label="Meta title" value={draft.metaTitle} setValue={v=>updateDraft("metaTitle",v)} placeholder="Tên sản phẩm - Futurebook Miền Nam"/><Field label="Meta description" value={draft.metaDescription} setValue={v=>updateDraft("metaDescription",v)} area/><small className="subtle">Địa chỉ web và SEO thật sẽ tạo sau khi xuất bản.</small></Panel><div className="suggestion-box"><Glyph name="sparkle"/><div><b>Gợi ý nhập liệu</b><p>Không tự đoán giá, mã SKU hoặc chất lượng giấy. Dùng bảng giá và catalogue đã đối chiếu.</p></div></div></div></div>
             </>}
