@@ -4,7 +4,7 @@ import 'ceo_repository.dart';
 import 'ceo_stats_models.dart';
 import 'ceo_ui_tokens.dart';
 import 'ceo_workspace.dart';
-import 'gsc_oauth_navigation_stub.dart' if (dart.library.js_interop) 'gsc_oauth_navigation_web.dart' as oauth_nav';
+import 'gsc_oauth_navigation_stub.dart' if (dart.library.js_interop) 'gsc_oauth_navigation_web.dart' as oauth_nav;
 
 /// Three lazy-load panels share the existing Statistics subtab rail.
 /// Never contains a Google credential and never sends a Google Ads mutation.

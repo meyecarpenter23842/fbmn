@@ -268,7 +268,6 @@ class CeoApi implements CeoRepository {
   final jwt=await _ownerJwt();
   await _request('DELETE','/api/ceo/gsc/oauth/status',bearer:jwt,json:{});
  }
-
  // ADS131: same-origin, authenticated endpoints. No credentials ever enter Flutter.
  Future<Map<String,dynamic>> adsStatus()async=>
   _data('/api/ceo/ads/oauth/status');
@@ -328,6 +327,22 @@ class CeoApi implements CeoRepository {
  @override void dispose()=>_client.close();
 }
 ).hasMatch(id))throw const CeoApiException(400);
+  await _request('DELETE','/api/ceo/ads/drafts?id='+id,
+   bearer:await _ownerJwt(),json:<String,dynamic>{});
+ }
+ Future<String> adsStartOAuth()async{
+  final result=await adsPost('/api/ceo/ads/oauth/start',{});
+  final url=result['authorizationUrl'];
+  if(url is! String||url.length>2048||
+   !url.startsWith('https://accounts.google.com/o/oauth2/v2/auth?'))
+   throw const CeoApiException(503);
+  return url;
+ }
+ Future<void> adsDisconnect()async{
+  await _request('DELETE','/api/ceo/ads/oauth/status',
+   bearer:await _ownerJwt(),json:<String,dynamic>{});
+ }  Future<void> adsDeleteDraft(String id)async{
+  if(!RegExp(r'^[a-fA-F0-9-]{36}$').hasMatch(id))throw const CeoApiException(400);
   await _request('DELETE','/api/ceo/ads/drafts?id='+id,
    bearer:await _ownerJwt(),json:<String,dynamic>{});
  }
