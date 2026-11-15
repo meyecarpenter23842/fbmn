@@ -353,7 +353,7 @@ class CeoStatisticsTabState extends State<CeoStatisticsTab>{
        if(section<5||section==7)
         CeoStatsPeriodFilter(period:period,mobile:mobile,enabled:!loading,
          onChanged:(range){
-          if(section==7)setState(()=>period=range);
+          if(section==7){setState(()=>period=range);}
           else{unawaited(load(range:range,fresh:true));}
          }),
        const Spacer(),
