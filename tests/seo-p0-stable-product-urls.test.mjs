@@ -129,3 +129,18 @@ test("SEO P0: split family can safely transmit 102 distinct historic aliases",as
   assert.equal(safe.products[0].slug,hash("family:"+family+"|part:0"));
   assert.ok(safe.products[0].legacySlugs.includes(hash(family+"|p5-uncategorized|part:0")));
 });
+
+test("SEO P0: growing 100 to 101 family SKUs and shrinking back never strands canonical URLs",async()=>{
+  const rows=Array.from({length:101},(_,i)=>({...base("F"+String(i).padStart(3,"0")),
+    category_id:catA,category_label:"Tập học sinh",family_id:family,family_label:"Bộ tập"}));
+  const at100=(await catalogFor(rows.slice(0,100))).products[0];
+  const at101=(await catalogFor(rows)).products[0];
+  const backTo100=(await catalogFor(rows.slice(0,100))).products[0];
+  const oldUrl=hash(family+"|p5-uncategorized|part:0");
+  const splitUrl=hash("family:"+family+"|part:0");
+  assert.equal(at100.slug,oldUrl);
+  assert.equal(at101.slug,splitUrl);
+  assert.ok(at101.legacySlugs.includes(oldUrl),"the original 100-SKU URL must still open");
+  assert.equal(backTo100.slug,oldUrl);
+  assert.ok(backTo100.legacySlugs.includes(splitUrl),"the 101-SKU URL must redirect after shrinking");
+});
