@@ -85,5 +85,32 @@ test("SEO P0: a family above 100 SKUs keeps a stable slug for every split page",
   const after=await catalogFor(rows.map((row,i)=>i%2?{...row,category_id:catA,category_label:"Tập học sinh"}:row));
   assert.equal(before.products.length,2);
   assert.deepEqual(before.products.map(p=>p.slug),after.products.map(p=>p.slug));
-  assert.equal(after.products[1].slug,hash(family+"|p5-uncategorized|part:1"));
+  assert.equal(after.products[1].slug,hash("family:"+family+"|part:1"));
+  assert.ok(after.products[1].legacySlugs.includes(hash(family+"|p5-uncategorized|part:1")));
+});
+
+test("SEO P0: 200-SKU family never steals a historic URL from another split page",async()=>{
+  const rows=Array.from({length:200},(_,i)=>({...base("F"+String(i).padStart(3,"0")),
+    family_id:family,family_label:"Bộ tập",
+    ...(i<100?{category_id:catA,category_label:"Tập học sinh"}:{})}));
+  const catalog=await catalogFor(rows);
+  assert.equal(catalog.products.length,2);
+  const [first,second]=catalog.products;
+  const historicSecond=hash(family+"|p5-uncategorized|part:0");
+  assert.notEqual(first.slug,historicSecond);
+  assert.ok(!first.legacySlugs.includes(historicSecond));
+  assert.ok(second.legacySlugs.includes(historicSecond));
+  assert.equal(first.slug,hash("family:"+family+"|part:0"));
+  assert.equal(second.slug,hash("family:"+family+"|part:1"));
+  const matches=catalog.products.filter(p=>p.slug===historicSecond||p.legacySlugs?.includes(historicSecond));
+  assert.deepEqual(matches,[second],"historic unclassified URL still selects the correct SKU page");
+  const api=createPublicApi({
+    getPublicCatalog:async()=>catalog,
+    getPublicContent:async()=>({company:null,articles:[],promotions:[],dealerInformation:null})
+  });
+  const result=await api.fetch(new Request("https://worker.example.invalid/v1/public/products?slug="+historicSecond));
+  assert.equal(result.status,200);
+  const data=await result.json();
+  assert.equal(data.pagination.total,1);
+  assert.deepEqual(data.data[0].variants.map(v=>v.sku),rows.slice(100).map(r=>r.sku_cong_ty));
 });
