@@ -58,13 +58,16 @@ test("L06 Song Natural: six SKUs in one family despite mixed categories; 0110 ke
   assert.equal(product.name,"Song Natural");
   assert.equal(product.categoryId,"p5-f04","prefer a real category for the family breadcrumb");
   assert.deepEqual(product.variants.map(v=>v.sku),codes,"all published company codes survive");
-  const oldSlug=async categoryId=>{
-    const bytes=new TextEncoder().encode(family+"|"+categoryId+"|part:0");
+  const hashed=async key=>{
+    const bytes=new TextEncoder().encode(key);
     const hash=new Uint8Array(await crypto.subtle.digest("SHA-256",bytes));
     return "sku-"+Array.from(hash.slice(0,16),b=>b.toString(16).padStart(2,"0")).join("");
   };
+  const oldSlug=categoryId=>hashed(family+"|"+categoryId+"|part:0");
   const oldNamed=await oldSlug("p5-f04"),oldUncategorized=await oldSlug("p5-uncategorized");
-  assert.deepEqual(new Set(product.legacySlugs),new Set([oldNamed,oldUncategorized]));
+  const oldMixedFamily=await hashed("family:"+family+"|part:0");
+  assert.equal(product.slug,oldUncategorized,"the historic uncategorized URL remains canonical");
+  assert.deepEqual(new Set(product.legacySlugs),new Set([oldNamed,oldMixedFamily]));
   assert.equal(getProductBySlug(catalog,oldNamed),product,"old single-SKU link still resolves");
   assert.equal(getProductBySlug(catalog,oldUncategorized),product,"old 5-SKU link still resolves");
   const api=createPublicApi({getPublicCatalog:async()=>catalog,
