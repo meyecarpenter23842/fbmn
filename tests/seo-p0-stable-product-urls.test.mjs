@@ -64,7 +64,7 @@ test("SEO P0: historic category-specific URL resolves to the published canonical
     /paths\.push\("\/san-pham\/"\+encodeURIComponent\(product\.slug\)\)/);
 });
 
-test("SEO P0: 100 distinct legacy category pages plus old family URL remain transport-safe",async()=>{
+test("SEO P0: 100 distinct category links and absorbed page alias stay transport-safe",async()=>{
   const rows=Array.from({length:100},(_,i)=>{
     const id="00000000-0000-4000-8000-"+String(i+1).padStart(12,"0");
     return {...base("F"+String(i).padStart(3,"0")),
@@ -72,9 +72,9 @@ test("SEO P0: 100 distinct legacy category pages plus old family URL remain tran
   });
   const catalog=await catalogFor(rows);
   assert.equal(catalog.products.length,1);
-  assert.equal(catalog.products[0].legacySlugs.length,101);
+  assert.equal(catalog.products[0].legacySlugs.length,102);
   const safe=projectPublicCatalog(catalog);
-  assert.equal(safe.products[0].legacySlugs.length,101);
+  assert.equal(safe.products[0].legacySlugs.length,102);
   assert.equal(safe.products[0].slug,hash(family+"|p5-uncategorized|part:0"));
 });
 
@@ -143,4 +143,10 @@ test("SEO P0: growing 100 to 101 family SKUs and shrinking back never strands ca
   assert.ok(at101.legacySlugs.includes(oldUrl),"the original 100-SKU URL must still open");
   assert.equal(backTo100.slug,oldUrl);
   assert.ok(backTo100.legacySlugs.includes(splitUrl),"the 101-SKU URL must redirect after shrinking");
+  const absorbed=(await catalogFor(rows.slice(1))).products[0];
+  const formerSecondPage=hash("family:"+family+"|part:1");
+  assert.ok(absorbed.legacySlugs.includes(formerSecondPage),
+    "removing the first SKU must redirect the absorbed second-page URL");
+  assert.ok(absorbed.variants.some(v=>v.sku===rows[100].sku_cong_ty),
+    "the formerly second-page SKU must survive in the merged product");
 });
