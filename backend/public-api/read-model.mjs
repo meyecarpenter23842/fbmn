@@ -160,7 +160,7 @@ export function createReadModel(query,{enableP5=false}={}) {
       const pageKey=key+"|part:"+part;
       let group=groups.get(pageKey);
       if(!group){
-        group={id:pageKey,stableKey:String(row.family_id??sku)+"|p5-uncategorized|part:"+part,
+        group={id:pageKey,groupKey:key,stableKey:String(row.family_id??sku)+"|p5-uncategorized|part:"+part,
           categoryId,name:((normalized(row.family_label)||name).slice(0,160-(part?(" · Phần "+(part+1)).length:0))+(part?" · Phần "+(part+1):"")),
           sourceSku:sku,slug:"",priceLabel:"Liên hệ báo giá",variants:[],media:[],legacyKeys:new Map()};
         groups.set(pageKey,group);
@@ -198,12 +198,18 @@ export function createReadModel(query,{enableP5=false}={}) {
       await Promise.all(products.slice(offset,offset+32).map(async group=>{
         const owned=[...group.legacyKeys.keys()].filter(k=>legacyOwners.get(k)?.group===group);
         const previousCanonicalKey=group.legacyKeys.size===1&&owned.length===1?owned[0]:group.id;
-        group.slug=await makeSlug(group.stableKey);
+        // A multi-page family can reuse an older unclassified page key on a
+        // different split page after category edits. Anchor those pages to
+        // their distinct family+part identity; legacyOwners retains each old
+        // category URL for exactly one page.
+        const canonicalKey=(familyCounts.get(group.groupKey)??0)>100?group.id:group.stableKey;
+        group.slug=await makeSlug(canonicalKey);
         group.id=group.slug;
         const aliases=[...new Set(await Promise.all([...owned,previousCanonicalKey].map(makeSlug)))]
           .filter(slug=>slug!==group.slug);
         if(aliases.length)group.legacySlugs=aliases;
         delete group.legacyKeys;
+        delete group.groupKey;
         delete group.stableKey;
         delete group.sourceSku;
       }));
