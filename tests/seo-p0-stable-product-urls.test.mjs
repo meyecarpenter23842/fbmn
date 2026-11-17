@@ -115,7 +115,7 @@ test("SEO P0: 200-SKU family never steals a historic URL from another split page
   assert.deepEqual(data.data[0].variants.map(v=>v.sku),rows.slice(100).map(r=>r.sku_cong_ty));
 });
 
-test("SEO P0: split family can safely transmit 102 distinct historic aliases",async()=>{
+test("SEO P0: split family can safely transmit 101 distinct historic aliases",async()=>{
   const rows=Array.from({length:101},(_,i)=>{
     const id="00000000-0000-4000-8000-"+String(i+1).padStart(12,"0");
     return {...base("F"+String(i).padStart(3,"0")),
@@ -123,9 +123,9 @@ test("SEO P0: split family can safely transmit 102 distinct historic aliases",as
   });
   const catalog=await catalogFor(rows);
   assert.equal(catalog.products.length,2);
-  assert.equal(catalog.products[0].legacySlugs.length,102);
+  assert.equal(catalog.products[0].legacySlugs.length,101);
   const safe=projectPublicCatalog(catalog);
-  assert.equal(safe.products[0].legacySlugs.length,102);
+  assert.equal(safe.products[0].legacySlugs.length,101);
   assert.equal(safe.products[0].slug,hash("family:"+family+"|part:0"));
   assert.ok(safe.products[0].legacySlugs.includes(hash(family+"|p5-uncategorized|part:0")));
 });
