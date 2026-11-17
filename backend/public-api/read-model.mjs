@@ -160,7 +160,8 @@ export function createReadModel(query,{enableP5=false}={}) {
       const pageKey=key+"|part:"+part;
       let group=groups.get(pageKey);
       if(!group){
-        group={id:pageKey,categoryId,name:((normalized(row.family_label)||name).slice(0,160-(part?(" · Phần "+(part+1)).length:0))+(part?" · Phần "+(part+1):"")),
+        group={id:pageKey,stableKey:String(row.family_id??sku)+"|p5-uncategorized|part:"+part,
+          categoryId,name:((normalized(row.family_label)||name).slice(0,160-(part?(" · Phần "+(part+1)).length:0))+(part?" · Phần "+(part+1):"")),
           sourceSku:sku,slug:"",priceLabel:"Liên hệ báo giá",variants:[],media:[],legacyKeys:new Map()};
         groups.set(pageKey,group);
       }
@@ -187,18 +188,23 @@ export function createReadModel(query,{enableP5=false}={}) {
         if(!oldOwner||count>oldOwner.count)legacyOwners.set(oldKey,{group,count});
       }
     }
-    // Retain the exact old slug for unchanged, one-category products. Mixed
-    // families use a category-independent canonical slug and serve old URLs.
-    // Bounded concurrency avoids sequential crypto operations per product.
+    // P0: use the original uncategorized URL key as the permanent anchor.
+    // All currently published P5 SKUs used this key, so existing indexed links
+    // stay canonical when Admin assigns/reassigns a category. New SKUs get the
+    // same category-independent URL from their first publication.
+    // Preserve pre-P0 category-specific and mixed-family URLs as aliases so
+    // Next.js can issue a permanent redirect to the single canonical address.
     for(let offset=0;offset<products.length;offset+=32){
       await Promise.all(products.slice(offset,offset+32).map(async group=>{
         const owned=[...group.legacyKeys.keys()].filter(k=>legacyOwners.get(k)?.group===group);
-        const canonicalKey=group.legacyKeys.size===1&&owned.length===1?owned[0]:group.id;
-        group.slug=await makeSlug(canonicalKey);
+        const previousCanonicalKey=group.legacyKeys.size===1&&owned.length===1?owned[0]:group.id;
+        group.slug=await makeSlug(group.stableKey);
         group.id=group.slug;
-        const aliases=(await Promise.all(owned.map(makeSlug))).filter(slug=>slug!==group.slug);
+        const aliases=[...new Set(await Promise.all([...owned,previousCanonicalKey].map(makeSlug)))]
+          .filter(slug=>slug!==group.slug);
         if(aliases.length)group.legacySlugs=aliases;
         delete group.legacyKeys;
+        delete group.stableKey;
         delete group.sourceSku;
       }));
     }
