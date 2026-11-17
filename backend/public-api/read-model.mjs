@@ -202,10 +202,17 @@ export function createReadModel(query,{enableP5=false}={}) {
         // different split page after category edits. Anchor those pages to
         // their distinct family+part identity; legacyOwners retains each old
         // category URL for exactly one page.
-        const canonicalKey=(familyCounts.get(group.groupKey)??0)>100?group.id:group.stableKey;
+        const isSplit=(familyCounts.get(group.groupKey)??0)>100;
+        const canonicalKey=isSplit?group.id:group.stableKey;
         group.slug=await makeSlug(canonicalKey);
         group.id=group.slug;
-        const aliases=[...new Set(await Promise.all([...owned,previousCanonicalKey].map(makeSlug)))]
+        const historicalKeys=[...owned,previousCanonicalKey];
+        // Retain an older uncategorized split-page URL after a category move,
+        // unless another page already owns that exact legacy key. Never let
+        // an alias shadow a different page's canonical or legacy URL.
+        const anchorOwner=legacyOwners.get(group.stableKey)?.group;
+        if(isSplit&&(!anchorOwner||anchorOwner===group))historicalKeys.push(group.stableKey);
+        const aliases=[...new Set(await Promise.all(historicalKeys.map(makeSlug)))]
           .filter(slug=>slug!==group.slug);
         if(aliases.length)group.legacySlugs=aliases;
         delete group.legacyKeys;
