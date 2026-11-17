@@ -96,7 +96,7 @@ export function projectPublicCatalog(raw) {
         ...(sku === undefined ? {} : { sku }) };
     });
     guard(p.priceLabel === null || p.priceLabel === "Liên hệ báo giá");
-    const legacySlugs=p.legacySlugs===undefined?undefined:strings(p.legacySlugs,100,80);
+    const legacySlugs=p.legacySlugs===undefined?undefined:strings(p.legacySlugs,102,80);
     if(legacySlugs)guard(legacySlugs.every(s=>/^sku-[0-9a-f]{32}$/.test(s)));
     return {
       id: text(p.id, 80), categoryId: text(p.categoryId, 80),

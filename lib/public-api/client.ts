@@ -69,7 +69,7 @@ function safeProduct(raw: unknown): PublicProduct {
       ...(sku === undefined ? {} : { sku }) };
   });
   if (p.priceLabel !== null && p.priceLabel !== "Liên hệ báo giá") throw new Error("Disallowed price label");
-  const legacySlugs=p.legacySlugs==null?undefined:arr(p.legacySlugs,100).map(s=>{
+  const legacySlugs=p.legacySlugs==null?undefined:arr(p.legacySlugs,102).map(s=>{
     const value=str(s,80);
     if(!/^sku-[0-9a-f]{32}$/.test(value))throw new Error("Invalid legacy slug");
     return value;
