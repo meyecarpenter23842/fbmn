@@ -216,6 +216,11 @@ export function createReadModel(query,{enableP5=false}={}) {
         // an alias shadow a different page's canonical or legacy URL.
         const anchorOwner=legacyOwners.get(group.stableKey)?.group;
         if(isSplit&&(!anchorOwner||anchorOwner===group))historicalKeys.push(group.stableKey);
+        // A former second page is absorbed into page 0 if a family shrinks
+        // below 101 published SKUs. Keep its identity URL routable so any
+        // surviving ?sku= selector still points to the merged family page.
+        if(!isSplit&&group.groupKey.startsWith("family:"))
+          historicalKeys.push(group.groupKey+"|part:1");
         const aliases=[...new Set(await Promise.all(historicalKeys.map(makeSlug)))]
           .filter(slug=>slug!==group.slug);
         if(aliases.length)group.legacySlugs=aliases;
