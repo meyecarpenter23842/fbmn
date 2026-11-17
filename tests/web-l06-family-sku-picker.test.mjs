@@ -66,8 +66,9 @@ test("L06 Song Natural: six SKUs in one family despite mixed categories; 0110 ke
   const oldSlug=categoryId=>hashed(family+"|"+categoryId+"|part:0");
   const oldNamed=await oldSlug("p5-f04"),oldUncategorized=await oldSlug("p5-uncategorized");
   const oldMixedFamily=await hashed("family:"+family+"|part:0");
+  const absorbedSecondPage=await hashed("family:"+family+"|part:1");
   assert.equal(product.slug,oldUncategorized,"the historic uncategorized URL remains canonical");
-  assert.deepEqual(new Set(product.legacySlugs),new Set([oldNamed,oldMixedFamily]));
+  assert.deepEqual(new Set(product.legacySlugs),new Set([oldNamed,oldMixedFamily,absorbedSecondPage]));
   assert.equal(getProductBySlug(catalog,oldNamed),product,"old single-SKU link still resolves");
   assert.equal(getProductBySlug(catalog,oldUncategorized),product,"old 5-SKU link still resolves");
   const api=createPublicApi({getPublicCatalog:async()=>catalog,
