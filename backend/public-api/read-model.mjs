@@ -197,7 +197,8 @@ export function createReadModel(query,{enableP5=false}={}) {
     for(let offset=0;offset<products.length;offset+=32){
       await Promise.all(products.slice(offset,offset+32).map(async group=>{
         const owned=[...group.legacyKeys.keys()].filter(k=>legacyOwners.get(k)?.group===group);
-        const previousCanonicalKey=group.legacyKeys.size===1&&owned.length===1?owned[0]:group.id;
+        const familyPageKey=group.id;
+        const previousCanonicalKey=group.legacyKeys.size===1&&owned.length===1?owned[0]:familyPageKey;
         // A multi-page family can reuse an older unclassified page key on a
         // different split page after category edits. Anchor those pages to
         // their distinct family+part identity; legacyOwners retains each old
@@ -206,7 +207,10 @@ export function createReadModel(query,{enableP5=false}={}) {
         const canonicalKey=isSplit?group.id:group.stableKey;
         group.slug=await makeSlug(canonicalKey);
         group.id=group.slug;
-        const historicalKeys=[...owned,previousCanonicalKey];
+        // A family moving across the 100-SKU page boundary used the family
+        // identity URL on the larger side. Always retain it as a redirect
+        // when the family shrinks back to one page.
+        const historicalKeys=[...owned,previousCanonicalKey,familyPageKey];
         // Retain an older uncategorized split-page URL after a category move,
         // unless another page already owns that exact legacy key. Never let
         // an alias shadow a different page's canonical or legacy URL.
