@@ -123,7 +123,7 @@ test("P3 live check only accepts 200, canonical match, absent noindex and sitema
    new Response('<head><link rel="canonical" href="'+p003.url+
     '"><meta name="robots" content="NOINDEX,follow"></head>',{
     headers:{"Content-Type":"text/html"}})
- }});
+ });
  assert.equal(noindex.ready,false);
  assert.equal(noindex.http.noindex,true);
  assert.equal(p3TechnicalHtml('<head><meta content="noindex" name="googlebot"></head>',
@@ -139,7 +139,7 @@ test("P3 SSRF safety and rate-limit failures remain unverified rather than succe
   url.endsWith("sitemap.xml")?
    new Response("<urlset></urlset>",{headers:{"content-type":"application/xml"}}):
    new Response(null,{status:308,headers:{Location:"https://somewhere.example"}})
- }});
+ });
  assert.equal(moved.http.status,308);
  assert.equal(moved.ready,false);
 });
