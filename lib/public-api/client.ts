@@ -134,10 +134,10 @@ async function getData(origin: string, route: string, transport: typeof fetch): 
 // a gallery or silently convert publication state into a cached snapshot.
 export async function fetchPublicCatalog(input: string, transport: typeof fetch = fetch): Promise<PublicCatalog> {
   const origin = baseUrl(input);
-  for (const batchSize of [1000, 100, 20, 5]) {
+  for (const batchSize of [1000, 100, 20, 5, 1]) {
     try { return await fetchPublicCatalogPageSize(origin, transport, batchSize); }
     catch (error) {
-      if (error instanceof Error && error.message === "Public API payload too large" && batchSize !== 5) continue;
+      if (error instanceof Error && error.message === "Public API payload too large" && batchSize !== 1) continue;
       throw error;
     }
   }
