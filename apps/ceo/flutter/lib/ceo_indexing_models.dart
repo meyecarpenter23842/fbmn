@@ -1,3 +1,4 @@
+// ignore_for_file: prefer_interpolation_to_compose_strings, curly_braces_in_flow_control_structures
 // P3: strongly typed read-only SEO indexing watchlist and inspection results.
 // Google indexed-version status is independent from live-site technical checks.
 class CeoP3Url{
