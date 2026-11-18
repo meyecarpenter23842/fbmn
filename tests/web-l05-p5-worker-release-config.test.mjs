@@ -6,7 +6,7 @@ test("L05 P5 public Worker uses only dedicated restricted Hyperdrive and never a
   const config = JSON.parse(readFileSync(
     new URL("../backend/public-api/wrangler.jsonc", import.meta.url), "utf8"));
   assert.equal(config.name, "futurebook-mien-nam-public-api-staging");
-  assert.equal(config.workers_dev, false, "Worker routes stay under existing authorized dashboard controls");
+  assert.equal(config.workers_dev, true, "Website production SSR uses this public workers.dev hostname; the public API remains origin-gated and least-privilege");
   assert.equal(config.vars.PUBLIC_P5_ENABLED, "true");
   assert.equal(config.vars.EXPECTED_DB_ROLE, "fbmn_p5_public_login");
   assert.deepEqual(config.hyperdrive, [{
