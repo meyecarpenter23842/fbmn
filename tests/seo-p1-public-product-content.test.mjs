@@ -96,7 +96,8 @@ test("SEO P1: Website displays only real selected-SKU copy and sourced specifica
   const ui=readFileSync(new URL("../components/catalogue-product-options.tsx",import.meta.url),"utf8");
   const seo=readFileSync(new URL("../lib/seo/structured-data.ts",import.meta.url),"utf8");
   const client=readFileSync(new URL("../lib/public-api/client.ts",import.meta.url),"utf8");
-  assert.match(ui,/selected\.description&&selected\.description!==product\.description/);
+  assert.match(ui,/const showFullDescription=Boolean\(detailDescription\)/);
+  assert.match(ui,/showFullDescription&&detailDescription&&<details/);
   assert.match(ui,/exactFormat\?"Khổ giấy":"Phân nhóm"/);
   assert.match(ui,/\^\[AB\]\[3-6\]\$/);
   for(const label of ["Khổ giấy","Số trang","Định lượng giấy","Kiểu kẻ","Loại bìa"]){
