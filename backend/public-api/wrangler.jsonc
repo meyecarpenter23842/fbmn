@@ -5,7 +5,7 @@
   "compatibility_flags": [
     "nodejs_compat"
   ],
-  "workers_dev": false,
+  "workers_dev": true,
   "vars": {
     "PUBLIC_ALLOWED_ORIGINS": "https://fbmn-web.vercel.app,https://fbmn.vn,https://www.fbmn.vn,https://fbmn.com.vn,https://www.fbmn.com.vn",
     "EXPECTED_DB_ROLE": "fbmn_p5_public_login",

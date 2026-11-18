@@ -84,7 +84,7 @@ test("OPTIONS preflight does not create DB connections",async()=>{
 });
 test("staging Worker binds the dedicated public read-only Hyperdrive, never B2B",()=>{
  const config=JSON.parse(readFileSync(new URL("../backend/public-api/wrangler.jsonc",import.meta.url),"utf8"));
- assert.equal(config.workers_dev,false);
+ assert.equal(config.workers_dev,true,"Website SSR requires the approved public workers.dev endpoint");
  assert.notEqual(config.hyperdrive[0].id,"680f8ad608b845039dcb889240ace3d2");
  assert.equal(config.ratelimits[0].name,"RATE_LIMITER");
  assert.equal(config.vars.EXPECTED_DB_ROLE,"fbmn_p5_public_login");
