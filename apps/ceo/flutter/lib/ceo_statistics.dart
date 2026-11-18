@@ -7,6 +7,7 @@ import 'ceo_marketing.dart';
 import 'ceo_dashboard_charts.dart';
 import 'ceo_gsc_models.dart';
 import 'ceo_search_console.dart';
+import 'ceo_indexing.dart';
 import 'gsc_oauth_navigation_stub.dart' if (dart.library.js_interop) 'gsc_oauth_navigation_web.dart' as oauth_nav;
 import 'ceo_ui_tokens.dart';
 import 'ceo_stat_controls.dart';
@@ -401,6 +402,11 @@ class CeoStatisticsTabState extends State<CeoStatisticsTab>{
       onDisconnect:()=>unawaited(disconnectGoogle()),
       retry:()=>unawaited(loadGsc(fresh:true))),
     ])),
+   if(section==4)CeoPanel(
+    title:'SEO P3 · Giám sát lập chỉ mục',
+    subtitle:'12 URL ưu tiên · Google URL Inspection, sitemap và kỹ thuật Website',
+    icon:Icons.fact_check_outlined,
+    child:CeoP3IndexingPanel(api:widget.api)),
    if(section>=5)CeoAdsPanel(
     key:adsKey,api:widget.api,kind:section-5,period:period,
     marketing:value?.marketing),
