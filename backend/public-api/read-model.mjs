@@ -66,6 +66,17 @@ export function createReadModel(query,{enableP5=false}={}) {
     const n=Number(String(value??"").match(/^\s*(\d{1,4})/)?.[1]??NaN);
     return Number.isSafeInteger(n)&&n>0?n:null;
   };
+  // Read only text authored in the published SKU's product_spec. Do not
+  // invent descriptive copy or expose non-string/private product data.
+  const publicDescription=(spec)=>{
+    const parts=[spec.short_description,spec.long_description]
+      .filter(value=>typeof value==="string")
+      .map(value=>value.trim().replace(/\\r\\n?/g,"\\n"))
+      .filter(Boolean);
+    if(!parts.length)return undefined;
+    const result=[...new Set(parts)].join("\\n\\n").slice(0,3000).trim();
+    return result||undefined;
+  };
   const strictCount=(value)=>{
     if(!/^[1-9]\d{0,4}$/.test(String(value??"")))return null;
     const n=Number(value);return Number.isSafeInteger(n)&&n>0?n:null;
@@ -169,7 +180,9 @@ export function createReadModel(query,{enableP5=false}={}) {
       // category over "Chưa phân loại" when family members differ.
       if(row.category_id&&group.categoryId==="p5-uncategorized")group.categoryId=categoryId;
       group.legacyKeys.set(oldPageKey,(group.legacyKeys.get(oldPageKey)??0)+1);
-      group.variants.push({sku,name,categoryId,specifications:values,price:null});
+      const description=publicDescription(spec);
+      group.variants.push({sku,name,categoryId,specifications:values,price:null,
+        ...(description?{description}:{})});
       const ownImages=(bySku.get(sku)??[]).sort((a,b)=>Number(b.cover)-Number(a.cover)||a.position-b.position);
       for(const media of ownImages){
         // 100 variants x Admin's max 20 photos/SKU: never silently drop
@@ -179,6 +192,13 @@ export function createReadModel(query,{enableP5=false}={}) {
       }
     }
     const products=[...groups.values()];
+    // Never present one SKU's text as the description for its whole family.
+    // Variants retain their own descriptions for the selected-SKU UI.
+    for(const product of products){
+      const descriptions=product.variants.map(variant=>variant.description);
+      if(descriptions[0]&&descriptions.every(text=>text===descriptions[0]))
+        product.description=descriptions[0];
+    }
     // One old per-category page can overlap two new 100-SKU family pages.
     // Assign its legacy address to the page containing the most old members.
     const legacyOwners=new Map();
