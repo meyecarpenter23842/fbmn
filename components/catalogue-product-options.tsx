@@ -82,6 +82,13 @@ export default function CatalogueProductOptions({product,photos,glass=false,init
    trackWebEvent("web_lead_cta_click",{cta_location,product_key:product.slug});
   const specs=selected.specifications;
   const extraInfo:{label:string;value:string}[]=[];
+  // Only expose specification fields actually provided by the published
+  // read model. Never infer counts, paper weight or cover type from the name.
+  if(specs.paperSize)extraInfo.push({label:"Khổ giấy",value:specs.paperSize});
+  if(specs.pageCount)extraInfo.push({label:"Số trang",value:String(specs.pageCount)});
+  if(specs.paperWeightGsm)extraInfo.push({label:"Định lượng giấy",value:specs.paperWeightGsm+" gsm"});
+  if(specs.ruling)extraInfo.push({label:"Kiểu kẻ",value:specs.ruling});
+  if(specs.coverFinish)extraInfo.push({label:"Loại bìa",value:specs.coverFinish});
   if(specs.binding)extraInfo.push({label:"Đóng gáy",value:specs.binding});
   if(specs.packaging?.saleUnit)extraInfo.push({label:"Đơn vị bán",value:specs.packaging.saleUnit});
   if(specs.packaging?.unitsPerPack!==undefined)
@@ -166,6 +173,10 @@ export default function CatalogueProductOptions({product,photos,glass=false,init
               {quoteLabel}
             </Link>}
       </div>
+      {selected.description&&selected.description!==product.description&&
+        <p className={glass?"fb-song-description":"catalog-detail__description"}>
+          {selected.description}
+        </p>}
       {extraInfo.length>0&&<details className={glass?"fb-song-details":"catalogue-extra-details"}>
         <summary>Thông tin thêm</summary>
         <dl>{extraInfo.map(row=><div key={row.label}>
