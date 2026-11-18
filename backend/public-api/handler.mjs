@@ -83,6 +83,7 @@ export function projectPublicCatalog(raw) {
         sku: text(v.sku, 100), name: text(v.name, 160),
         ...(v.categoryId === undefined ? {} : {categoryId: (()=>{const id=text(v.categoryId,80);guard(ids.has(id));return id;})()}),
         specifications: copySpecifications(v.specifications), price,
+        ...(optionalText(v.description,3000)?{description:v.description}:{}),
       };
     });
     const allowedSkus = new Set(variants.map(v => v.sku));
