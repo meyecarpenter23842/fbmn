@@ -3,6 +3,7 @@ import Link from "next/link";
 import SeoLeadLink from "@/components/seo-lead-link";
 import {ContentShell,ContentBreadcrumb,PageHeading} from "@/components/content-ui";
 import CatalogueFlipbook from "./catalogue-flipbook";
+import CatalogueBookDeepLink from "./catalogue-book-deep-link";
 import {getPublishedCatalogueSeoBooks} from "@/lib/catalogue/seo-books";
 import {SeoJsonLd} from "@/lib/seo/json-ld";
 import "./flipbook.css";
@@ -24,9 +25,9 @@ export default async function CataloguePage(){
    <section className="fb-catalogue-seo-books" aria-labelledby="fb-catalogue-published-title">
     <h2 id="fb-catalogue-published-title">Các bộ Catalogue đã phát hành</h2>
     <ul>{published.map(book=><li key={book.id}>
-     <a href={"/catalogue?book="+encodeURIComponent(book.id)}>
+     <CatalogueBookDeepLink bookId={book.id}>
       {book.title}{book.edition?" · "+book.edition:""}
-     </a>
+     </CatalogueBookDeepLink>
     </li>)}</ul>
    </section>
    <SeoJsonLd data={{"@context":"https://schema.org","@type":"CollectionPage",
