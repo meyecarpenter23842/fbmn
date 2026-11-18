@@ -58,7 +58,7 @@ test("SEO P2 catalogue first HTML includes server-rendered book titles and crawl
  assert.match(page,/CollectionPage/);
  assert.match(page,/canonical: "\/catalogue"/);
  const viewer=read("app/catalogue/catalogue-flipbook.tsx");
- assert.match(viewer,/searchParams\.get\("book"\)/);
+ assert.match(viewer,/new URLSearchParams\(location\.search\)\.get\("book"\)/);
  assert.match(viewer,/await loadBook\(selected\.id,currentRequestedPage\(\)\)/);
 });
 
