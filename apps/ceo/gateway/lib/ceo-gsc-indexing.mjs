@@ -174,9 +174,11 @@ const attr=(tag,name)=>{
  return match?match[2]:null;
 };
 export function p3TechnicalHtml(html,url,headers=new Headers()){
- const head=typeof html==="string"?html.split(/<\/head>/i)[0]:"";
- const links=head.match(/<link\b[^>]*>/gi)||[];
- const metas=head.match(/<meta\b[^>]*>/gi)||[];
+ // Next.js may stream generateMetadata into the BODY for non-bot clients.
+ // Inspect all actual metadata tags in the bounded HTML, not only the head.
+ const markup=typeof html==="string"?html:"";
+ const links=markup.match(/<link\b[^>]*>/gi)||[];
+ const metas=markup.match(/<meta\b[^>]*>/gi)||[];
  const link=links.find(tag=>(attr(tag,"rel")||"").toLowerCase().split(/\s+/).includes("canonical"));
  const canonical=safeCanonical(link?attr(link,"href"):null);
  const robots=metas.filter(tag=>["robots","googlebot"].includes((attr(tag,"name")||"").toLowerCase()))
