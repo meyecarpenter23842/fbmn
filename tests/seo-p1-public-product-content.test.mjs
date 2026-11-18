@@ -83,12 +83,12 @@ test("SEO P1: null, invalid types and unapproved private fields never become pub
   assert.doesNotMatch(JSON.stringify(pub),/123456|For admin only|internalNotes/);
 });
 
-test("SEO P1: descriptions are trimmed to the public 3000 character limit without losing a SKU",async()=>{
+test("SEO P1: approved 600+6000 text survives the public DTO without truncation",async()=>{
   const model=await catalog([record("P003",{
-    short_description:"X".repeat(3500),long_description:"more"
+    short_description:"X".repeat(600),long_description:"L".repeat(6000)
   })]);
-  assert.equal(model.products[0].description.length,3000);
-  assert.equal((await wire(model))[0].description.length,3000);
+  assert.equal(model.products[0].description.length,6602);
+  assert.equal((await wire(model))[0].description.length,6602);
 });
 
 test("SEO P1: Website displays only real selected-SKU copy and sourced specification values",()=>{
@@ -100,5 +100,5 @@ test("SEO P1: Website displays only real selected-SKU copy and sourced specifica
     assert.ok(ui.includes(label));
   }
   assert.match(seo,/const supplied=text\(product\.description\?\?""/);
-  assert.match(client,/optionalText\(v\.description,3000\)/);
+  assert.match(client,/optionalText\(v\.description,6602\)/);
 });
