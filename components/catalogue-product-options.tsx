@@ -92,7 +92,14 @@ export default function CatalogueProductOptions({product,photos,glass=false,init
   const extraInfo:{label:string;value:string}[]=[];
   // Only expose specification fields actually provided by the published
   // read model. Never infer counts, paper weight or cover type from the name.
-  if(specs.paperSize)extraInfo.push({label:"Khổ giấy",value:specs.paperSize});
+  if(specs.paperSize){
+    // paper_size can also be an audience label such as "Học Sinh".
+    // Never present that label as a physical paper format.
+    const raw=specs.paperSize.trim();
+    const exactFormat=/^[AB][3-6]$/i.test(raw);
+    extraInfo.push({label:exactFormat?"Khổ giấy":"Phân nhóm",
+      value:exactFormat?raw.toUpperCase():raw});
+  }
   if(specs.pageCount)extraInfo.push({label:"Số trang",value:String(specs.pageCount)});
   if(specs.paperWeightGsm)extraInfo.push({label:"Định lượng giấy",value:specs.paperWeightGsm+" gsm"});
   if(specs.ruling)extraInfo.push({label:"Kiểu kẻ",value:specs.ruling});
