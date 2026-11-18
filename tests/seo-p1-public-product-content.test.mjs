@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {readFileSync} from "node:fs";
 import {createReadModel,PUBLIC_READ_QUERIES} from "../backend/public-api/read-model.mjs";
 import {createPublicApi,projectPublicCatalog} from "../backend/public-api/handler.mjs";
+import {fetchPublicCatalog} from "../lib/public-api/client.ts";
 
 const one="66d992ff-8f13-48cd-a944-71de0c3edbc8";
 const record=(sku,product_spec={},family_id=null)=>({
@@ -96,9 +97,42 @@ test("SEO P1: Website displays only real selected-SKU copy and sourced specifica
   const seo=readFileSync(new URL("../lib/seo/structured-data.ts",import.meta.url),"utf8");
   const client=readFileSync(new URL("../lib/public-api/client.ts",import.meta.url),"utf8");
   assert.match(ui,/selected\.description&&selected\.description!==product\.description/);
+  assert.match(ui,/exactFormat\?"Khổ giấy":"Phân nhóm"/);
+  assert.match(ui,/\^\[AB\]\[3-6\]\$/);
   for(const label of ["Khổ giấy","Số trang","Định lượng giấy","Kiểu kẻ","Loại bìa"]){
     assert.ok(ui.includes(label));
   }
   assert.match(seo,/const supplied=text\(product\.description\?\?""/);
   assert.match(client,/optionalText\(v\.description,6602\)/);
+});
+
+
+test("SEO P1: large fully-described families fall back to one-product API pages",async()=>{
+  const all=[];
+  for(let familyIndex=0;familyIndex<5;familyIndex++){
+    const family_id="11111111-1111-4111-8111-"+String(familyIndex+1).padStart(12,"0");
+    for(let variant=0;variant<100;variant++){
+      const sku="F"+String(familyIndex).padStart(2,"0")+String(variant).padStart(3,"0");
+      all.push(record(sku,{
+        short_description:"ắ".repeat(600),long_description:"ắ".repeat(6000)
+      },family_id));
+    }
+  }
+  const data=await catalog(all);
+  assert.equal(data.products.length,5);
+  const limits=[];
+  const api=createPublicApi({
+    getPublicCatalog:async()=>data,
+    getPublicContent:async()=>({company:null,articles:[],promotions:[],dealerInformation:null})
+  });
+  const transport=async url=>{
+    limits.push(Number(new URL(url).searchParams.get("limit")));
+    return api.fetch(new Request(url));
+  };
+  const loaded=await fetchPublicCatalog("https://public.example.com",transport);
+  assert.equal(loaded.products.length,5);
+  assert.equal(loaded.products[0].variants.length,100);
+  assert.equal(loaded.products[4].variants[99].description.length,6602);
+  assert.ok(limits.includes(5),"must reach oversized five-product response");
+  assert.ok(limits.includes(1),"must retry with a one-product response to avoid losing the catalogue");
 });
