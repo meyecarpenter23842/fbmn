@@ -80,6 +80,14 @@ export default function CatalogueProductOptions({product,photos,glass=false,init
   const quoteLabel=<>Liên hệ báo giá <span aria-hidden="true">→</span></>;
   const trackQuote=(cta_location:"product_primary"|"product_mobile")=>
    trackWebEvent("web_lead_cta_click",{cta_location,product_key:product.slug});
+  // Short summary keeps the glass card compact. Long published descriptions
+  // remain fully readable in the existing expandable details surface.
+  const descriptionPreview=product.description
+    ?(product.description.length>260?product.description.slice(0,260).trimEnd()+"…":product.description)
+    :seoIntro;
+  const detailDescription=selected.description??product.description;
+  const showFullDescription=Boolean((selected.description&&selected.description!==product.description)||
+    (product.description&&product.description.length>260));
   const specs=selected.specifications;
   const extraInfo:{label:string;value:string}[]=[];
   // Only expose specification fields actually provided by the published
@@ -110,7 +118,7 @@ export default function CatalogueProductOptions({product,photos,glass=false,init
       <div className={glass?"fb-song-overview-copy":undefined}>
         <p className={glass?"fb-song-overline":"catalog-overline"}>SẢN PHẨM FUTUREBOOK</p>
         <h1 className={glass?"fb-song-title":undefined}>{product.name}</h1>
-        {(product.description||seoIntro)&&<p className={glass?"fb-song-description":"catalog-detail__description"}>{product.description||seoIntro}</p>}
+        {descriptionPreview&&<p className={glass?"fb-song-description":"catalog-detail__description"}>{descriptionPreview}</p>}
         <p className={glass?"fb-song-count":"catalog-detail__count"}>{product.variants.length} mã sản phẩm</p>
       </div>
     </div>
@@ -173,10 +181,10 @@ export default function CatalogueProductOptions({product,photos,glass=false,init
               {quoteLabel}
             </Link>}
       </div>
-      {selected.description&&selected.description!==product.description&&
-        <p className={glass?"fb-song-description":"catalog-detail__description"}>
-          {selected.description}
-        </p>}
+      {showFullDescription&&detailDescription&&<details className={glass?"fb-song-details":"catalogue-extra-details"}>
+        <summary>Mô tả chi tiết sản phẩm</summary>
+        <p className={glass?"fb-song-description":"catalog-detail__description"}>{detailDescription}</p>
+      </details>}
       {extraInfo.length>0&&<details className={glass?"fb-song-details":"catalogue-extra-details"}>
         <summary>Thông tin thêm</summary>
         <dl>{extraInfo.map(row=><div key={row.label}>
