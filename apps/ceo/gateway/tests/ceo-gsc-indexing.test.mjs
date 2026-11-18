@@ -51,6 +51,19 @@ test("P3 validates Google indexed-version verdict without presenting it as live 
  assert.equal(p3GoogleResult({inspectionResult:{indexStatusResult:{verdict:"NEUTRAL"}}},p003.url).indexed,null);
  assert.throws(()=>p3GoogleResult({inspectionResult:{}},p003.url),/p3_gsc_invalid_data/);
 });
+test("P3 never strips SKU queries or fragments from Google/live canonical comparison",()=>{
+ const queried=p003.url+"?sku=P003";
+ const report=p3GoogleResult({inspectionResult:{indexStatusResult:{
+  verdict:"PASS",googleCanonical:queried,userCanonical:queried
+ }}},p003.url);
+ assert.equal(report.googleCanonical,queried);
+ assert.equal(report.googleCanonicalMatches,false);
+ assert.equal(report.userCanonicalMatches,false);
+ const html='<head><link rel="canonical" href="'+queried+'"></head>';
+ const live=p3TechnicalHtml(html,p003.url);
+ assert.equal(live.canonical,queried);
+ assert.equal(live.canonicalMatches,false);
+});
 test("P3 makes one allowlisted read-only Google URL Inspection request using the connected property",async()=>{
  let calls=0;
  const result=await p3InspectGoogle("P003",TOKEN,SITE,{fetchImpl:async(url,options)=>{
