@@ -190,6 +190,23 @@ class _CeoP3IndexingPanelState extends State<CeoP3IndexingPanel>{
    ]),
    note(value.note),
    const SizedBox(height:8),
+   Wrap(spacing:8,runSpacing:8,children:[
+    OutlinedButton.icon(
+     onPressed:()=>google_nav.openGoogleInspection(
+      'https://search.google.com/search-console/sitemaps?resource_id=sc-domain%3Afbmn.vn'),
+     icon:const Icon(Icons.open_in_new,size:16),
+     label:const Text('Mở Sitemap trong Google')),
+    TextButton.icon(
+     onPressed:()async{
+      await Clipboard.setData(ClipboardData(text:value.sitemap));
+      if(mounted)setState(()=>copied='sitemap');
+     },
+     icon:const Icon(Icons.copy,size:16),
+     label:Text(copied=='sitemap'?'Đã sao chép sitemap':'Sao chép sitemap.xml')),
+   ]),
+   note('Gửi lại sitemap.xml trong Search Console nếu có quyền quản lý property. '
+    'CEO chỉ có quyền đọc Google, không tự gửi sitemap hoặc yêu cầu index.'),
+   const SizedBox(height:8),
    Wrap(spacing:7,runSpacing:7,children:[
     for(final checkpoint in value.schedule)
      stateTag('Mốc '+checkpoint.days.toString()+' ngày: '+checkpoint.dueDate),
