@@ -11,7 +11,9 @@ import 'gsc_oauth_navigation_stub.dart' if (dart.library.js_interop)
 /// on explicit per-URL clicks to avoid burning the Google Inspection API quota.
 class CeoP3IndexingPanel extends StatefulWidget{
  final CeoRepository api;
- const CeoP3IndexingPanel({super.key,required this.api});
+ final Future<CeoP3Watchlist> Function()? loadWatchlist;
+ final Future<CeoP3Audit> Function(String)? inspectUrl;
+ const CeoP3IndexingPanel({super.key,required this.api,this.loadWatchlist,this.inspectUrl});
  @override State<CeoP3IndexingPanel> createState()=>_CeoP3IndexingPanelState();
 }
 class _CeoP3IndexingPanelState extends State<CeoP3IndexingPanel>{
@@ -30,7 +32,7 @@ class _CeoP3IndexingPanelState extends State<CeoP3IndexingPanel>{
   if(loading)return;
   setState((){loading=true;error='';});
   try{
-   final report=await widget.api.indexingWatchlist();
+   final report=await (widget.loadWatchlist?.call() ?? widget.api.indexingWatchlist());
    if(mounted)setState((){watchlist=report;loading=false;});
   }catch(_){
    if(mounted)setState((){
@@ -42,7 +44,7 @@ class _CeoP3IndexingPanelState extends State<CeoP3IndexingPanel>{
   if(inspecting!=null)return;
   setState((){inspecting=target.key;error='';});
   try{
-   final result=await widget.api.inspectIndexingUrl(target.key);
+   final result=await (widget.inspectUrl?.call(target.key) ?? widget.api.inspectIndexingUrl(target.key));
    if(mounted)setState((){checks[target.key]=result;inspecting=null;});
   }catch(_){
    if(mounted)setState((){
