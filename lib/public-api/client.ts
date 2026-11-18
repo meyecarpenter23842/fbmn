@@ -54,7 +54,8 @@ function safeVariant(raw: unknown): PublicVariant {
   }
   return { sku: str(v.sku, 100), name: str(v.name, 160),
     ...(v.categoryId==null?{}:{categoryId:(()=>{const id=str(v.categoryId,80);if(!/^p5-(?:[0-9a-f-]{36}|uncategorized)$/.test(id))throw Error("Invalid public SKU category");return id;})()}),
-    specifications: safeSpec(v.specifications), price };
+    specifications: safeSpec(v.specifications), price,
+    ...(optionalText(v.description,3000)?{description:optionalText(v.description,3000)}:{}) };
 }
 function safeProduct(raw: unknown): PublicProduct {
   const p = obj(raw);
