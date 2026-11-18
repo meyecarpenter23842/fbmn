@@ -55,7 +55,7 @@ function safeVariant(raw: unknown): PublicVariant {
   return { sku: str(v.sku, 100), name: str(v.name, 160),
     ...(v.categoryId==null?{}:{categoryId:(()=>{const id=str(v.categoryId,80);if(!/^p5-(?:[0-9a-f-]{36}|uncategorized)$/.test(id))throw Error("Invalid public SKU category");return id;})()}),
     specifications: safeSpec(v.specifications), price,
-    ...(optionalText(v.description,3000)?{description:optionalText(v.description,3000)}:{}) };
+    ...(optionalText(v.description,6602)?{description:optionalText(v.description,6602)}:{}) };
 }
 function safeProduct(raw: unknown): PublicProduct {
   const p = obj(raw);
@@ -79,7 +79,7 @@ function safeProduct(raw: unknown): PublicProduct {
     id: str(p.id, 80), categoryId: str(p.categoryId, 80),
     name: str(p.name, 160), slug: str(p.slug, 80),
     ...(legacySlugs?.length?{legacySlugs}:{}),
-    ...(p.description == null ? {} : { description: str(p.description, 3000) }),
+    ...(p.description == null ? {} : { description: str(p.description, 6602) }),
     priceLabel: p.priceLabel as PublicProduct["priceLabel"], variants, media,
   };
 }
