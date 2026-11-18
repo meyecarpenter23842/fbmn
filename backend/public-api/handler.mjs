@@ -83,6 +83,7 @@ export function projectPublicCatalog(raw) {
         sku: text(v.sku, 100), name: text(v.name, 160),
         ...(v.categoryId === undefined ? {} : {categoryId: (()=>{const id=text(v.categoryId,80);guard(ids.has(id));return id;})()}),
         specifications: copySpecifications(v.specifications), price,
+        ...(optionalText(v.description,6602)?{description:v.description}:{}),
       };
     });
     const allowedSkus = new Set(variants.map(v => v.sku));
@@ -102,7 +103,7 @@ export function projectPublicCatalog(raw) {
       id: text(p.id, 80), categoryId: text(p.categoryId, 80),
       name: text(p.name, 160), slug: text(p.slug, 80),
       ...(legacySlugs?.length ? {legacySlugs}:{}),
-      ...(optionalText(p.description, 3000) ? { description: p.description } : {}),
+      ...(optionalText(p.description, 6602) ? { description: p.description } : {}),
       priceLabel: p.priceLabel, variants, media,
     };
   });

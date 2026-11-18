@@ -80,8 +80,31 @@ export default function CatalogueProductOptions({product,photos,glass=false,init
   const quoteLabel=<>Liên hệ báo giá <span aria-hidden="true">→</span></>;
   const trackQuote=(cta_location:"product_primary"|"product_mobile")=>
    trackWebEvent("web_lead_cta_click",{cta_location,product_key:product.slug});
+  // Short summary keeps the glass card compact. Long published descriptions
+  // remain fully readable in the existing expandable details surface.
+  const descriptionPreview=product.description
+    ?(product.description.length>260?product.description.slice(0,260).trimEnd()+"…":product.description)
+    :seoIntro;
+  const detailDescription=selected.description??product.description;
+  // Mobile glass previews are intentionally clamped to two lines even for
+  // short descriptions. Always offer the complete authored text in details.
+  const showFullDescription=Boolean(detailDescription);
   const specs=selected.specifications;
   const extraInfo:{label:string;value:string}[]=[];
+  // Only expose specification fields actually provided by the published
+  // read model. Never infer counts, paper weight or cover type from the name.
+  if(specs.paperSize){
+    // paper_size can also be an audience label such as "Học Sinh".
+    // Never present that label as a physical paper format.
+    const raw=specs.paperSize.trim();
+    const exactFormat=/^[AB][3-6]$/i.test(raw);
+    extraInfo.push({label:exactFormat?"Khổ giấy":"Phân nhóm",
+      value:exactFormat?raw.toUpperCase():raw});
+  }
+  if(specs.pageCount)extraInfo.push({label:"Số trang",value:String(specs.pageCount)});
+  if(specs.paperWeightGsm)extraInfo.push({label:"Định lượng giấy",value:specs.paperWeightGsm+" gsm"});
+  if(specs.ruling)extraInfo.push({label:"Kiểu kẻ",value:specs.ruling});
+  if(specs.coverFinish)extraInfo.push({label:"Loại bìa",value:specs.coverFinish});
   if(specs.binding)extraInfo.push({label:"Đóng gáy",value:specs.binding});
   if(specs.packaging?.saleUnit)extraInfo.push({label:"Đơn vị bán",value:specs.packaging.saleUnit});
   if(specs.packaging?.unitsPerPack!==undefined)
@@ -103,7 +126,7 @@ export default function CatalogueProductOptions({product,photos,glass=false,init
       <div className={glass?"fb-song-overview-copy":undefined}>
         <p className={glass?"fb-song-overline":"catalog-overline"}>SẢN PHẨM FUTUREBOOK</p>
         <h1 className={glass?"fb-song-title":undefined}>{product.name}</h1>
-        {(product.description||seoIntro)&&<p className={glass?"fb-song-description":"catalog-detail__description"}>{product.description||seoIntro}</p>}
+        {descriptionPreview&&<p className={glass?"fb-song-description":"catalog-detail__description"}>{descriptionPreview}</p>}
         <p className={glass?"fb-song-count":"catalog-detail__count"}>{product.variants.length} mã sản phẩm</p>
       </div>
     </div>
@@ -166,6 +189,10 @@ export default function CatalogueProductOptions({product,photos,glass=false,init
               {quoteLabel}
             </Link>}
       </div>
+      {showFullDescription&&detailDescription&&<details className={glass?"fb-song-details":"catalogue-extra-details"}>
+        <summary>Mô tả chi tiết sản phẩm</summary>
+        <p className={glass?"fb-song-description":"catalog-detail__description"}>{detailDescription}</p>
+      </details>}
       {extraInfo.length>0&&<details className={glass?"fb-song-details":"catalogue-extra-details"}>
         <summary>Thông tin thêm</summary>
         <dl>{extraInfo.map(row=><div key={row.label}>
