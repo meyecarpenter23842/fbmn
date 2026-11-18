@@ -24,9 +24,9 @@ export default async function CataloguePage(){
    <section className="fb-catalogue-seo-books" aria-labelledby="fb-catalogue-published-title">
     <h2 id="fb-catalogue-published-title">Các bộ Catalogue đã phát hành</h2>
     <ul>{published.map(book=><li key={book.id}>
-     <Link href={"/catalogue?book="+encodeURIComponent(book.id)}>
+     <a href={"/catalogue?book="+encodeURIComponent(book.id)}>
       {book.title}{book.edition?" · "+book.edition:""}
-     </Link>
+     </a>
     </li>)}</ul>
    </section>
    <SeoJsonLd data={{"@context":"https://schema.org","@type":"CollectionPage",
