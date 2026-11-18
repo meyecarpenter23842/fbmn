@@ -63,7 +63,7 @@ class CeoP3Audit{
  final String key,url,checkedAt,googleStatus,performanceStatus,sitemapStatus;
  final String? verdict,coverage,indexingState,fetchState,robotsTxtState,lastCrawlTime,
   googleCanonical,userCanonical,inspectionLink,performanceEnd;
- final bool? indexed,googleCanonicalMatches,userCanonicalMatches,hasNoindex,inSitemap;
+ final bool? indexed,googleCanonicalMatches,userCanonicalMatches,liveCanonicalMatches,hasNoindex,inSitemap;
  final int? httpStatus;
  final bool technicalReady;
  final List<CeoP3Window> performance;
@@ -73,7 +73,7 @@ class CeoP3Audit{
   required this.technicalReady,this.verdict,this.coverage,this.indexingState,
   this.fetchState,this.robotsTxtState,this.lastCrawlTime,this.googleCanonical,
   this.userCanonical,this.inspectionLink,this.performanceEnd,this.indexed,
-  this.googleCanonicalMatches,this.userCanonicalMatches,this.hasNoindex,
+  this.googleCanonicalMatches,this.userCanonicalMatches,this.liveCanonicalMatches,this.hasNoindex,
   this.inSitemap,this.httpStatus,this.performance=const []
  });
  static String? _text(Object? value)=>value is String&&value.isNotEmpty?value:null;
@@ -108,6 +108,7 @@ class CeoP3Audit{
    inspectionLink:_text(g['inspectionLink']),
    googleCanonicalMatches:_bool(g['googleCanonicalMatches']),
    userCanonicalMatches:_bool(g['userCanonicalMatches']),
+   liveCanonicalMatches:_bool(h['canonicalMatches']),
    indexed:_bool(g['indexed']),hasNoindex:_bool(h['noindex']),
    inSitemap:_bool(s['included']),httpStatus:h['status'] is int?h['status'] as int:null,
    performanceEnd:_text(p['endDate']),performance:windows
@@ -130,7 +131,7 @@ class CeoP3Audit{
   if(httpStatus==null)return 'Chưa kiểm tra được Website';
   if(httpStatus!=200)return 'HTTP $httpStatus';
   if(hasNoindex==true)return 'Trang đang chặn index';
-  if(userCanonicalMatches==false)return 'Google ghi canonical khác';
+  if(liveCanonicalMatches==false)return 'Canonical Website chưa đúng';
   if(inSitemap==false)return 'Thiếu trong sitemap';
   return 'Cần kiểm tra canonical hoặc sitemap';
  }
