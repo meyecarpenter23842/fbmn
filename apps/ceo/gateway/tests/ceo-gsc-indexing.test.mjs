@@ -9,7 +9,7 @@ import {
 import {ceoScope,canAccessCeo} from "../lib/ceo-user01-scope.mjs";
 const TOKEN="token_token_token_abcdefgh_123456";
 const SITE="sc-domain:fbmn.vn";
-const now=new Date("2026-11-18T10:00:00Z");
+const now=new Date("2026-11-17T23:00:00Z"); // 17 Nov in Pacific time
 const p003=P3_URLS.find(x=>x.key==="P003");
 const validResponse={
  inspectionResult:{inspectionResultLink:"https://search.google.com/search-console/inspect?resource_id=sc-domain%3Afbmn.vn",
