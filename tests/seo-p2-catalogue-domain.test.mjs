@@ -53,7 +53,11 @@ test("SEO P2 catalogue first HTML includes server-rendered book titles and crawl
  assert.match(page,/export const dynamic="force-dynamic"/);
  assert.match(page,/await getPublishedCatalogueSeoBooks\(\)/);
  assert.match(page,/published\.map\(book=><li/);
- assert.match(page,/<a href=\{"\/catalogue\?book="\+encodeURIComponent\(book\.id\)\}>/);
+ assert.match(page,/<CatalogueBookDeepLink bookId=\{book\.id\}>/);
+ const deepLink=read("app/catalogue/catalogue-book-deep-link.tsx");
+ assert.match(deepLink,/href="\/catalogue\?book="\+encodeURIComponent\(bookId\)/);
+ assert.match(deepLink,/window\.location\.assign\(href\)/);
+ assert.match(deepLink,/event\.metaKey/);
  assert.match(page,/SeoJsonLd data=\{\{/);
  assert.match(page,/CollectionPage/);
  assert.match(page,/canonical: "\/catalogue"/);
