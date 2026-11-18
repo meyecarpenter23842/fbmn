@@ -56,6 +56,13 @@
 .fb-catalogue-zoom::backdrop{background:rgba(19,11,32,.82);backdrop-filter:blur(8px)}
 .fb-catalogue-zoom-image{overflow:auto;max-height:calc(95vh - 64px);padding:16px;display:grid;place-items:center}
 .fb-catalogue-zoom-image img{display:block;max-width:100%;max-height:none;width:auto;height:auto}
+/* P2: small, crawlable catalogue index. Keep the flipbook as the hero. */
+.fb-catalogue-seo-books{max-width:1100px;margin:10px auto 0;padding:14px 16px 6px;border-top:1px solid var(--fb-glass-border-fallback)}
+.fb-catalogue-seo-books h2{margin:0 0 10px;color:var(--color-primary-strong);font-size:16px;line-height:1.4}
+.fb-catalogue-seo-books ul{display:flex;align-items:center;flex-wrap:wrap;gap:8px 20px;margin:0;padding:0;list-style:none}
+.fb-catalogue-seo-books li{min-width:0;font-size:var(--fb-control-font-size);line-height:1.6}
+.fb-catalogue-seo-books a{color:var(--color-primary-strong);text-decoration:underline;text-underline-offset:3px;overflow-wrap:anywhere}
+.fb-catalogue-seo-books a:focus-visible{outline:2px solid var(--color-primary);outline-offset:3px}
 .fb-catalogue-related{display:flex;gap:20px;align-items:center;justify-content:center;flex-wrap:wrap;padding:18px 12px 28px;font-size:var(--fb-control-font-size);font-weight:750}
 .fb-catalogue-related a{color:var(--color-primary-strong);text-decoration:underline;text-underline-offset:3px}
 @media(max-width:700px){
