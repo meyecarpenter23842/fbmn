@@ -1,4 +1,4 @@
-import {catalogueWorkerOrigin} from "./worker-origin";
+import {catalogueWorkerOrigin} from "./worker-origin.ts";
 
 export type PublishedCatalogueSeoBook={
  id:string;
