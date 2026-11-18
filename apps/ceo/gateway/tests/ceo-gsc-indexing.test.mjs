@@ -129,6 +129,17 @@ test("P3 live check only accepts 200, canonical match, absent noindex and sitema
  assert.equal(p3TechnicalHtml('<head><meta content="noindex" name="googlebot"></head>',
   p003.url).noindex,true);
 });
+test("P3 recognizes Next.js streamed canonical and noindex in body metadata",()=>{
+ const html='<html><head><title>P003</title></head><body>'+
+  '<h1>Futurebook</h1><link rel="canonical" href="'+p003.url+'">'+
+  '<meta name="robots" content="noindex,follow"></body></html>';
+ const detected=p3TechnicalHtml(html,p003.url);
+ assert.equal(detected.canonicalMatches,true);
+ assert.equal(detected.noindex,true);
+ const valid=p3TechnicalHtml(html.replace('noindex,follow','index,follow'),p003.url);
+ assert.equal(valid.canonicalMatches,true);
+ assert.equal(valid.noindex,false);
+});
 test("P3 SSRF safety and rate-limit failures remain unverified rather than success",async()=>{
  await assert.rejects(()=>p3InspectLive("../../admin"),/p3_invalid_request/);
  const failed=await p3InspectLive("P003",{fetchImpl:async()=>{throw Error("network failure");}});
