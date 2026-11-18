@@ -71,10 +71,10 @@ export function createReadModel(query,{enableP5=false}={}) {
   const publicDescription=(spec)=>{
     const parts=[spec.short_description,spec.long_description]
       .filter(value=>typeof value==="string")
-      .map(value=>value.trim().replace(/\\r\\n?/g,"\\n"))
+      .map(value=>value.trim().replace(/\r\n?/g,"\n"))
       .filter(Boolean);
     if(!parts.length)return undefined;
-    const result=[...new Set(parts)].join("\\n\\n").slice(0,3000).trim();
+    const result=[...new Set(parts)].join("\n\n").slice(0,3000).trim();
     return result||undefined;
   };
   const strictCount=(value)=>{
