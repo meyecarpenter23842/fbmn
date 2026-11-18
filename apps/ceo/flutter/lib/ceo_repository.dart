@@ -5,6 +5,7 @@ import 'ceo_models.dart';
 import 'ceo_mail_models.dart';
 import 'ceo_stats_models.dart';
 import 'ceo_gsc_models.dart';
+import 'ceo_indexing_models.dart';
 import 'http_client_stub.dart' if (dart.library.js_interop) 'http_client_web.dart' as platform;
 
 /// Same-origin only. No token storage, credential logging or direct private Worker requests.
@@ -16,6 +17,16 @@ const allCeoScopes=<String>{
 // Existing test implementations remain source-compatible without extra methods.
 extension CeoGrantAccess on CeoRepository{
  Set<String> get grantedScopes => this is CeoApi ? (this as CeoApi).grantedScopes : allCeoScopes;
+}
+
+// P3 access is an extension to preserve older CeoRepository test fakes.
+extension CeoP3IndexingAccess on CeoRepository{
+ Future<CeoP3Watchlist> indexingWatchlist()=>
+  this is CeoApi?(this as CeoApi).loadIndexingWatchlist():
+   Future<CeoP3Watchlist>.error(const CeoApiException(503));
+ Future<CeoP3Audit> inspectIndexingUrl(String key)=>
+  this is CeoApi?(this as CeoApi).loadIndexingAudit(key):
+   Future<CeoP3Audit>.error(const CeoApiException(503));
 }
 abstract class CeoRepository{
  Future<void> signIn(String email,String password);
@@ -253,6 +264,18 @@ class CeoApi implements CeoRepository {
   final raw=await _data('/api/ceo/search-console?period=$period${fresh?'&fresh=1':''}',
    timeout:const Duration(seconds:40));
   return CeoGscReport.fromJson(raw);
+ }
+ Future<CeoP3Watchlist> loadIndexingWatchlist()async{
+  final result=await _data('/api/ceo/search-console/indexing',
+   timeout:const Duration(seconds:20));
+  return CeoP3Watchlist.fromJson(result);
+ }
+ Future<CeoP3Audit> loadIndexingAudit(String key)async{
+  if(!RegExp(r'^(catalogue|[A-Za-z0-9]{3,6})$').hasMatch(key))
+   throw const CeoApiException(400);
+  final result=await _data('/api/ceo/search-console/indexing?key=${Uri.encodeQueryComponent(key)}',
+   timeout:const Duration(seconds:45));
+  return CeoP3Audit.fromJson(result);
  }
  @override Future<String> startGscOAuth()async{
   final jwt=await _ownerJwt();
