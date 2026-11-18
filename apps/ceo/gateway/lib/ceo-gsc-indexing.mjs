@@ -51,7 +51,9 @@ const safeCanonical=(value)=>{
  try{
   const u=new URL(value);
   if(!["https:","http:"].includes(u.protocol)||u.username||u.password||u.port)return null;
-  return u.origin+u.pathname;
+  // Query and fragment change canonical identity; never erase them before
+  // comparing with a query-free published product URL.
+  return u.origin+u.pathname+u.search+u.hash;
  }catch{return null;}
 };
 const googleLink=(value)=>{
