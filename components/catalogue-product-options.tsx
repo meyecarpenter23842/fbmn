@@ -86,8 +86,9 @@ export default function CatalogueProductOptions({product,photos,glass=false,init
     ?(product.description.length>260?product.description.slice(0,260).trimEnd()+"…":product.description)
     :seoIntro;
   const detailDescription=selected.description??product.description;
-  const showFullDescription=Boolean((selected.description&&selected.description!==product.description)||
-    (product.description&&product.description.length>260));
+  // Mobile glass previews are intentionally clamped to two lines even for
+  // short descriptions. Always offer the complete authored text in details.
+  const showFullDescription=Boolean(detailDescription);
   const specs=selected.specifications;
   const extraInfo:{label:string;value:string}[]=[];
   // Only expose specification fields actually provided by the published
