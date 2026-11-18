@@ -97,6 +97,8 @@ export interface PublicVariant {
   /** Published SKU category, may differ from the family canonical category. */
   categoryId?: string;
   name: string;
+  /** Publicly published descriptive copy for this specific SKU, if supplied. */
+  description?: string;
   specifications: Specifications;
   price: { kind: "retail"; amountVnd: number; currency: "VND" } | null;
 }
