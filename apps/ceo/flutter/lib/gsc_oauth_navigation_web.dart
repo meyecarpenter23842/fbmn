@@ -8,6 +8,8 @@ external JSAny? _googleWindow(JSString url,JSString target,JSString features);
 void openGoogleInspection(String url){
  final uri=Uri.tryParse(url);
  if(uri==null||uri.scheme!='https'||uri.host!='search.google.com'||
-   !uri.path.startsWith('/search-console'))throw ArgumentError('Untrusted Search Console URL');
+   !uri.path.startsWith('/search-console')){
+  throw ArgumentError('Untrusted Search Console URL');
+ }
  _googleWindow(url.toJS,'_blank'.toJS,'noopener,noreferrer'.toJS);
 }
