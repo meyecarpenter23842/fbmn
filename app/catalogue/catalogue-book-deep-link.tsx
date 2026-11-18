@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import type {ReactNode} from "react";
 
 /**
  * A catalogue deep link must reinitialize the existing page-flip viewer.
@@ -8,7 +9,7 @@ import Link from "next/link";
  * The real href remains crawlable and modifier/new-tab actions are native.
  */
 export default function CatalogueBookDeepLink({bookId,children}:{
- bookId:string;children:React.ReactNode;
+ bookId:string;children:ReactNode;
 }){
  const href="/catalogue?book="+encodeURIComponent(bookId);
  return <Link href={href} prefetch={false} onClick={event=>{
