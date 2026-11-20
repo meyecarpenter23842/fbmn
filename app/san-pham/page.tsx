@@ -3,19 +3,26 @@ import Image from "next/image";
 import { CatalogShell, CatalogBreadcrumb, CatalogListing } from "@/components/catalog-ui";
 import { getPublicCatalog } from "@/lib/catalog/adapter";
 import {getPublicCategoryDisplay} from "@/lib/catalog/category-display";
-import { parseCatalogFilters } from "@/lib/catalog/query";
+import { parseCatalogFilters, searchCatalog } from "@/lib/catalog/query";
+import {paginatedCatalogMetadata} from "@/lib/seo/catalogue-pagination";
 import { toAllowedParams, type RawSearchParams } from "@/lib/catalog/route";
 
 export const dynamic = "force-dynamic";
+/** SEO: independent canonical for each UNFILTERED listing page.
+ * Search/filters remain noindex; invalid/overflow pages canonicalize to a
+ * real listing page rather than fabricating hundreds of crawlable URLs.
+ */
 export async function generateMetadata({searchParams}:{searchParams:Promise<RawSearchParams>}):Promise<Metadata>{
   const params=await searchParams;
-  const filtered=["q","nhom","kho","gsm","trang","sap-xep"].some(key=>key in params);
-  return {
-    title: "Danh mục sản phẩm | Futurebook Miền Nam",
-    description: "Tra cứu tập học sinh, tập sinh viên, sổ ghi chép và văn phòng phẩm Futurebook theo mã SKU, khổ giấy và quy cách đã công khai.",
-    alternates:{canonical:"/san-pham"},
-    ...(filtered?{robots:{index:false,follow:true}}:{}),
-  };
+  const filtered=["q","nhom","kho","gsm","sap-xep"].some(key=>key in params);
+  const filters=parseCatalogFilters(toAllowedParams(params));
+  let page=1;
+  if(!filtered){
+    const [catalog,modes]=await Promise.all([getPublicCatalog(),getPublicCategoryDisplay()]);
+    const results=searchCatalog(catalog,{...filters,page:filters.page},modes);
+    page=results.page;
+  }
+  return paginatedCatalogMetadata({requested:filters.page,actual:page,filtered});
 }
 
 export default async function ProductsPage({

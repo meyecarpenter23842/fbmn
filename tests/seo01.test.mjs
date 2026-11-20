@@ -27,12 +27,14 @@ test("alternate .com.vn hosts permanently redirect to the www.fbmn.vn canonical 
 test("filtered catalogue routes excluded from index without hiding links",()=>{
  for(const f of ["app/san-pham/page.tsx","app/danh-muc/[slug]/page.tsx"]){
   const source=read(f);
-  assert.match(source,/robots:\{index:false,follow:true\}/);
   if(f==="app/san-pham/page.tsx"){
-   assert.match(source,/alternates:\{canonical:/);
+   assert.match(source,/paginatedCatalogMetadata/);
+   assert.match(read("lib/seo/catalogue-pagination.ts"),/robots:\{index:false,follow:true\}/);
+   assert.match(read("lib/seo/catalogue-pagination.ts"),/alternates:\{canonical:/);
   }else{
+   assert.match(source,/robots:\{index:false,follow:true\}/);
    assert.match(source,/categoryMetadata\(category,catalog,modes\)/);
-   assert.match(read("lib/seo/structured-data.ts"),/alternates:\{canonical:url\}/);
   }
  }
+ assert.match(read("lib/seo/structured-data.ts"),/alternates:\{canonical:url\}/);
 });

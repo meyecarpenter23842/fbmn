@@ -35,8 +35,9 @@ test("SEO04 sitemap index only category listings that match Family/SKU display",
  assert.match(site,/!isNoindex\(seo,"product",product\.slug\)/);
  assert.doesNotMatch(site,/variant\.categoryId\)activeCategoryIds\.add/);
  assert.match(read("lib/seo/structured-data.ts"),/category\.id!=="p5-uncategorized"/);
- for(const path of ["app/san-pham/page.tsx","app/danh-muc/[slug]/page.tsx"])
-  assert.match(read(path),/robots:\{index:false,follow:true\}/);
+  assert.match(read("app/san-pham/page.tsx"),/paginatedCatalogMetadata/);
+  assert.match(read("lib/seo/catalogue-pagination.ts"),/robots:\{index:false,follow:true\}/);
+  assert.match(read("app/danh-muc/[slug]/page.tsx"),/robots:\{index:false,follow:true\}/);
 });
 test("SEO04 browser audit never requests authenticated private data or claims real field CWV",()=>{
  const audit=read("scripts/seo04-mobile-audit.mjs");
