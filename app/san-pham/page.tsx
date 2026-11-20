@@ -3,18 +3,36 @@ import Image from "next/image";
 import { CatalogShell, CatalogBreadcrumb, CatalogListing } from "@/components/catalog-ui";
 import { getPublicCatalog } from "@/lib/catalog/adapter";
 import {getPublicCategoryDisplay} from "@/lib/catalog/category-display";
-import { parseCatalogFilters } from "@/lib/catalog/query";
+import { parseCatalogFilters, searchCatalog } from "@/lib/catalog/query";
 import { toAllowedParams, type RawSearchParams } from "@/lib/catalog/route";
 
 export const dynamic = "force-dynamic";
+/** SEO: independent canonical for each UNFILTERED listing page.
+ * Search/filters remain noindex; invalid/overflow pages canonicalize to a
+ * real listing page rather than fabricating hundreds of crawlable URLs.
+ */
 export async function generateMetadata({searchParams}:{searchParams:Promise<RawSearchParams>}):Promise<Metadata>{
   const params=await searchParams;
-  const filtered=["q","nhom","kho","gsm","trang","sap-xep"].some(key=>key in params);
+  const filtered=["q","nhom","kho","gsm","sap-xep"].some(key=>key in params);
+  const filters=parseCatalogFilters(toAllowedParams(params));
+  let page=1;
+  let overflow=false;
+  if(!filtered){
+    const [catalog,modes]=await Promise.all([getPublicCatalog(),getPublicCategoryDisplay()]);
+    const results=searchCatalog(catalog,{...filters,page:filters.page},modes);
+    page=results.page;
+    overflow=filters.page!==results.page;
+  }
+  const canonical=page===1?"/san-pham":"/san-pham?trang="+page;
   return {
-    title: "Danh mục sản phẩm | Futurebook Miền Nam",
-    description: "Tra cứu tập học sinh, tập sinh viên, sổ ghi chép và văn phòng phẩm Futurebook theo mã SKU, khổ giấy và quy cách đã công khai.",
-    alternates:{canonical:"/san-pham"},
-    ...(filtered?{robots:{index:false,follow:true}}:{}),
+    title:page>1?"Sản phẩm Futurebook – Trang "+page+" | Futurebook Miền Nam":
+      "Danh mục sản phẩm | Futurebook Miền Nam",
+    description:page>1
+      ?"Danh sách sản phẩm Futurebook Miền Nam, trang "+page+
+       ". Xem các mã sản phẩm và quy cách đã công khai tại Futurebook."
+      :"Tra cứu tập học sinh, tập sinh viên, sổ ghi chép và văn phòng phẩm Futurebook theo mã SKU, khổ giấy và quy cách đã công khai.",
+    alternates:{canonical:filtered?"/san-pham":canonical},
+    ...((filtered||overflow)?{robots:{index:false,follow:true}}:{})
   };
 }
 
