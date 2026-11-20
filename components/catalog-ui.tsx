@@ -77,6 +77,10 @@ export function CatalogListing({ data, heading, description, filters, actionPath
   modeByCategory?: Readonly<Record<string,"family"|"sku">>;
 }) {
   const results = searchCatalog(data, filters, modeByCategory);
+  // One crawlable link to every unfiltered page from the canonical listing.
+  // A compact disclosure keeps the catalogue's mobile layout unchanged.
+  const unfiltered=!filters.q&&!filters.group&&!filters.size&&
+    filters.gsm===null&&filters.sort==="name";
   return <>
     {/* Keep the semantic H1 for SEO/accessibility; filters and results
          are the visible catalogue entry point, not duplicated hero copy. */}
@@ -125,6 +129,17 @@ export function CatalogListing({ data, heading, description, filters, actionPath
             <span>Trang {results.page}/{results.pages}</span>
             {results.page < results.pages && <Link href={actionPath + "?" + filtersToParams(filters, results.page + 1)} prefetch={false}>Trang sau</Link>}
           </nav>}
+          {unfiltered && results.page===1 && results.pages>1 &&
+            <details className="catalog-pages-directory">
+              <summary>Xem danh sách {results.pages} trang sản phẩm</summary>
+              <nav aria-label="Các trang sản phẩm Futurebook" className="catalog-pages-directory__links">
+                {Array.from({length:Math.min(results.pages,120)},(_,index)=>index+1).map(page=>
+                  <Link key={page} href={actionPath+(page===1?"":"?trang="+page)}
+                    aria-current={page===results.page?"page":undefined} prefetch={false}>
+                    Trang {page}
+                  </Link>)}
+              </nav>
+            </details>}
         </> : <EmptyState
           heading={filters.q || filters.size || filters.gsm || filters.group ? "Chưa tìm thấy sản phẩm phù hợp" : "Catalogue đang được cập nhật"}
           message="Chỉ sản phẩm, SKU và hình ảnh có nguồn xác minh mới được hiển thị. Anh/chị có thể thử bộ lọc khác hoặc quay lại sau."
