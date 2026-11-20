@@ -25,7 +25,7 @@ test("Site remains indexable with real canonical/OG metadata but no fabricated r
  assert.match(page,/productApprovedSeoImages\(product\)/);
  assert.match(page,/initialSku=\{selectedSku\}/);
  assert.match(structured,/alternates:\{canonical:url\}/);
- assert.match(structured,/socialShareMetadata\\(/);
+ assert.match(structured,/socialShareMetadata\(/);
  assert.match(read("lib/seo/social-share.ts"),/openGraph:/);
  assert.doesNotMatch(structured,/aggregateRating:|review:|offers:|priceValidUntil:|\.prices|\.internalNotes/);
  assert.match(read("app/layout.tsx"),/organizationSchema\(\)/);
