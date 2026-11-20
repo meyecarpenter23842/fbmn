@@ -67,6 +67,8 @@ test("Root, pages, SKU, category, article and custom overrides all provide OG an
  assert.match(policy,/openGraph,twitter/);
  const listing=src("lib/seo/catalogue-pagination.ts");
  assert.match(listing,/socialShareMetadata\(\{title,description,path:filtered\?"\/san-pham":canonical\}\)/);
+ assert.match(src("app/khuyen-mai/[slug]/page.tsx"),/socialShareMetadata/);
+ assert.match(src("app/policy/page.tsx"),/socialShareMetadata/);
  for(const page of ["catalogue","tin-tuc","khuyen-mai","bang-tin","lien-he",
   "dai-ly","gia-cong","gioi-thieu"]){
   assert.match(src("app/"+page+"/page.tsx"),/socialShareMetadata\(/);
