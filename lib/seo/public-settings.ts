@@ -72,5 +72,8 @@ export function applySeoSetting(base:Metadata,setting:PublishedSeoSetting|undefi
  const openGraph={...(base.openGraph||{}),
   ...(title?{title}:{}),...(description?{description}:{}),
   ...(verifiedImage?{images:[verifiedImage]}:{})} as Metadata["openGraph"];
- return {...base,...(title?{title}:{}),...(description?{description}:{}),openGraph};
+ const twitter={...(base.twitter||{}),
+  ...(title?{title}:{}),...(description?{description}:{}),
+  ...(verifiedImage?{images:[verifiedImage]}:{})} as Metadata["twitter"];
+ return {...base,...(title?{title}:{}),...(description?{description}:{}),openGraph,twitter};
 }
