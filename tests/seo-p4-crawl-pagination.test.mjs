@@ -39,6 +39,9 @@ test("SEO crawl: catalogue links every published listing page in original HTML",
  assert.match(page,/const filtered=\["q","nhom","kho","gsm","sap-xep"\]/);
  assert.match(page,/return paginatedCatalogMetadata\(\{requested:filters\.page,actual:page,filtered\}\)/);
  assert.doesNotMatch(page,/const filtered=\[[^\]]*"trang"/);
+ const css=read("app/catalog.css");
+ assert.match(css,/\.catalog-pages-directory__links a\{[^}]*min-height:var\(--fb-control-height-compact\)/);
+ assert.match(css,/@media\(max-width:700px\)\{\.catalog-pages-directory__links a\{min-height:var\(--fb-control-height-touch\)/);
  const sitemap=read("app/sitemap.ts");
  assert.match(sitemap,/for\(const product of catalog\.products\)/);
  assert.match(sitemap,/!isNoindex\(seo,"product",product\.slug\)/);
