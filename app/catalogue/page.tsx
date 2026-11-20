@@ -1,3 +1,4 @@
+import {socialShareMetadata} from "@/lib/seo/social-share";
 import type { Metadata } from "next";
 import Link from "next/link";
 import SeoLeadLink from "@/components/seo-lead-link";
@@ -9,6 +10,7 @@ import {SeoJsonLd} from "@/lib/seo/json-ld";
 import "./flipbook.css";
 
 export const metadata: Metadata={
+  ...socialShareMetadata({title:"Catalogue | Futurebook Miền Nam",description:"Lật xem các cuốn Catalogue Futurebook Miền Nam chính thức được duyệt và phát hành.",path:"/catalogue"}),
  title:"Catalogue | Futurebook Miền Nam",
  description:"Lật xem các cuốn Catalogue Futurebook Miền Nam chính thức được duyệt và phát hành.",
   alternates: { canonical: "/catalogue" },
