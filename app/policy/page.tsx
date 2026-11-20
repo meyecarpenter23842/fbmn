@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import {socialShareMetadata} from "@/lib/seo/social-share";
 import { officialContact as contact } from "@/lib/content/official-contact";
 import { GlassPanel } from "@/components/glass-ui";
 import "./policy.css";
@@ -6,6 +7,7 @@ import "./policy.css";
 export const metadata: Metadata = {
   title: "Chính sách bảo mật | Futurebook Miền Nam",
   description: "Chính sách bảo mật và hướng dẫn yêu cầu xóa dữ liệu của Futurebook Miền Nam.",
+  ...socialShareMetadata({title:"Chính sách bảo mật | Futurebook Miền Nam",description:"Chính sách bảo mật và hướng dẫn yêu cầu xóa dữ liệu của Futurebook Miền Nam.",path:"/policy"}),
   alternates: { canonical: "https://www.fbmn.vn/policy" },
   robots: { index: true, follow: true },
 };
