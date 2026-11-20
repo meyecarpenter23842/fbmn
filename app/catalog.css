@@ -158,7 +158,8 @@
 .catalog-pages-directory{margin:0 0 20px;border-top:1px solid var(--fb-glass-border);padding:12px 4px 0;color:var(--fb-glass-muted);font-size:12px}
 .catalog-pages-directory summary{cursor:pointer;color:#542288;font-weight:700;list-style-position:inside;padding:6px 0}
 .catalog-pages-directory__links{display:flex;flex-wrap:wrap;gap:6px 8px;padding:10px 0}
-.catalog-pages-directory__links a{display:inline-flex;align-items:center;justify-content:center;min-height:32px;min-width:54px;padding:4px 9px;border:1px solid var(--fb-glass-border);border-radius:12px;background:var(--fb-glass-surface-layer);color:#542288}
+.catalog-pages-directory__links a{display:inline-flex;align-items:center;justify-content:center;min-height:var(--fb-control-height-compact);min-width:54px;padding:4px 9px;font-size:var(--fb-control-font-size);border:1px solid var(--fb-glass-border);border-radius:var(--fb-control-radius);background:var(--fb-glass-surface-layer);color:#542288}
+@media(max-width:700px){.catalog-pages-directory__links a{min-height:var(--fb-control-height-touch)}}
 .catalog-pages-directory__links a[aria-current="page"]{font-weight:800;background:var(--fb-glass-panel-layer)}
 .catalog-pages-directory__links a:focus-visible{outline:2px solid #542288;outline-offset:2px}
 .catalog-empty-state { text-align: center; padding: 45px 22px; border: 1px solid var(--fb-glass-border); border-radius: 24px; background: var(--fb-glass-panel-layer);  box-shadow: var(--fb-glass-shadow); -webkit-backdrop-filter: blur(var(--fb-glass-ui-blur)); backdrop-filter: blur(var(--fb-glass-ui-blur));}
