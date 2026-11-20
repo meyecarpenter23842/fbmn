@@ -1,3 +1,4 @@
+import {socialShareMetadata} from "@/lib/seo/social-share";
 import ContactRequestForm from "@/components/contact-request-form";
 import type { Metadata } from "next";
 import { ContentShell, ContentBreadcrumb, PageHeading } from "@/components/content-ui";
@@ -5,6 +6,7 @@ import { getPublicContent } from "@/lib/content/adapter";
 import { officialContact as contact } from "@/lib/content/official-contact";
 
 export const metadata: Metadata = {
+  ...socialShareMetadata({title:"Liên hệ | Futurebook Miền Nam",description:"Liên hệ Futurebook Miền Nam để được tư vấn sản phẩm, báo giá sỉ và hợp tác đại lý.",path:"/lien-he"}),
   title: "Liên hệ | Futurebook Miền Nam",
   description: "Liên hệ Futurebook Miền Nam để được tư vấn sản phẩm, báo giá sỉ và hợp tác đại lý.",
   alternates: { canonical: "/lien-he" },
