@@ -8,7 +8,20 @@ export const revalidate=86400;
 // Read the real, source-controlled FBMN logo. No synthetic product images,
 // external image services, R2 public access, or user-controlled inputs.
 export async function GET(){
- const logo=await readFile(join(process.cwd(),"public","brand","fbmn-mark.svg"));
+ // Vercel may serve public/ from its CDN rather than package it inside
+ // the serverless function. Only fall back to the identical public logo URL.
+ const logo=await readFile(join(process.cwd(),"public","brand","fbmn-mark.svg"))
+  .catch(async()=>{
+   const response=await fetch("https://www.fbmn.vn/brand/fbmn-mark.svg",{
+    cache:"force-cache",redirect:"error",signal:AbortSignal.timeout(4000)
+   });
+   if(!response.ok||!response.headers.get("content-type")?.includes("svg"))
+    throw new Error("Official FBMN SVG unavailable");
+   const svg=await response.text();
+   if(svg.length>6000||!svg.startsWith('<svg xmlns="http://www.w3.org/2000/svg"'))
+    throw new Error("Official FBMN SVG invalid");
+   return Buffer.from(svg,"utf8");
+  });
  const mark="data:image/svg+xml;base64,"+logo.toString("base64");
  return new ImageResponse(
   <div style={{width:"100%",height:"100%",display:"flex",position:"relative",
