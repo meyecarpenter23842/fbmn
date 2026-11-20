@@ -4,6 +4,7 @@ import type {Metadata} from "next";
 import type {PublicProduct,PublicCatalog} from "@/lib/catalog/schema";
 import type {PublicArticle} from "@/lib/content/schema";
 import {getPublishedProductImageUrl} from "@/lib/catalog/product-image";
+import {socialShareMetadata} from "./social-share";
 import {SEO_GROUP_LABELS,categorySeoSummary,type PublicCategory} from "./content-strategy";
 
 export const SEO_ORIGIN="https://www.fbmn.vn";
@@ -59,7 +60,7 @@ export function productMetadata(product:PublicProduct,category?:PublicCategory):
  const url="/san-pham/"+encodeURIComponent(product.slug);
  const images=productSeoImages(product);
  return {title,description,alternates:{canonical:url},
-  openGraph:{type:"website",title,description,url,siteName:BRAND,...(images.length?{images}: {})}};
+  ...socialShareMetadata({title,description,path:url,images})};
 }
 export function categoryMetadata(category:PublicCatalog["categories"][number],catalog?:PublicCatalog,
  modeByCategory:Readonly<Record<string,"family"|"sku">>={}):Metadata{
@@ -68,14 +69,14 @@ export function categoryMetadata(category:PublicCatalog["categories"][number],ca
   "Danh mục "+category.name+". Tra cứu sản phẩm và quy cách đã công khai tại Futurebook Miền Nam.";
  const url="/danh-muc/"+encodeURIComponent(category.slug);
  return {title,description,alternates:{canonical:url},
-  openGraph:{type:"website",title,description,url,siteName:BRAND}};
+  ...socialShareMetadata({title,description,path:url})};
 }
 export function articleMetadata(article:PublicArticle):Metadata{
  const title=article.title+" | "+BRAND;
  const description=text(article.summary,400);
  const url="/tin-tuc/"+encodeURIComponent(article.slug);
  return {title,description,alternates:{canonical:url},
-  openGraph:{type:"article",title,description,url,siteName:BRAND,publishedTime:article.publishedAt}};
+  ...socialShareMetadata({title,description,path:url,publishedTime:article.publishedAt})};
 }
 // Google Search site name: emit WebSite once, on the canonical homepage.
 export function websiteSchema():Record<string,unknown>{

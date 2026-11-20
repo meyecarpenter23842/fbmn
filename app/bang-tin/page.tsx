@@ -1,3 +1,4 @@
+import {socialShareMetadata} from "@/lib/seo/social-share";
 import type {Metadata} from "next";
 import Link from "next/link";
 import {GlassChipLink} from "@/components/glass-ui";
@@ -7,6 +8,7 @@ import {buildNewsHubItems,type NewsHubFilter} from "@/lib/content/news-hub";
 
 export const dynamic="force-dynamic";
 export const metadata: Metadata ={
+  ...socialShareMetadata({title:"Bảng tin | Futurebook Miền Nam",description:"Tin tức và chương trình khuyến mãi Futurebook Miền Nam.",path:"/bang-tin"}),
  title:"Bảng tin | Futurebook Miền Nam",
  description:"Tin tức và chương trình khuyến mãi Futurebook Miền Nam.",
  alternates:{canonical:"/bang-tin"}

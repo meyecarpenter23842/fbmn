@@ -1,3 +1,4 @@
+import {socialShareMetadata} from "@/lib/seo/social-share";
 import type { Metadata } from "next";
 import Link from "next/link";
 import Image from "next/image";
@@ -5,6 +6,7 @@ import {ContentShell,ContentBreadcrumb,PageHeading} from "@/components/content-u
 import OutsourcingRequestForm from "@/components/outsourcing-request-form";
 export const dynamic="force-dynamic";
 export const metadata: Metadata = {
+  ...socialShareMetadata({title:"Tư vấn gia công tập vở, sổ tay theo yêu cầu | Futurebook Miền Nam",description:"Gửi nhu cầu gia công tập vở, sổ tay và sản phẩm giấy theo khổ, số trang, bìa, số lượng dự kiến. Tư vấn cho khách hàng tại TP.HCM và miền Tây; báo giá sau khi xác minh.",path:"/gia-cong"}),
  title:"Tư vấn gia công tập vở, sổ tay theo yêu cầu | Futurebook Miền Nam",
  description:"Gửi nhu cầu gia công tập vở, sổ tay và sản phẩm giấy theo khổ, số trang, bìa, số lượng dự kiến. Tư vấn cho khách hàng tại TP.HCM và miền Tây; báo giá sau khi xác minh.",
   alternates: { canonical: "/gia-cong" },

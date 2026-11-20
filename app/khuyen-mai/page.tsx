@@ -1,3 +1,4 @@
+import {socialShareMetadata} from "@/lib/seo/social-share";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ContentShell, ContentBreadcrumb, PageHeading, WaitingForApproval, PromotionPreview } from "@/components/content-ui";
@@ -5,6 +6,7 @@ import { getPublicContent } from "@/lib/content/adapter";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
+  ...socialShareMetadata({title:"Khuyến mãi | Futurebook Miền Nam",description:"Các chương trình khuyến mãi Futurebook Miền Nam.",path:"/khuyen-mai"}),
   title: "Khuyến mãi | Futurebook Miền Nam",
   description: "Các chương trình khuyến mãi Futurebook Miền Nam.",
   alternates: { canonical: "/khuyen-mai" },

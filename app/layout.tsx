@@ -22,6 +22,7 @@ import CmsPopupRuntime from "@/components/cms-popup-runtime";
 import WebAnalytics from "@/components/web-analytics";
 import {SeoJsonLd} from "@/lib/seo/json-ld";
 import {organizationSchema} from "@/lib/seo/structured-data";
+import {socialShareMetadata} from "@/lib/seo/social-share";
 
 export const metadata: Metadata = {
   title: "Futurebook Miền Nam",
@@ -36,7 +37,11 @@ export const metadata: Metadata = {
     shortcut: "/favicon.ico",
     apple: "/apple-touch-icon.png",
   },
-  openGraph: { siteName: "Futurebook Miền Nam" },
+  ...socialShareMetadata({
+    title:"Futurebook Miền Nam",
+    description:"Tập vở, sổ, giấy và văn phòng phẩm Futurebook Miền Nam. Khám phá sản phẩm, catalogue và liên hệ hợp tác.",
+    path:"/"
+  }),
 };
 
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
