@@ -1,3 +1,4 @@
+import {socialShareMetadata} from "@/lib/seo/social-share";
 import type { Metadata } from "next";
 import Link from "next/link";
 import SeoLeadLink from "@/components/seo-lead-link";
@@ -5,6 +6,7 @@ import { ContentShell, ContentBreadcrumb, PageHeading } from "@/components/conte
 import { getPublicContent } from "@/lib/content/adapter";
 
 export const metadata: Metadata = {
+  ...socialShareMetadata({title:"Hợp tác đại lý tập vở, văn phòng phẩm | Futurebook Miền Nam",description:"Tìm hiểu hợp tác đại lý, nhà phân phối tập học sinh, tập sinh viên, sổ ghi chép và văn phòng phẩm Futurebook. Gửi nhu cầu từ TP.HCM và miền Tây.",path:"/dai-ly"}),
   title: "Hợp tác đại lý tập vở, văn phòng phẩm | Futurebook Miền Nam",
   description: "Tìm hiểu hợp tác đại lý, nhà phân phối tập học sinh, tập sinh viên, sổ ghi chép và văn phòng phẩm Futurebook. Gửi nhu cầu từ TP.HCM và miền Tây.",
   alternates: { canonical: "/dai-ly" },
