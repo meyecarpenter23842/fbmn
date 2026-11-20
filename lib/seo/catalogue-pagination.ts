@@ -1,5 +1,5 @@
 import type {Metadata} from "next";
-import {socialShareMetadata} from "./social-share";
+import {socialShareMetadata} from "./social-share.ts";
 
 /** Search filters are deliberately noindex; a real unfiltered listing page
  * has its own canonical so Google can crawl different SKU cards on each page.
