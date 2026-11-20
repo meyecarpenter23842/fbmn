@@ -1,10 +1,12 @@
+import {socialShareMetadata} from "@/lib/seo/social-share";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ContentShell, ContentBreadcrumb, PageHeading } from "@/components/content-ui";
 import { getPublicContent } from "@/lib/content/adapter";
 import { officialContact as contact } from "@/lib/content/official-contact";
 
-export const metadata: Metadata = { title: "Giới thiệu | Futurebook Miền Nam", description: "Giới thiệu tập vở, sổ và văn phòng phẩm Futurebook Miền Nam.", alternates: { canonical: "/gioi-thieu" },
+export const metadata: Metadata = {
+  ...socialShareMetadata({title:"Giới thiệu | Futurebook Miền Nam",description:"Giới thiệu tập vở, sổ và văn phòng phẩm Futurebook Miền Nam.",path:"/gioi-thieu"}), title: "Giới thiệu | Futurebook Miền Nam", description: "Giới thiệu tập vở, sổ và văn phòng phẩm Futurebook Miền Nam.", alternates: { canonical: "/gioi-thieu" },
 };
 const groups = [
   { title: "Tập học sinh", description: "Tập học sinh theo khổ, số trang và loại bìa." },
