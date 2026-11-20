@@ -69,7 +69,8 @@ test("DL8: no private pricing exposed in SEO + strict noindex policies",()=>{
  assert.doesNotMatch(site,/api\/ceo|\/admin\//);
  assert.match(policy,/robots: \{ index: true, follow: true \}/);
  assert.match(products,/formatRetail/);
- assert.match(source("app/san-pham/page.tsx"),/robots:\{index:false,follow:true\}/);
+  assert.match(source("app/san-pham/page.tsx"),/paginatedCatalogMetadata/);
+  assert.match(source("lib/seo/catalogue-pagination.ts"),/robots:\{index:false,follow:true\}/);
 });
 test("DL8: browser audit is read-only and covers Chromium/WebKit and a11y",()=>{
  const script=source("scripts/dl8-browser-audit.mjs"),flow=source(".github/workflows/dl8-browser-audit.yml");
