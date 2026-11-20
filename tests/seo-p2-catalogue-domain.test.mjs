@@ -80,6 +80,7 @@ test("SEO P2 canonical origin and permanent secondary-host redirects remain alig
  assert.match(sitemap,/\"\/catalogue\"/);
  assert.match(sitemap,/!isNoindex\(seo,"product",product\.slug\)/);
  assert.match(robots,/sitemap:"https:\/\/www\.fbmn\.vn\/sitemap\.xml"/);
- assert.match(robots,/allow:\["\/","\/api\/catalogue-image\/"/);
+ assert.match(robots,/\/api\/catalogue-image\//);
+ assert.match(robots,/\/api\/social-preview/);
  assert.match(layout,/metadataBase: new URL\("https:\/\/www\.fbmn\.vn"\)/);
 });
