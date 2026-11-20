@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import {socialShareMetadata} from "@/lib/seo/social-share";
 import { ContentShell, ContentBreadcrumb, WaitingForApproval, EditorialCover } from "@/components/content-ui";
 import { getPublicContent } from "@/lib/content/adapter";
 import {notFound} from "next/navigation";
@@ -13,8 +14,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const [content, { slug },seo] = await Promise.all([getPublicContent(), params,getPublishedSeo()]);
   const item = content.promotions.find(promotion => promotion.slug === slug);
   return item
-    ? applySeoSetting({ title: item.title + " | Futurebook Miền Nam", description: item.summary,
-        alternates:{canonical:"/khuyen-mai/"+encodeURIComponent(item.slug)} },seoFor(seo,"promotion",item.slug))
+    ? applySeoSetting({
+        title: item.title + " | Futurebook Miền Nam", description: item.summary,
+        ...socialShareMetadata({title:item.title+" | Futurebook Miền Nam",
+          description:item.summary,path:"/khuyen-mai/"+encodeURIComponent(item.slug)}),
+        alternates:{canonical:"/khuyen-mai/"+encodeURIComponent(item.slug)}
+      },seoFor(seo,"promotion",item.slug))
     : { title: "Chương trình chưa công khai | Futurebook Miền Nam", robots: { index: false } };
 }
 export default async function PromotionDetail({ params }: Props) {
