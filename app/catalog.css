@@ -153,6 +153,14 @@
 .catalog-price { color: #cd0e49; margin-top: auto; font-size: 14px; }
 .catalog-pagination { display: flex; align-items: center; justify-content: center; gap: 16px; padding: 24px 0; font-size: 13px; font-weight: 700; }
 .catalog-pagination a { display: inline-flex; align-items: center; color: #542288; border: 1px solid var(--fb-glass-border); border-radius: 999px; padding: 6px 12px; min-height: var(--fb-control-height-compact); transition: background-color var(--fb-motion-button) var(--fb-easing-open), border-color var(--fb-motion-button) var(--fb-easing-open);  background: var(--fb-glass-surface-layer); box-shadow: 0 3px 11px rgba(61, 26, 92, .08);}
+/* SEO crawl path: an unobtrusive page directory after the grid.
+   Links are real HTML anchors without extra product cards or long hero text. */
+.catalog-pages-directory{margin:0 0 20px;border-top:1px solid var(--fb-glass-border);padding:12px 4px 0;color:var(--fb-glass-muted);font-size:12px}
+.catalog-pages-directory summary{cursor:pointer;color:#542288;font-weight:700;list-style-position:inside;padding:6px 0}
+.catalog-pages-directory__links{display:flex;flex-wrap:wrap;gap:6px 8px;padding:10px 0}
+.catalog-pages-directory__links a{display:inline-flex;align-items:center;justify-content:center;min-height:32px;min-width:54px;padding:4px 9px;border:1px solid var(--fb-glass-border);border-radius:12px;background:var(--fb-glass-surface-layer);color:#542288}
+.catalog-pages-directory__links a[aria-current="page"]{font-weight:800;background:var(--fb-glass-panel-layer)}
+.catalog-pages-directory__links a:focus-visible{outline:2px solid #542288;outline-offset:2px}
 .catalog-empty-state { text-align: center; padding: 45px 22px; border: 1px solid var(--fb-glass-border); border-radius: 24px; background: var(--fb-glass-panel-layer);  box-shadow: var(--fb-glass-shadow); -webkit-backdrop-filter: blur(var(--fb-glass-ui-blur)); backdrop-filter: blur(var(--fb-glass-ui-blur));}
 .catalog-empty-state__mark { font-size: 46px; color: #7f51a4; }
 .catalog-empty-state h2 { color: #46207b; font-size: 20px; margin: 8px 0;  font-family: var(--fb-glass-display-font);}
