@@ -51,8 +51,11 @@ test("Owner SEO mode is still editable; no false SEO02B not-live warning",()=>{
  assert.match(ui,/mode:"auto"/);
  assert.match(ui,/value="custom"/);
  assert.match(ui,/value="noindex"/);
- assert.match(ui,/Mở danh mục công khai/);
- assert.match(ui,/Website áp dụng/);
+ assert.match(ui,/loadTargets\(\)/);
+ assert.match(ui,/Mở trang/);
+ assert.match(ui,/Chỉnh SEO/);
+ assert.doesNotMatch(ui,/dán URL hoặc slug/);
+ assert.match(ui,/Google sẽ cập nhật khi đọc lại trang Website/);
  assert.doesNotMatch(ui,/Chưa áp dụng công khai cho đến khi SEO02C/);
  assert.match(backend,/actor\?\.role!=="owner"/);
  assert.match(backend,/revision_conflict/);
