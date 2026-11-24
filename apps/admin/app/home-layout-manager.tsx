@@ -112,8 +112,8 @@ export default function HomeLayoutManager({owner,readable}:{owner:boolean;readab
          onChange={e=>patch({categoryIds:e.target.checked?[...chosenIds,c.id]:chosenIds.filter(id=>id!==c.id)})}/>
         <span>{c.name}<small>{c.productCount} nhóm sản phẩm</small></span></label>
        {selected&&<div className="dl4-arrows">
-        <button type="button" className="fb-ui-button fb-ui-button--secondary" disabled={i===0} aria-label={"Đưa "+c.name+" lên"} onClick={()=>patch({categoryIds:move(chosenIds,i,-1)})}>↑</button>
-        <button type="button" className="fb-ui-button fb-ui-button--secondary" disabled={i===chosenIds.length-1} aria-label={"Đưa "+c.name+" xuống"} onClick={()=>patch({categoryIds:move(chosenIds,i,1)})}>↓</button>
+        <button type="button" className="fb-ui-button fb-ui-button--secondary fb-ui-button--icon" disabled={i===0} aria-label={"Đưa "+c.name+" lên"} onClick={()=>patch({categoryIds:move(chosenIds,i,-1)})}>↑</button>
+        <button type="button" className="fb-ui-button fb-ui-button--secondary fb-ui-button--icon" disabled={i===chosenIds.length-1} aria-label={"Đưa "+c.name+" xuống"} onClick={()=>patch({categoryIds:move(chosenIds,i,1)})}>↓</button>
        </div>}
       </li>;
      })}</ul>
@@ -136,9 +136,9 @@ export default function HomeLayoutManager({owner,readable}:{owner:boolean;readab
      <ol className="dl4-list">{draft.featuredSkus.map((sku,i)=><li key={sku} className="dl4-item">
       <span><strong>{sku}</strong><small>{skuMap.get(sku)?.name||"SKU không còn công khai"}</small></span>
       <div className="dl4-arrows">
-       <button type="button" className="fb-ui-button fb-ui-button--secondary" disabled={i===0} aria-label={"Đưa "+sku+" lên"} onClick={()=>patch({featuredSkus:move(draft.featuredSkus,i,-1)})}>↑</button>
-       <button type="button" className="fb-ui-button fb-ui-button--secondary" disabled={i===draft.featuredSkus.length-1} aria-label={"Đưa "+sku+" xuống"} onClick={()=>patch({featuredSkus:move(draft.featuredSkus,i,1)})}>↓</button>
-       <button type="button" className="fb-ui-button fb-ui-button--secondary" aria-label={"Bỏ "+sku} onClick={()=>patch({featuredSkus:draft.featuredSkus.filter(s=>s!==sku)})}>×</button>
+       <button type="button" className="fb-ui-button fb-ui-button--secondary fb-ui-button--icon" disabled={i===0} aria-label={"Đưa "+sku+" lên"} onClick={()=>patch({featuredSkus:move(draft.featuredSkus,i,-1)})}>↑</button>
+       <button type="button" className="fb-ui-button fb-ui-button--secondary fb-ui-button--icon" disabled={i===draft.featuredSkus.length-1} aria-label={"Đưa "+sku+" xuống"} onClick={()=>patch({featuredSkus:move(draft.featuredSkus,i,1)})}>↓</button>
+       <button type="button" className="fb-ui-button fb-ui-button--secondary fb-ui-button--icon" aria-label={"Bỏ "+sku} onClick={()=>patch({featuredSkus:draft.featuredSkus.filter(s=>s!==sku)})}>×</button>
       </div>
      </li>)}</ol>
     </section>
@@ -146,8 +146,8 @@ export default function HomeLayoutManager({owner,readable}:{owner:boolean;readab
      <h2>Thứ tự khu vực</h2><p>Hero và CMS giữ nguyên. Chỉ đổi vị trí danh mục và sản phẩm.</p>
      <ol className="dl4-list">{draft.sectionOrder.map((x,i)=><li key={x} className="dl4-item">
       <strong>{x==="categories"?"Danh mục":"Sản phẩm"}</strong><div className="dl4-arrows">
-       <button type="button" className="fb-ui-button fb-ui-button--secondary" disabled={i===0} onClick={()=>patch({sectionOrder:move(draft.sectionOrder,i,-1)})}>↑</button>
-       <button type="button" className="fb-ui-button fb-ui-button--secondary" disabled={i===1} onClick={()=>patch({sectionOrder:move(draft.sectionOrder,i,1)})}>↓</button>
+       <button type="button" className="fb-ui-button fb-ui-button--secondary fb-ui-button--icon" aria-label="Đưa khu vực lên" disabled={i===0} onClick={()=>patch({sectionOrder:move(draft.sectionOrder,i,-1)})}>↑</button>
+       <button type="button" className="fb-ui-button fb-ui-button--secondary fb-ui-button--icon" aria-label="Đưa khu vực xuống" disabled={i===1} onClick={()=>patch({sectionOrder:move(draft.sectionOrder,i,1)})}>↓</button>
       </div>
      </li>)}</ol>
     </section>

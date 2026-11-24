@@ -24,8 +24,8 @@
 .fb-admin .dl7b-image-empty{font-size:12px;color:#70627c;text-align:center;padding:12px}
 .fb-admin .dl7b-page-caption{display:flex;justify-content:space-between;gap:6px;flex-wrap:wrap;font-size:13px}
 .fb-admin .dl7b-page-caption small{font-size:11px;color:#736980}
-.fb-admin .dl7b-order{display:flex;align-items:center;gap:4px}
-.fb-admin .dl7b-order .fb-ui-button{width:36px;padding:0}
+.fb-admin .dl7b-order{display:flex;align-items:center;flex-wrap:wrap;gap:4px}
+
 .fb-admin .dl7b-single{display:flex;flex-wrap:wrap;align-items:start;gap:14px}
 .fb-admin .dl7b-single .dl7b-image{width:180px}
 .fb-admin .dl7b-single>div:last-child{display:grid;gap:10px}
@@ -34,7 +34,7 @@
 .fb-admin .dl7b-fields input{padding:0 12px;border:1px solid #d8cbe4;min-width:0}
 .fb-admin .dl7b-fields p{font-size:13px;color:#74687b;margin:0}
 @media(max-width:1080px){.fb-admin .dl7b-grid{grid-template-columns:1fr}}
-@media(max-width:780px){.fb-admin .dl7b-panel{padding:12px}.fb-admin .dl7b-order .fb-ui-button{width:44px}}
+@media(max-width:780px){.fb-admin .dl7b-panel{padding:12px}}
 
 .fb-admin .dl7b-pages-nav{display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap;margin:14px 0;font-size:13px;color:#65536e}
 

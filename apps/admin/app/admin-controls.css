@@ -37,12 +37,40 @@
   gap: 8px;
   vertical-align: middle;
   white-space: nowrap;
+  flex-shrink: 0;
 }
 
 :is(.fb-admin,.fb-product-modal) :is(.btn, .import-btn, .catalogue-actions-trigger, .fb-ui-button) svg {
   width: 16px;
   height: 16px;
   flex: none;
+}
+
+/* Icon-only controls opt in; text buttons must never inherit square widths. */
+:is(.fb-admin,.fb-product-modal) .fb-ui-button {
+  font-family: inherit;
+  text-decoration: none;
+}
+:is(.fb-admin,.fb-product-modal) .fb-ui-button--icon {
+  width: var(--fb-control-height-compact);
+  padding: 0;
+  flex: none;
+}
+@media (max-width: 780px) {
+  :is(.fb-admin,.fb-product-modal) .fb-ui-button--icon {
+    width: var(--fb-control-height-touch);
+  }
+}
+/* Reusable compact row actions: wrap instead of squeezing the labels. */
+:is(.fb-admin,.fb-product-modal) .fb-ui-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-width: 0;
+  max-width: 100%;
+  flex: 0 1 auto;
 }
 
 /* Semantic variants are owned by the shared UI contract, including CMS buttons. */
@@ -143,6 +171,7 @@
   font-weight: 650;
   line-height: 1.35;
   white-space: nowrap;
+  flex-shrink: 0;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
@@ -431,7 +460,7 @@
 
 /* Shared modal footer lives OUTSIDE the scroll body; existing modals opt in. */
 .fb-product-modal-footer {
- flex-shrink:0;min-height:60px;display:flex;align-items:center;
+ flex-shrink:0;min-height:60px;display:flex;align-items:center;justify-content:flex-end;flex-wrap:wrap;gap:8px;
  padding:10px 16px;background:var(--fb-ui-surface,#fff);
  border-top:1px solid var(--fb-ui-border,#e4e7ef);
  box-shadow:0 -3px 10px rgba(32,24,70,.03);

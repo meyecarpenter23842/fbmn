@@ -124,3 +124,24 @@ test("runtime shared modal and categories meet the mandatory UI contract",()=>{
  assert.match(taxonomy,/Thuộc ngành hàng/);
  assert.doesNotMatch(taxonomy,/Danh mục cha|Tạo danh mục con bên dưới/);
 });
+
+
+test("shared action rows keep text controls intrinsic and square controls explicit",()=>{
+ const rows=source("apps/admin/app/home-layout.css");
+ const books=source("apps/admin/app/catalogue-book-manager.css");
+ assert.doesNotMatch(rows,/\.dl4-item\s+\.fb-ui-button\s*\{[^}]*width\s*:/);
+ assert.doesNotMatch(books,/\.dl7b-order\s+\.fb-ui-button\s*\{[^}]*width\s*:/);
+ assert.match(css,/\.fb-ui-button--icon\s*\{[^}]*width: var\(--fb-control-height-compact\)/);
+ assert.match(css,/\.fb-ui-button--icon\s*\{[^}]*width: var\(--fb-control-height-touch\)/);
+ assert.match(css,/\.fb-ui-actions\s*\{[^}]*flex-wrap: wrap/);
+ assert.match(rows,/\.dl4-item\s*\{[^}]*flex-wrap:wrap/);
+ assert.match(rows,/\.dl4-item > :first-child\s*\{[^}]*overflow-wrap:anywhere/);
+ const seo=source("apps/admin/app/seo-settings-manager.tsx");
+ assert.match(seo,/className="fb-ui-actions"/);
+ assert.match(seo,/<a className="fb-ui-button fb-ui-button--secondary"/);
+ for(const path of ["apps/admin/app/home-layout-manager.tsx","apps/admin/app/catalogue-book-manager.tsx"]){
+  const buttons=source(path).split("\n").filter(line=>/[↑↓×]<\/button>/.test(line));
+  assert.ok(buttons.length>=3,path);
+  for(const button of buttons){assert.ok(button.includes("fb-ui-button--icon"),path);assert.ok(button.includes("aria-label="),path);}
+ }
+});
