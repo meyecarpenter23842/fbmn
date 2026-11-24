@@ -76,6 +76,7 @@ export default function SeoSettingsManager({owner,readable}:{owner:boolean;reada
  const [editing,setEditing]=useState<Target|null>(null);
  const [draft,setDraft]=useState<Draft>({mode:"auto",title:"",description:"",ogImagePath:""});
  const [confirmed,setConfirmed]=useState(false);
+ const [initialDraft,setInitialDraft]=useState<Draft|null>(null);
  const [search,setSearch]=useState("");
  const [kind,setKind]=useState<Kind|"all">("all");
  const [mode,setMode]=useState<Mode|"all">("all");
@@ -116,8 +117,9 @@ export default function SeoSettingsManager({owner,readable}:{owner:boolean;reada
   if(!owner||error||loading)return;
   const item=saved.get(key(target));
   setEditing(target);setConfirmed(false);
-  setDraft({mode:item?.mode==="noindex"?"noindex":"custom",title:item?.title??"",
-   description:item?.description??"",ogImagePath:item?.ogImagePath??""});
+  const next:Draft={mode:item?.mode==="noindex"?"noindex":"custom",title:item?.title??"",
+   description:item?.description??"",ogImagePath:item?.ogImagePath??""};
+  setDraft(next);setInitialDraft(next);
  };
  const set=<K extends keyof Draft>(k:K,value:Draft[K])=>setDraft(prev=>({...prev,[k]:value}));
  const showToast=(message:string,variant:"success"|"error")=>{
@@ -139,6 +141,7 @@ export default function SeoSettingsManager({owner,readable}:{owner:boolean;reada
    const result=await seoRequest<{item:SeoItem}>({operation:"save",kind:editing.kind,slug:editing.slug,
     mode:draft.mode,title,description,ogImagePath:image,revision:existing?.revision??0});
    setItems(prev=>[...prev.filter(x=>key(x)!==key(result.item)),result.item]);
+   setInitialDraft(draft);
    showToast("Đã lưu. Google sẽ cập nhật khi đọc lại trang Website.","success");return true;
   }catch(e){showToast(e instanceof Error?e.message:"Không thể lưu.","error");return false;}
   finally{setSaving(false);}
@@ -182,7 +185,8 @@ export default function SeoSettingsManager({owner,readable}:{owner:boolean;reada
     </div>
     {orphanCount>0&&<p>{orphanCount} thiết lập cũ không nằm trong danh sách trang hiện công khai. Các thiết lập này vẫn được giữ nguyên.</p>}
    </section>}
-  {owner&&editing&&<ProductModal title={"Chỉnh SEO: "+editing.name} locked={saving} onClose={()=>setEditing(null)} wide
+  {owner&&editing&&<ProductModal title={"Chỉnh SEO: "+editing.name} locked={saving} onClose={()=>setEditing(null)}
+   beforeClose={()=>JSON.stringify(draft)===JSON.stringify(initialDraft)||window.confirm("Bỏ các thay đổi chưa lưu?")} wide
    footer={<SeoModalFooter saving={saving} canSave={canSave} onSave={save}/>}>
    <div className="cms-form-grid">
     <label className="cms-wide">Cách hiển thị trên Google
