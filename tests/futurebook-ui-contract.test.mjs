@@ -140,6 +140,8 @@ test("shared action rows keep text controls intrinsic and square controls explic
  assert.match(seo,/className="fb-ui-actions"/);
  assert.match(seo,/<a className="fb-ui-button fb-ui-button--secondary"/);
  for(const path of ["apps/admin/app/home-layout-manager.tsx","apps/admin/app/catalogue-book-manager.tsx"]){
-  for(const tag of source(path).matchAll(/<button[^>]*className="fb-ui-button[^"]*"[^>]*>[↑↓×]<\/button>/g))assert.ok(tag[0].includes("fb-ui-button--icon"),path);
+  const buttons=source(path).split("\n").filter(line=>/[↑↓×]<\/button>/.test(line));
+  assert.ok(buttons.length>=3,path);
+  for(const button of buttons){assert.ok(button.includes("fb-ui-button--icon"),path);assert.ok(button.includes("aria-label="),path);}
  }
 });

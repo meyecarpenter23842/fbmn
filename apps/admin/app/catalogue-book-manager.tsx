@@ -443,9 +443,9 @@ export default function CatalogueBookManager({owner,readable,onBusyChange}:{
       <div className="dl7b-image"><CatalogueImage id={p.id} alt={"Trang "+(i+1)}/></div>
       <div className="dl7b-page-caption"><strong>Trang {i+1}</strong><small>{p.width} × {p.height}</small></div>
       <div className="dl7b-order">
-       <button type="button" className="fb-ui-button fb-ui-button--secondary" aria-label={"Đưa trang "+(i+1)+" lên"} disabled={!canEdit||busy||i===0} onClick={()=>void move(i,-1)}>↑</button>
-       <button type="button" className="fb-ui-button fb-ui-button--secondary" aria-label={"Đưa trang "+(i+1)+" xuống"} disabled={!canEdit||busy||i===pages.length-1} onClick={()=>void move(i,1)}>↓</button>
-       <button type="button" className="fb-ui-button fb-ui-button--secondary" aria-label={"Xóa trang "+(i+1)} disabled={!canEdit||busy} onClick={()=>setDeleteFile(p)}>×</button>
+       <button type="button" className="fb-ui-button fb-ui-button--secondary fb-ui-button--icon" aria-label={"Đưa trang "+(i+1)+" lên"} disabled={!canEdit||busy||i===0} onClick={()=>void move(i,-1)}>↑</button>
+       <button type="button" className="fb-ui-button fb-ui-button--secondary fb-ui-button--icon" aria-label={"Đưa trang "+(i+1)+" xuống"} disabled={!canEdit||busy||i===pages.length-1} onClick={()=>void move(i,1)}>↓</button>
+       <button type="button" className="fb-ui-button fb-ui-button--secondary fb-ui-button--icon" aria-label={"Xóa trang "+(i+1)} disabled={!canEdit||busy} onClick={()=>setDeleteFile(p)}>×</button>
       </div>
      </li>;})}</ol>
      {pages.length>12&&<div className="dl7b-pages-nav">
