@@ -174,8 +174,8 @@ export default function SeoSettingsManager({owner,readable}:{owner:boolean;reada
     </div>
     {!visible.length?<p>Không có trang phù hợp.</p>:<ul className="dl4-list">{visible.map(item=><li className="dl4-item" key={key(item)}>
      <div><strong>{item.name}</strong><small>{LABELS[item.kind]} · {MODES[getMode(item)]}</small></div>
-     <div className="action-row">
-      <a href={ORIGIN+PATHS[item.kind]+item.slug} target="_blank" rel="noopener noreferrer">Mở trang</a>
+     <div className="fb-ui-actions">
+      <a className="fb-ui-button fb-ui-button--secondary" href={ORIGIN+PATHS[item.kind]+item.slug} target="_blank" rel="noopener noreferrer">Mở trang</a>
       <button className="fb-ui-button fb-ui-button--secondary" type="button" disabled={!owner} onClick={()=>open(item)}>Chỉnh SEO</button>
      </div></li>)}</ul>}
     <div className="action-row">

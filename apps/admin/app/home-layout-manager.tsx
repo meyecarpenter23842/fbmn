@@ -146,8 +146,8 @@ export default function HomeLayoutManager({owner,readable}:{owner:boolean;readab
      <h2>Thứ tự khu vực</h2><p>Hero và CMS giữ nguyên. Chỉ đổi vị trí danh mục và sản phẩm.</p>
      <ol className="dl4-list">{draft.sectionOrder.map((x,i)=><li key={x} className="dl4-item">
       <strong>{x==="categories"?"Danh mục":"Sản phẩm"}</strong><div className="dl4-arrows">
-       <button type="button" className="fb-ui-button fb-ui-button--secondary" disabled={i===0} onClick={()=>patch({sectionOrder:move(draft.sectionOrder,i,-1)})}>↑</button>
-       <button type="button" className="fb-ui-button fb-ui-button--secondary" disabled={i===1} onClick={()=>patch({sectionOrder:move(draft.sectionOrder,i,1)})}>↓</button>
+       <button type="button" className="fb-ui-button fb-ui-button--secondary" aria-label="Đưa khu vực lên" disabled={i===0} onClick={()=>patch({sectionOrder:move(draft.sectionOrder,i,-1)})}>↑</button>
+       <button type="button" className="fb-ui-button fb-ui-button--secondary" aria-label="Đưa khu vực xuống" disabled={i===1} onClick={()=>patch({sectionOrder:move(draft.sectionOrder,i,1)})}>↓</button>
       </div>
      </li>)}</ol>
     </section>
